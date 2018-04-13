@@ -106,7 +106,6 @@ draw_object(Object *obj, BOOL selected, BOOL highlighted)
     }
 }
 
-
 // Draw the contents of the main window. Everything happens in here.
 void CALLBACK
 Draw(BOOL picking, GLint x_pick, GLint y_pick)
