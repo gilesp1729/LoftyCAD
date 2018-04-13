@@ -1,0 +1,42 @@
+OBJ1 = font.obj glaux.obj image.obj shapes.obj teapot.obj tk.obj 
+OBJ2 = tkdib.obj tkfont.obj tkimage.obj vect3d.obj xform.obj
+
+DEBUG=-v
+CFLAGS=$(DEBUG)
+CFLAGS2= -c
+CC=bcc32
+BC_OBJ= # c:\bounds\bct4.obj  # Bounds-checker stuff. Set to empty if you
+BC_LIB= # c:\bounds\bct.lib   # aren't running bounds checker
+
+.c.obj:
+    $(CC) $(CFLAGS) $(CFLAGS2) { $*.c }
+#--------------------------------------------------------------
+glaux.lib: makefile $(OBJ1) $(OBJ2)
+   tlib $< /C /P32 @&&|
+-+font.obj    &
+-+glaux.obj   &
+-+image.obj   &
+-+shapes.obj  &
+-+teapot.obj  &
+-+tk.obj      &
+-+tkdib.obj   &
+-+tkfont.obj  &
+-+tkimage.obj &
+-+vect3d.obj  &
+-+xform.obj    
+|
+
+# ----------------------------------------------------------------------
+font.obj    :  font.c   
+glaux.obj   :  glaux.c  
+image.obj   :  image.c  
+shapes.obj  :  shapes.c 
+teapot.obj  :  teapot.c 
+tk.obj      :  tk.c     
+tkdib.obj   :  tkdib.c  
+tkfont.obj  :  tkfont.c 
+tkimage.obj :  tkimage.c
+vect3d.obj  :  vect3d.c 
+xform.obj   :  xform.c  
+# ----------------------------------------------------------------------
+
