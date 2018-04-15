@@ -9,7 +9,8 @@ typedef enum
     OBJ_POINT,
     OBJ_EDGE,
     OBJ_FACE,
-    OBJ_VOLUME
+    OBJ_VOLUME,
+    OBJ_NONE       // must be highest
 } OBJECT;
 
 // What kind of edge this is
@@ -157,6 +158,7 @@ typedef struct Volume
 // Prototypes for object functions: 
 
 // Object creation
+Object *obj_new();
 Point *point_new(float x, float y, float z);
 Point *point_newp(Point *p);
 Edge *edge_new(EDGE edge_type);

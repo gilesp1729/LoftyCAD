@@ -78,9 +78,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <Text Include="ReadMe.txt" />
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="draw3d.h" />
     <ClInclude Include="geometry.h" />
     <ClInclude Include="glaux\3D.H" />

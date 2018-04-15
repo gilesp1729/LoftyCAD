@@ -81,7 +81,7 @@ extern PLANE facing_index;
 #define ASSERT(exp, msg)    { if (!(exp)) LogShow(msg) }
 
 // Some forwards
-Object * Pick(GLint x_pick, GLint y_pick);
+Object * Pick(GLint x_pick, GLint y_pick, OBJECT obj_type);
 void CALLBACK Draw(BOOL picking, GLint x_pick, GLint y_pick);
 void CALLBACK Position(BOOL picking, GLint x_pick, GLint y_pick);
 

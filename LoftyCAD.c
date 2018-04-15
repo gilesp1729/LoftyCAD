@@ -193,14 +193,16 @@ Reshape(int width, int height)
     Position(FALSE, 0, 0);
 }
 
-// Pick an object: find the frontmost object under the cursor, or NULL if nothing is there
+// Pick an object: find the frontmost object under the cursor, or NULL if nothing is there.
+// Pick objects from "min_priority" down in the hierarchy; e.g. faces/edges/points, or just edges/points.
 Object *
-Pick(GLint x_pick, GLint y_pick)
+Pick(GLint x_pick, GLint y_pick, OBJECT min_priority)
 {
     GLuint buffer[512];
     GLint viewport[4];
     GLint num_hits;
     GLuint min_obj = 0;
+    OBJECT priority = OBJ_NONE;
 
     // Find the object under the cursor, if any
     glSelectBuffer(512, buffer);
@@ -217,16 +219,33 @@ Pick(GLint x_pick, GLint y_pick)
         size_t size = 512;
         char *p = buf;
         GLuint min_depth = 0xFFFFFFFF;
+        char *obj_prefix[] = { "P", "E", "F", "V" };
+        Object *obj;
 
         for (i = 0; i < num_hits; i++)
         {
             int num_objs = buffer[n];
 
+            if (num_objs == 0)
+            {
+                n += 3;  // skip count, min and max
+                break;
+            }
+
             // buffer = {{num objs, min depth, max depth, obj name, ...}, ...}
-            if (buffer[n + 1] < min_depth)
+
+            // find top-of-stack and what kind of object it is
+            obj = (Object *)buffer[n + num_objs + 2];
+            if (obj == NULL)
+                priority = OBJ_NONE;
+            else
+                priority = obj->type;
+
+            if (priority < min_priority || buffer[n + 1] < min_depth)
             {
                 min_depth = buffer[n + 1];
-                min_obj = buffer[n + 3];  // assumed only one obj in stack!
+                min_priority = priority;
+                min_obj = buffer[n + num_objs + 2];  // top of stack is last element in buffer
             }
 
             if (view_debug)
@@ -237,9 +256,15 @@ Pick(GLint x_pick, GLint y_pick)
                 n += 3;
                 for (j = 0; j < num_objs; j++)
                 {
-                    len = sprintf_s(p, size, "%x ", buffer[n++]);
+                    Object *obj = (Object *)buffer[n];
+ 
+                    if (obj == NULL)
+                        len = sprintf_s(p, size, "NULL ");
+                    else
+                        len = sprintf_s(p, size, "%s%d ", obj_prefix[obj->type], obj->ID);
                     p += len;
                     size -= len;
+                    n++;
                 }
                 len = sprintf_s(p, size, "\r\n");
                 p += len;
@@ -249,7 +274,12 @@ Pick(GLint x_pick, GLint y_pick)
 
         if (view_debug)
         {
-            sprintf_s(p, size, "Frontmost: %x\r\n", min_obj);
+            obj = (Object *)min_obj;
+            if (obj == NULL)
+                len = sprintf_s(p, size, "Frontmost: NULL\r\n");
+            else
+                len = sprintf_s(p, size, "Frontmost: %s%d\r\n", obj_prefix[obj->type], obj->ID);
+
             Log(buf);
         }
     }
@@ -264,13 +294,15 @@ DrawCB(void)
     Draw(FALSE, 0, 0);
 }
 
-// Find if an object is in the selection
+// Find if an object is in the selection, returning TRUE if found, and
+// a pointer to the _previous_ element (to aid deletion) if not the first.
 BOOL
-is_selected(Object *obj)
+is_selected(Object *obj, Object **prev_in_list)
 {
     Object *sel;
     BOOL present = FALSE;
 
+    *prev_in_list = NULL;
     for (sel = selection; sel != NULL; sel = sel->next)
     {
         if (sel->prev == obj)
@@ -278,6 +310,7 @@ is_selected(Object *obj)
             present = TRUE;
             break;
         }
+        *prev_in_list = sel;
     }
 
     return present;
@@ -287,14 +320,16 @@ is_selected(Object *obj)
 void CALLBACK
 left_down(AUX_EVENTREC *event)
 {
+    Object *dummy;
+
     // In any case, find if there is an object under the cursor, and
     // also find if it is in the selection.
-    picked_obj = Pick(event->data[0], event->data[1]);
+    picked_obj = Pick(event->data[0], event->data[1], OBJ_FACE);
 
     switch (app_state)
     {
     case STATE_NONE:
-        if (!is_selected(picked_obj))
+        if (!is_selected(picked_obj, &dummy))
         {
             trackball_MouseDown(event);
         }
@@ -540,11 +575,41 @@ left_up(AUX_EVENTREC *event)
 void CALLBACK
 left_click(AUX_EVENTREC *event)
 {
-    // Pick object and select. If Shift key down, add it to the selection.
-    // If it is already selected, remove it from selection.
-    // watch for spurious mouse up events!! Delete any no-size objects formed by the down/up.
+    Object *prev_in_list;
+    Object *sel_obj;
 
-    //Pick(event->data[0], event->data[1]);
+    // Pick object (already in picked_obj) and select. If Shift key down, add it to the selection.
+    // If it is already selected, remove it from selection.
+    if (picked_obj != NULL)
+    {
+        if (is_selected(curr_obj, &prev_in_list))
+        {
+            if (prev_in_list == NULL)
+            {
+                sel_obj = selection;
+                selection = sel_obj->next;
+            }
+            else
+            {
+                sel_obj = prev_in_list->next;
+                prev_in_list->next = sel_obj->next;
+            }
+
+            ASSERT(sel_obj->prev == curr_obj, "Selection list broken");
+            free(sel_obj);
+        }
+        else
+        {
+            // TODO need to free the whole selection if SHIFT not down
+            // Free list for selection-list objects?
+
+            // select it
+            sel_obj = obj_new();
+            sel_obj->next = selection;
+            selection = sel_obj;
+            sel_obj->prev = curr_obj;
+        }
+    }
 }
 
 void CALLBACK
@@ -876,7 +941,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
             toolbar_dialog
             );
 
-        SetWindowPos(hWndToolbar, HWND_TOPMOST, wWidth, 0, 0, 0, SWP_NOSIZE);
+        SetWindowPos(hWndToolbar, HWND_NOTOPMOST, wWidth, 0, 0, 0, SWP_NOSIZE);
         if (view_tools)
             ShowWindow(hWndToolbar, SW_SHOW);
 
@@ -889,9 +954,11 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
             debug_dialog
             );
 
-        SetWindowPos(hWndDebug, HWND_TOPMOST, wWidth, wHeight/2, 0, 0, SWP_NOSIZE);
+        SetWindowPos(hWndDebug, HWND_NOTOPMOST, wWidth, wHeight/2, 0, 0, SWP_NOSIZE);
         if (view_debug)
             ShowWindow(hWndDebug, SW_SHOW);
+
+        SetWindowPos(auxGetHWND(), HWND_TOP, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOREPOSITION);
 
         hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
         CheckMenuItem(hMenu, ID_VIEW_TOOLS, view_tools ? MF_CHECKED : MF_UNCHECKED);

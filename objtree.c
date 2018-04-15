@@ -18,6 +18,18 @@ static unsigned int save_count = 1;
 static Point *free_list = NULL;
 
 // Creation functions for objects
+Object *obj_new(void)
+{
+    Object *obj = malloc(sizeof(Object));
+
+    obj->type = OBJ_NONE;
+    obj->ID = 0;
+    obj->next = NULL;
+    obj->prev = NULL;
+    obj->save_count = 0;
+    return obj;
+}
+
 Point *point_new(float x, float y, float z)
 {
     Point   *pt;

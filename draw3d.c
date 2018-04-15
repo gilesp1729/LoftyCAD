@@ -6,30 +6,31 @@
 void
 color(OBJECT obj_type, BOOL selected, BOOL highlighted)
 {
+    float r, g, b;
+
     switch (obj_type)
     {
     case OBJ_VOLUME:
     case OBJ_POINT:
-        break;  // no action here
+        return;  // no action here
 
     case OBJ_EDGE:
+        r = g = b = 0.5f;
         if (selected)
-            glColor3d(1.0, 0.0, 0.0);
-        else if (highlighted)
-            glColor3d(0.0, 1.0, 0.0);
-        else
-            glColor3d(0.5, 0.5, 0.5);
+            r += 0.2f;
+        if (highlighted)
+            g += 0.2f;
         break;
 
     case OBJ_FACE:
+        r = g = b = 0.8f;
         if (selected)
-            glColor3d(1.0, 0.0, 0.0);
-        else if (highlighted)
-            glColor3d(0.0, 0.8, 0.0);
-        else
-            glColor3d(0.8, 0.8, 0.8);
+            r += 0.2f;
+        if (highlighted)
+            g += 0.2f;
         break;
     }
+    glColor3f(r, g, b);
 }
 
 // Shade in a face.
@@ -60,16 +61,16 @@ draw_object(Object *obj, BOOL selected, BOOL highlighted)
         // Only if selected/highlighted.
         if (selected)
         {
-            glLoadName((GLuint)obj);
-
+            // glPushName((GLuint)obj);
             // TODO
 
+            // glPopName();
 
         }
         break;
 
     case OBJ_EDGE:
-        glLoadName((GLuint)obj);
+        glPushName((GLuint)obj);
         edge = (Edge *)obj;
         switch (edge->type)
         {
@@ -80,6 +81,8 @@ draw_object(Object *obj, BOOL selected, BOOL highlighted)
             glVertex3f(se->endpoints[0]->x, se->endpoints[0]->y, se->endpoints[0]->z);
             glVertex3f(se->endpoints[1]->x, se->endpoints[1]->y, se->endpoints[1]->z);
             glEnd();
+            glPopName();
+            // TODO draw points after popping
             break;
 
         case EDGE_CIRCLE:
@@ -87,19 +90,17 @@ draw_object(Object *obj, BOOL selected, BOOL highlighted)
         case EDGE_BEZIER:
             break;
         }
-
-
         break;
 
     case OBJ_FACE:
-        glLoadName((GLuint)obj);
+        glPushName((GLuint)obj);
         face_shade((Face *)obj, selected, highlighted);
+        glPopName();
         for (edge = ((Face *)obj)->edges; edge != NULL; edge = (Edge *)edge->hdr.next)
             draw_object(&edge->hdr, selected, highlighted);
         break;
 
     case OBJ_VOLUME:
-        glLoadName((GLuint)obj);
         for (face = ((Volume *)obj)->faces; face != NULL; face = (Face *)face->hdr.next)
             draw_object(&face->hdr, selected, highlighted);
         break;
@@ -113,23 +114,17 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
     float matRot[4][4];
     POINT   pt;
     Object  *obj;
+    BOOL highlit;
 
     if (!picking)
     {
-        // handle mouse movement actions when starting a new object.
+        // handle mouse movement actions.
         // Highlight snap targets (use curr_obj for this)
         if (!left_mouse && !right_mouse)
         {
-            //if (app_state > STATE_MOVING)  // Pick all the time (aids selection)
-            {
-                auxGetMouseLoc(&pt.x, &pt.y);
-                curr_obj = Pick(pt.x, pt.y);
-            }
+            auxGetMouseLoc(&pt.x, &pt.y);
+            curr_obj = Pick(pt.x, pt.y, OBJ_FACE);
         }
-
-        // Only clear pixel buffer stuff if not picking (reduces flashing)
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glDisable(GL_LIGHTING);
 
         // handle left mouse dragging actions. We must be moving or drawing,
         // otherwise the trackball would have it and we wouldn't be here.
@@ -374,6 +369,10 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
             Position(FALSE, 0, 0);
             zoom_delta = 0;
         }
+
+        // Only clear pixel buffer stuff if not picking (reduces flashing)
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glDisable(GL_LIGHTING);
     }
 
     // handle picking, or just position for viewing
@@ -387,21 +386,31 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
 
     // traverse object tree
     glInitNames();
-    glPushName(0);
     for (obj = object_tree; obj != NULL; obj = obj->next)
         draw_object(obj, FALSE, FALSE);
 
-    // draw selection
+    // draw selection. Watch for highlighted objects appearing in the selection list
+    highlit = FALSE;
     for (obj = selection; obj != NULL; obj = obj->next)
-        draw_object(obj->prev, TRUE, FALSE);
+    {
+        if (obj->prev == curr_obj)
+        {
+            draw_object(obj->prev, TRUE, TRUE);
+            highlit = TRUE;
+        }
+        else
+        {
+            draw_object(obj->prev, TRUE, FALSE);
+        }
+    }
 
     // draw any current object not yet added to the object tree,
     // or any under highlighting
-    if (curr_obj != NULL)
+    if (curr_obj != NULL && !highlit)
         draw_object(curr_obj, FALSE, TRUE);
 
     // Draw axes XYZ in RGB. TODO: move these to bottom corner and get them out of the way
-    glLoadName(0);
+    glPushName(0);
     glBegin(GL_LINES);
     glColor3d(1.0, 0.0, 0.0);
     glVertex3d(0.0, 0.0, 0.0);
