@@ -67,8 +67,18 @@ Plane plane_mXY = { 0, };
 Plane plane_mXZ = { 0, };
 Plane plane_mYZ = { 0, };
 
+float quat_XY[4] = { 0, 0, 0, 1 };
+float quat_YZ[4] = { 0, -0.707, 0, 0.707 };
+float quat_XZ[4] = { -0.707, 0, 0, -0.707 };
+float quat_mXY[4] = { 0, 1, 0, 0 };
+float quat_mYZ[4] = { -0.5, 0.5, 0.5, -0.5 };
+float quat_mXZ[4] = { 0, -0.707, -0.707, 0 };
+
 Plane *facing_plane = &plane_XY;
 PLANE facing_index = PLANE_XY;
+
+// Viewing model (ortho or perspective)
+BOOL view_ortho = FALSE;
 
 // Current filename
 char curr_filename[256] = { 0, };
@@ -170,13 +180,27 @@ Position(BOOL picking, GLint x_pick, GLint y_pick)
     if (picking)
         gluPickMatrix(x_pick, height - y_pick, 3, 3, viewport);  // Y window coords need inverting for GL
 
-    if (width > height)
+    if (view_ortho)
     {
-        glFrustum(-(double)width / height, (double)width / height, -1, 1, 0.5, 50);
+        if (width > height)
+        {
+            glOrtho(-(double)width / height, (double)width / height, -1, 1, 0.5, 50);
+        }
+        else
+        {
+            glOrtho(-1, 1, -(double)height / width, (double)height / width, 0.5, 50);
+        }
     }
     else
     {
-        glFrustum(-1, 1, -(double)height / width, (double)height / width, 0.5, 50);
+        if (width > height)
+        {
+            glFrustum(-(double)width / height, (double)width / height, -1, 1, 0.5, 50);
+        }
+        else
+        {
+            glFrustum(-1, 1, -(double)height / width, (double)height / width, 0.5, 50);
+        }
     }
 
     glTranslated(xTrans, yTrans, zTrans);
@@ -270,6 +294,10 @@ Pick(GLint x_pick, GLint y_pick, OBJECT min_priority)
                 p += len;
                 size -= len;
             }
+            else  // not logging, still need to skip the data
+            {
+                n += num_objs + 3;
+            }
         }
 
         if (view_debug)
@@ -314,6 +342,23 @@ is_selected(Object *obj, Object **prev_in_list)
     }
 
     return present;
+}
+
+// Clear the selection
+void
+clear_selection(void)
+{
+    Object *sel_obj, *next_obj;
+
+    sel_obj = selection;
+    do
+    {
+        next_obj = sel_obj->next;
+        free(sel_obj);
+        sel_obj = next_obj;
+    } while (next_obj != NULL);
+
+    selection = NULL;
 }
 
 // Mouse handlers
@@ -419,6 +464,7 @@ left_up(AUX_EVENTREC *event)
 {
     Face *rf;
     StraightEdge *se;
+    Object *sel_obj;
     float mv[16], vec[4], nvec[4];
     float eye[4] = { 0, 0, 1, 0 };
     char buf[256];
@@ -497,6 +543,26 @@ left_up(AUX_EVENTREC *event)
         ReleaseCapture();
         left_mouse = FALSE;
         app_state = STATE_NONE;
+
+        // regenerate the view lists for all moved faces to get rid of
+        // any little errors that have crept in
+        for (sel_obj = selection; sel_obj != NULL; sel_obj = sel_obj->next)
+        {
+            Object *parent = find_top_level_parent(object_tree, sel_obj->prev);
+            Face *face;
+
+            if (parent->type == OBJ_VOLUME)
+            {
+                for (face = ((Volume *)parent)->faces; face != NULL; face = (Face *)face->hdr.next)
+                    face->view_valid = FALSE;
+            }
+            else if (parent->type == OBJ_FACE)
+            {
+                ((Face *)parent)->view_valid = FALSE;
+            }
+        }
+
+        drawing_changed = TRUE;
         break;
 
     case STATE_DRAWING_RECT:
@@ -578,6 +644,9 @@ left_click(AUX_EVENTREC *event)
     Object *prev_in_list;
     Object *sel_obj;
 
+    if (picked_obj == NULL)
+        return;
+
     // Pick object (already in picked_obj) and select. If Shift key down, add it to the selection.
     // If it is already selected, remove it from selection.
     if (picked_obj != NULL)
@@ -597,11 +666,14 @@ left_click(AUX_EVENTREC *event)
 
             ASSERT(sel_obj->prev == curr_obj, "Selection list broken");
             free(sel_obj);
+
+            if (selection != NULL && (event->data[AUX_MOUSESTATUS] & AUX_SHIFT) == 0)
+                clear_selection();
         }
         else
         {
-            // TODO need to free the whole selection if SHIFT not down
-            // Free list for selection-list objects?
+            if (selection != NULL && (event->data[AUX_MOUSESTATUS] & AUX_SHIFT) == 0)
+                clear_selection();
 
             // select it
             sel_obj = obj_new();
@@ -659,6 +731,16 @@ Command(int wParam, int lParam)
     switch (LOWORD(wParam))
     {
     case IDM_EXIT:
+        if (drawing_changed)
+        {
+            int rc = MessageBox(auxGetHWND(), "File modified. Save it?", curr_filename, MB_YESNOCANCEL | MB_ICONWARNING);
+
+            if (rc == IDCANCEL)
+                break;
+            else if (rc == IDYES)
+                serialise_tree(object_tree, curr_filename);
+        }
+
         purge_tree(object_tree);
         DestroyWindow(auxGetHWND());
         break;
@@ -695,6 +777,68 @@ Command(int wParam, int lParam)
         }
         break;
 
+    case ID_VIEW_TOP:
+        facing_plane = &plane_XY;
+        facing_index = PLANE_XY;
+        Log("Facing plane XY\r\n");
+        trackball_InitQuat(quat_XY);
+        break;
+
+    case ID_VIEW_FRONT:
+        facing_plane = &plane_YZ;
+        facing_index = PLANE_YZ;
+        Log("Facing plane YZ\r\n");
+        trackball_InitQuat(quat_YZ);
+        break;
+
+    case ID_VIEW_LEFT:
+        facing_plane = &plane_XZ;
+        facing_index = PLANE_XZ;
+        Log("Facing plane XZ\r\n");
+        trackball_InitQuat(quat_XZ);
+        break;
+
+    case ID_VIEW_BOTTOM:
+        facing_plane = &plane_mXY;
+        facing_index = PLANE_MINUS_XY;
+        Log("Facing plane -XY\r\n");
+        trackball_InitQuat(quat_mXY);
+        break;
+
+    case ID_VIEW_BACK:
+        facing_plane = &plane_mYZ;
+        facing_index = PLANE_MINUS_YZ;
+        Log("Facing plane -YZ\r\n");
+        trackball_InitQuat(quat_mYZ);
+        break;
+
+    case ID_VIEW_RIGHT:
+        facing_plane = &plane_mXZ;
+        facing_index = PLANE_MINUS_XZ;
+        Log("Facing plane -XZ\r\n");
+        trackball_InitQuat(quat_mXZ);
+        break;
+
+    case ID_VIEW_ORTHO:
+        hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
+        if (!view_ortho)
+        {
+            view_ortho = TRUE;
+            CheckMenuItem(hMenu, ID_VIEW_PERSPECTIVE, MF_UNCHECKED);
+            CheckMenuItem(hMenu, ID_VIEW_ORTHO, MF_CHECKED);
+        }
+        break;
+
+    case ID_VIEW_PERSPECTIVE:
+        hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
+        if (view_ortho)
+        {
+            view_ortho = FALSE;
+            CheckMenuItem(hMenu, ID_VIEW_ORTHO, MF_UNCHECKED);
+            CheckMenuItem(hMenu, ID_VIEW_PERSPECTIVE, MF_CHECKED);
+        }
+        break;
+
     case ID_FILE_NEW:
     case ID_FILE_OPEN:
         if (drawing_changed)
@@ -705,7 +849,6 @@ Command(int wParam, int lParam)
                 break;
             else if (rc == IDYES)
                 serialise_tree(object_tree, curr_filename);
-
         }
 
         purge_tree(object_tree);
@@ -836,6 +979,21 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             case IDB_CIRCLE:
                 app_state = STATE_STARTING_CIRCLE;
                 break;
+
+            case IDB_XY:
+                facing_plane = &plane_XY;
+                facing_index = PLANE_XY;
+                Log("Facing plane XY\r\n");
+                trackball_InitQuat(quat_XY);
+                break;   // TODO set focus back to main window so trackball starts working
+
+            case IDB_YZ:
+                facing_plane = &plane_YZ;
+                facing_index = PLANE_YZ;
+                Log("Facing plane YZ\r\n");
+                trackball_InitQuat(quat_YZ);
+                break;
+
             }
         }
 
@@ -963,6 +1121,8 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
         hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
         CheckMenuItem(hMenu, ID_VIEW_TOOLS, view_tools ? MF_CHECKED : MF_UNCHECKED);
         CheckMenuItem(hMenu, ID_VIEW_DEBUGLOG, view_debug ? MF_CHECKED : MF_UNCHECKED);
+        CheckMenuItem(hMenu, ID_VIEW_ORTHO, view_ortho ? MF_CHECKED : MF_UNCHECKED);
+        CheckMenuItem(hMenu, ID_VIEW_PERSPECTIVE, !view_ortho ? MF_CHECKED : MF_UNCHECKED);
 
         hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_LOFTYCAD));
 

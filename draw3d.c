@@ -154,10 +154,14 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                             (
                             obj->prev,
                             new_point.x - picked_point.x,
-                            new_point.x - picked_point.y,
-                            new_point.x - picked_point.z
+                            new_point.y - picked_point.y,
+                            new_point.z - picked_point.z
                             );
+                        clear_move_copy_flags(obj->prev);
+
                     }
+                    picked_point = new_point;
+
                     break;
 
                 case STATE_DRAWING_EDGE:
@@ -409,22 +413,22 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
     if (curr_obj != NULL && !highlit)
         draw_object(curr_obj, FALSE, TRUE);
 
-    // Draw axes XYZ in RGB. TODO: move these to bottom corner and get them out of the way
+    // Draw axes XYZ in RGB. 
     glPushName(0);
     glBegin(GL_LINES);
-    glColor3d(1.0, 0.0, 0.0);
+    glColor3d(1.0, 0.4, 0.4);
     glVertex3d(0.0, 0.0, 0.0);
-    glVertex3d(1.0, 0.0, 0.0);
+    glVertex3d(100.0, 0.0, 0.0);
     glEnd();
     glBegin(GL_LINES);
-    glColor3d(0.0, 1.0, 0.0);
+    glColor3d(0.4, 1.0, 0.4);
     glVertex3d(0.0, 0.0, 0.0);
-    glVertex3d(0.0, 1.0, 0.0);
+    glVertex3d(0.0, 100.0, 0.0);
     glEnd();
     glBegin(GL_LINES);
-    glColor3d(0.0, 0.0, 1.0);
+    glColor3d(0.4, 0.4, 1.0);
     glVertex3d(0.0, 0.0, 0.0);
-    glVertex3d(0.0, 0.0, 1.0);
+    glVertex3d(0.0, 0.0, 100.0);
     glEnd();
 
 #if 0

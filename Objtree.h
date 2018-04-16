@@ -44,6 +44,8 @@ typedef struct Object
     unsigned int    save_count;     // Number of times the tree has been serialised. Shared objects
                                     // will not be written again if their save_count is up to date
                                     // with the current save count for the tree.
+    struct Object   *copied_to;     // When an object is copied, the original is set to point to
+                                    // the copy here. This allows sharing to be kept the same.
     struct Object   *next;          // The next object in any list, e.g. the entire object tree, 
                                     // or the list of faces in a volume, etc. Not always used if
                                     // there is a fixed array of objects, e.g. two end points
@@ -51,15 +53,13 @@ typedef struct Object
     struct Object   *prev;          // The previous object in a list. NULL if the first.
 } Object;
 
-// Point (vertex). Points are the only kind of object that can be shared.
+// Point (vertex). Points and edges are the only kind of objects that can be shared.
 typedef struct Point
 {
     struct Object   hdr;            // Header
     float           x;              // Coordinates
     float           y;
     float           z;
-    struct Point    *copied_to;     // When a point is copied, the original is set to point to
-                                    // the copy here. This allows sharing to be kept the same.
     BOOL            moved;          // When a point is moved, this is set TRUE. This stops shared
                                     // points from being moved twice.
 } Point;
@@ -173,6 +173,8 @@ void link_tail(Object *new_obj, Object **obj_list);
 // Copy and move object
 Object *copy_obj(Object *obj, float xoffset, float yoffset, float zoffset);
 void move_obj(Object *obj, float xoffset, float yoffset, float zoffset);
+void clear_move_copy_flags(Object *obj);
+Object *find_top_level_parent(Object *tree, Object *obj);
 
 // Regenerate a face's view list
 void gen_view_list(Face *face);

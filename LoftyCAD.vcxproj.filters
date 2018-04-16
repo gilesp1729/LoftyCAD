@@ -51,6 +51,9 @@
     <ClInclude Include="draw3d.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Trackbal.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -133,6 +136,9 @@
       <Filter>Resource Files</Filter>
     </Image>
     <Image Include="icon-point.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="icon-xy.ico">
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>

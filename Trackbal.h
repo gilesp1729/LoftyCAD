@@ -11,6 +11,9 @@ extern void
 trackball_Init( GLint width, GLint height );
 
 extern void
+trackball_InitQuat(float quat[4]);
+
+extern void
 trackball_Resize( GLint width, GLint height );
 
 extern void CALLBACK

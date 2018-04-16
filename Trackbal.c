@@ -38,6 +38,12 @@ BOOL    gbLeftMouse = FALSE;
 BOOL    gbSpinning = FALSE;
 float   curquat[4], lastquat[4];
 
+// Slerp parameters.
+float   start_quat[4], desired_quat[4];
+BOOL    slerping = FALSE;
+float   slerp_step = 0.05;
+float   slerp_t;
+
 /*
  * This size should really be based on the distance from the center of
  * rotation to the point on the object underneath the mouse.  That
@@ -52,6 +58,8 @@ float   curquat[4], lastquat[4];
  */
 static float tb_project_to_sphere(float, float, float);
 static void normalize_quat(float [4]);
+void qcopy(const float *q1, float *q2);
+BOOL slerp(float start[4], float desired[4], float result[4], float t);
 
 void 
 trackball_Init( GLint width, GLint height )
@@ -61,6 +69,16 @@ trackball_Init( GLint width, GLint height )
     giHeight = height;
 
     trackball_calc_quat( curquat, 0.0f, 0.0f, 0.0f, 0.0f );
+}
+
+// Set a desired rotation, and start slerping round to it.
+void
+trackball_InitQuat(float quat[4])
+{
+    qcopy(curquat, start_quat);
+    qcopy(quat, desired_quat);
+    slerp_t = 0;
+    slerping = TRUE;
 }
 
 void
@@ -115,7 +133,13 @@ trackball_CalcRotMatrix( GLfloat matRot[4][4] )
 {
     POINT pt;
 
-    if (gbLeftMouse)
+    if (slerping)
+    {
+        gbSpinning = FALSE;
+        slerp_t += slerp_step;
+        slerping = slerp(start_quat, desired_quat, curquat, slerp_t);
+    }
+    else if (gbLeftMouse)
     {
         auxGetMouseLoc( &pt.x, &pt.y );
 
@@ -144,7 +168,9 @@ trackball_CalcRotMatrix( GLfloat matRot[4][4] )
                 gbSpinning = TRUE;
             }
             else
+            {
                 gbSpinning = FALSE;
+            }
 
             glMouseDownX = pt.x;
             glMouseDownY = pt.y;
@@ -231,6 +257,20 @@ vadd(const float *src1, const float *src2, float *dst)
     dst[0] = src1[0] + src2[0];
     dst[1] = src1[1] + src2[1];
     dst[2] = src1[2] + src2[2];
+}
+
+void
+qcopy(const float *q1, float *q2)
+{
+    register int i;
+    for (i = 0; i < 4; i++)
+        q2[i] = q1[i];
+}
+
+float
+qdot(const float *q1, const float *q2)
+{
+    return q1[0] * q2[0] + q1[1] * q2[1] + q1[2] * q2[2] + q1[3] * q2[3];
 }
 
 /*
@@ -360,6 +400,82 @@ trackball_add_quats(float q1[4], float q2[4], float dest[4])
         normalize_quat(dest);
     }
 }
+
+// Slerp from start_quat to desired_quat in steps of t in [0,1]. Return FALSE whan done.
+BOOL
+slerp(float start[4], float desired[4], float result[4], float t)
+{
+    double theta, theta_0, s0, s1;
+    double dot = qdot(start, desired);
+
+    if (dot < 0.0f)                 // swap to go the short way round
+    {
+        start[0] = -start[0];
+        start[1] = -start[1];
+        start[2] = -start[2];
+        start[3] = -start[3];
+        dot = -dot;
+    }
+
+    if (dot > 0.99 || t > 0.95)
+    {
+        qcopy(desired, result);    // we're finished
+        return FALSE;
+    }
+
+    theta_0 = acos(dot);    // theta_0 = angle between input vectors
+    theta = theta_0 * t;    // theta = angle between v0 and result
+
+    s0 = cos(theta) - dot * sin(theta) / sin(theta_0);  // == sin(theta_0 - theta) / sin(theta_0)
+    s1 = sin(theta) / sin(theta_0);
+
+    result[0] = s0 * start[0] + s1 * desired[0];
+    result[1] = s0 * start[1] + s1 * desired[1];
+    result[2] = s0 * start[2] + s1 * desired[2];
+    result[3] = s0 * start[3] + s1 * desired[3];
+
+    return TRUE;
+}
+
+#if 0
+Quaternion slerp(Quaternion v0, Quaternion v1, double t) {
+    // Only unit quaternions are valid rotations.
+    // Normalize to avoid undefined behavior.
+    v0.normalize();
+    v1.normalize();
+
+    // Compute the cosine of the angle between the two vectors.
+    double dot = dot_product(v0, v1);
+
+    // If the dot product is negative, the quaternions
+    // have opposite handed-ness and slerp won't take
+    // the shorter path. Fix by reversing one quaternion.
+    if (dot < 0.0f) {
+        v1 = -v1;
+        dot = -dot;
+    }
+
+    const double DOT_THRESHOLD = 0.9995;
+    if (dot > DOT_THRESHOLD) {
+        // If the inputs are too close for comfort, linearly interpolate
+        // and normalize the result.
+
+        Quaternion result = v0 + t*(v1 – v0);
+        result.normalize();
+        return result;
+    }
+
+    Clamp(dot, -1, 1);           // Robustness: Stay within domain of acos()
+    double theta_0 = acos(dot);  // theta_0 = angle between input vectors
+    double theta = theta_0*t;    // theta = angle between v0 and result
+
+    double s0 = cos(theta) - dot * sin(theta) / sin(theta_0);  // == sin(theta_0 - theta) / sin(theta_0)
+    double s1 = sin(theta) / sin(theta_0);
+
+    return (s0 * v0) + (s1 * v1);
+}
+#endif
+
 
 /*
  * Quaternions always obey:  a^2 + b^2 + c^2 + d^2 = 1.0

@@ -27,6 +27,7 @@ Object *obj_new(void)
     obj->next = NULL;
     obj->prev = NULL;
     obj->save_count = 0;
+    obj->copied_to = NULL;
     return obj;
 }
 
@@ -52,8 +53,8 @@ Point *point_new(float x, float y, float z)
     pt->x = x;
     pt->y = y;
     pt->z = z;
+    pt->hdr.copied_to = NULL;
     pt->hdr.save_count = 0;
-    pt->copied_to = NULL;
     pt->moved = FALSE;
     return pt;
 }
@@ -70,6 +71,7 @@ Point *point_newp(Point *p)
     pt->x = p->x;
     pt->y = p->y;
     pt->z = p->z;
+    pt->hdr.copied_to = NULL;
     pt->hdr.save_count = 0;
     return pt;
 }
@@ -91,6 +93,7 @@ Edge *edge_new(EDGE edge_type)
         se->edge.hdr.ID = objid++;
         se->edge.hdr.next = NULL;
         se->edge.hdr.prev = NULL;
+        se->edge.hdr.copied_to = NULL;
         se->edge.hdr.save_count = 0;
         se->edge.type = edge_type;
         return (Edge *)se;
@@ -101,6 +104,7 @@ Edge *edge_new(EDGE edge_type)
         ce->edge.hdr.ID = objid++;
         ce->edge.hdr.next = NULL;
         ce->edge.hdr.prev = NULL;
+        ce->edge.hdr.copied_to = NULL;
         ce->edge.hdr.save_count = 0;
         ce->edge.type = edge_type;
         return (Edge *)ce;
@@ -111,6 +115,7 @@ Edge *edge_new(EDGE edge_type)
         ae->edge.hdr.ID = objid++;
         ae->edge.hdr.next = NULL;
         ae->edge.hdr.prev = NULL;
+        ae->edge.hdr.copied_to = NULL;
         ae->edge.hdr.save_count = 0;
         ae->edge.type = edge_type;
         return (Edge *)ae;
@@ -121,6 +126,7 @@ Edge *edge_new(EDGE edge_type)
         be->edge.hdr.ID = objid++;
         be->edge.hdr.next = NULL;
         be->edge.hdr.prev = NULL;
+        be->edge.hdr.copied_to = NULL;
         be->edge.hdr.save_count = 0;
         be->edge.type = edge_type;
         return (Edge *)be;
@@ -135,6 +141,7 @@ Face *face_new(Plane norm)
     face->hdr.ID = objid++;
     face->hdr.next = NULL;
     face->hdr.prev = NULL;
+    face->hdr.copied_to = NULL;
     face->hdr.save_count = 0;
     face->normal = norm;
     face->vol = NULL;
@@ -152,6 +159,7 @@ Volume *vol_new(Face *attached_to)
     vol->hdr.ID = objid++;
     vol->hdr.next = NULL;
     vol->hdr.prev = NULL;
+    vol->hdr.copied_to = NULL;
     vol->hdr.save_count = 0;
     vol->faces = NULL;
     vol->attached_to = attached_to;
@@ -207,6 +215,7 @@ link_tail(Object *new_obj, Object **obj_list)
 }
 
 // Clear the moved and copied_to flags on all points referenced by the object.
+// Call this after move_obj or copy_obj.
 void
 clear_move_copy_flags(Object *obj)
 {
@@ -222,7 +231,7 @@ clear_move_copy_flags(Object *obj)
     case OBJ_POINT:
         p = (Point *)obj;
         p->moved = FALSE;
-        p->copied_to = NULL;
+        obj->copied_to = NULL;
         break;
 
     case OBJ_EDGE:
@@ -233,6 +242,7 @@ clear_move_copy_flags(Object *obj)
             se = (StraightEdge *)obj;
             clear_move_copy_flags((Object *)se->endpoints[0]);
             clear_move_copy_flags((Object *)se->endpoints[1]);
+            obj->copied_to = NULL;
             break;
 
         case EDGE_CIRCLE:     // TODO others
@@ -248,12 +258,16 @@ clear_move_copy_flags(Object *obj)
         face = (Face *)obj;
         for (edge = face->edges; edge != NULL; edge = (Edge *)edge->hdr.next)
             clear_move_copy_flags((Object *)edge);
+        for (p = face->view_list; p != NULL; p = (Point *)p->hdr.next)
+            clear_move_copy_flags((Object *)p);
+        obj->copied_to = NULL;
         break;
 
     case OBJ_VOLUME:
         vol = (Volume *)obj;
         for (face = vol->faces; face != NULL; face = (Face *)face->hdr.next)
             clear_move_copy_flags((Object *)face);
+        obj->copied_to = NULL;
         break;
     }
 }
@@ -274,34 +288,43 @@ copy_obj(Object *obj, float xoffset, float yoffset, float zoffset)
     {
     case OBJ_POINT:
         p = (Point *)obj;
-        if (p->copied_to != NULL)
+        if (obj->copied_to != NULL)
         {
-            new_obj = (Object *)p->copied_to;
+            new_obj = obj->copied_to;
         }
         else
         {
             new_obj = (Object *)point_new(p->x + xoffset, p->y + yoffset, p->z + zoffset);
-            p->copied_to = (Point *)new_obj;
+            obj->copied_to = new_obj;
         }
         break;
 
     case OBJ_EDGE:
-        new_obj = (Object *)edge_new(((Edge *)obj)->type);
-        type = ((Edge *)obj)->type & ~EDGE_CONSTRUCTION;
-        switch (type)
+        if (obj->copied_to != NULL)
         {
-        case EDGE_STRAIGHT:
-            se = (StraightEdge *)obj;
-            ne = (StraightEdge *)new_obj;
-            ne->endpoints[0] = (Point *)copy_obj((Object *)se->endpoints[0], xoffset, yoffset, zoffset);
-            ne->endpoints[1] = (Point *)copy_obj((Object *)se->endpoints[1], xoffset, yoffset, zoffset);
-            break;
+            new_obj = obj->copied_to;
+        }
+        else
+        {
+            new_obj = (Object *)edge_new(((Edge *)obj)->type);
+            obj->copied_to = new_obj;
 
-        case EDGE_CIRCLE:     // TODO others
-        case EDGE_ARC:
-        case EDGE_BEZIER:
-            ASSERT(FALSE, "Not implemented");
-            break;
+            type = ((Edge *)obj)->type & ~EDGE_CONSTRUCTION;
+            switch (type)
+            {
+            case EDGE_STRAIGHT:
+                se = (StraightEdge *)obj;
+                ne = (StraightEdge *)new_obj;
+                ne->endpoints[0] = (Point *)copy_obj((Object *)se->endpoints[0], xoffset, yoffset, zoffset);
+                ne->endpoints[1] = (Point *)copy_obj((Object *)se->endpoints[1], xoffset, yoffset, zoffset);
+                break;
+
+            case EDGE_CIRCLE:     // TODO others
+            case EDGE_ARC:
+            case EDGE_BEZIER:
+                ASSERT(FALSE, "Not implemented");
+                break;
+            }
         }
 
         break;
@@ -328,7 +351,6 @@ copy_obj(Object *obj, float xoffset, float yoffset, float zoffset)
         }
         break;
     }
-    clear_move_copy_flags(obj);
  
     return new_obj;
 }
@@ -380,6 +402,8 @@ move_obj(Object *obj, float xoffset, float yoffset, float zoffset)
         face = (Face *)obj;
         for (edge = face->edges; edge != NULL; edge = (Edge *)edge->hdr.next)
             move_obj((Object *)edge, xoffset, yoffset, zoffset);
+        for (p = face->view_list; p != NULL; p = (Point *)p->hdr.next)
+            move_obj((Object *)p, xoffset, yoffset, zoffset);
         break;
 
     case OBJ_VOLUME:
@@ -388,7 +412,83 @@ move_obj(Object *obj, float xoffset, float yoffset, float zoffset)
             move_obj((Object *)face, xoffset, yoffset, zoffset);
         break;
     }
-    clear_move_copy_flags(obj);
+}
+
+// Find an object owned by another object; return TRUE if it is found.
+BOOL
+find_obj(Object *parent, Object *obj)
+{
+    EDGE type;
+    StraightEdge *se;
+    Edge *edge;
+    Face *face;
+    Volume *vol;
+
+    switch (parent->type)
+    {
+    case OBJ_POINT:
+        ASSERT(FALSE, "A Point cannot be a parent");
+        return FALSE;
+
+    case OBJ_EDGE:
+        type = ((Edge *)obj)->type & ~EDGE_CONSTRUCTION;
+        switch (type)
+        {
+        case EDGE_STRAIGHT:
+            se = (StraightEdge *)obj;
+            if ((Object *)se->endpoints[0] == obj)
+                return TRUE;
+            if ((Object *)se->endpoints[1] == obj)
+                return TRUE;
+            break;
+
+        case EDGE_CIRCLE:     // TODO others
+        case EDGE_ARC:
+        case EDGE_BEZIER:
+            ASSERT(FALSE, "Not implemented");
+            break;
+        }
+
+        break;
+
+    case OBJ_FACE:
+        face = (Face *)parent;
+        for (edge = face->edges; edge != NULL; edge = (Edge *)edge->hdr.next)
+        {
+            if ((Object *)edge == obj)
+                return TRUE;
+            if (find_obj((Object *)edge, obj))
+                return TRUE;
+        }
+        break;
+
+    case OBJ_VOLUME:
+        vol = (Volume *)parent;
+        for (face = vol->faces; face != NULL; face = (Face *)face->hdr.next)
+        {
+            if ((Object *)face == obj)
+                return TRUE;
+            if (find_obj((Object *)face, obj))
+                return TRUE;
+        }
+        break;
+    }
+
+    return FALSE;
+}
+
+// Find the top-level parent object (i.e. in the object tree) for the given object.
+Object *
+find_top_level_parent(Object *tree, Object *obj)
+{
+    Object *top_level;
+
+    for (top_level = tree; top_level != NULL; top_level = top_level->next)
+    {
+        if (top_level == obj || find_obj(top_level, obj))
+            return top_level;
+    }
+    return NULL;
 }
 
 // Clean out the view list for a face, by putting all the points on the free list.
