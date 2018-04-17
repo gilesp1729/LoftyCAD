@@ -41,7 +41,7 @@ float   curquat[4], lastquat[4];
 // Slerp parameters.
 float   start_quat[4], desired_quat[4];
 BOOL    slerping = FALSE;
-float   slerp_step = 0.05;
+float   slerp_step = 0.1;
 float   slerp_t;
 
 /*

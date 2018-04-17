@@ -316,8 +316,55 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                 case STATE_DRAWING_ARC:
                 case STATE_DRAWING_BEZIER:
                 case STATE_DRAWING_MEASURE:
-                case STATE_DRAWING_EXTRUDE:
                     ASSERT(FALSE, "Not implemented");
+                    break;
+
+                case STATE_DRAWING_EXTRUDE:
+                    if (picked_obj != NULL && picked_obj->type == OBJ_FACE)
+                    {
+                        Plane proj_plane = *facing_plane;
+                        Face *face = (Face *)picked_obj;
+                        float length;
+
+                        // Move the picked face by a delta in XYZ up its own normal
+                        if (face->vol == NULL)
+                        {
+                            // TODO: 2 cases - picked_obj is a face on a volume, or it is a face on its own.
+                            // The latter need to create a volume first, otherwise just move the face
+
+
+
+                        }
+
+                        // Project new_point back to the face's normal wrt. picked_point,
+                        // as seen from the eye position. First project onto the facing plane
+                        // through the picked point
+                        proj_plane.refpt = picked_point;
+                        intersect_ray_plane(pt.x, pt.y, &proj_plane, &new_point);
+
+                        // Project picked-new onto the face's normal
+                        length = dot
+                            (
+                            new_point.x - picked_point.x,
+                            new_point.y - picked_point.y,
+                            new_point.z - picked_point.z,
+                            face->normal.A,
+                            face->normal.B,
+                            face->normal.C
+                            );
+
+                        move_obj
+                            (
+                            picked_obj,
+                            face->normal.A * length,
+                            face->normal.B * length,
+                            face->normal.C * length
+                            );
+                        clear_move_copy_flags(picked_obj);
+
+                        picked_point = new_point;
+                    }
+
                     break;
 
                 default:

@@ -68,11 +68,11 @@ Plane plane_mXZ = { 0, };
 Plane plane_mYZ = { 0, };
 
 float quat_XY[4] = { 0, 0, 0, 1 };
-float quat_YZ[4] = { 0, -0.707, 0, 0.707 };
-float quat_XZ[4] = { -0.707, 0, 0, -0.707 };
+float quat_YZ[4] = { -0.5f, -0.5f, -0.5f, -0.5f };
+float quat_XZ[4] = { -0.707f, 0, 0, -0.707f };
 float quat_mXY[4] = { 0, 1, 0, 0 };
-float quat_mYZ[4] = { -0.5, 0.5, 0.5, -0.5 };
-float quat_mXZ[4] = { 0, -0.707, -0.707, 0 };
+float quat_mYZ[4] = { -0.5f, 0.5f, 0.5f, -0.5f };
+float quat_mXZ[4] = { 0, -0.707f, -0.707f, 0 };
 
 Plane *facing_plane = &plane_XY;
 PLANE facing_index = PLANE_XY;
@@ -622,6 +622,13 @@ left_up(AUX_EVENTREC *event)
         left_mouse = FALSE;
         app_state = STATE_NONE;
         break;
+    case STATE_DRAWING_EXTRUDE:
+        ReleaseCapture();
+        left_mouse = FALSE;
+        app_state = STATE_NONE;
+        drawing_changed = TRUE;
+        // TODO regenerate view lists for faces on volume that has changed
+        break;
 
     case STATE_STARTING_RECT:
     case STATE_STARTING_CIRCLE:
@@ -904,14 +911,19 @@ Command(int wParam, int lParam)
     return 0;
 }
 
-// Put the icon in the button, and set up a tooltip for the button.
+// Put the icon in the button (if not zero) and set up a tooltip for the button.
 void
 LoadAndDisplayIcon(HWND hWnd, int icon, int button, int toolstring)
 {
     char buffer[256];
-    HICON hIcon = LoadIcon(hInst, MAKEINTRESOURCE(icon));
-    SendDlgItemMessage(hWnd, button, BM_SETIMAGE, (WPARAM)IMAGE_ICON, (LPARAM)hIcon);
     HWND hWndButton = GetDlgItem(hWnd, button);
+    HICON hIcon;
+    
+    if (icon != 0)
+    {
+        hIcon = LoadIcon(hInst, MAKEINTRESOURCE(icon));
+        SendDlgItemMessage(hWnd, button, BM_SETIMAGE, (WPARAM)IMAGE_ICON, (LPARAM)hIcon);
+    }
 
     // Create a tooltip.
     HWND hwndTT = CreateWindowEx(WS_EX_TOPMOST, TOOLTIPS_CLASS, NULL,
@@ -954,6 +966,13 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         //  LoadAndDisplayIcon(hWnd, IDI_BEZIER, IDB_BEZIER, IDS_BEZIER);
         //  LoadAndDisplayIcon(hWnd, IDI_ARC, IDB_ARC, IDS_ARC);
         //  LoadAndDisplayIcon(hWnd, IDI_MEASURE, IDB_MEASURE, IDS_MEASURE);
+        LoadAndDisplayIcon(hWnd, IDI_EXTRUDE, IDB_EXTRUDE, IDS_EXTRUDE);
+        LoadAndDisplayIcon(hWnd, 0, IDB_XY, IDS_XY);
+        LoadAndDisplayIcon(hWnd, 0, IDB_YZ, IDS_YZ);
+        LoadAndDisplayIcon(hWnd, 0, IDB_XZ, IDS_XZ);
+        LoadAndDisplayIcon(hWnd, 0, IDB_MINUS_XY, IDS_MINUS_XY);
+        LoadAndDisplayIcon(hWnd, 0, IDB_MINUS_YZ, IDS_MINUS_YZ);
+        LoadAndDisplayIcon(hWnd, 0, IDB_MINUS_XZ, IDS_MINUS_XZ);
 
         // For now grey out unimplemented ones
         EnableWindow(GetDlgItem(hWnd, IDB_POINT), FALSE);
@@ -980,20 +999,57 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 app_state = STATE_STARTING_CIRCLE;
                 break;
 
+            case IDB_EXTRUDE:
+                app_state = STATE_STARTING_EXTRUDE;
+                break;
+
             case IDB_XY:
                 facing_plane = &plane_XY;
                 facing_index = PLANE_XY;
                 Log("Facing plane XY\r\n");
                 trackball_InitQuat(quat_XY);
-                break;   // TODO set focus back to main window so trackball starts working
+                SetWindowPos(auxGetHWND(), HWND_TOP, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOREPOSITION);
+                break;
 
             case IDB_YZ:
                 facing_plane = &plane_YZ;
                 facing_index = PLANE_YZ;
                 Log("Facing plane YZ\r\n");
                 trackball_InitQuat(quat_YZ);
+                SetWindowPos(auxGetHWND(), HWND_TOP, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOREPOSITION);
                 break;
 
+            case IDB_XZ:
+                facing_plane = &plane_XZ;
+                facing_index = PLANE_XZ;
+                Log("Facing plane XZ\r\n");
+                trackball_InitQuat(quat_XZ);
+                SetWindowPos(auxGetHWND(), HWND_TOP, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOREPOSITION);
+                break;
+
+            case IDB_MINUS_XY:
+                facing_plane = &plane_mXY;
+                facing_index = PLANE_MINUS_XY;
+                Log("Facing plane -XY\r\n");
+                trackball_InitQuat(quat_mXY);
+                SetWindowPos(auxGetHWND(), HWND_TOP, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOREPOSITION);
+                break;
+
+            case IDB_MINUS_YZ:
+                facing_plane = &plane_mYZ;
+                facing_index = PLANE_MINUS_YZ;
+                Log("Facing plane -YZ\r\n");
+                trackball_InitQuat(quat_mYZ);
+                SetWindowPos(auxGetHWND(), HWND_TOP, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOREPOSITION);
+                break;
+
+            case IDB_MINUS_XZ:
+                facing_plane = &plane_mXZ;
+                facing_index = PLANE_MINUS_XZ;
+                Log("Facing plane -XZ\r\n");
+                trackball_InitQuat(quat_mXZ);
+                SetWindowPos(auxGetHWND(), HWND_TOP, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOREPOSITION);
+                break;
             }
         }
 
