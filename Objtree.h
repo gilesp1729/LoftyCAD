@@ -140,6 +140,9 @@ typedef struct Face
                                     // or moving. Other changes (inserting points, etc) will also be
                                     // performed on the pair.
 #endif
+    struct Point    *initial_point; // Point in the first edge that the face starts from. Used to allow
+                                    // view lists to be built up independent of the order of points
+                                    // in any edge.
     struct Point    *view_list;     // List of XYZ coordinates of GL points to be rendered as a line loop
                                     // (for the edges) and a polygon (for the face). Regenerated whenever
                                     // something has changed. Doubly linked list.

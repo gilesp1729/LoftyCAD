@@ -145,6 +145,7 @@ Face *face_new(Plane norm)
     face->hdr.save_count = 0;
     face->normal = norm;
     face->vol = NULL;
+    face->initial_point = NULL;
     face->view_list = NULL;
     face->edges = NULL;
     face->view_valid = FALSE;
@@ -306,9 +307,11 @@ copy_obj(Object *obj, float xoffset, float yoffset, float zoffset)
         }
         else
         {
+            // Copy the edge.
             new_obj = (Object *)edge_new(((Edge *)obj)->type);
             obj->copied_to = new_obj;
 
+            // Copy the points
             type = ((Edge *)obj)->type & ~EDGE_CONSTRUCTION;
             switch (type)
             {
@@ -332,11 +335,34 @@ copy_obj(Object *obj, float xoffset, float yoffset, float zoffset)
     case OBJ_FACE:
         face = (Face *)obj;
         new_face = face_new(face->normal);
+        new_face->type = face->type;
         new_obj = (Object *)new_face;
+
+        // Copy the edges
         for (edge = face->edges; edge != NULL; edge = (Edge *)edge->hdr.next)
         {
             new_edge = (Edge *)copy_obj((Object *)edge, xoffset, yoffset, zoffset);
             link_tail((Object *)new_edge, (Object **)&new_face->edges);
+        }
+
+        // Set the initial point corresponding to the original
+        switch (((Edge *)face->edges)->type)
+        {
+        case EDGE_STRAIGHT:
+            se = (StraightEdge *)face->edges;
+            ne = (StraightEdge *)new_face->edges;
+            if (face->initial_point = se->endpoints[0])
+            {
+                new_face->initial_point = ne->endpoints[0];
+            }
+            else
+            {
+                ASSERT(face->initial_point == se->endpoints[1], "Point order messed up");
+                new_face->initial_point = ne->endpoints[1];
+            }
+            break;
+
+            // TODO other types
         }
         break;
 
@@ -518,7 +544,7 @@ void
 gen_view_list(Face *face)
 {
     Edge *e;
-    BOOL start_point;
+    Point *last_point;
     Point *p;
     StraightEdge *se;
 
@@ -528,36 +554,43 @@ gen_view_list(Face *face)
     free_view_list(face);
 
     // Add points at tail of list, to preserve order
-    start_point = FALSE;
+    // First the start point
+    switch (face->edges->type)
+    {
+    case EDGE_STRAIGHT:
+        p = point_newp(face->initial_point);
+        p->hdr.ID = 0;
+        link_tail((Object *)p, (Object **)&face->view_list);
+        break;
+
+    case EDGE_CIRCLE:     // TODO others
+    case EDGE_ARC:
+    case EDGE_BEZIER:
+        ASSERT(FALSE, "Not implemented");
+        break;
+    }
+
+    last_point = face->initial_point;
+
     for (e = face->edges; e != NULL; e = (Edge *)e->hdr.next)
     {
-        if (!start_point)
-        {
-            // First the start point
-            switch (e->type)
-            {
-            case EDGE_STRAIGHT:
-                se = (StraightEdge *)e;
-                p = point_newp(se->endpoints[0]);
-                p->hdr.ID = 0;
-                link_tail((Object *)p, (Object **)&face->view_list);
-                break;
-
-            case EDGE_CIRCLE:     // TODO others
-            case EDGE_ARC:
-            case EDGE_BEZIER:
-                ASSERT(FALSE, "Not implemented");
-                break;
-            }
-            start_point = TRUE;
-        }
-
-        // Then the subsequent points, assuming the edges follow on
+        // Then the subsequent points. Edges will follow in order, but their points
+        // may be reversed.
         switch (e->type)
         {
         case EDGE_STRAIGHT:
             se = (StraightEdge *)e;
-            p = point_newp(se->endpoints[1]);
+            if (last_point == se->endpoints[0])
+            {
+                last_point = se->endpoints[1];
+            }
+            else
+            {
+                ASSERT(last_point == se->endpoints[1], "Point order messed up");
+                last_point = se->endpoints[0];
+            }
+
+            p = point_newp(last_point);
             p->hdr.ID = 0;
             link_tail((Object *)p, (Object **)&face->view_list);
             break;
@@ -720,8 +753,9 @@ serialise_obj(Object *obj, FILE *f)
 
     case OBJ_FACE:
         face = (Face *)obj;
-        fprintf_s(f, "%s %f %f %f %f %f %f ",
+        fprintf_s(f, "%s %d %f %f %f %f %f %f ",
             facetypes[face->type],
+            face->initial_point->hdr.ID,
             face->normal.refpt.x, face->normal.refpt.y, face->normal.refpt.z,
             face->normal.A, face->normal.B, face->normal.C);
         for (edge = face->edges; edge != NULL; edge = (Edge *)edge->hdr.next)
@@ -869,6 +903,7 @@ deserialise_tree(Object **tree, char *filename)
             Face *face;
             Plane norm;
             FACE type;
+            Point *init_pt;
 
             tok = strtok_s(NULL, " \t\n", &nexttok);
             id = atoi(tok);
@@ -885,6 +920,10 @@ deserialise_tree(Object **tree, char *filename)
 
 
             }
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            id = atoi(tok);
+            ASSERT(id != 0 && object[id] != NULL && object[id]->type == OBJ_POINT, "Bad initial point ID");
+            init_pt = (Point *)object[id];
 
             tok = strtok_s(NULL, " \t\n", &nexttok);
             norm.refpt.x = (float)atof(tok);
@@ -901,6 +940,7 @@ deserialise_tree(Object **tree, char *filename)
 
             face = face_new(norm);
             face->type = type;
+            face->initial_point = init_pt;
 
             while(TRUE)
             {

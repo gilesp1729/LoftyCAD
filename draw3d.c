@@ -279,7 +279,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                         p03 = point_newp(&p3);
 
                         // put the points into the view list
-                        rf->view_list = p00;
+                        rf->view_list = rf->initial_point = p00;
                         p00->hdr.next = (Object *)p01;
                         p01->hdr.next = (Object *)p02;
                         p02->hdr.next = (Object *)p03;
@@ -326,14 +326,32 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                         Face *face = (Face *)picked_obj;
                         float length;
 
-                        // Move the picked face by a delta in XYZ up its own normal
+                        // Can we extrude this face?
+                        if (face->type == FACE_CYLINDRICAL || face->type == FACE_GENERAL)
+                            break;
+
+                        // See if we need to create a volume first, otherwise just move the face
                         if (face->vol == NULL)
                         {
-                            // TODO: 2 cases - picked_obj is a face on a volume, or it is a face on its own.
-                            // The latter need to create a volume first, otherwise just move the face
+                            switch (face->type)
+                            {
+                            case FACE_RECT:
+                            case FACE_FLAT:
+                                // Clone the face with coincident edges/points, but in the
+                                // opposite sense (and with an opposite normal)
+
+
+                                // Create faces that link the picked face to its clone
 
 
 
+                                break;
+
+
+                            case FACE_CIRCLE:
+                                ASSERT(FALSE, "Not implemented yet");
+                                break;
+                            }
                         }
 
                         // Project new_point back to the face's normal wrt. picked_point,
@@ -353,6 +371,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                             face->normal.C
                             );
 
+                        // Move the picked face by a delta in XYZ up its own normal
                         move_obj
                             (
                             picked_obj,
