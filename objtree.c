@@ -133,7 +133,7 @@ Edge *edge_new(EDGE edge_type)
     }
 }
 
-Face *face_new(Plane norm)
+Face *face_new(FACE face_type, Plane norm)
 {
     Face *face = malloc(sizeof(Face));
 
@@ -143,12 +143,29 @@ Face *face_new(Plane norm)
     face->hdr.prev = NULL;
     face->hdr.copied_to = NULL;
     face->hdr.save_count = 0;
+    face->type = face_type;
     face->normal = norm;
     face->vol = NULL;
     face->initial_point = NULL;
     face->view_list = NULL;
-    face->edges = NULL;
     face->view_valid = FALSE;
+
+    face->n_edges = 0;
+    switch (face_type)
+    {
+    case FACE_RECT:
+    case FACE_CIRCLE:
+    case FACE_CYLINDRICAL:
+        face->max_edges = 4;
+        break;
+
+    default:  // general and flat faces may have many edges
+        face->max_edges = 16;
+        break;
+    }
+
+    face->edges = (Edge **)malloc(face->max_edges * sizeof(struct Edge *));
+
     return face;
 }
 
@@ -220,6 +237,7 @@ link_tail(Object *new_obj, Object **obj_list)
 void
 clear_move_copy_flags(Object *obj)
 {
+    int i;
     Point *p;
     EDGE type;
     StraightEdge *se;
@@ -257,8 +275,11 @@ clear_move_copy_flags(Object *obj)
 
     case OBJ_FACE:
         face = (Face *)obj;
-        for (edge = face->edges; edge != NULL; edge = (Edge *)edge->hdr.next)
+        for (i = 0; i < face->n_edges; i++)
+        {
+            edge = face->edges[i];
             clear_move_copy_flags((Object *)edge);
+        }
         for (p = face->view_list; p != NULL; p = (Point *)p->hdr.next)
             clear_move_copy_flags((Object *)p);
         obj->copied_to = NULL;
@@ -277,6 +298,7 @@ clear_move_copy_flags(Object *obj)
 Object *
 copy_obj(Object *obj, float xoffset, float yoffset, float zoffset)
 {
+    int i;
     Object *new_obj = NULL;
     Point *p;
     EDGE type;
@@ -334,23 +356,25 @@ copy_obj(Object *obj, float xoffset, float yoffset, float zoffset)
 
     case OBJ_FACE:
         face = (Face *)obj;
-        new_face = face_new(face->normal);
-        new_face->type = face->type;
+        new_face = face_new(face->type, face->normal);
         new_obj = (Object *)new_face;
 
         // Copy the edges
-        for (edge = face->edges; edge != NULL; edge = (Edge *)edge->hdr.next)
+        for (i = 0; i < face->n_edges; i++)
         {
+            edge = face->edges[i];
             new_edge = (Edge *)copy_obj((Object *)edge, xoffset, yoffset, zoffset);
-            link_tail((Object *)new_edge, (Object **)&new_face->edges);
+            new_face->edges[i] = new_edge;
         }
+        new_face->n_edges = face->n_edges;
+        new_face->max_edges = face->max_edges;
 
         // Set the initial point corresponding to the original
-        switch (((Edge *)face->edges)->type)
+        switch (((Edge *)face->edges[0])->type)
         {
         case EDGE_STRAIGHT:
-            se = (StraightEdge *)face->edges;
-            ne = (StraightEdge *)new_face->edges;
+            se = (StraightEdge *)face->edges[0];
+            ne = (StraightEdge *)new_face->edges[0];
             if (face->initial_point = se->endpoints[0])
             {
                 new_face->initial_point = ne->endpoints[0];
@@ -381,10 +405,77 @@ copy_obj(Object *obj, float xoffset, float yoffset, float zoffset)
     return new_obj;
 }
 
+// Copy a face, but reverse all the edges so the normal points the opposite
+// way. Make sure the edges containing the initial points still line up.
+Face 
+*clone_face_reverse(Face *face)
+{
+    Face *clone = face_new(face->type, face->normal);
+    Object *e;
+    Object *ne = NULL;
+    StraightEdge *se;
+    Point *last_point;
+    int i, idx;
+    //char buf[256];
+
+    clone->normal.A = -clone->normal.A;
+    clone->normal.B = -clone->normal.B;
+    clone->normal.C = -clone->normal.C;
+    clone->n_edges = face->n_edges;
+    clone->max_edges = face->max_edges;         // TODO - handle case where face->edges has been grown
+
+    // Set the initial point. 
+    last_point = face->initial_point;
+
+    // Copy the edges, reversing the order
+    for (i = 0; i < face->n_edges; i++)
+    {
+        e = (Object *)face->edges[i];
+        ne = copy_obj(e, 0, 0, 0);
+        if (i == 0)
+            idx = 0;
+        else
+            idx = face->n_edges - i;
+        clone->edges[idx] = (Edge *)ne;
+
+        // Follow the chain of points from e->initial_point
+        // TODO: this only works for straight edges
+        se = (StraightEdge *)e;
+        if (last_point == se->endpoints[0])
+        {
+            idx = 1;
+        }
+        else
+        {
+            ASSERT(last_point == se->endpoints[1], "Cloned edges don't join up");
+            idx = 0;
+        }
+        last_point = se->endpoints[idx];
+        if (i == 0)
+            clone->initial_point = ((StraightEdge *)ne)->endpoints[idx];
+    }
+
+#if 0
+    sprintf_s(buf, 256, "Clone %d IP %d\r\n", clone->hdr.ID, clone->initial_point->hdr.ID);
+    Log(buf);
+    sprintf_s(buf, 256, "%d %d\r\n", ((StraightEdge *)clone->edges[0])->endpoints[0]->hdr.ID, ((StraightEdge *)clone->edges[0])->endpoints[1]->hdr.ID);
+    Log(buf);
+    sprintf_s(buf, 256, "%d %d\r\n", ((StraightEdge *)clone->edges[1])->endpoints[0]->hdr.ID, ((StraightEdge *)clone->edges[1])->endpoints[1]->hdr.ID);
+    Log(buf);
+    sprintf_s(buf, 256, "%d %d\r\n", ((StraightEdge *)clone->edges[2])->endpoints[0]->hdr.ID, ((StraightEdge *)clone->edges[2])->endpoints[1]->hdr.ID);
+    Log(buf);
+    sprintf_s(buf, 256, "%d %d\r\n", ((StraightEdge *)clone->edges[3])->endpoints[0]->hdr.ID, ((StraightEdge *)clone->edges[3])->endpoints[1]->hdr.ID);
+    Log(buf);
+#endif
+
+    return clone;
+}
+
 // Move any object by an offset on all its point coordinates.
 void
 move_obj(Object *obj, float xoffset, float yoffset, float zoffset)
 {
+    int i;
     Point *p;
     EDGE type;
     StraightEdge *se;
@@ -426,10 +517,12 @@ move_obj(Object *obj, float xoffset, float yoffset, float zoffset)
 
     case OBJ_FACE:
         face = (Face *)obj;
-        for (edge = face->edges; edge != NULL; edge = (Edge *)edge->hdr.next)
+        for (i = 0; i < face->n_edges; i++)
+        {
+            edge = face->edges[i];
             move_obj((Object *)edge, xoffset, yoffset, zoffset);
-        for (p = face->view_list; p != NULL; p = (Point *)p->hdr.next)
-            move_obj((Object *)p, xoffset, yoffset, zoffset);
+        }
+        face->view_valid = FALSE;
         break;
 
     case OBJ_VOLUME:
@@ -444,6 +537,7 @@ move_obj(Object *obj, float xoffset, float yoffset, float zoffset)
 BOOL
 find_obj(Object *parent, Object *obj)
 {
+    int i;
     EDGE type;
     StraightEdge *se;
     Edge *edge;
@@ -479,8 +573,9 @@ find_obj(Object *parent, Object *obj)
 
     case OBJ_FACE:
         face = (Face *)parent;
-        for (edge = face->edges; edge != NULL; edge = (Edge *)edge->hdr.next)
+        for (i = 0; i < face->n_edges; i++)
         {
+            edge = face->edges[i];
             if ((Object *)edge == obj)
                 return TRUE;
             if (find_obj((Object *)edge, obj))
@@ -543,10 +638,12 @@ free_view_list(Face *face)
 void
 gen_view_list(Face *face)
 {
+    int i;
     Edge *e;
     Point *last_point;
     Point *p;
     StraightEdge *se;
+    //char buf[256];
 
     if (face->view_valid)
         return;
@@ -555,7 +652,7 @@ gen_view_list(Face *face)
 
     // Add points at tail of list, to preserve order
     // First the start point
-    switch (face->edges->type)
+    switch (face->edges[0]->type)
     {
     case EDGE_STRAIGHT:
         p = point_newp(face->initial_point);
@@ -570,10 +667,24 @@ gen_view_list(Face *face)
         break;
     }
 
+#if 0
+    sprintf_s(buf, 256, "Face %d IP %d\r\n", face->hdr.ID, face->initial_point->hdr.ID);
+    Log(buf);
+    sprintf_s(buf, 256, "%d %d\r\n", ((StraightEdge *)face->edges[0])->endpoints[0]->hdr.ID, ((StraightEdge *)face->edges[0])->endpoints[1]->hdr.ID);
+    Log(buf);
+    sprintf_s(buf, 256, "%d %d\r\n", ((StraightEdge *)face->edges[1])->endpoints[0]->hdr.ID, ((StraightEdge *)face->edges[1])->endpoints[1]->hdr.ID);
+    Log(buf);
+    sprintf_s(buf, 256, "%d %d\r\n", ((StraightEdge *)face->edges[2])->endpoints[0]->hdr.ID, ((StraightEdge *)face->edges[2])->endpoints[1]->hdr.ID);
+    Log(buf);
+    sprintf_s(buf, 256, "%d %d\r\n", ((StraightEdge *)face->edges[3])->endpoints[0]->hdr.ID, ((StraightEdge *)face->edges[3])->endpoints[1]->hdr.ID);
+    Log(buf);
+#endif
     last_point = face->initial_point;
 
-    for (e = face->edges; e != NULL; e = (Edge *)e->hdr.next)
+    for (i = 0; i < face->n_edges; i++)
     {
+        e = face->edges[i];
+
         // Then the subsequent points. Edges will follow in order, but their points
         // may be reversed.
         switch (e->type)
@@ -613,10 +724,10 @@ gen_view_list(Face *face)
 void
 purge_obj(Object *obj)
 {
+    int i;
     StraightEdge *se;
     EDGE type;
     Face *face;
-    Edge *edge;
     Volume *vol;
 
     switch (obj->type)
@@ -639,25 +750,28 @@ purge_obj(Object *obj)
             purge_obj((Object *)se->endpoints[1]);
             break;
 
-        case EDGE_CIRCLE:     // TODO others. Be very careful if Points are in a list, as freeing them will cause problems...
+        case EDGE_CIRCLE:     // TODO others. Be very careful if Points are ever in a list, as freeing them will cause problems...
         case EDGE_ARC:
         case EDGE_BEZIER:
             ASSERT(FALSE, "Not implemented");
             break;
         }
+        //free(obj);     // TODO: Don't do this. The edge may be shared. (Might need to use a free list or ref counts.)
         break;
 
     case OBJ_FACE:
         face = (Face *)obj;
         free_view_list(face);
-        for (edge = face->edges; edge != NULL; edge = (Edge *)edge->hdr.next)
-            purge_obj((Object *)edge);
+        for (i = 0; i < face->n_edges; i++)
+            purge_obj((Object *)face->edges[i]);
+        free(obj);
         break;
 
     case OBJ_VOLUME:
         vol = (Volume *)obj;
         for (face = vol->faces; face != NULL; face = (Face *)face->hdr.next)
             purge_obj((Object *)face);
+        free(obj);
         break;
     }
 }
@@ -668,9 +782,13 @@ void
 purge_tree(Object *tree)
 {
     Object *obj;
+    Object *nextobj = NULL;
 
-    for (obj = tree; obj != NULL; obj = obj->next)
+    for (obj = tree; obj != NULL; obj = nextobj)
+    {
+        nextobj = obj->next;
         purge_obj(obj);
+    }
 }
 
 // names of things that make the serialised format a little easier to read
@@ -682,10 +800,10 @@ char *facetypes[] = { "RECT", "CIRCLE", "FLAT", "CYLINDRICAL", "GENERAL" };
 void
 serialise_obj(Object *obj, FILE *f)
 {
+    int i;
     StraightEdge *se;
     EDGE type, constr;
     Face *face;
-    Edge *edge;
     Volume *vol;
 
     // check for object already saved
@@ -722,12 +840,15 @@ serialise_obj(Object *obj, FILE *f)
     case OBJ_FACE:
         fprintf_s(f, "BEGIN %d\n", obj->ID);
         face = (Face *)obj;
-        for (edge = face->edges; edge != NULL; edge = (Edge *)edge->hdr.next)
-            serialise_obj((Object *)edge, f);
+        for (i = 0; i < face->n_edges; i++)
+            serialise_obj((Object *)face->edges[i], f);
         break;
 
     case OBJ_VOLUME:
+        fprintf_s(f, "BEGIN %d\n", obj->ID);
         vol = (Volume *)obj;
+        if (vol->attached_to != NULL)
+            serialise_obj((Object *)vol->attached_to, f);
         for (face = vol->faces; face != NULL; face = (Face *)face->hdr.next)
             serialise_obj((Object *)face, f);
         break;
@@ -758,14 +879,17 @@ serialise_obj(Object *obj, FILE *f)
             face->initial_point->hdr.ID,
             face->normal.refpt.x, face->normal.refpt.y, face->normal.refpt.z,
             face->normal.A, face->normal.B, face->normal.C);
-        for (edge = face->edges; edge != NULL; edge = (Edge *)edge->hdr.next)
-            fprintf_s(f, "%d ", edge->hdr.ID);
+        for (i = 0; i < face->n_edges; i++)
+            fprintf_s(f, "%d ", face->edges[i]->hdr.ID);
         fprintf_s(f, "\n");
         break;
 
     case OBJ_VOLUME:
-
-        // TODO
+        vol = (Volume *)obj;
+        fprintf_s(f, "%d ", vol->attached_to != NULL ? vol->attached_to->hdr.ID : 0);
+        for (face = vol->faces; face != NULL; face = (Face *)face->hdr.next)
+            fprintf_s(f, "%d ", face->hdr.ID);
+        fprintf_s(f, "\n");
         break;
     }
 
@@ -900,6 +1024,7 @@ deserialise_tree(Object **tree, char *filename)
         }
         else if (strcmp(tok, "FACE") == 0)
         {
+            int pid;
             Face *face;
             Plane norm;
             FACE type;
@@ -921,9 +1046,9 @@ deserialise_tree(Object **tree, char *filename)
 
             }
             tok = strtok_s(NULL, " \t\n", &nexttok);
-            id = atoi(tok);
-            ASSERT(id != 0 && object[id] != NULL && object[id]->type == OBJ_POINT, "Bad initial point ID");
-            init_pt = (Point *)object[id];
+            pid = atoi(tok);
+            ASSERT(pid != 0 && object[pid] != NULL && object[pid]->type == OBJ_POINT, "Bad initial point ID");
+            init_pt = (Point *)object[pid];
 
             tok = strtok_s(NULL, " \t\n", &nexttok);
             norm.refpt.x = (float)atof(tok);
@@ -938,8 +1063,7 @@ deserialise_tree(Object **tree, char *filename)
             tok = strtok_s(NULL, " \t\n", &nexttok);
             norm.C = (float)atof(tok);
 
-            face = face_new(norm);
-            face->type = type;
+            face = face_new(type, norm);
             face->initial_point = init_pt;
 
             while(TRUE)
@@ -951,7 +1075,14 @@ deserialise_tree(Object **tree, char *filename)
                     break;
                 eid = atoi(tok);
                 ASSERT(eid > 0 && object[eid] != NULL, "Bad edge ID");
-                link_tail(object[eid], (Object **)&face->edges);
+
+                if (face->n_edges >= face->max_edges)
+                {
+                    // TODO grow array
+
+                }
+
+                face->edges[face->n_edges++] = (Edge *)object[eid];
             }
 
             face->hdr.ID = id;
@@ -963,21 +1094,41 @@ deserialise_tree(Object **tree, char *filename)
         }
         else if (strcmp(tok, "VOLUME") == 0)
         {
-#if 0 // TODO vol record
             Volume *vol;
+            Face *attached_to = NULL;
+            int fid;
 
             tok = strtok_s(NULL, " \t\n", &nexttok);
             id = atoi(tok);
             check_and_grow(id, &object, &objsize);
 
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            fid = atoi(tok);
+            if (fid != 0)
+                attached_to = (Face *)object[fid];
 
+            vol = vol_new(attached_to);
             vol->hdr.ID = id;
             object[id] = (Object *)vol;
+
+            while (TRUE)
+            {
+                int fid;
+
+                tok = strtok_s(NULL, " \t\n", &nexttok);
+                if (tok == NULL)
+                    break;
+                fid = atoi(tok);
+                ASSERT(fid > 0 && object[fid] != NULL, "Bad face ID");
+
+                ((Face *)object[fid])->vol = vol;
+                link_tail(object[fid], (Object **)&vol->faces);
+            }
+
             ASSERT(stkptr > 0 && id == stack[stkptr - 1], "Badly formed volume record");
             stkptr--;
             ASSERT(stkptr == 0, "ID stack not empty");
             link_tail((Object *)vol, tree);
-#endif
         }
     }
 

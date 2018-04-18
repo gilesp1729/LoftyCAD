@@ -51,6 +51,7 @@ face_shade(Face *face, BOOL selected, BOOL highlighted)
 void
 draw_object(Object *obj, BOOL selected, BOOL highlighted)
 {
+    int i;
     Face *face;
     Edge *edge;
     StraightEdge *se;
@@ -94,15 +95,16 @@ draw_object(Object *obj, BOOL selected, BOOL highlighted)
 
     case OBJ_FACE:
         glPushName((GLuint)obj);
-        face_shade((Face *)obj, selected, highlighted);
+        face = (Face *)obj;
+        face_shade(face, selected, highlighted);
         glPopName();
-        for (edge = ((Face *)obj)->edges; edge != NULL; edge = (Edge *)edge->hdr.next)
-            draw_object(&edge->hdr, selected, highlighted);
+        for (i = 0; i < face->n_edges; i++)
+            draw_object((Object *)face->edges[i], selected, highlighted);
         break;
 
     case OBJ_VOLUME:
         for (face = ((Volume *)obj)->faces; face != NULL; face = (Face *)face->hdr.next)
-            draw_object(&face->hdr, selected, highlighted);
+            draw_object((Object *)face, selected, highlighted);
         break;
     }
 }
@@ -147,6 +149,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                 {
                 case STATE_MOVING:
                     // Move the selection by a delta in XYZ within the facing plane
+                    // TODO: We need some locking/constraints, otherwise we can mess things up.
                     intersect_ray_plane(pt.x, pt.y, facing_plane, &new_point);
                     for (obj = selection; obj != NULL; obj = obj->next)
                     {
@@ -262,15 +265,13 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                         p3 = swap;
                     }
 
-
                     // If first move, create the rect and its edges here.
                     // Create a special rect with no edges but a 4-point view list.
                     // Only create the edges when completed, as we have to keep the anticlockwise
                     // order of the points no matter how the mouse is dragged around.
                     if (curr_obj == NULL)
                     {
-                        rf = face_new(*picked_plane);
-                        rf->type = FACE_RECT;
+                        rf = face_new(FACE_RECT, *picked_plane);
 
                         // generate four points for the view list
                         p00 = point_newp(&picked_point);
@@ -333,25 +334,96 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                         // See if we need to create a volume first, otherwise just move the face
                         if (face->vol == NULL)
                         {
+                            int i;
+                            Face *opposite, *side;
+                            Edge *e, *o;
+                            StraightEdge *se;
+                            Point *eip, *oip;
+                            Volume *vol;
+
+                            delink((Object *)face, &object_tree);
+                            vol = vol_new(NULL);
+                            link((Object *)face, (Object **)&vol->faces);
+                            face->vol = vol;
+                            face->view_valid = FALSE;
+
                             switch (face->type)
                             {
                             case FACE_RECT:
-                            case FACE_FLAT:
                                 // Clone the face with coincident edges/points, but in the
                                 // opposite sense (and with an opposite normal)
-
+                                opposite = clone_face_reverse(face);
+                                link((Object *)opposite, (Object **)&vol->faces);
+                                opposite->vol = vol;
 
                                 // Create faces that link the picked face to its clone
+                                // Take care to traverse the opposite edges backwards
+                                eip = face->initial_point;
+                                oip = opposite->initial_point;
+                                o = opposite->edges[0];
+                                if (oip == ((StraightEdge *)o)->endpoints[0])    // TODO this only works for EDGE_STRAIGHT
+                                    oip = ((StraightEdge *)o)->endpoints[1];
+                                else
+                                    oip = ((StraightEdge *)o)->endpoints[0];
 
+                                for (i = 0; i < face->n_edges; i++)
+                                {
+                                    e = face->edges[i];
+                                    if (i == 0)
+                                        o = opposite->edges[0];
+                                    else
+                                        o = opposite->edges[face->n_edges - i];
+                                   
+                                    side = face_new(FACE_RECT, norm);  // Any old norm will do, it will be recalculated with the view list
+                                    side->initial_point = eip;
+                                    side->vol = vol;
 
+                                    se = (StraightEdge *)edge_new(EDGE_STRAIGHT);
+                                    se->endpoints[0] = eip;
+                                    se->endpoints[1] = oip;
+                                    side->edges[0] = (Edge *)se;
+                                    side->edges[1] = o;
 
+                                    // Move to the next pair of points
+                                    // TODO this only works for EDGE_STRAIGHT - break this out into a routine that works for all types
+                                    if (eip == ((StraightEdge *)e)->endpoints[0])
+                                    {
+                                        eip = ((StraightEdge *)e)->endpoints[1];
+                                    }
+                                    else
+                                    {
+                                        ASSERT(eip == ((StraightEdge *)e)->endpoints[1], "Edges don't join up");
+                                        eip = ((StraightEdge *)e)->endpoints[0];
+                                    }
+
+                                    if (oip == ((StraightEdge *)o)->endpoints[0])
+                                    {
+                                        oip = ((StraightEdge *)o)->endpoints[1];
+                                    }
+                                    else
+                                    {
+                                        ASSERT(oip == ((StraightEdge *)o)->endpoints[1], "Edges don't join up");
+                                        oip = ((StraightEdge *)o)->endpoints[0];
+                                    }
+
+                                    se = (StraightEdge *)edge_new(EDGE_STRAIGHT);
+                                    se->endpoints[0] = oip;
+                                    se->endpoints[1] = eip;
+                                    side->edges[2] = (Edge *)se;
+                                    side->edges[3] = e;
+                                    side->n_edges = 4;
+
+                                    link((Object *)side, (Object **)&vol->faces);
+                                }
                                 break;
 
-
+                            case FACE_FLAT:
                             case FACE_CIRCLE:
                                 ASSERT(FALSE, "Not implemented yet");
                                 break;
                             }
+
+                            link((Object *)vol, &object_tree);
                         }
 
                         // Project new_point back to the face's normal wrt. picked_point,
@@ -380,6 +452,15 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                             face->normal.C * length
                             );
                         clear_move_copy_flags(picked_obj);
+
+                        // Invalidate all the view lists for the volume, as any of them may have changed
+                        if (face->vol != NULL)
+                        {
+                            Face *f;
+
+                            for (f = face->vol->faces; f != NULL; f = (Face *)f->hdr.next)
+                                f->view_valid = FALSE;
+                        }
 
                         picked_point = new_point;
                     }

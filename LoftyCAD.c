@@ -622,6 +622,7 @@ left_up(AUX_EVENTREC *event)
         left_mouse = FALSE;
         app_state = STATE_NONE;
         break;
+
     case STATE_DRAWING_EXTRUDE:
         ReleaseCapture();
         left_mouse = FALSE;

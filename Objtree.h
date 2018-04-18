@@ -85,7 +85,8 @@ typedef enum
     PLANE_GENERAL                   // Plane is not parallel to any of the above
 } PLANE;
 
-// Edges of various kinds
+// Edges of various kinds. Edges are shared; they do not appear in a list unless they are in the
+// top level object tree.
 typedef struct Edge
 {
     struct Object   hdr;            // Header
@@ -125,7 +126,9 @@ typedef struct Face
 {
     struct Object   hdr;            // Header
     FACE            type;           // What type of face this is
-    struct Edge     *edges;         // Doubly linked list of edges bounding the face
+    struct Edge     **edges;        // Points to a growable array of pointers to edges bounding the face
+    int             n_edges;        // the number of edges in the above array
+    int             max_edges;      // the allocated size of the above array
     Plane           normal;         // What plane is the face lying in (if flat) 
                                     // or a parallel to the cylinder (if bounded by arcs, circles or beziers)
 #if 0 // might bring this back later
@@ -165,7 +168,7 @@ Object *obj_new();
 Point *point_new(float x, float y, float z);
 Point *point_newp(Point *p);
 Edge *edge_new(EDGE edge_type);
-Face *face_new(Plane norm);
+Face *face_new(FACE face_type, Plane norm);
 Volume *vol_new();
 
 // Link and delink from lists
@@ -178,6 +181,7 @@ Object *copy_obj(Object *obj, float xoffset, float yoffset, float zoffset);
 void move_obj(Object *obj, float xoffset, float yoffset, float zoffset);
 void clear_move_copy_flags(Object *obj);
 Object *find_top_level_parent(Object *tree, Object *obj);
+Face *clone_face_reverse(Face *face);
 
 // Regenerate a face's view list
 void gen_view_list(Face *face);
