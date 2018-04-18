@@ -652,7 +652,7 @@ gen_view_list(Face *face)
 
     // Add points at tail of list, to preserve order
     // First the start point
-    switch (face->edges[0]->type)
+    switch (face->edges[0]->type) 
     {
     case EDGE_STRAIGHT:
         p = point_newp(face->initial_point);

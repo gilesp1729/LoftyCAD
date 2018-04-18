@@ -170,6 +170,7 @@ normal(Point *list, Plane *norm)
 
     cross(b->x - a->x, b->y - a->y, b->z - a->z, c->x - a->x, c->y - a->y, c->z - a->z, &cp.x, &cp.y, &cp.z);
     length = (float)sqrt(cp.x * cp.x + cp.y * cp.y + cp.z * cp.z);
+    ASSERT(length > 0.0001, "Normal of collinear points");
     norm->A = cp.x / length;
     norm->B = cp.y / length;
     norm->C = cp.z / length;
@@ -193,6 +194,12 @@ normal3(Point *b, Point *a, Point *c, Plane *norm)
     norm->refpt.x = a->x;
     norm->refpt.y = a->y;
     norm->refpt.z = a->z;
+}
+
+float
+length(float x0, float y0, float z0, float x1, float y1, float z1)
+{
+    return sqrt((x1 - x0)*(x1 - x0) + (y1 - y0)*(y1 - y0) + (z1 - z0)*(z1 - z0));
 }
 
 float

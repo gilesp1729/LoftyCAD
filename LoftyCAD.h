@@ -52,8 +52,10 @@ extern BOOL	right_mouse;
 
 extern HWND hWndToolbar;
 extern HWND hWndDebug;
+extern HWND hWndDims;
 extern BOOL view_tools;
 extern BOOL view_debug;
+extern BOOL view_rendered;
 
 extern STATE app_state;
 extern Object *selection;

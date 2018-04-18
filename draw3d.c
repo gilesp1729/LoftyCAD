@@ -15,11 +15,11 @@ color(OBJECT obj_type, BOOL selected, BOOL highlighted)
         return;  // no action here
 
     case OBJ_EDGE:
-        r = g = b = 0.5f;
+        r = g = b = 0.3f;
         if (selected)
-            r += 0.2f;
+            r += 0.4f;
         if (highlighted)
-            g += 0.2f;
+            g += 0.4f;
         break;
 
     case OBJ_FACE:
@@ -42,6 +42,7 @@ face_shade(Face *face, BOOL selected, BOOL highlighted)
     gen_view_list(face);
     glBegin(GL_POLYGON);
     color(OBJ_FACE, selected, highlighted);
+    glNormal3f(face->normal.A, face->normal.B, face->normal.C);
     for (v = face->view_list; v != NULL; v = (Point *)v->hdr.next)
         glVertex3f(v->x, v->y, v->z);
     glEnd();
@@ -144,6 +145,8 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                 StraightEdge *se;
                 Face *rf;
                 Plane norm;
+                char buf[64];
+                POINT winpt;
 
                 switch (app_state)
                 {
@@ -162,7 +165,23 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                             );
                         clear_move_copy_flags(obj->prev);
 
+                        // If we have moved a face:
+                        // Invalidate all the view lists for the volume, as any of them may have changed
+                        // TODO - do this by finding the ultimate parent, so it works for points, edges, etc.
+                        if (obj->prev->type == OBJ_FACE)
+                        {
+                            Face *face = (Face *)obj->prev;
+
+                            if (face->vol != NULL)
+                            {
+                                Face *f;
+
+                                for (f = face->vol->faces; f != NULL; f = (Face *)f->hdr.next)
+                                    f->view_valid = FALSE;
+                            }
+                        }
                     }
+
                     picked_point = new_point;
 
                     break;
@@ -196,6 +215,15 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                         se->endpoints[1]->y = new_point.y;
                         se->endpoints[1]->z = new_point.z;
                     }
+
+                    // Show the dimensions (length) of the edge.
+                    sprintf_s(buf, 64, "%f mm", length(picked_point.x, picked_point.y, picked_point.z, new_point.x, new_point.y, new_point.z));
+                    SendDlgItemMessage(hWndDims, IDC_DIMENSIONS, WM_SETTEXT, 0, (LPARAM)buf);
+                    winpt.x = pt.x;
+                    winpt.y = pt.y;
+                    ClientToScreen(auxGetHWND(), &winpt);
+                    SetWindowPos(hWndDims, HWND_TOPMOST, winpt.x + 10, winpt.y + 20, 0, 0, SWP_NOSIZE);
+                    ShowWindow(hWndDims, SW_SHOW);
 
                     break;
 
@@ -353,6 +381,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                                 // Clone the face with coincident edges/points, but in the
                                 // opposite sense (and with an opposite normal)
                                 opposite = clone_face_reverse(face);
+                                clear_move_copy_flags(picked_obj);
                                 link((Object *)opposite, (Object **)&vol->faces);
                                 opposite->vol = vol;
 
@@ -479,7 +508,6 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
         }
 
         // handle panning with right mouse drag. 
-        // Perhaps use gluLookAt here instead if it gives a more natural pan.
         if (right_mouse)
         {
             auxGetMouseLoc(&pt.x, &pt.y);
@@ -523,7 +551,10 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
 
         // Only clear pixel buffer stuff if not picking (reduces flashing)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glDisable(GL_LIGHTING);
+        if (view_rendered)
+            glEnable(GL_LIGHTING);
+        else
+            glDisable(GL_LIGHTING);
     }
 
     // handle picking, or just position for viewing

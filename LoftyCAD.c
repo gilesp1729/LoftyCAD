@@ -32,6 +32,7 @@ BOOL	right_mouse = FALSE;
 // Toolbars
 HWND hWndToolbar;
 HWND hWndDebug;
+HWND hWndDims;
 BOOL view_tools = TRUE;
 BOOL view_debug = FALSE;
 
@@ -79,6 +80,9 @@ PLANE facing_index = PLANE_XY;
 
 // Viewing model (ortho or perspective)
 BOOL view_ortho = FALSE;
+
+// TRUE if viewing rendered representation
+BOOL view_rendered = FALSE;
 
 // Current filename
 char curr_filename[256] = { 0, };
@@ -572,8 +576,7 @@ left_up(AUX_EVENTREC *event)
 
             // Create the edges for the rect here as a special case, as the order
             // is not known till the mouse is released.
-            // generate four edges, and put them on the face's edge list
-            // (in opposite order, as they are being added at the list head)
+            // Generate four edges, and put them on the face's edge list.
             rf = (Face *)curr_obj;
             p00 = rf->view_list;
             p01 = (Point *)p00->hdr.next;
@@ -581,23 +584,28 @@ left_up(AUX_EVENTREC *event)
             p03 = (Point *)p02->hdr.next;
 
             se = (StraightEdge *)edge_new(EDGE_STRAIGHT);
-            se->endpoints[0] = p03;
-            se->endpoints[1] = p00;
-            link((Object *)se, (Object **)&rf->edges);
-            se = (StraightEdge *)edge_new(EDGE_STRAIGHT);
-            se->endpoints[0] = p02;
-            se->endpoints[1] = p03;
-            link((Object *)se, (Object **)&rf->edges);
+            se->endpoints[0] = p00;
+            se->endpoints[1] = p01;
+            rf->edges[0] = (Edge *)se;
             se = (StraightEdge *)edge_new(EDGE_STRAIGHT);
             se->endpoints[0] = p01;
             se->endpoints[1] = p02;
-            link((Object *)se, (Object **)&rf->edges);
+            rf->edges[1] = (Edge *)se;
             se = (StraightEdge *)edge_new(EDGE_STRAIGHT);
-            se->endpoints[0] = p00;
-            se->endpoints[1] = p01;
-            link((Object *)se, (Object **)&rf->edges);
+            se->endpoints[0] = p02;
+            se->endpoints[1] = p03;
+            rf->edges[2] = (Edge *)se;
+            se = (StraightEdge *)edge_new(EDGE_STRAIGHT);
+            se->endpoints[0] = p03;
+            se->endpoints[1] = p00;
+            rf->edges[3] = (Edge *)se;
+
+            // Take the points out of the face's view list, as they are about
+            // to be freed when the view list is regenerated.
+            rf->view_list = NULL;
 
             // the face now has its edges. Generate its view list and the normal
+            rf->n_edges = 4;
             rf->view_valid = FALSE;
             gen_view_list(rf);
         }
@@ -621,6 +629,7 @@ left_up(AUX_EVENTREC *event)
         ReleaseCapture();
         left_mouse = FALSE;
         app_state = STATE_NONE;
+        ShowWindow(hWndDims, SW_HIDE);
         break;
 
     case STATE_DRAWING_EXTRUDE:
@@ -782,6 +791,20 @@ Command(int wParam, int lParam)
             ShowWindow(hWndDebug, SW_SHOW);
             view_debug = TRUE;
             CheckMenuItem(hMenu, ID_VIEW_DEBUGLOG, MF_CHECKED);
+        }
+        break;
+
+    case ID_VIEW_RENDEREDVIEW:
+        hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
+        if (view_rendered)
+        {
+            view_rendered = FALSE;
+            CheckMenuItem(hMenu, ID_VIEW_RENDEREDVIEW, MF_UNCHECKED);
+        }
+        else
+        {
+            view_rendered = TRUE;
+            CheckMenuItem(hMenu, ID_VIEW_RENDEREDVIEW, MF_CHECKED);
         }
         break;
 
@@ -1089,6 +1112,17 @@ debug_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 }
 
 
+// Wndproc for the dimensions dialog. Not much to it.
+int WINAPI
+dimensions_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    switch (msg)
+    {
+    }
+
+    return 0;
+}
+
 // The good old WinMain.
 int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
@@ -1173,6 +1207,19 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
         if (view_debug)
             ShowWindow(hWndDebug, SW_SHOW);
 
+        // Dimensions window (looks like a tooltip, but displays and allows input of dimensions)
+        hWndDims = CreateDialog
+            (
+            hInst,
+            MAKEINTRESOURCE(IDD_DIMENSIONS),
+            auxGetHWND(),
+            dimensions_dialog
+            );
+
+        SetWindowPos(hWndDims, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOSIZE);
+        ShowWindow(hWndDims, SW_HIDE);
+
+        // Bring main window back to the front
         SetWindowPos(auxGetHWND(), HWND_TOP, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOREPOSITION);
 
         hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
