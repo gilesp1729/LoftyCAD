@@ -221,6 +221,7 @@ extern void tkMouseMoveFunc(GLenum(CALLBACK *)(int, int, GLenum));
 extern void tkMouseWheelFunc(GLenum(CALLBACK *)(int, int, int));
 extern void tkIdleFunc(void (CALLBACK *)(void));
 extern void tkCommandFunc(int (CALLBACK *)(int, int));
+extern void tkDestroyFunc(void (CALLBACK *)(HWND));
 
 extern void tkSwapBuffers(void);
 

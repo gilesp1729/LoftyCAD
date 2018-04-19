@@ -16,13 +16,8 @@ TCHAR szWindowClass[MAX_LOADSTRING];			// the main window class name
 
 INT_PTR CALLBACK	About(HWND, UINT, WPARAM, LPARAM);
 
-#define INIT_ZTRANS -2
 
 GLint wWidth = 800, wHeight = 800;
-float xTrans = 0;
-float yTrans = 0;
-float zTrans = INIT_ZTRANS;
-int zoom_delta = 0;
 
 int	left_mouseX, left_mouseY;
 int	right_mouseX, right_mouseY;
@@ -84,8 +79,37 @@ BOOL view_ortho = FALSE;
 // TRUE if viewing rendered representation
 BOOL view_rendered = FALSE;
 
-// Current filename
+// Current filename and title
 char curr_filename[256] = { 0, };
+char curr_title[256] = { 0, };
+
+// Grid scale (for snapping points) and unit tolerance (for display of dims)
+// When snapping is turned off, points are still snapped to the tolerance.
+// Scale must be a power of 10; tolerance must be a power of 10, and less
+// than or equal to the grid scale. (e.g. 1, 0.1)
+float grid_scale = 1.0f;
+float tolerance = 0.1f;
+
+// log10(1.0 / tolerance)
+int tol_log = 1;
+
+// TRUE if snapping to grid (FALSE will snap to the tolerance)
+BOOL snap_grid = TRUE;
+
+// Half-size of drawing volume, nominally in mm (although units are arbitrary)
+float half_size = 100.0f;
+
+// Initial values of translation components
+float xTrans = 0;
+float yTrans = 0;
+float zTrans = -200;    // twice the initial half_size
+int zoom_delta = 0;
+
+// Forwards for window procedures
+int WINAPI debug_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+int WINAPI toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+int WINAPI dimensions_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+int WINAPI prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 // Set material and lighting up
 void
@@ -174,6 +198,7 @@ void CALLBACK
 Position(BOOL picking, GLint x_pick, GLint y_pick)
 {
     GLint viewport[4], width, height;
+    float h, w, znear, zfar;
 
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
@@ -184,26 +209,32 @@ Position(BOOL picking, GLint x_pick, GLint y_pick)
     if (picking)
         gluPickMatrix(x_pick, height - y_pick, 3, 3, viewport);  // Y window coords need inverting for GL
 
+    znear = 0.5f * half_size;
+    zfar = 50 * half_size;
     if (view_ortho)
     {
         if (width > height)
         {
-            glOrtho(-(double)width / height, (double)width / height, -1, 1, 0.5, 50);
+            w = half_size * (float)width / height;
+            glOrtho(-w, w, -half_size, half_size, znear, zfar);
         }
         else
         {
-            glOrtho(-1, 1, -(double)height / width, (double)height / width, 0.5, 50);
+            h = half_size * (float)height / width;
+            glOrtho(-half_size, half_size, -h, h, znear, zfar);
         }
     }
     else
     {
         if (width > height)
         {
-            glFrustum(-(double)width / height, (double)width / height, -1, 1, 0.5, 50);
+            w = half_size * (float)width / height;
+            glFrustum(-w, w, -half_size, half_size, znear, zfar);
         }
         else
         {
-            glFrustum(-1, 1, -(double)height / width, (double)height / width, 0.5, 50);
+            h = half_size * (float)height / width;
+            glFrustum(-half_size, half_size, -h, h, znear, zfar);
         }
     }
 
@@ -392,6 +423,7 @@ left_down(AUX_EVENTREC *event)
 
             // Set the picked point on the facing plane for later subtraction
             intersect_ray_plane(left_mouseX, left_mouseY, facing_plane, &picked_point);
+            snap_to_grid(facing_plane, &picked_point);
         }
         break;
 
@@ -418,8 +450,10 @@ left_down(AUX_EVENTREC *event)
 
         if (picked_obj == NULL)
         {
+            // Drawing on the standard axis.
             picked_plane = facing_plane;
             intersect_ray_plane(left_mouseX, left_mouseY, picked_plane, &picked_point);
+            snap_to_grid(picked_plane, &picked_point);
         }
         else
         {
@@ -435,6 +469,7 @@ left_down(AUX_EVENTREC *event)
                 // We're on a face, so we can proceed.
                 picked_plane = &((Face *)picked_obj)->normal;
                 intersect_ray_plane(left_mouseX, left_mouseY, picked_plane, &picked_point);
+                snap_to_grid(picked_plane, &picked_point);
                 break;
 
             case OBJ_EDGE:
@@ -450,6 +485,8 @@ left_down(AUX_EVENTREC *event)
         }
         // Don't add the object yet until we have moved the mouse, as a click will
         // need to be handled harmlessly and silently.
+        curr_obj = NULL;
+
         break;
 
     case STATE_DRAWING_RECT:
@@ -629,7 +666,7 @@ left_up(AUX_EVENTREC *event)
         ReleaseCapture();
         left_mouse = FALSE;
         app_state = STATE_NONE;
-        ShowWindow(hWndDims, SW_HIDE);
+        hide_hint();
         break;
 
     case STATE_DRAWING_EXTRUDE:
@@ -637,7 +674,7 @@ left_up(AUX_EVENTREC *event)
         left_mouse = FALSE;
         app_state = STATE_NONE;
         drawing_changed = TRUE;
-        // TODO regenerate view lists for faces on volume that has changed
+        hide_hint();
         break;
 
     case STATE_STARTING_RECT:
@@ -701,6 +738,16 @@ left_click(AUX_EVENTREC *event)
     }
 }
 
+// ESC key aborts a dragging operation.
+void CALLBACK
+escape_key(void)
+{
+    curr_obj = NULL;
+    ReleaseCapture();
+    left_mouse = FALSE;
+    app_state = STATE_NONE;
+}
+
 void CALLBACK
 right_down(AUX_EVENTREC *event)
 {
@@ -730,6 +777,23 @@ mouse_wheel(AUX_EVENTREC *event)
 }
 
 void CALLBACK
+check_file_changed(HWND hWnd)
+{
+    if (drawing_changed)
+    {
+        int rc = MessageBox(hWnd, "File modified. Save it?", curr_filename, MB_YESNOCANCEL | MB_ICONWARNING);
+
+        if (rc == IDCANCEL)
+            return;
+        else if (rc == IDYES)
+            serialise_tree(object_tree, curr_filename);
+    }
+
+    purge_tree(object_tree);
+    DestroyWindow(hWnd);
+}
+
+void CALLBACK
 mouse_move(AUX_EVENTREC *event)
 {
     // when moving the mouse, we may be highlighting objects.
@@ -744,22 +808,26 @@ Command(int wParam, int lParam)
 {
     HMENU hMenu;
     OPENFILENAME ofn;
+    char window_title[256];
 
     switch (LOWORD(wParam))
     {
     case IDM_EXIT:
-        if (drawing_changed)
+        check_file_changed(auxGetHWND());
+        break;
+
+    case ID_EDIT_SNAP:
+        hMenu = GetSubMenu(GetMenu(auxGetHWND()), 1);
+        if (snap_grid)
         {
-            int rc = MessageBox(auxGetHWND(), "File modified. Save it?", curr_filename, MB_YESNOCANCEL | MB_ICONWARNING);
-
-            if (rc == IDCANCEL)
-                break;
-            else if (rc == IDYES)
-                serialise_tree(object_tree, curr_filename);
+            snap_grid = FALSE;
+            CheckMenuItem(hMenu, ID_EDIT_SNAP, MF_UNCHECKED);
         }
-
-        purge_tree(object_tree);
-        DestroyWindow(auxGetHWND());
+        else
+        {
+            snap_grid = TRUE;
+            CheckMenuItem(hMenu, ID_EDIT_SNAP, MF_CHECKED);
+        }
         break;
 
     case ID_VIEW_TOOLS:
@@ -885,6 +953,9 @@ Command(int wParam, int lParam)
         purge_tree(object_tree);
         object_tree = NULL;
         drawing_changed = FALSE;
+        curr_filename[0] = '\0';
+        curr_title[0] = '\0';
+        SetWindowText(auxGetHWND(), "LoftyCAD");
 
         if (LOWORD(wParam) == ID_FILE_NEW)
             break;
@@ -894,6 +965,7 @@ Command(int wParam, int lParam)
         ofn.hwndOwner = auxGetHWND();
         ofn.lpstrFilter = "LoftyCAD Files\0*.LCD\0All Files\0*.*\0\0";
         ofn.nFilterIndex = 1;
+        ofn.lpstrDefExt = "lcd";
         ofn.lpstrFile = curr_filename;
         ofn.nMaxFile = 256;
         ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST;
@@ -901,7 +973,10 @@ Command(int wParam, int lParam)
         {
             deserialise_tree(&object_tree, curr_filename);
             drawing_changed = FALSE;
-            SetWindowText(auxGetHWND(), curr_filename);
+            strcpy_s(window_title, 256, curr_filename);
+            strcat_s(window_title, 256, " - ");
+            strcat_s(window_title, 256, curr_title);
+            SetWindowText(auxGetHWND(), window_title);
         }
 
         break;
@@ -920,6 +995,7 @@ Command(int wParam, int lParam)
         ofn.hwndOwner = auxGetHWND();
         ofn.lpstrFilter = "LoftyCAD Files\0*.LCD\0All Files\0*.*\0\0";
         ofn.nFilterIndex = 1;
+        ofn.lpstrDefExt = "lcd";
         ofn.lpstrFile = curr_filename;
         ofn.nMaxFile = 256;
         ofn.Flags = OFN_EXPLORER | OFN_OVERWRITEPROMPT;
@@ -927,9 +1003,20 @@ Command(int wParam, int lParam)
         {
             serialise_tree(object_tree, curr_filename);
             drawing_changed = FALSE;
-            SetWindowText(auxGetHWND(), curr_filename);
+            strcpy_s(window_title, 256, curr_filename);
+            strcat_s(window_title, 256, " - ");
+            strcat_s(window_title, 256, curr_title);
+            SetWindowText(auxGetHWND(), window_title);
         }
 
+        break;
+
+    case ID_FILE_PREFS:
+        DialogBox(hInst, MAKEINTRESOURCE(IDD_PREFS), auxGetHWND(), prefs_dialog);
+        strcpy_s(window_title, 256, curr_filename);
+        strcat_s(window_title, 256, " - ");
+        strcat_s(window_title, 256, curr_title);
+        SetWindowText(auxGetHWND(), window_title);
         break;
     }
     return 0;
@@ -1123,6 +1210,44 @@ dimensions_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     return 0;
 }
 
+// Preferences dialog.
+int WINAPI
+prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    char buf[16];
+
+    switch (msg)
+    {
+    case WM_INITDIALOG:
+        SendDlgItemMessage(hWnd, IDC_PREFS_TITLE, WM_SETTEXT, 0, (LPARAM)curr_title);
+        sprintf_s(buf, 16, "%.0f", half_size);
+        SendDlgItemMessage(hWnd, IDC_PREFS_HALFSIZE, WM_SETTEXT, 0, (LPARAM)buf);
+        sprintf_s(buf, 16, "%.1f", grid_scale);
+        SendDlgItemMessage(hWnd, IDC_PREFS_GRID, WM_SETTEXT, 0, (LPARAM)buf);
+        sprintf_s(buf, 16, "%.2f", tolerance);
+        SendDlgItemMessage(hWnd, IDC_PREFS_TOL, WM_SETTEXT, 0, (LPARAM)buf);
+
+    case WM_COMMAND:
+        switch (LOWORD(wParam))
+        {
+        case IDOK:
+            SendDlgItemMessage(hWnd, IDC_PREFS_TITLE, WM_GETTEXT, 256, (LPARAM)curr_title);
+            SendDlgItemMessage(hWnd, IDC_PREFS_HALFSIZE, WM_GETTEXT, 16, (LPARAM)buf);
+            half_size = (float)atof(buf);
+            SendDlgItemMessage(hWnd, IDC_PREFS_GRID, WM_GETTEXT, 16, (LPARAM)buf);
+            grid_scale = (float)atof(buf);
+            // TODO check grid scale and tolerance are powers of 10
+            SendDlgItemMessage(hWnd, IDC_PREFS_TOL, WM_GETTEXT, 16, (LPARAM)buf);
+            tolerance = (float)atof(buf);
+            tol_log = (int)log10f(1.0f / tolerance);
+
+            EndDialog(hWnd, 1);
+        }
+    }
+
+    return 0;
+}
+
 // The good old WinMain.
 int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
@@ -1151,6 +1276,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
         auxExposeFunc((AUXEXPOSEPROC)Reshape);
         auxReshapeFunc((AUXRESHAPEPROC)Reshape);
         auxCommandFunc((AUXCOMMANDPROC)Command);
+        auxDestroyFunc((AUXDESTROYPROC)check_file_changed);
 
 #if 0
         auxKeyFunc(AUX_z, Key_z); // zero viewing distance
@@ -1165,6 +1291,8 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
         auxKeyFunc(AUX_UP, Key_up);	    // up zline
         auxKeyFunc(AUX_DOWN, Key_down);   // down zline
 #endif
+        auxKeyFunc(AUX_ESCAPE, escape_key);
+
         auxMouseFunc(AUX_LEFTBUTTON, AUX_MOUSEDOWN, left_down);
         auxMouseFunc(AUX_LEFTBUTTON, AUX_MOUSEUP, left_up);
         auxMouseFunc(AUX_LEFTBUTTON, AUX_MOUSECLICK, left_click);
@@ -1221,6 +1349,9 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 
         // Bring main window back to the front
         SetWindowPos(auxGetHWND(), HWND_TOP, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOREPOSITION);
+
+        hMenu = GetSubMenu(GetMenu(auxGetHWND()), 1);
+        CheckMenuItem(hMenu, ID_EDIT_SNAP, snap_grid ? MF_CHECKED : MF_UNCHECKED);
 
         hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
         CheckMenuItem(hMenu, ID_VIEW_TOOLS, view_tools ? MF_CHECKED : MF_UNCHECKED);

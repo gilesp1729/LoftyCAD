@@ -214,6 +214,7 @@ static GLenum(CALLBACK *MouseMoveFunc)(int, int, GLenum)  = NULL;
 static GLenum(CALLBACK *MouseWheelFunc)(int, int, int)    = NULL;
 static void (CALLBACK *IdleFunc)(void)                    = NULL;
 static int (CALLBACK *CommandFunc)(int, int)              = NULL;
+static void (CALLBACK *DestroyFunc)(HWND)                  = NULL;
 
 static char     *lpszClassName = "tkLibWClass";
 static WCHAR    *lpszClassNameW = L"tkLibWClass";
@@ -530,6 +531,11 @@ void tkIdleFunc(void (CALLBACK *Func)(void))
 void tkCommandFunc(int (CALLBACK *Func)(int, int))
 {
     CommandFunc = Func;
+}
+
+void tkDestroyFunc(void (CALLBACK *Func)(HWND))
+{
+    DestroyFunc = Func;
 }
 
 void tkInitPosition(int x, int y, int width, int height)
@@ -1417,11 +1423,14 @@ PIXELFORMATDESCRIPTOR pfd;
           break;
 
       case WM_CLOSE:
-         DestroyWindow(tkhwnd);
+          if (DestroyFunc)
+              (*DestroyFunc)(tkhwnd);
+          else
+              DestroyWindow(tkhwnd);
          return(0);
 
       case WM_DESTROY:
-         CleanUp();
+         CleanUp(); 
          if (tkQuitApp)
             PostQuitMessage(TRUE);   // GP - control whether X-ing this window takes whole app down
          return 0;

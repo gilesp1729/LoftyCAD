@@ -299,6 +299,11 @@ void APIENTRY auxCommandFunc(AUXCOMMANDPROC Func)
     tkCommandFunc(Func);
 }
 
+void APIENTRY auxDestroyFunc(AUXDESTROYPROC Func)
+{
+    tkDestroyFunc(Func);
+}
+
 void APIENTRY auxKeyFunc(int key, AUXKEYPROC Func)
 {
     keyTable[keyTableCount].keyField = key;
@@ -399,7 +404,6 @@ int useDoubleAsSingle = 0;
    tkMouseMoveFunc(MouseLoc);
    tkMouseWheelFunc(MouseWheel);
    tkKeyDownFunc(KeyDown);
-   // auxKeyFunc(AUX_ESCAPE, auxQuit);
    if (white_bgnd)
        glClearColor((GLclampf)1.0, (GLclampf)1.0, (GLclampf)1.0, (GLclampf)1.0);
    else

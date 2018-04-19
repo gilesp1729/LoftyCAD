@@ -41,7 +41,7 @@ float   curquat[4], lastquat[4];
 // Slerp parameters.
 float   start_quat[4], desired_quat[4];
 BOOL    slerping = FALSE;
-float   slerp_step = 0.1;
+float   slerp_step = 0.1f;
 float   slerp_t;
 
 /*
@@ -429,10 +429,10 @@ slerp(float start[4], float desired[4], float result[4], float t)
     s0 = cos(theta) - dot * sin(theta) / sin(theta_0);  // == sin(theta_0 - theta) / sin(theta_0)
     s1 = sin(theta) / sin(theta_0);
 
-    result[0] = s0 * start[0] + s1 * desired[0];
-    result[1] = s0 * start[1] + s1 * desired[1];
-    result[2] = s0 * start[2] + s1 * desired[2];
-    result[3] = s0 * start[3] + s1 * desired[3];
+    result[0] = (float)(s0 * start[0] + s1 * desired[0]);
+    result[1] = (float)(s0 * start[1] + s1 * desired[1]);
+    result[2] = (float)(s0 * start[2] + s1 * desired[2]);
+    result[3] = (float)(s0 * start[3] + s1 * desired[3]);
 
     return TRUE;
 }

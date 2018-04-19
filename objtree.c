@@ -650,6 +650,8 @@ gen_view_list(Face *face)
 
     free_view_list(face);
 
+    // TODO don't bump objid when getting new points in here. They will never go in the tree
+    
     // Add points at tail of list, to preserve order
     // First the start point
     switch (face->edges[0]->type) 
@@ -728,6 +730,7 @@ purge_obj(Object *obj)
     StraightEdge *se;
     EDGE type;
     Face *face;
+    Face *next_face = NULL;
     Volume *vol;
 
     switch (obj->type)
@@ -769,8 +772,11 @@ purge_obj(Object *obj)
 
     case OBJ_VOLUME:
         vol = (Volume *)obj;
-        for (face = vol->faces; face != NULL; face = (Face *)face->hdr.next)
+        for (face = vol->faces; face != NULL; face = next_face)
+        {
+            next_face = (Face *)face->hdr.next;
             purge_obj((Object *)face);
+        }
         free(obj);
         break;
     }
@@ -904,6 +910,9 @@ serialise_tree(Object *tree, char *filename)
     Object *obj;
     
     fopen_s(&f, filename, "wt");
+    fprintf_s(f, "TITLE %s\n", curr_title);
+    fprintf_s(f, "SCALE %f %f %f\n", half_size, grid_scale, tolerance);
+
     save_count++;
     for (obj = tree; obj != NULL; obj = obj->next)
         serialise_obj(obj, f);
@@ -956,7 +965,23 @@ deserialise_tree(Object **tree, char *filename)
             break;
 
         tok = strtok_s(buf, " \t\n", &nexttok);
-        if (strcmp(tok, "BEGIN") == 0)
+        if (strcmp(tok, "TITLE") == 0)
+        {
+            tok = strtok_s(NULL, "\n", &nexttok);  // rest of line till \n
+            if (tok != NULL)
+                strcpy_s(curr_title, 256, tok);
+        }
+        else if (strcmp(tok, "SCALE") == 0)
+        {
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            half_size = (float)atof(tok);
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            grid_scale = (float)atof(tok);
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            tolerance = (float)atof(tok);
+            tol_log = log10f(1.0f / tolerance);
+        }
+        else if (strcmp(tok, "BEGIN") == 0)
         {
             // Stack the object ID being constructed
             tok = strtok_s(NULL, " \t\n", &nexttok);

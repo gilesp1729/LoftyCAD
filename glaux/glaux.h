@@ -291,6 +291,9 @@ void APIENTRY auxMouseFunc(int, int, AUXMOUSEPROC);
 typedef int (CALLBACK* AUXCOMMANDPROC)(int, int);
 void APIENTRY auxCommandFunc(AUXCOMMANDPROC);
 
+typedef void (CALLBACK* AUXDESTROYPROC)(HWND);
+void APIENTRY auxDestroyFunc(AUXDESTROYPROC);
+
 int  APIENTRY auxGetColorMapSize(void);
 void APIENTRY auxGetMouseLoc(int *, int *);
 void APIENTRY auxSetOneColor(int, float, float, float);

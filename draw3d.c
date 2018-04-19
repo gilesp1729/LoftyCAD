@@ -2,6 +2,27 @@
 #include "LoftyCAD.h"
 #include <stdio.h>
 
+
+// Show a dimension or other hint in the dims window.
+void
+show_hint_at(POINT pt, char *buf)
+{
+    POINT winpt;  // copy the POINT so it doesn't change the caller
+
+    SendDlgItemMessage(hWndDims, IDC_DIMENSIONS, WM_SETTEXT, 0, (LPARAM)buf);
+    winpt.x = pt.x;
+    winpt.y = pt.y;
+    ClientToScreen(auxGetHWND(), &winpt);
+    SetWindowPos(hWndDims, HWND_TOPMOST, winpt.x + 10, winpt.y + 20, 0, 0, SWP_NOSIZE);
+    ShowWindow(hWndDims, SW_SHOW);
+}
+
+void 
+hide_hint()
+{
+    ShowWindow(hWndDims, SW_HIDE);
+}
+
 // Some standard colors sent to GL.
 void
 color(OBJECT obj_type, BOOL selected, BOOL highlighted)
@@ -145,8 +166,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                 StraightEdge *se;
                 Face *rf;
                 Plane norm;
-                char buf[64];
-                POINT winpt;
+                char buf[64], buf2[64];
 
                 switch (app_state)
                 {
@@ -154,6 +174,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                     // Move the selection by a delta in XYZ within the facing plane
                     // TODO: We need some locking/constraints, otherwise we can mess things up.
                     intersect_ray_plane(pt.x, pt.y, facing_plane, &new_point);
+                    snap_to_grid(facing_plane, &new_point);
                     for (obj = selection; obj != NULL; obj = obj->next)
                     {
                         move_obj
@@ -190,13 +211,14 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                     if (picked_plane == NULL)
                     {
                         // Uhoh. We don't have a plane yet. TODO: Check if the mouse has moved into
-                        // a face object, and use that.
+                        // a face object, and use that. 
 
 
                     }
 
                     // Move the end point of the current edge
                     intersect_ray_plane(pt.x, pt.y, picked_plane, &new_point);
+                    snap_to_grid(picked_plane, &new_point);
 
                     // If first move, create the edge here.
                     if (curr_obj == NULL)
@@ -217,13 +239,8 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                     }
 
                     // Show the dimensions (length) of the edge.
-                    sprintf_s(buf, 64, "%f mm", length(picked_point.x, picked_point.y, picked_point.z, new_point.x, new_point.y, new_point.z));
-                    SendDlgItemMessage(hWndDims, IDC_DIMENSIONS, WM_SETTEXT, 0, (LPARAM)buf);
-                    winpt.x = pt.x;
-                    winpt.y = pt.y;
-                    ClientToScreen(auxGetHWND(), &winpt);
-                    SetWindowPos(hWndDims, HWND_TOPMOST, winpt.x + 10, winpt.y + 20, 0, 0, SWP_NOSIZE);
-                    ShowWindow(hWndDims, SW_SHOW);
+                    sprintf_s(buf, 64, "%s mm", display_rounded(buf2, length(&picked_point, &new_point)));
+                    show_hint_at(pt, buf);
 
                     break;
 
@@ -238,6 +255,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
 
                     // Move the opposite corner point
                     intersect_ray_plane(pt.x, pt.y, picked_plane, &new_point);
+                    snap_to_grid(picked_plane, &new_point);
 
                     // generate the other corners. The rect goes in the 
                     // order picked-p1-new-p3.
@@ -323,7 +341,8 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                         rf = (Face *)curr_obj;
 
                         // Dig out the points that need updating, and update them
-                        p01 = (Point *)rf->view_list->hdr.next;
+                        p00 = (Point *)rf->view_list;
+                        p01 = (Point *)p00->hdr.next;
                         p02 = (Point *)p01->hdr.next;
                         p03 = (Point *)p02->hdr.next;
 
@@ -339,6 +358,9 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                         p03->z = p3.z;
                     }
 
+                    // Show the dimensions of the rect.
+                    sprintf_s(buf, 64, "%s,%s mm", display_rounded(buf, length(p00, p01)), display_rounded(buf2, length(p00, p03)));
+                    show_hint_at(pt, buf);
                     break;
 
                 case STATE_DRAWING_CIRCLE:
@@ -353,7 +375,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                     {
                         Plane proj_plane = *facing_plane;
                         Face *face = (Face *)picked_obj;
-                        float length;
+                        float length, height;
 
                         // Can we extrude this face?
                         if (face->type == FACE_CYLINDRICAL || face->type == FACE_GENERAL)
@@ -452,7 +474,14 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                                 break;
                             }
 
+                            height = 0;
                             link((Object *)vol, &object_tree);
+                        }
+                        else
+                        {
+                            // TODO - Find the height of the existing volume
+                            // TODO - make height persist between calls!
+                            height = 0;
                         }
 
                         // Project new_point back to the face's normal wrt. picked_point,
@@ -471,6 +500,9 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                             face->normal.B,
                             face->normal.C
                             );
+                        snap_to_scale(&length);
+                        if (length == 0)
+                            break;          // come back in when you've got a length
 
                         // Move the picked face by a delta in XYZ up its own normal
                         move_obj
@@ -492,6 +524,11 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                         }
 
                         picked_point = new_point;
+                        height += length;
+
+                        // Show the height of the extrusion.
+                        sprintf_s(buf, 64, "%s mm", display_rounded(buf2, height));
+                        show_hint_at(pt, buf);
                     }
 
                     break;
@@ -544,7 +581,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
         // handle zooming. No state change here.
         if (zoom_delta != 0)
         {
-            zTrans += 0.01f * zoom_delta;
+            zTrans += 0.01f * half_size * zoom_delta;
             Position(FALSE, 0, 0);
             zoom_delta = 0;
         }

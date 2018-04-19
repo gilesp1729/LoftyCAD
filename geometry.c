@@ -170,7 +170,8 @@ normal(Point *list, Plane *norm)
 
     cross(b->x - a->x, b->y - a->y, b->z - a->z, c->x - a->x, c->y - a->y, c->z - a->z, &cp.x, &cp.y, &cp.z);
     length = (float)sqrt(cp.x * cp.x + cp.y * cp.y + cp.z * cp.z);
-    ASSERT(length > 0.0001, "Normal of collinear points");
+    // Don't check, as this happens normally during extrusion of zero-height rects
+    //ASSERT(length > 0.0001, "Normal of collinear points");
     norm->A = cp.x / length;
     norm->B = cp.y / length;
     norm->C = cp.z / length;
@@ -197,9 +198,16 @@ normal3(Point *b, Point *a, Point *c, Plane *norm)
 }
 
 float
-length(float x0, float y0, float z0, float x1, float y1, float z1)
+length(Point *p0, Point *p1)
 {
-    return sqrt((x1 - x0)*(x1 - x0) + (y1 - y0)*(y1 - y0) + (z1 - z0)*(z1 - z0));
+    float x0 = p0->x;
+    float y0 = p0->y;
+    float z0 = p0->z;
+    float x1 = p1->x;
+    float y1 = p1->y;
+    float z1 = p1->z;
+
+    return (float)sqrt((x1 - x0)*(x1 - x0) + (y1 - y0)*(y1 - y0) + (z1 - z0)*(z1 - z0));
 }
 
 float
@@ -248,4 +256,53 @@ mat_mult_by_row(float *m, float *v, float *res)
     res[1] = m[4] * v[0] + m[5] * v[1] + m[6] * v[2] + m[7] * v[3];
     res[2] = m[8] * v[0] + m[9] * v[1] + m[10] * v[2] + m[11] * v[3];
     res[3] = m[12] * v[0] + m[13] * v[1] + m[14] * v[2] + m[15] * v[3];
+}
+
+// test for "near" zero.
+#define nz(val)  (fabsf(val) < 0.00001)
+
+
+// Snap a point to the grid. It must lie in the given plane. If the plane is
+// not axis aligned, we can't snap anything (it would move out of plane)
+void
+snap_to_grid(Plane *plane, Point *point)
+{
+    if (nz(plane->A) && nz(plane->B))
+    {
+        snap_to_scale(&point->x);
+        snap_to_scale(&point->y);
+    }
+    else if (nz(plane->B) && nz(plane->C))
+    {
+        snap_to_scale(&point->y);
+        snap_to_scale(&point->z);
+    }
+    else if (nz(plane->A) && nz(plane->C))
+    {
+        snap_to_scale(&point->x);
+        snap_to_scale(&point->z);
+    }
+}
+
+// Snap a length to the grid snapping distance.
+void
+snap_to_scale(float *length)
+{
+    float snap;
+
+    // This assumes grid scale and tolerance are powers of 10.
+    if (snap_grid)
+        snap = grid_scale;
+    else
+        snap = tolerance;
+    *length = roundf(*length / snap) * snap;
+}
+
+// Display a coordinate or length, rounded to the tolerance.
+// buf must be char[64]
+char *
+display_rounded(char *buf, float val)
+{
+    sprintf_s(buf, 64, "%.*f", tol_log, val); 
+    return buf;
 }

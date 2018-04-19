@@ -4,6 +4,7 @@
 #include <GL/glu.h>
 #include "glaux/glaux.h"
 #include <math.h>
+#include <stdio.h>
 #include "resource.h"
 #include "trackbal.h"
 #include "objtree.h"
@@ -67,6 +68,14 @@ extern Point picked_point;
 extern Plane *picked_plane;
 extern Plane *facing_plane;
 extern PLANE facing_index;
+
+extern char curr_title[];
+extern float grid_scale;
+extern float tolerance;
+extern int tol_log;
+extern BOOL snap_grid;
+extern float half_size;
+
 
 
 // Debug stuff
