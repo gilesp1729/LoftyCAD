@@ -172,11 +172,13 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                 {
                 case STATE_MOVING:
                     // Move the selection by a delta in XYZ within the facing plane
-                    // TODO: We need some locking/constraints, otherwise we can mess things up.
                     intersect_ray_plane(pt.x, pt.y, facing_plane, &new_point);
                     snap_to_grid(facing_plane, &new_point);
                     for (obj = selection; obj != NULL; obj = obj->next)
                     {
+                        Face *f;
+                        Object *parent;
+
                         move_obj
                             (
                             obj->prev,
@@ -188,18 +190,16 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
 
                         // If we have moved a face:
                         // Invalidate all the view lists for the volume, as any of them may have changed
-                        // TODO - do this by finding the ultimate parent, so it works for points, edges, etc.
-                        if (obj->prev->type == OBJ_FACE)
+                        // Do this by finding the ultimate parent, so it works for points, edges, etc.
+                        parent = find_top_level_parent(object_tree, obj->prev);
+                        if (parent->type == OBJ_VOLUME)
                         {
-                            Face *face = (Face *)obj->prev;
-
-                            if (face->vol != NULL)
-                            {
-                                Face *f;
-
-                                for (f = face->vol->faces; f != NULL; f = (Face *)f->hdr.next)
-                                    f->view_valid = FALSE;
-                            }
+                            for (f = ((Volume *)parent)->faces; f != NULL; f = (Face *)f->hdr.next)
+                                f->view_valid = FALSE;
+                        }
+                        else if (parent->type == OBJ_FACE)
+                        {
+                            ((Face *)parent)->view_valid = FALSE;
                         }
                     }
 
@@ -582,6 +582,8 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
         if (zoom_delta != 0)
         {
             zTrans += 0.01f * half_size * zoom_delta;
+            if (zTrans > -0.8f * half_size)
+                zTrans = -0.8f * half_size;
             Position(FALSE, 0, 0);
             zoom_delta = 0;
         }

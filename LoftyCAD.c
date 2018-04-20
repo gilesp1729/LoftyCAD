@@ -198,7 +198,8 @@ void CALLBACK
 Position(BOOL picking, GLint x_pick, GLint y_pick)
 {
     GLint viewport[4], width, height;
-    float h, w, znear, zfar;
+    float h, w, znear, zfar, zoom_factor;
+    // char buf[64];
 
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
@@ -213,28 +214,38 @@ Position(BOOL picking, GLint x_pick, GLint y_pick)
     zfar = 50 * half_size;
     if (view_ortho)
     {
+        zoom_factor = -0.5f * zTrans / half_size;
+      //  sprintf_s(buf, 64, "Ortho Ztrans %f zoomf %f\r\n", zTrans, zoom_factor);
+      //  Log(buf);
         if (width > height)
         {
-            w = half_size * (float)width / height;
-            glOrtho(-w, w, -half_size, half_size, znear, zfar);
+            w = half_size * zoom_factor * (float)width / height;
+            h = half_size * zoom_factor;
+            glOrtho(-w, w, -h, h, znear, zfar);
         }
         else
         {
-            h = half_size * (float)height / width;
-            glOrtho(-half_size, half_size, -h, h, znear, zfar);
+            w = half_size * zoom_factor;
+            h = half_size * zoom_factor * (float)height / width;
+            glOrtho(-w, w, -h, h, znear, zfar);
         }
     }
     else
     {
+        zoom_factor = ((-0.5f * zTrans / half_size) - 1) * 0.5f + 1;
+       // sprintf_s(buf, 64, "Persp Ztrans %f zoomf %f\r\n", zTrans, zoom_factor);
+       // Log(buf);
         if (width > height)
         {
-            w = half_size * (float)width / height;
-            glFrustum(-w, w, -half_size, half_size, znear, zfar);
+            w = half_size * zoom_factor * (float)width / height;
+            h = half_size * zoom_factor;
+            glFrustum(-w, w, -h, h, znear, zfar);
         }
         else
         {
-            h = half_size * (float)height / width;
-            glFrustum(-half_size, half_size, -h, h, znear, zfar);
+            w = half_size * zoom_factor;
+            h = half_size * zoom_factor * (float)height / width;
+            glFrustum(-w, w, -h, h, znear, zfar);
         }
     }
 
@@ -505,7 +516,6 @@ left_up(AUX_EVENTREC *event)
 {
     Face *rf;
     StraightEdge *se;
-    Object *sel_obj;
     float mv[16], vec[4], nvec[4];
     float eye[4] = { 0, 0, 1, 0 };
     char buf[256];
@@ -584,25 +594,6 @@ left_up(AUX_EVENTREC *event)
         ReleaseCapture();
         left_mouse = FALSE;
         app_state = STATE_NONE;
-
-        // regenerate the view lists for all moved faces to get rid of
-        // any little errors that have crept in
-        for (sel_obj = selection; sel_obj != NULL; sel_obj = sel_obj->next)
-        {
-            Object *parent = find_top_level_parent(object_tree, sel_obj->prev);
-            Face *face;
-
-            if (parent->type == OBJ_VOLUME)
-            {
-                for (face = ((Volume *)parent)->faces; face != NULL; face = (Face *)face->hdr.next)
-                    face->view_valid = FALSE;
-            }
-            else if (parent->type == OBJ_FACE)
-            {
-                ((Face *)parent)->view_valid = FALSE;
-            }
-        }
-
         drawing_changed = TRUE;
         break;
 
@@ -705,7 +696,7 @@ left_click(AUX_EVENTREC *event)
     // If it is already selected, remove it from selection.
     if (picked_obj != NULL)
     {
-        if (is_selected(curr_obj, &prev_in_list))
+        if (is_selected(picked_obj, &prev_in_list))
         {
             if (prev_in_list == NULL)
             {
@@ -718,7 +709,7 @@ left_click(AUX_EVENTREC *event)
                 prev_in_list->next = sel_obj->next;
             }
 
-            ASSERT(sel_obj->prev == curr_obj, "Selection list broken");
+            ASSERT(sel_obj->prev == picked_obj, "Selection list broken");
             free(sel_obj);
 
             if (selection != NULL && (event->data[AUX_MOUSESTATUS] & AUX_SHIFT) == 0)
@@ -733,11 +724,82 @@ left_click(AUX_EVENTREC *event)
             sel_obj = obj_new();
             sel_obj->next = selection;
             selection = sel_obj;
-            sel_obj->prev = curr_obj;
+            sel_obj->prev = picked_obj;
         }
     }
 }
 
+// move the selection by a small amount
+void
+micro_move_selection(float x, float y)
+{
+    float dx, dy, dz;
+    Object *obj;
+
+    switch (facing_index)
+    {
+    case PLANE_XY:
+        dx = x;
+        dy = y;
+        dz = 0;
+        break;
+
+    case PLANE_YZ:
+        dx = 0;
+        dy = x;
+        dz = y;
+        break;
+
+    case PLANE_XZ:
+        dx = -x;
+        dy = 0;
+        dz = y;
+        break;
+
+    case PLANE_MINUS_XY:
+        dx = -x;
+        dy = y;
+        dz = 0;
+        break;
+
+    case PLANE_MINUS_YZ:
+        dx = 0;
+        dy = -x;
+        dz = y;
+        break;
+
+    case PLANE_MINUS_XZ:
+        dx = x;
+        dy = 0;
+        dz = y;
+        break;
+    }
+
+    for (obj = selection; obj != NULL; obj = obj->next)
+    {
+        Face *f;
+        Object *parent;
+
+        move_obj(obj->prev, dx, dy, dz);
+        clear_move_copy_flags(obj->prev);
+
+        // If we have moved a face:
+        // Invalidate all the view lists for the volume, as any of them may have changed
+        // Do this by finding the ultimate parent, so it works for points, edges, etc.
+        parent = find_top_level_parent(object_tree, obj->prev);
+        if (parent->type == OBJ_VOLUME)
+        {
+            for (f = ((Volume *)parent)->faces; f != NULL; f = (Face *)f->hdr.next)
+                f->view_valid = FALSE;
+        }
+        else if (parent->type == OBJ_FACE)
+        {
+            ((Face *)parent)->view_valid = FALSE;
+        }
+    }
+}
+
+#if 0 // this doesn't work - need to register a hotkey instead.
 // ESC key aborts a dragging operation.
 void CALLBACK
 escape_key(void)
@@ -746,6 +808,32 @@ escape_key(void)
     ReleaseCapture();
     left_mouse = FALSE;
     app_state = STATE_NONE;
+}
+#endif // 0
+
+// U/D/L/R arrow keys move selection by one unit in the facing plane
+void CALLBACK
+left_arrow_key(void)
+{
+    micro_move_selection(-1, 0);
+}
+
+void CALLBACK
+right_arrow_key(void)
+{
+    micro_move_selection(1, 0);
+}
+
+void CALLBACK
+up_arrow_key(void)
+{
+    micro_move_selection(0, 1);
+}
+
+void CALLBACK
+down_arrow_key(void)
+{
+    micro_move_selection(0, -1);
 }
 
 void CALLBACK
@@ -784,9 +872,16 @@ check_file_changed(HWND hWnd)
         int rc = MessageBox(hWnd, "File modified. Save it?", curr_filename, MB_YESNOCANCEL | MB_ICONWARNING);
 
         if (rc == IDCANCEL)
+        {
             return;
+        }
         else if (rc == IDYES)
-            serialise_tree(object_tree, curr_filename);
+        {
+            if (curr_filename[0] == '\0')
+                SendMessage(hWnd, WM_COMMAND, ID_FILE_SAVEAS, 0);
+            else
+                serialise_tree(object_tree, curr_filename);
+        }
     }
 
     purge_tree(object_tree);
@@ -1064,6 +1159,8 @@ LoadAndDisplayIcon(HWND hWnd, int icon, int button, int toolstring)
 int WINAPI
 toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
+    HMENU hMenu;
+
     switch (msg)
     {
     case WM_INITDIALOG:
@@ -1168,6 +1265,9 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
     case WM_CLOSE:
         view_tools = FALSE;
+        ShowWindow(hWnd, SW_HIDE);
+        hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
+        CheckMenuItem(hMenu, ID_VIEW_TOOLS, view_tools ? MF_CHECKED : MF_UNCHECKED);
         break;
     }
 
@@ -1178,6 +1278,8 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 int WINAPI
 debug_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
+    HMENU hMenu;
+
     switch (msg)
     {
     case WM_COMMAND:
@@ -1186,12 +1288,19 @@ debug_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             switch (LOWORD(wParam))
             {
             case IDB_CLEARDEBUG:
-                SendDlgItemMessage(hWndDebug, IDC_DEBUG, EM_SETSEL, 0, -1);
-                SendDlgItemMessage(hWndDebug, IDC_DEBUG, EM_REPLACESEL, 0, (LPARAM)"");
+                SendDlgItemMessage(hWnd, IDC_DEBUG, EM_SETSEL, 0, -1);
+                SendDlgItemMessage(hWnd, IDC_DEBUG, EM_REPLACESEL, 0, (LPARAM)"");
                 break;
             }
         }
 
+        break;
+
+    case WM_CLOSE:
+        view_debug = FALSE;
+        ShowWindow(hWnd, SW_HIDE);
+        hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
+        CheckMenuItem(hMenu, ID_VIEW_DEBUGLOG, view_debug ? MF_CHECKED : MF_UNCHECKED);
         break;
     }
 
@@ -1240,8 +1349,12 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             SendDlgItemMessage(hWnd, IDC_PREFS_TOL, WM_GETTEXT, 16, (LPARAM)buf);
             tolerance = (float)atof(buf);
             tol_log = (int)log10f(1.0f / tolerance);
-
+            drawing_changed = TRUE;   // TODO test for a real change
             EndDialog(hWnd, 1);
+            break;
+
+        case IDCANCEL:
+            EndDialog(hWnd, 0);
         }
     }
 
@@ -1279,19 +1392,12 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
         auxDestroyFunc((AUXDESTROYPROC)check_file_changed);
 
 #if 0
-        auxKeyFunc(AUX_z, Key_z); // zero viewing distance
-        auxKeyFunc(AUX_r, Key_r); // results view
-        auxKeyFunc(AUX_e, Key_e); // elements
-        auxKeyFunc(AUX_n, Key_n); // normals
-        auxKeyFunc(AUX_m, Key_m); // vel. magnitudes
-        auxKeyFunc(AUX_v, Key_v); // vel. vectors
-        auxKeyFunc(AUX_p, Key_p); // pressures
-        auxKeyFunc(AUX_l, Key_l); // zlines
-        auxKeyFunc(AUX_t, Key_t); // zones of turb/separation
-        auxKeyFunc(AUX_UP, Key_up);	    // up zline
-        auxKeyFunc(AUX_DOWN, Key_down);   // down zline
-#endif
         auxKeyFunc(AUX_ESCAPE, escape_key);
+#endif
+        auxKeyFunc(AUX_LEFT, left_arrow_key);
+        auxKeyFunc(AUX_RIGHT, right_arrow_key);
+        auxKeyFunc(AUX_UP, up_arrow_key);
+        auxKeyFunc(AUX_DOWN, down_arrow_key);
 
         auxMouseFunc(AUX_LEFTBUTTON, AUX_MOUSEDOWN, left_down);
         auxMouseFunc(AUX_LEFTBUTTON, AUX_MOUSEUP, left_up);
