@@ -551,11 +551,11 @@ find_obj(Object *parent, Object *obj)
         return FALSE;
 
     case OBJ_EDGE:
-        type = ((Edge *)obj)->type & ~EDGE_CONSTRUCTION;
+        type = ((Edge *)parent)->type & ~EDGE_CONSTRUCTION;
         switch (type)
         {
         case EDGE_STRAIGHT:
-            se = (StraightEdge *)obj;
+            se = (StraightEdge *)parent;
             if ((Object *)se->endpoints[0] == obj)
                 return TRUE;
             if ((Object *)se->endpoints[1] == obj)

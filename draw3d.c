@@ -32,9 +32,9 @@ color(OBJECT obj_type, BOOL selected, BOOL highlighted)
     switch (obj_type)
     {
     case OBJ_VOLUME:
-    case OBJ_POINT:
         return;  // no action here
 
+    case OBJ_POINT:
     case OBJ_EDGE:
         r = g = b = 0.3f;
         if (selected)
@@ -77,19 +77,64 @@ draw_object(Object *obj, BOOL selected, BOOL highlighted)
     Face *face;
     Edge *edge;
     StraightEdge *se;
+    Point *p;
 
     switch (obj->type)
     {
     case OBJ_POINT:
-        // Only if selected/highlighted.
-        if (selected)
+        p = (Point *)obj;
+        glPushName((GLuint)obj);
+        if (selected || highlighted)
         {
-            // glPushName((GLuint)obj);
-            // TODO
+            float dx, dy, dz;
 
-            // glPopName();
-
+            // Draw a square blob in the facing plane, so it's more easily seen
+            glDisable(GL_CULL_FACE);
+            glBegin(GL_POLYGON);
+            color(OBJ_POINT, selected, highlighted);
+            switch (facing_index)
+            {
+            case PLANE_XY:
+            case PLANE_MINUS_XY:
+                dx = 1;
+                dy = 1;
+                glVertex3f(p->x - dx, p->y - dy, p->z);
+                glVertex3f(p->x + dx, p->y - dy, p->z);
+                glVertex3f(p->x + dx, p->y + dy, p->z);
+                glVertex3f(p->x - dx, p->y + dy, p->z);
+                break;
+            case PLANE_YZ:
+            case PLANE_MINUS_YZ:
+                dx = 0;
+                dy = 1;
+                dz = 1;
+                glVertex3f(p->x, p->y - dy, p->z - dz);
+                glVertex3f(p->x, p->y + dy, p->z - dz);
+                glVertex3f(p->x, p->y + dy, p->z + dz);
+                glVertex3f(p->x, p->y - dy, p->z + dz);
+                break;
+            case PLANE_XZ:
+            case PLANE_MINUS_XZ:
+                dx = 1;
+                dy = 0;
+                dz = 1;
+                glVertex3f(p->x - dx, p->y, p->z - dz);
+                glVertex3f(p->x + dx, p->y, p->z - dz);
+                glVertex3f(p->x + dx, p->y, p->z + dz);
+                glVertex3f(p->x - dx, p->y, p->z + dz);
+            }
+            glEnd();
+            glEnable(GL_CULL_FACE);
         }
+        else
+        {
+            // Just draw the point, the picking will still work
+            glBegin(GL_POINTS);
+            color(OBJ_POINT, selected, highlighted);
+            glVertex3f(p->x, p->y, p->z);
+            glEnd();
+        }
+        glPopName();
         break;
 
     case OBJ_EDGE:
@@ -105,7 +150,8 @@ draw_object(Object *obj, BOOL selected, BOOL highlighted)
             glVertex3f(se->endpoints[1]->x, se->endpoints[1]->y, se->endpoints[1]->z);
             glEnd();
             glPopName();
-            // TODO draw points after popping
+            draw_object((Object *)se->endpoints[0], selected, highlighted);
+            draw_object((Object *)se->endpoints[1], selected, highlighted);
             break;
 
         case EDGE_CIRCLE:
