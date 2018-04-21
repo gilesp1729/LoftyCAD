@@ -911,7 +911,7 @@ serialise_tree(Object *tree, char *filename)
     
     fopen_s(&f, filename, "wt");
     fprintf_s(f, "TITLE %s\n", curr_title);
-    fprintf_s(f, "SCALE %f %f %f %d\n", half_size, grid_snap, tolerance, snap_to_angle);
+    fprintf_s(f, "SCALE %f %f %f %d\n", half_size, grid_snap, tolerance, angle_snap);
 
     save_count++;
     for (obj = tree; obj != NULL; obj = obj->next)

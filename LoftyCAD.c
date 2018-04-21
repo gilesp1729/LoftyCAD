@@ -1422,6 +1422,8 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         SendDlgItemMessage(hWnd, IDC_PREFS_GRID, WM_SETTEXT, 0, (LPARAM)buf);
         sprintf_s(buf, 16, "%.2f", tolerance);
         SendDlgItemMessage(hWnd, IDC_PREFS_TOL, WM_SETTEXT, 0, (LPARAM)buf);
+        sprintf_s(buf, 16, "%d", angle_snap);
+        SendDlgItemMessage(hWnd, IDC_PREFS_ANGLE, WM_SETTEXT, 0, (LPARAM)buf);
 
     case WM_COMMAND:
         switch (LOWORD(wParam))
@@ -1436,6 +1438,10 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             SendDlgItemMessage(hWnd, IDC_PREFS_TOL, WM_GETTEXT, 16, (LPARAM)buf);
             tolerance = (float)atof(buf);
             tol_log = (int)log10f(1.0f / tolerance);
+            // TODO check angle snap divides 360
+            SendDlgItemMessage(hWnd, IDC_PREFS_ANGLE, WM_GETTEXT, 16, (LPARAM)buf);
+            angle_snap = atoi(buf);
+
             drawing_changed = TRUE;   // TODO test for a real change
             EndDialog(hWnd, 1);
             break;
