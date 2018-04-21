@@ -284,6 +284,25 @@ snap_to_grid(Plane *plane, Point *point)
     }
 }
 
+// Snap p0-p1 to an angle snap tolerance. p1 may be moved.
+// p1 must be snapped to the grid after calling this.
+void
+snap_to_angle(Plane *plane, Point *p0, Point *p1, int angle_tol)
+{
+    if (nz(plane->A) && nz(plane->B))
+    {
+        snap_2d_angle(p0->x, p0->y, &p1->x, &p1->y, angle_tol);
+    }
+    else if (nz(plane->B) && nz(plane->C))
+    {
+        snap_2d_angle(p0->y, p0->z, &p1->y, &p1->z, angle_tol);
+    }
+    else if (nz(plane->A) && nz(plane->C))
+    {
+        snap_2d_angle(p0->x, p0->z, &p1->x, &p1->z, angle_tol);
+    }
+}
+
 // Snap a length to the grid snapping distance.
 void
 snap_to_scale(float *length)
@@ -291,11 +310,29 @@ snap_to_scale(float *length)
     float snap;
 
     // This assumes grid scale and tolerance are powers of 10.
-    if (snap_grid)
-        snap = grid_scale;
+    if (snapping_to_grid)
+        snap = grid_snap;
     else
         snap = tolerance;
     *length = roundf(*length / snap) * snap;
+}
+
+// Snap to an angle in 2D. angle_tol is in degrees. 
+void
+snap_2d_angle(float x0, float y0, float *x1, float *y1, int angle_tol)
+{
+    float length = (float)sqrt((*x1 - x0)*(*x1 - x0) + (*y1 - y0)*(*y1 - y0));
+    int theta = (int)(atan2f(*y1 - y0, *x1 - x0) * 57.29577);
+    int tol_half = angle_tol / 2;
+    float theta_rad;
+
+    // round theta to a multiple of angle_tol
+    if (theta < 0)
+        theta += 360;
+    theta = ((theta + tol_half) / angle_tol) * angle_tol; 
+    theta_rad = theta / 57.29577f;
+    *x1 = x0 + length * cosf(theta_rad);
+    *y1 = y0 + length * sinf(theta_rad);
 }
 
 // Display a coordinate or length, rounded to the tolerance.

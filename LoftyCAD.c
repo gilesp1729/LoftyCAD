@@ -19,8 +19,10 @@ INT_PTR CALLBACK	About(HWND, UINT, WPARAM, LPARAM);
 
 GLint wWidth = 800, wHeight = 800;
 
+// Mouse movements recorded here
 int	left_mouseX, left_mouseY;
 int	right_mouseX, right_mouseY;
+int key_status;
 BOOL	left_mouse = FALSE;
 BOOL	right_mouse = FALSE;
 
@@ -51,6 +53,9 @@ Object *curr_obj = NULL;
 // started. Also the point where the pick occurred (in (x,y,z) coordinates)
 Object *picked_obj = NULL;
 Point picked_point;
+
+// Starts at picked_point, but is updated throughout a move/drag.
+Point last_point;
 
 // The plane that picked_obj lies in; or else the facing plane if there is none.
 Plane *picked_plane = NULL;
@@ -83,18 +88,24 @@ BOOL view_rendered = FALSE;
 char curr_filename[256] = { 0, };
 char curr_title[256] = { 0, };
 
-// Grid scale (for snapping points) and unit tolerance (for display of dims)
+// Grid (for snapping points) and unit tolerance (for display of dims)
 // When snapping is turned off, points are still snapped to the tolerance.
-// Scale must be a power of 10; tolerance must be a power of 10, and less
+// grid_snap must be a power of 10; tolerance must be a power of 10, and less
 // than or equal to the grid scale. (e.g. 1, 0.1)
-float grid_scale = 1.0f;
+float grid_snap = 1.0f;
 float tolerance = 0.1f;
 
 // log10(1.0 / tolerance)
 int tol_log = 1;
 
 // TRUE if snapping to grid (FALSE will snap to the tolerance)
-BOOL snap_grid = TRUE;
+BOOL snapping_to_grid = TRUE;
+
+// Angular snap in degrees
+int angle_snap = 15;
+
+// TRUE if snapping to angle
+BOOL snapping_to_angle = FALSE;
 
 // Half-size of drawing volume, nominally in mm (although units are arbitrary)
 float half_size = 100.0f;
@@ -430,11 +441,13 @@ left_down(AUX_EVENTREC *event)
             left_mouseX = event->data[AUX_MOUSEX];
             left_mouseY = event->data[AUX_MOUSEY];
             left_mouse = TRUE;
+            key_status = event->data[AUX_MOUSESTATUS];
             app_state = STATE_MOVING;
 
             // Set the picked point on the facing plane for later subtraction
             intersect_ray_plane(left_mouseX, left_mouseY, facing_plane, &picked_point);
             snap_to_grid(facing_plane, &picked_point);
+            last_point = picked_point;
         }
         break;
 
@@ -455,6 +468,7 @@ left_down(AUX_EVENTREC *event)
         left_mouseX = event->data[AUX_MOUSEX];
         left_mouseY = event->data[AUX_MOUSEY];
         left_mouse = TRUE;
+        key_status = event->data[AUX_MOUSESTATUS];
 
         // Move into the corresponding drawing state
         app_state += STATE_DRAWING_OFFSET;
@@ -681,6 +695,8 @@ left_up(AUX_EVENTREC *event)
         app_state = STATE_NONE;
         break;
     }
+
+    key_status = 0;;
 }
 
 void CALLBACK
@@ -735,6 +751,17 @@ micro_move_selection(float x, float y)
 {
     float dx, dy, dz;
     Object *obj;
+
+    if (snapping_to_grid)
+    {
+        x *= grid_snap;
+        y *= grid_snap;
+    }
+    else
+    {
+        x *= tolerance;
+        y *= tolerance;
+    }
 
     switch (facing_index)
     {
@@ -811,7 +838,9 @@ escape_key(void)
 }
 #endif // 0
 
-// U/D/L/R arrow keys move selection by one unit in the facing plane
+// U/D/L/R arrow keys move selection by one unit in the facing plane,
+// where one unit is a multiple of grid snap, or of tolerance if snapping is
+// turmed off.
 void CALLBACK
 left_arrow_key(void)
 {
@@ -856,6 +885,47 @@ right_up(AUX_EVENTREC *event)
 void CALLBACK
 right_click(AUX_EVENTREC *event)
 {
+    HMENU hMenu = LoadMenu(hInst, MAKEINTRESOURCE(IDR_CONTEXT));
+    int rc;
+    POINT pt;
+    char buf[32];
+
+    picked_obj = Pick(event->data[0], event->data[1], OBJ_FACE);
+    if (picked_obj == NULL)
+        return;
+
+    pt.x = event->data[AUX_MOUSEX];
+    pt.y = event->data[AUX_MOUSEY];
+    ClientToScreen(auxGetHWND(), &pt);
+    hMenu = GetSubMenu(hMenu, 0);
+    switch (picked_obj->type)
+    {
+    case OBJ_POINT:
+        sprintf_s(buf, 32, "Point %d", picked_obj->ID);
+        break;
+    case OBJ_EDGE:
+        sprintf_s(buf, 32, "Edge %d", picked_obj->ID);
+        break;
+    case OBJ_FACE:
+        sprintf_s(buf, 32, "Face %d", picked_obj->ID);
+        break;
+    case OBJ_VOLUME:
+        sprintf_s(buf, 32, "Volume %d", picked_obj->ID);
+        break;
+    }
+    ModifyMenu(hMenu, 0, MF_BYPOSITION | MF_GRAYED | MF_STRING, 0, buf);
+
+    rc = TrackPopupMenu
+        (
+        hMenu, 
+        TPM_RETURNCMD | TPM_NONOTIFY | TPM_RIGHTBUTTON,
+        pt.x, 
+        pt.y, 
+        0, 
+        auxGetHWND(), 
+        NULL
+        );
+
 }
 
 void CALLBACK
@@ -895,6 +965,9 @@ mouse_move(AUX_EVENTREC *event)
     // We do this when we are about to add something to the tree.
     // Just having the function causes force redraws (TODO: TK/AUX may need to 
     // handle a return value to control this, if the drawing is complex)
+
+    // while here, store away the state of the shift key
+    key_status = event->data[AUX_MOUSESTATUS];
 }
 
 // Process WM_COMMAND from TK window proc
@@ -911,17 +984,31 @@ Command(int wParam, int lParam)
         check_file_changed(auxGetHWND());
         break;
 
-    case ID_EDIT_SNAP:
-        hMenu = GetSubMenu(GetMenu(auxGetHWND()), 1);
-        if (snap_grid)
+    case ID_PREFERENCES_SNAPTOGRID:
+        hMenu = GetSubMenu(GetMenu(auxGetHWND()), 0);
+        if (snapping_to_grid)
         {
-            snap_grid = FALSE;
-            CheckMenuItem(hMenu, ID_EDIT_SNAP, MF_UNCHECKED);
+            snapping_to_grid = FALSE;
+            CheckMenuItem(hMenu, ID_PREFERENCES_SNAPTOGRID, MF_UNCHECKED);
         }
         else
         {
-            snap_grid = TRUE;
-            CheckMenuItem(hMenu, ID_EDIT_SNAP, MF_CHECKED);
+            snapping_to_grid = TRUE;
+            CheckMenuItem(hMenu, ID_PREFERENCES_SNAPTOGRID, MF_CHECKED);
+        }
+        break;
+
+    case ID_PREFERENCES_SNAPTOANGLE:
+        hMenu = GetSubMenu(GetMenu(auxGetHWND()), 0);
+        if (snapping_to_angle)
+        {
+            snapping_to_angle = FALSE;
+            CheckMenuItem(hMenu, ID_PREFERENCES_SNAPTOANGLE, MF_UNCHECKED);
+        }
+        else
+        {
+            snapping_to_angle = TRUE;
+            CheckMenuItem(hMenu, ID_PREFERENCES_SNAPTOANGLE, MF_CHECKED);
         }
         break;
 
@@ -1106,7 +1193,7 @@ Command(int wParam, int lParam)
 
         break;
 
-    case ID_FILE_PREFS:
+    case ID_PREFERENCES_SETTINGS:
         DialogBox(hInst, MAKEINTRESOURCE(IDD_PREFS), auxGetHWND(), prefs_dialog);
         strcpy_s(window_title, 256, curr_filename);
         strcat_s(window_title, 256, " - ");
@@ -1331,7 +1418,7 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         SendDlgItemMessage(hWnd, IDC_PREFS_TITLE, WM_SETTEXT, 0, (LPARAM)curr_title);
         sprintf_s(buf, 16, "%.0f", half_size);
         SendDlgItemMessage(hWnd, IDC_PREFS_HALFSIZE, WM_SETTEXT, 0, (LPARAM)buf);
-        sprintf_s(buf, 16, "%.1f", grid_scale);
+        sprintf_s(buf, 16, "%.1f", grid_snap);
         SendDlgItemMessage(hWnd, IDC_PREFS_GRID, WM_SETTEXT, 0, (LPARAM)buf);
         sprintf_s(buf, 16, "%.2f", tolerance);
         SendDlgItemMessage(hWnd, IDC_PREFS_TOL, WM_SETTEXT, 0, (LPARAM)buf);
@@ -1344,7 +1431,7 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             SendDlgItemMessage(hWnd, IDC_PREFS_HALFSIZE, WM_GETTEXT, 16, (LPARAM)buf);
             half_size = (float)atof(buf);
             SendDlgItemMessage(hWnd, IDC_PREFS_GRID, WM_GETTEXT, 16, (LPARAM)buf);
-            grid_scale = (float)atof(buf);
+            grid_snap = (float)atof(buf);
             // TODO check grid scale and tolerance are powers of 10
             SendDlgItemMessage(hWnd, IDC_PREFS_TOL, WM_GETTEXT, 16, (LPARAM)buf);
             tolerance = (float)atof(buf);
@@ -1456,8 +1543,9 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
         // Bring main window back to the front
         SetWindowPos(auxGetHWND(), HWND_TOP, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOREPOSITION);
 
-        hMenu = GetSubMenu(GetMenu(auxGetHWND()), 1);
-        CheckMenuItem(hMenu, ID_EDIT_SNAP, snap_grid ? MF_CHECKED : MF_UNCHECKED);
+        hMenu = GetSubMenu(GetMenu(auxGetHWND()), 0);
+        CheckMenuItem(hMenu, ID_PREFERENCES_SNAPTOGRID, snapping_to_grid ? MF_CHECKED : MF_UNCHECKED);
+        CheckMenuItem(hMenu, ID_PREFERENCES_SNAPTOANGLE, snapping_to_angle ? MF_CHECKED : MF_UNCHECKED);
 
         hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
         CheckMenuItem(hMenu, ID_VIEW_TOOLS, view_tools ? MF_CHECKED : MF_UNCHECKED);

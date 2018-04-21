@@ -48,6 +48,7 @@ extern int zoom_delta;
 
 extern int	left_mouseX, left_mouseY;
 extern int	right_mouseX, right_mouseY;
+extern int key_status;
 extern BOOL	left_mouse;
 extern BOOL	right_mouse;
 
@@ -65,15 +66,18 @@ extern BOOL drawing_changed;
 extern Object *curr_obj;
 extern Object *picked_obj;
 extern Point picked_point;
+extern Point last_point;
 extern Plane *picked_plane;
 extern Plane *facing_plane;
 extern PLANE facing_index;
 
 extern char curr_title[];
-extern float grid_scale;
+extern float grid_snap;
 extern float tolerance;
 extern int tol_log;
-extern BOOL snap_grid;
+extern int angle_snap;
+extern BOOL snapping_to_grid;
+extern BOOL snapping_to_angle;
 extern float half_size;
 
 

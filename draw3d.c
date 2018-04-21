@@ -173,7 +173,12 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                 case STATE_MOVING:
                     // Move the selection by a delta in XYZ within the facing plane
                     intersect_ray_plane(pt.x, pt.y, facing_plane, &new_point);
+                    if (key_status & AUX_SHIFT)
+                        snap_to_angle(picked_plane, &picked_point, &new_point, 45);
+                    else if (snapping_to_angle)
+                        snap_to_angle(picked_plane, &picked_point, &new_point, angle_snap);
                     snap_to_grid(facing_plane, &new_point);
+
                     for (obj = selection; obj != NULL; obj = obj->next)
                     {
                         Face *f;
@@ -182,9 +187,9 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                         move_obj
                             (
                             obj->prev,
-                            new_point.x - picked_point.x,
-                            new_point.y - picked_point.y,
-                            new_point.z - picked_point.z
+                            new_point.x - last_point.x,
+                            new_point.y - last_point.y,
+                            new_point.z - last_point.z
                             );
                         clear_move_copy_flags(obj->prev);
 
@@ -203,7 +208,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                         }
                     }
 
-                    picked_point = new_point;
+                    last_point = new_point;
 
                     break;
 
@@ -218,6 +223,10 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
 
                     // Move the end point of the current edge
                     intersect_ray_plane(pt.x, pt.y, picked_plane, &new_point);
+                    if (key_status & AUX_SHIFT)
+                        snap_to_angle(picked_plane, &picked_point, &new_point, 45);
+                    else if (snapping_to_angle)
+                        snap_to_angle(picked_plane, &picked_point, &new_point, angle_snap);
                     snap_to_grid(picked_plane, &new_point);
 
                     // If first move, create the edge here.

@@ -911,7 +911,7 @@ serialise_tree(Object *tree, char *filename)
     
     fopen_s(&f, filename, "wt");
     fprintf_s(f, "TITLE %s\n", curr_title);
-    fprintf_s(f, "SCALE %f %f %f\n", half_size, grid_scale, tolerance);
+    fprintf_s(f, "SCALE %f %f %f %d\n", half_size, grid_snap, tolerance, snap_to_angle);
 
     save_count++;
     for (obj = tree; obj != NULL; obj = obj->next)
@@ -976,10 +976,12 @@ deserialise_tree(Object **tree, char *filename)
             tok = strtok_s(NULL, " \t\n", &nexttok);
             half_size = (float)atof(tok);
             tok = strtok_s(NULL, " \t\n", &nexttok);
-            grid_scale = (float)atof(tok);
+            grid_snap = (float)atof(tok);
             tok = strtok_s(NULL, " \t\n", &nexttok);
             tolerance = (float)atof(tok);
-            tol_log = log10f(1.0f / tolerance);
+            tol_log = (int)log10f(1.0f / tolerance);
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            angle_snap = atoi(tok);
         }
         else if (strcmp(tok, "BEGIN") == 0)
         {

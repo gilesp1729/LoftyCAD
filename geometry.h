@@ -14,5 +14,7 @@ void cross(float x0, float y0, float z0, float x1, float y1, float z1, float *xc
 void snap_to_grid(Plane *plane, Point *point);
 void snap_to_scale(float *length);
 char *display_rounded(char *buf, float val);
+void snap_2d_angle(float x0, float y0, float *x1, float *y1, int angle_tol);
+void snap_to_angle(Plane *plane, Point *p0, Point *p1, int angle_tol);
 
 #endif
