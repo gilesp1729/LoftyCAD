@@ -99,5 +99,6 @@ extern float half_size;
 Object * Pick(GLint x_pick, GLint y_pick, OBJECT obj_type);
 void CALLBACK Draw(BOOL picking, GLint x_pick, GLint y_pick);
 void CALLBACK Position(BOOL picking, GLint x_pick, GLint y_pick);
+void display_help(char *key);
 
 

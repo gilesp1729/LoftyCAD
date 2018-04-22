@@ -29,9 +29,11 @@ BOOL	right_mouse = FALSE;
 // Toolbars
 HWND hWndToolbar;
 HWND hWndDebug;
+HWND hWndHelp;
 HWND hWndDims;
 BOOL view_tools = TRUE;
 BOOL view_debug = FALSE;
+BOOL view_help = TRUE;
 
 // State the app is in.
 STATE app_state = STATE_NONE;
@@ -1098,6 +1100,10 @@ Command(int wParam, int lParam)
         check_file_changed(auxGetHWND());
         break;
 
+    case IDM_ABOUT:
+        DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), auxGetHWND(), About);
+        break;
+
     case ID_PREFERENCES_SNAPTOGRID:
         hMenu = GetSubMenu(GetMenu(auxGetHWND()), 0);
         if (snapping_to_grid)
@@ -1155,6 +1161,22 @@ Command(int wParam, int lParam)
             ShowWindow(hWndDebug, SW_SHOW);
             view_debug = TRUE;
             CheckMenuItem(hMenu, ID_VIEW_DEBUGLOG, MF_CHECKED);
+        }
+        break;
+
+    case ID_VIEW_HELP:
+        hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
+        if (view_help)
+        {
+            ShowWindow(hWndHelp, SW_HIDE);
+            view_help = FALSE;
+            CheckMenuItem(hMenu, ID_VIEW_HELP, MF_UNCHECKED);
+        }
+        else
+        {
+            ShowWindow(hWndHelp, SW_SHOW);
+            view_help = TRUE;
+            CheckMenuItem(hMenu, ID_VIEW_HELP, MF_CHECKED);
         }
         break;
 
@@ -1508,6 +1530,38 @@ debug_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     return 0;
 }
 
+// Display text in the help window relevant to the current action.
+void 
+display_help(char *key)
+{
+    // Look up whatever.. in some sort of INI file?
+
+
+
+
+    SendDlgItemMessage(hWndHelp, IDC_CONTEXT_HELP, EM_SETSEL, 0, -1);
+    SendDlgItemMessage(hWndHelp, IDC_CONTEXT_HELP, EM_REPLACESEL, 0, (LPARAM)key);
+}
+
+// Wndproc for help dialog. Contains one large edit box.
+int WINAPI
+help_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    HMENU hMenu;
+
+    switch (msg)
+    {
+    case WM_CLOSE:
+        view_help = FALSE;
+        ShowWindow(hWnd, SW_HIDE);
+        hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
+        CheckMenuItem(hMenu, ID_VIEW_HELP, view_help ? MF_CHECKED : MF_UNCHECKED);
+        break;
+    }
+
+    return 0;
+}
+
 
 // Wndproc for the dimensions dialog. Not much to it.
 int WINAPI
@@ -1648,6 +1702,19 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
         if (view_debug)
             ShowWindow(hWndDebug, SW_SHOW);
 
+        // help window
+        hWndHelp = CreateDialog
+            (
+            hInst,
+            MAKEINTRESOURCE(IDD_HELP),
+            auxGetHWND(),
+            help_dialog
+            );
+
+        SetWindowPos(hWndHelp, HWND_NOTOPMOST, wWidth, wHeight / 2, 0, 0, SWP_NOSIZE);
+        if (view_help)
+            ShowWindow(hWndHelp, SW_SHOW);
+
         // Dimensions window (looks like a tooltip, but displays and allows input of dimensions)
         hWndDims = CreateDialog
             (
@@ -1674,6 +1741,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
         hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
         CheckMenuItem(hMenu, ID_VIEW_TOOLS, view_tools ? MF_CHECKED : MF_UNCHECKED);
         CheckMenuItem(hMenu, ID_VIEW_DEBUGLOG, view_debug ? MF_CHECKED : MF_UNCHECKED);
+        CheckMenuItem(hMenu, ID_VIEW_HELP, view_help ? MF_CHECKED : MF_UNCHECKED);
         CheckMenuItem(hMenu, ID_VIEW_ORTHO, view_ortho ? MF_CHECKED : MF_UNCHECKED);
         CheckMenuItem(hMenu, ID_VIEW_PERSPECTIVE, !view_ortho ? MF_CHECKED : MF_UNCHECKED);
 
@@ -1699,8 +1767,6 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
         }
         return (int)msg.wParam;
 }
-
-
 
 // Message handler for about box.
 INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
