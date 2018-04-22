@@ -6,11 +6,12 @@
 // Distinguishes objects on the main tree.
 typedef enum
 {
+    OBJ_NONE,       // must be lowest
     OBJ_POINT,
     OBJ_EDGE,
     OBJ_FACE,
     OBJ_VOLUME,
-    OBJ_NONE       // must be highest
+    OBJ_MAX         // must be highest
 } OBJECT;
 
 // What kind of edge this is
@@ -34,6 +35,16 @@ typedef enum
     FACE_GENERAL                    // A compound-curved face (e.g. 4 bezier edges)
 } FACE;
 
+// Locking level. They must agree with the object types.
+typedef enum
+{
+    LOCK_NONE = OBJ_NONE,           // Fully unlocked
+    LOCK_POINTS = OBJ_POINT,       // The points are locked; the edges and faces may be selected
+    LOCK_EDGES = OBJ_EDGE,         // The edges are locked; the faces may be selected
+    LOCK_FACES = OBJ_FACE,         // The faces are locked; only the whole volume can be selected
+    LOCK_VOLUME = OBJ_VOLUME        // The whole volume is locked; nothing can be selected or changed
+} LOCK;
+
 // Header for any type of object.
 typedef struct Object
 {
@@ -46,6 +57,8 @@ typedef struct Object
                                     // with the current save count for the tree.
     struct Object   *copied_to;     // When an object is copied, the original is set to point to
                                     // the copy here. This allows sharing to be kept the same.
+    LOCK            lock;           // The locking level of this object. It is only relevant
+                                    // for top level objects (i.e. in the object tree)
     struct Object   *next;          // The next object in any list, e.g. the entire object tree, 
                                     // or the list of faces in a volume, etc. Not always used if
                                     // there is a fixed array of objects, e.g. two end points

@@ -276,6 +276,7 @@ Reshape(int width, int height)
 
 // Pick an object: find the frontmost object under the cursor, or NULL if nothing is there.
 // Pick objects from "min_priority" down in the hierarchy; e.g. faces/edges/points, or just edges/points.
+// Only execption is that picking a face in a locked volume will pick the parent volume instead.
 Object *
 Pick(GLint x_pick, GLint y_pick, OBJECT min_priority)
 {
@@ -283,7 +284,8 @@ Pick(GLint x_pick, GLint y_pick, OBJECT min_priority)
     GLint viewport[4];
     GLint num_hits;
     GLuint min_obj = 0;
-    OBJECT priority = OBJ_NONE;
+    OBJECT priority = OBJ_MAX;
+    Object *obj = NULL;
 
     // Find the object under the cursor, if any
     glSelectBuffer(512, buffer);
@@ -300,8 +302,7 @@ Pick(GLint x_pick, GLint y_pick, OBJECT min_priority)
         size_t size = 512;
         char *p = buf;
         GLuint min_depth = 0xFFFFFFFF;
-        char *obj_prefix[] = { "P", "E", "F", "V" };
-        Object *obj;
+        char *obj_prefix[] = { "N", "P", "E", "F", "V" };
 
         for (i = 0; i < num_hits; i++)
         {
@@ -318,7 +319,7 @@ Pick(GLint x_pick, GLint y_pick, OBJECT min_priority)
             // find top-of-stack and what kind of object it is
             obj = (Object *)buffer[n + num_objs + 2];
             if (obj == NULL)
-                priority = OBJ_NONE;
+                priority = OBJ_MAX;
             else
                 priority = obj->type;
 
@@ -357,19 +358,29 @@ Pick(GLint x_pick, GLint y_pick, OBJECT min_priority)
             }
         }
 
+        // If the object is a face, but it belongs to a volume that is locked at the
+        // face or volume level, then return the parent volume instead.
+        obj = (Object *)min_obj;
+        if (obj != NULL && obj->type == OBJ_FACE)
+        {
+            Face *face = (Face *)obj;
+
+            if (face->vol != NULL && face->vol->hdr.lock >= LOCK_FACES)
+                obj = (Object *)face->vol;
+        }
+
         if (view_debug)
         {
-            obj = (Object *)min_obj;
             if (obj == NULL)
-                len = sprintf_s(p, size, "Frontmost: NULL\r\n");
+                len = sprintf_s(p, size, "Picked: NULL\r\n");
             else
-                len = sprintf_s(p, size, "Frontmost: %s%d\r\n", obj_prefix[obj->type], obj->ID);
+                len = sprintf_s(p, size, "Picked: %s%d\r\n", obj_prefix[obj->type], obj->ID);
 
             Log(buf);
         }
     }
 
-    return (Object *)min_obj;
+    return obj;
 }
 
 // callback version of Draw for AUX/TK
@@ -661,11 +672,17 @@ left_up(AUX_EVENTREC *event)
         if (curr_obj != NULL)
         {
             link(curr_obj, &object_tree);
-            drawing_changed = TRUE;
-            curr_obj = NULL;
+
+            // Set its lock to EDGES for rect/circle faces, but no lock for edges (we will
+            // very likely need to move the points soon)
+            curr_obj->lock = 
+                (app_state == STATE_DRAWING_RECT || app_state == STATE_DRAWING_CIRCLE) ? LOCK_EDGES : LOCK_NONE;
+
             // TODO push tree to undo stack
 
 
+            drawing_changed = TRUE;
+            curr_obj = NULL;
         }
 
         ReleaseCapture();
@@ -699,35 +716,57 @@ left_up(AUX_EVENTREC *event)
     key_status = 0;;
 }
 
-void CALLBACK
-left_click(AUX_EVENTREC *event)
+// Remove an object from the selection and return TRUE. If the object was
+// not selected, return FALSE.
+BOOL
+remove_from_selection(Object *obj)
 {
     Object *prev_in_list;
     Object *sel_obj;
 
+    if (is_selected(obj, &prev_in_list))
+    {
+        if (prev_in_list == NULL)
+        {
+            sel_obj = selection;
+            selection = sel_obj->next;
+        }
+        else
+        {
+            sel_obj = prev_in_list->next;
+            prev_in_list->next = sel_obj->next;
+        }
+
+        ASSERT(sel_obj->prev == picked_obj, "Selection list broken");
+        free(sel_obj);
+        return TRUE;
+    }
+    else
+    {
+        return FALSE;
+    }
+}
+
+void CALLBACK
+left_click(AUX_EVENTREC *event)
+{
+    Object *sel_obj;
+    Object *parent;
+
     if (picked_obj == NULL)
+        return;
+
+    // We cannot select objects that are locked at their own level.
+    parent = find_top_level_parent(object_tree, picked_obj);
+    if (parent->lock >= picked_obj->type)
         return;
 
     // Pick object (already in picked_obj) and select. If Shift key down, add it to the selection.
     // If it is already selected, remove it from selection.
     if (picked_obj != NULL)
     {
-        if (is_selected(picked_obj, &prev_in_list))
+        if (remove_from_selection(picked_obj))
         {
-            if (prev_in_list == NULL)
-            {
-                sel_obj = selection;
-                selection = sel_obj->next;
-            }
-            else
-            {
-                sel_obj = prev_in_list->next;
-                prev_in_list->next = sel_obj->next;
-            }
-
-            ASSERT(sel_obj->prev == picked_obj, "Selection list broken");
-            free(sel_obj);
-
             if (selection != NULL && (event->data[AUX_MOUSESTATUS] & AUX_SHIFT) == 0)
                 clear_selection();
         }
@@ -882,12 +921,14 @@ right_up(AUX_EVENTREC *event)
     right_mouse = FALSE;
 }
 
+// handle context menu when right-clicking on a highlightable object.
 void CALLBACK
 right_click(AUX_EVENTREC *event)
 {
     HMENU hMenu = LoadMenu(hInst, MAKEINTRESOURCE(IDR_CONTEXT));
     int rc;
     POINT pt;
+    Object *parent;
     char buf[32];
 
     picked_obj = Pick(event->data[0], event->data[1], OBJ_FACE);
@@ -897,6 +938,8 @@ right_click(AUX_EVENTREC *event)
     pt.x = event->data[AUX_MOUSEX];
     pt.y = event->data[AUX_MOUSEY];
     ClientToScreen(auxGetHWND(), &pt);
+
+    // Display the object ID at the top of the menu
     hMenu = GetSubMenu(hMenu, 0);
     switch (picked_obj->type)
     {
@@ -915,6 +958,40 @@ right_click(AUX_EVENTREC *event)
     }
     ModifyMenu(hMenu, 0, MF_BYPOSITION | MF_GRAYED | MF_STRING, 0, buf);
 
+    // Find the top-level parent. Disable irrelevant menu items
+    parent = find_top_level_parent(object_tree, picked_obj);
+    switch (parent->type)
+    {
+    case OBJ_EDGE:
+        EnableMenuItem(hMenu, ID_LOCKING_FACES, MF_GRAYED);
+        // fall through
+    case OBJ_FACE:
+        EnableMenuItem(hMenu, ID_LOCKING_VOLUME, MF_GRAYED);
+        EnableMenuItem(hMenu, ID_OBJ_SELECTPARENTVOLUME, MF_GRAYED);
+        break;
+    }
+
+    // Check the right lock state for the parent
+    switch (parent->lock)
+    {
+    case LOCK_VOLUME:
+        CheckMenuItem(hMenu, ID_LOCKING_VOLUME, MF_CHECKED);
+        break;
+    case LOCK_FACES:
+        CheckMenuItem(hMenu, ID_LOCKING_FACES, MF_CHECKED);
+        break;
+    case LOCK_EDGES:
+        CheckMenuItem(hMenu, ID_LOCKING_EDGES, MF_CHECKED);
+        break;
+    case LOCK_POINTS:
+        CheckMenuItem(hMenu, ID_LOCKING_POINTS, MF_CHECKED);
+        break;
+    case LOCK_NONE:
+        CheckMenuItem(hMenu, ID_LOCKING_UNLOCKED, MF_CHECKED);
+        break;
+    }
+
+    // Display and track the menu
     rc = TrackPopupMenu
         (
         hMenu, 
@@ -926,6 +1003,43 @@ right_click(AUX_EVENTREC *event)
         NULL
         );
 
+    switch (rc)
+    {
+    case 0:             // no item chosen
+        break;
+
+        // Locking options. If an object is selected, and we have locked it at
+        // its own level, we must remove it from selection (it cannot be selected)
+    case ID_LOCKING_UNLOCKED:
+        parent->lock = LOCK_NONE;
+        if (parent->lock == picked_obj->type)
+            remove_from_selection(picked_obj);
+        break;
+    case ID_LOCKING_POINTS:
+        parent->lock = LOCK_POINTS;
+        if (parent->lock == picked_obj->type)
+            remove_from_selection(picked_obj);
+        break;
+    case ID_LOCKING_EDGES:
+        parent->lock = LOCK_EDGES;
+        if (parent->lock == picked_obj->type)
+            remove_from_selection(picked_obj);
+        break;
+    case ID_LOCKING_FACES:
+        parent->lock = LOCK_FACES;
+        if (parent->lock == picked_obj->type)
+            remove_from_selection(picked_obj);
+        break;
+    case ID_LOCKING_VOLUME:
+        parent->lock = LOCK_VOLUME;
+        if (parent->lock == picked_obj->type)
+            remove_from_selection(picked_obj);
+        break;
+
+    case ID_OBJ_SELECTPARENTVOLUME:
+    case ID_OBJ_ENTERDIMENSIONS:
+        break;
+    }
 }
 
 void CALLBACK

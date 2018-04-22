@@ -20,14 +20,10 @@ static Point *free_list = NULL;
 // Creation functions for objects
 Object *obj_new(void)
 {
-    Object *obj = malloc(sizeof(Object));
+    Object *obj = calloc(1, sizeof(Object));
 
     obj->type = OBJ_NONE;
     obj->ID = 0;
-    obj->next = NULL;
-    obj->prev = NULL;
-    obj->save_count = 0;
-    obj->copied_to = NULL;
     return obj;
 }
 
@@ -40,39 +36,31 @@ Point *point_new(float x, float y, float z)
     {
         pt = free_list;
         free_list = (Point *)free_list->hdr.next;
+        memset(pt, 0, sizeof(Point));
     }
     else
     {
-        pt = malloc(sizeof(Point));
+        pt = calloc(1, sizeof(Point));
     }
 
     pt->hdr.type = OBJ_POINT;
     pt->hdr.ID = objid++;
-    pt->hdr.next = NULL;
-    pt->hdr.prev = NULL;
     pt->x = x;
     pt->y = y;
     pt->z = z;
-    pt->hdr.copied_to = NULL;
-    pt->hdr.save_count = 0;
-    pt->moved = FALSE;
     return pt;
 }
 
 // Copy just the coordinates from the given point.
 Point *point_newp(Point *p)
 {
-    Point   *pt = malloc(sizeof(Point));
+    Point   *pt = calloc(1, sizeof(Point));
 
     pt->hdr.type = OBJ_POINT;
     pt->hdr.ID = objid++;
-    pt->hdr.next = NULL;
-    pt->hdr.prev = NULL;
     pt->x = p->x;
     pt->y = p->y;
     pt->z = p->z;
-    pt->hdr.copied_to = NULL;
-    pt->hdr.save_count = 0;
     return pt;
 }
 
@@ -88,46 +76,30 @@ Edge *edge_new(EDGE edge_type)
     {
     case EDGE_STRAIGHT:
     default:  // just to shut compiler up
-        se = malloc(sizeof(StraightEdge));
+        se = calloc(1, sizeof(StraightEdge));
         se->edge.hdr.type = OBJ_EDGE;
         se->edge.hdr.ID = objid++;
-        se->edge.hdr.next = NULL;
-        se->edge.hdr.prev = NULL;
-        se->edge.hdr.copied_to = NULL;
-        se->edge.hdr.save_count = 0;
         se->edge.type = edge_type;
         return (Edge *)se;
 
     case EDGE_CIRCLE:
-        ce = malloc(sizeof(CircleEdge));
+        ce = calloc(1, sizeof(CircleEdge));
         ce->edge.hdr.type = OBJ_EDGE;
         ce->edge.hdr.ID = objid++;
-        ce->edge.hdr.next = NULL;
-        ce->edge.hdr.prev = NULL;
-        ce->edge.hdr.copied_to = NULL;
-        ce->edge.hdr.save_count = 0;
         ce->edge.type = edge_type;
         return (Edge *)ce;
 
     case EDGE_ARC:
-        ae = malloc(sizeof(ArcEdge));
+        ae = calloc(1, sizeof(ArcEdge));
         ae->edge.hdr.type = OBJ_EDGE;
         ae->edge.hdr.ID = objid++;
-        ae->edge.hdr.next = NULL;
-        ae->edge.hdr.prev = NULL;
-        ae->edge.hdr.copied_to = NULL;
-        ae->edge.hdr.save_count = 0;
         ae->edge.type = edge_type;
         return (Edge *)ae;
 
     case EDGE_BEZIER:
-        be = malloc(sizeof(BezierEdge));
+        be = calloc(1, sizeof(BezierEdge));
         be->edge.hdr.type = OBJ_EDGE;
         be->edge.hdr.ID = objid++;
-        be->edge.hdr.next = NULL;
-        be->edge.hdr.prev = NULL;
-        be->edge.hdr.copied_to = NULL;
-        be->edge.hdr.save_count = 0;
         be->edge.type = edge_type;
         return (Edge *)be;
     }
@@ -135,22 +107,13 @@ Edge *edge_new(EDGE edge_type)
 
 Face *face_new(FACE face_type, Plane norm)
 {
-    Face *face = malloc(sizeof(Face));
+    Face *face = calloc(1, sizeof(Face));
 
     face->hdr.type = OBJ_FACE;
     face->hdr.ID = objid++;
-    face->hdr.next = NULL;
-    face->hdr.prev = NULL;
-    face->hdr.copied_to = NULL;
-    face->hdr.save_count = 0;
     face->type = face_type;
     face->normal = norm;
-    face->vol = NULL;
-    face->initial_point = NULL;
-    face->view_list = NULL;
-    face->view_valid = FALSE;
 
-    face->n_edges = 0;
     switch (face_type)
     {
     case FACE_RECT:
@@ -171,15 +134,10 @@ Face *face_new(FACE face_type, Plane norm)
 
 Volume *vol_new(Face *attached_to)
 {
-    Volume *vol = malloc(sizeof(Volume));
+    Volume *vol = calloc(1, sizeof(Volume));
 
     vol->hdr.type = OBJ_VOLUME;
     vol->hdr.ID = objid++;
-    vol->hdr.next = NULL;
-    vol->hdr.prev = NULL;
-    vol->hdr.copied_to = NULL;
-    vol->hdr.save_count = 0;
-    vol->faces = NULL;
     vol->attached_to = attached_to;
     return vol;
 }
@@ -798,7 +756,8 @@ purge_tree(Object *tree)
 }
 
 // names of things that make the serialised format a little easier to read
-char *objname[] = { "POINT", "EDGE", "FACE", "VOLUME" };
+char *objname[] = { "(none)", "POINT", "EDGE", "FACE", "VOLUME" };
+char *locktypes[] = { "N", "P", "E", "F", "V" };
 char *edgetypes[] = { "STRAIGHT", "CIRCLE", "ARC", "BEZIER" };
 char *facetypes[] = { "RECT", "CIRCLE", "FLAT", "CYLINDRICAL", "GENERAL" };
 
@@ -860,7 +819,7 @@ serialise_obj(Object *obj, FILE *f)
         break;
     }
 
-    fprintf_s(f, "%s %d ", objname[obj->type], obj->ID);
+    fprintf_s(f, "%s %d %s ", objname[obj->type], obj->ID, locktypes[obj->lock]);
     switch (obj->type)
     {
     case OBJ_POINT:
@@ -935,6 +894,22 @@ check_and_grow(unsigned int id, Object ***object, unsigned int *objsize)
     }
 }
 
+// Find a lock type from its letter.
+LOCK
+locktype_of(char *tok)
+{
+    int i;
+
+    for (i = 0; i <= LOCK_VOLUME; i++)
+    {
+        if (tok[0] == locktypes[i][0])
+            return i;
+    }
+
+    return 0;
+}
+
+
 // Deserialise a tree from file. 
 BOOL
 deserialise_tree(Object **tree, char *filename)
@@ -960,6 +935,7 @@ deserialise_tree(Object **tree, char *filename)
         char *nexttok = NULL;
         char *tok;
         unsigned int id;
+        LOCK lock;
 
         if (fgets(buf, 512, f) == NULL)
             break;
@@ -997,7 +973,8 @@ deserialise_tree(Object **tree, char *filename)
             tok = strtok_s(NULL, " \t\n", &nexttok);
             id = atoi(tok);
             check_and_grow(id, &object, &objsize);
-
+            tok = strtok_s(NULL, " \t\n", &nexttok);  // swallow up the lock type (it's ignored for points)
+    
             tok = strtok_s(NULL, " \t\n", &nexttok);
             x = (float)atof(tok);
             tok = strtok_s(NULL, " \t\n", &nexttok);
@@ -1019,6 +996,8 @@ deserialise_tree(Object **tree, char *filename)
             tok = strtok_s(NULL, " \t\n", &nexttok);
             id = atoi(tok);
             check_and_grow(id, &object, &objsize);
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            lock = locktype_of(tok);
 
             tok = strtok_s(NULL, " \t\n", &nexttok);
             if (strcmp(tok, "STRAIGHT") == 0)
@@ -1043,6 +1022,7 @@ deserialise_tree(Object **tree, char *filename)
 
             }
             edge->hdr.ID = id;
+            edge->hdr.lock = lock;
             object[id] = (Object *)edge;
             ASSERT(stkptr > 0 && id == stack[stkptr - 1], "Badly formed edge record");
             stkptr--;
@@ -1060,6 +1040,8 @@ deserialise_tree(Object **tree, char *filename)
             tok = strtok_s(NULL, " \t\n", &nexttok);
             id = atoi(tok);
             check_and_grow(id, &object, &objsize);
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            lock = locktype_of(tok);
 
             tok = strtok_s(NULL, " \t\n", &nexttok);
             if (strcmp(tok, "RECT") == 0)
@@ -1113,6 +1095,7 @@ deserialise_tree(Object **tree, char *filename)
             }
 
             face->hdr.ID = id;
+            face->hdr.lock = lock;
             object[id] = (Object *)face;
             ASSERT(stkptr > 0 && id == stack[stkptr - 1], "Badly formed face record");
             stkptr--;
@@ -1128,6 +1111,8 @@ deserialise_tree(Object **tree, char *filename)
             tok = strtok_s(NULL, " \t\n", &nexttok);
             id = atoi(tok);
             check_and_grow(id, &object, &objsize);
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            lock = locktype_of(tok);
 
             tok = strtok_s(NULL, " \t\n", &nexttok);
             fid = atoi(tok);
@@ -1136,6 +1121,7 @@ deserialise_tree(Object **tree, char *filename)
 
             vol = vol_new(attached_to);
             vol->hdr.ID = id;
+            vol->hdr.lock = lock;
             object[id] = (Object *)vol;
 
             while (TRUE)
