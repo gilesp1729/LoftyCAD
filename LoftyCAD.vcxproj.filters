@@ -144,5 +144,11 @@
     <Image Include="icon-extrude.ico">
       <Filter>Resource Files</Filter>
     </Image>
+    <Image Include="icon-arc.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="icon-bezier.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
   </ItemGroup>
 </Project>

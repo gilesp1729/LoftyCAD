@@ -115,6 +115,8 @@
     <ResourceCompile Include="LoftyCAD.rc" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="icon-arc.ico" />
+    <Image Include="icon-bezier.ico" />
     <Image Include="icon-circle.ico" />
     <Image Include="icon-const-circle.ico" />
     <Image Include="icon-const-edge.ico" />

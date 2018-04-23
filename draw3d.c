@@ -80,6 +80,7 @@ draw_object(Object *obj, BOOL selected, BOOL highlighted, LOCK parent_lock)
     int i;
     Face *face;
     Edge *edge;
+    ArcEdge *ae;
     Point *p;
     BOOL push_name, locked;
 
@@ -168,6 +169,13 @@ draw_object(Object *obj, BOOL selected, BOOL highlighted, LOCK parent_lock)
             break;
 
         case EDGE_ARC:
+            // TODO draw the arc itself here
+            ae = (ArcEdge *)edge;
+
+            glPopName();
+            draw_object((Object *)&ae->normal.refpt, selected, highlighted, parent_lock);
+            break;
+
         case EDGE_BEZIER:
             break;
         }
@@ -431,8 +439,8 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                     show_hint_at(pt, buf);
                     break;
 
-                case STATE_DRAWING_CIRCLE:
                 case STATE_DRAWING_ARC:
+                case STATE_DRAWING_CIRCLE:
                 case STATE_DRAWING_BEZIER:
                 case STATE_DRAWING_MEASURE:
                     ASSERT(FALSE, "Not implemented");

@@ -543,6 +543,7 @@ left_up(AUX_EVENTREC *event)
 {
     Face *rf;
     Edge *e;
+    ArcEdge *ae;
     float mv[16], vec[4], nvec[4];
     float eye[4] = { 0, 0, 1, 0 };
     char buf[256];
@@ -755,6 +756,11 @@ left_click(AUX_EVENTREC *event)
     Object *sel_obj;
     Object *parent;
 
+    // If we have just clicked on an arc centre, do nothing here
+    if (app_state == STATE_STARTING_ARC)
+        return;
+
+    // Nothing picked.
     if (picked_obj == NULL)
         return;
 
@@ -1388,8 +1394,8 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         LoadAndDisplayIcon(hWnd, IDI_CONST_EDGE, IDB_CONST_EDGE, IDS_CONST_EDGE);
         LoadAndDisplayIcon(hWnd, IDI_CONST_RECT, IDB_CONST_RECT, IDS_CONST_RECT);
         LoadAndDisplayIcon(hWnd, IDI_CONST_CIRCLE, IDB_CONST_CIRCLE, IDS_CONST_CIRCLE);
-        //  LoadAndDisplayIcon(hWnd, IDI_BEZIER, IDB_BEZIER, IDS_BEZIER);
-        //  LoadAndDisplayIcon(hWnd, IDI_ARC, IDB_ARC, IDS_ARC);
+        LoadAndDisplayIcon(hWnd, IDI_BEZIER_EDGE, IDB_BEZIER_EDGE, IDS_BEZIER_EDGE);
+        LoadAndDisplayIcon(hWnd, IDI_ARC_EDGE, IDB_ARC_EDGE, IDS_ARC_EDGE);
         //  LoadAndDisplayIcon(hWnd, IDI_MEASURE, IDB_MEASURE, IDS_MEASURE);
         LoadAndDisplayIcon(hWnd, IDI_EXTRUDE, IDB_EXTRUDE, IDS_EXTRUDE);
         LoadAndDisplayIcon(hWnd, 0, IDB_XY, IDS_XY);
@@ -1414,6 +1420,14 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             {
             case IDB_EDGE:
                 change_state(STATE_STARTING_EDGE);
+                break;
+
+            case IDB_ARC_EDGE:
+                change_state(STATE_STARTING_ARC);
+                break;
+
+            case IDB_BEZIER_EDGE:
+                change_state(STATE_STARTING_BEZIER);
                 break;
 
             case IDB_RECT:
