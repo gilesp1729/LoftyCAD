@@ -68,7 +68,6 @@ Point *point_newp(Point *p)
 Edge *edge_new(EDGE edge_type)
 {
     StraightEdge *se;
-    CircleEdge *ce;
     ArcEdge *ae;
     BezierEdge *be;
 
@@ -81,13 +80,6 @@ Edge *edge_new(EDGE edge_type)
         se->edge.hdr.ID = objid++;
         se->edge.type = edge_type;
         return (Edge *)se;
-
-    case EDGE_CIRCLE:
-        ce = calloc(1, sizeof(CircleEdge));
-        ce->edge.hdr.type = OBJ_EDGE;
-        ce->edge.hdr.ID = objid++;
-        ce->edge.type = edge_type;
-        return (Edge *)ce;
 
     case EDGE_ARC:
         ae = calloc(1, sizeof(ArcEdge));
@@ -198,7 +190,6 @@ clear_move_copy_flags(Object *obj)
     int i;
     Point *p;
     EDGE type;
-    StraightEdge *se;
     Edge *edge;
     Face *face;
     Volume *vol;
@@ -213,17 +204,16 @@ clear_move_copy_flags(Object *obj)
 
     case OBJ_EDGE:
         type = ((Edge *)obj)->type & ~EDGE_CONSTRUCTION;
+        edge = (Edge *)obj;
+        clear_move_copy_flags((Object *)edge->endpoints[0]);
+        clear_move_copy_flags((Object *)edge->endpoints[1]);
+        obj->copied_to = NULL;
         switch (type)
         {
         case EDGE_STRAIGHT:
-            se = (StraightEdge *)obj;
-            clear_move_copy_flags((Object *)se->endpoints[0]);
-            clear_move_copy_flags((Object *)se->endpoints[1]);
-            obj->copied_to = NULL;
             break;
 
-        case EDGE_CIRCLE:     // TODO others
-        case EDGE_ARC:
+        case EDGE_ARC:    // TODO others
         case EDGE_BEZIER:
             ASSERT(FALSE, "Not implemented");
             break;
@@ -260,7 +250,6 @@ copy_obj(Object *obj, float xoffset, float yoffset, float zoffset)
     Object *new_obj = NULL;
     Point *p;
     EDGE type;
-    StraightEdge *se, *ne;
     Edge *edge, *new_edge;
     Face *face, *new_face;
     Volume *vol, *new_vol;
@@ -292,18 +281,17 @@ copy_obj(Object *obj, float xoffset, float yoffset, float zoffset)
             obj->copied_to = new_obj;
 
             // Copy the points
+            edge = (Edge *)obj;
+            new_edge = (Edge *)new_obj;
+            new_edge->endpoints[0] = (Point *)copy_obj((Object *)edge->endpoints[0], xoffset, yoffset, zoffset);
+            new_edge->endpoints[1] = (Point *)copy_obj((Object *)edge->endpoints[1], xoffset, yoffset, zoffset);
             type = ((Edge *)obj)->type & ~EDGE_CONSTRUCTION;
             switch (type)
             {
             case EDGE_STRAIGHT:
-                se = (StraightEdge *)obj;
-                ne = (StraightEdge *)new_obj;
-                ne->endpoints[0] = (Point *)copy_obj((Object *)se->endpoints[0], xoffset, yoffset, zoffset);
-                ne->endpoints[1] = (Point *)copy_obj((Object *)se->endpoints[1], xoffset, yoffset, zoffset);
                 break;
 
-            case EDGE_CIRCLE:     // TODO others
-            case EDGE_ARC:
+            case EDGE_ARC:    // TODO others
             case EDGE_BEZIER:
                 ASSERT(FALSE, "Not implemented");
                 break;
@@ -328,23 +316,27 @@ copy_obj(Object *obj, float xoffset, float yoffset, float zoffset)
         new_face->max_edges = face->max_edges;
 
         // Set the initial point corresponding to the original
+        edge = face->edges[0];
+        new_edge = new_face->edges[0];
+        if (face->initial_point = edge->endpoints[0])
+        {
+            new_face->initial_point = new_edge->endpoints[0];
+        }
+        else
+        {
+            ASSERT(face->initial_point == edge->endpoints[1], "Point order messed up");
+            new_face->initial_point = new_edge->endpoints[1];
+        }
+
         switch (((Edge *)face->edges[0])->type)
         {
-        case EDGE_STRAIGHT:
-            se = (StraightEdge *)face->edges[0];
-            ne = (StraightEdge *)new_face->edges[0];
-            if (face->initial_point = se->endpoints[0])
-            {
-                new_face->initial_point = ne->endpoints[0];
-            }
-            else
-            {
-                ASSERT(face->initial_point == se->endpoints[1], "Point order messed up");
-                new_face->initial_point = ne->endpoints[1];
-            }
+        case EDGE_STRAIGHT:     // TODO do I have to do anything else ehere?
             break;
 
-            // TODO other types
+        case EDGE_ARC:     // TODO others
+        case EDGE_BEZIER:
+            ASSERT(FALSE, "Not implemented");
+            break;
         }
         break;
 
@@ -371,7 +363,7 @@ Face
     Face *clone = face_new(face->type, face->normal);
     Object *e;
     Object *ne = NULL;
-    StraightEdge *se;
+    Edge *edge;
     Point *last_point;
     int i, idx;
     //char buf[256];
@@ -397,20 +389,29 @@ Face
         clone->edges[idx] = (Edge *)ne;
 
         // Follow the chain of points from e->initial_point
-        // TODO: this only works for straight edges
-        se = (StraightEdge *)e;
-        if (last_point == se->endpoints[0])
+        switch (face->edges[i]->type)
         {
-            idx = 1;
+        case EDGE_STRAIGHT:
+            edge = (Edge *)e;
+            if (last_point == edge->endpoints[0])
+            {
+                idx = 1;
+            }
+            else
+            {
+                ASSERT(last_point == edge->endpoints[1], "Cloned edges don't join up");
+                idx = 0;
+            }
+            last_point = edge->endpoints[idx];
+            if (i == 0)
+                clone->initial_point = ((Edge *)ne)->endpoints[idx];
+            break;
+
+        case EDGE_ARC:     // TODO others
+        case EDGE_BEZIER:
+            ASSERT(FALSE, "Not implemented");
+            break;
         }
-        else
-        {
-            ASSERT(last_point == se->endpoints[1], "Cloned edges don't join up");
-            idx = 0;
-        }
-        last_point = se->endpoints[idx];
-        if (i == 0)
-            clone->initial_point = ((StraightEdge *)ne)->endpoints[idx];
     }
 
 #if 0
@@ -436,7 +437,6 @@ move_obj(Object *obj, float xoffset, float yoffset, float zoffset)
     int i;
     Point *p;
     EDGE type;
-    StraightEdge *se;
     Edge *edge;
     Face *face;
     Volume *vol;
@@ -455,17 +455,16 @@ move_obj(Object *obj, float xoffset, float yoffset, float zoffset)
         break;
 
     case OBJ_EDGE:
+        edge = (Edge *)obj;
+        move_obj((Object *)edge->endpoints[0], xoffset, yoffset, zoffset);
+        move_obj((Object *)edge->endpoints[1], xoffset, yoffset, zoffset);
         type = ((Edge *)obj)->type & ~EDGE_CONSTRUCTION;
         switch (type)
         {
         case EDGE_STRAIGHT:
-            se = (StraightEdge *)obj;
-            move_obj((Object *)se->endpoints[0], xoffset, yoffset, zoffset);
-            move_obj((Object *)se->endpoints[1], xoffset, yoffset, zoffset);
             break;
 
-        case EDGE_CIRCLE:     // TODO others
-        case EDGE_ARC:
+        case EDGE_ARC:     // TODO others
         case EDGE_BEZIER:
             ASSERT(FALSE, "Not implemented");
             break;
@@ -497,7 +496,6 @@ find_obj(Object *parent, Object *obj)
 {
     int i;
     EDGE type;
-    StraightEdge *se;
     Edge *edge;
     Face *face;
     Volume *vol;
@@ -509,19 +507,18 @@ find_obj(Object *parent, Object *obj)
         return FALSE;
 
     case OBJ_EDGE:
+        edge = (Edge *)parent;
+        if ((Object *)edge->endpoints[0] == obj)
+            return TRUE;
+        if ((Object *)edge->endpoints[1] == obj)
+            return TRUE;
         type = ((Edge *)parent)->type & ~EDGE_CONSTRUCTION;
         switch (type)
         {
         case EDGE_STRAIGHT:
-            se = (StraightEdge *)parent;
-            if ((Object *)se->endpoints[0] == obj)
-                return TRUE;
-            if ((Object *)se->endpoints[1] == obj)
-                return TRUE;
             break;
 
-        case EDGE_CIRCLE:     // TODO others
-        case EDGE_ARC:
+        case EDGE_ARC:    // TODO others
         case EDGE_BEZIER:
             ASSERT(FALSE, "Not implemented");
             break;
@@ -600,7 +597,6 @@ gen_view_list(Face *face)
     Edge *e;
     Point *last_point;
     Point *p;
-    StraightEdge *se;
     //char buf[256];
 
     if (face->view_valid)
@@ -620,8 +616,7 @@ gen_view_list(Face *face)
         link_tail((Object *)p, (Object **)&face->view_list);
         break;
 
-    case EDGE_CIRCLE:     // TODO others
-    case EDGE_ARC:
+    case EDGE_ARC:     // TODO others
     case EDGE_BEZIER:
         ASSERT(FALSE, "Not implemented");
         break;
@@ -650,15 +645,14 @@ gen_view_list(Face *face)
         switch (e->type)
         {
         case EDGE_STRAIGHT:
-            se = (StraightEdge *)e;
-            if (last_point == se->endpoints[0])
+            if (last_point == e->endpoints[0])
             {
-                last_point = se->endpoints[1];
+                last_point = e->endpoints[1];
             }
             else
             {
-                ASSERT(last_point == se->endpoints[1], "Point order messed up");
-                last_point = se->endpoints[0];
+                ASSERT(last_point == e->endpoints[1], "Point order messed up");
+                last_point = e->endpoints[0];
             }
 
             p = point_newp(last_point);
@@ -666,8 +660,7 @@ gen_view_list(Face *face)
             link_tail((Object *)p, (Object **)&face->view_list);
             break;
 
-        case EDGE_CIRCLE:     // TODO others
-        case EDGE_ARC:
+        case EDGE_ARC:     // TODO others
         case EDGE_BEZIER:
             ASSERT(FALSE, "Not implemented");
             break;
@@ -685,7 +678,7 @@ void
 purge_obj(Object *obj)
 {
     int i;
-    StraightEdge *se;
+    Edge *e;
     EDGE type;
     Face *face;
     Face *next_face = NULL;
@@ -706,13 +699,12 @@ purge_obj(Object *obj)
         switch (type)
         {
         case EDGE_STRAIGHT:
-            se = (StraightEdge *)obj;
-            purge_obj((Object *)se->endpoints[0]);
-            purge_obj((Object *)se->endpoints[1]);
+            e = (Edge *)obj;
+            purge_obj((Object *)e->endpoints[0]);
+            purge_obj((Object *)e->endpoints[1]);
             break;
 
-        case EDGE_CIRCLE:     // TODO others. Be very careful if Points are ever in a list, as freeing them will cause problems...
-        case EDGE_ARC:
+        case EDGE_ARC:    // TODO others. Be very careful if Points are ever in a list, as freeing them will cause problems...
         case EDGE_BEZIER:
             ASSERT(FALSE, "Not implemented");
             break;
@@ -766,7 +758,7 @@ void
 serialise_obj(Object *obj, FILE *f)
 {
     int i;
-    StraightEdge *se;
+    Edge *e;
     EDGE type, constr;
     Face *face;
     Volume *vol;
@@ -785,17 +777,16 @@ serialise_obj(Object *obj, FILE *f)
     case OBJ_EDGE:
         type = ((Edge *)obj)->type & ~EDGE_CONSTRUCTION;
         constr = ((Edge *)obj)->type & EDGE_CONSTRUCTION;
+        fprintf_s(f, "BEGIN %d\n", obj->ID);
+        e = (Edge *)obj;
+        serialise_obj((Object *)e->endpoints[0], f);
+        serialise_obj((Object *)e->endpoints[1], f);
         switch (type)
         {
         case EDGE_STRAIGHT:
-            fprintf_s(f, "BEGIN %d\n", obj->ID);
-            se = (StraightEdge *)obj;
-            serialise_obj((Object *)se->endpoints[0], f);
-            serialise_obj((Object *)se->endpoints[1], f);
             break;
 
-        case EDGE_CIRCLE:     // TODO others
-        case EDGE_ARC:
+        case EDGE_ARC:     // TODO others
         case EDGE_BEZIER:
             ASSERT(FALSE, "Not implemented");
             break;
@@ -828,11 +819,17 @@ serialise_obj(Object *obj, FILE *f)
 
     case OBJ_EDGE:
         fprintf_s(f, "%s%s ", edgetypes[type], constr ? "(C)" : "");
+        e = (Edge *)obj;
+        fprintf_s(f, "%d %d ", e->endpoints[0]->hdr.ID, e->endpoints[1]->hdr.ID);
         switch (type)
         {
         case EDGE_STRAIGHT:
-            se = (StraightEdge *)obj;
-            fprintf_s(f, "%d %d\n", se->endpoints[0]->hdr.ID, se->endpoints[1]->hdr.ID);
+            fprintf_s(f, "\n");
+            break;
+
+        case EDGE_ARC:     // TODO others
+        case EDGE_BEZIER:
+            ASSERT(FALSE, "Not implemented");
             break;
         }
         break;
@@ -1002,25 +999,22 @@ deserialise_tree(Object **tree, char *filename)
             tok = strtok_s(NULL, " \t\n", &nexttok);
             if (strcmp(tok, "STRAIGHT") == 0)
             {
-                StraightEdge *se;
-
                 edge = edge_new(EDGE_STRAIGHT);
-                se = (StraightEdge *)edge;
                 tok = strtok_s(NULL, " \t\n", &nexttok);
                 end0 = atoi(tok);
                 ASSERT(end0 > 0 && object[end0] != NULL, "Bad endpoint ID");
                 tok = strtok_s(NULL, " \t\n", &nexttok);
                 end1 = atoi(tok);
                 ASSERT(end1 > 0 && object[end1] != NULL, "Bad endpoint ID");
-                se->endpoints[0] = (Point *)object[end0];
-                se->endpoints[1] = (Point *)object[end1];
+                edge->endpoints[0] = (Point *)object[end0];
+                edge->endpoints[1] = (Point *)object[end1];
             }
             else
             {
                 // TODO other edge types
-
-
+                ASSERT(FALSE, "Not implemented");
             }
+
             edge->hdr.ID = id;
             edge->hdr.lock = lock;
             object[id] = (Object *)edge;
@@ -1051,9 +1045,9 @@ deserialise_tree(Object **tree, char *filename)
             else
             {
                 // TODO other types
-
-
+                ASSERT(FALSE, "Not implemented");
             }
+
             tok = strtok_s(NULL, " \t\n", &nexttok);
             pid = atoi(tok);
             ASSERT(pid != 0 && object[pid] != NULL && object[pid]->type == OBJ_POINT, "Bad initial point ID");

@@ -80,7 +80,6 @@ draw_object(Object *obj, BOOL selected, BOOL highlighted, LOCK parent_lock)
     int i;
     Face *face;
     Edge *edge;
-    StraightEdge *se;
     Point *p;
     BOOL push_name, locked;
 
@@ -158,18 +157,16 @@ draw_object(Object *obj, BOOL selected, BOOL highlighted, LOCK parent_lock)
         switch (edge->type)
         {
         case EDGE_STRAIGHT:
-            se = (StraightEdge *)edge;
             glBegin(GL_LINES);
             color(OBJ_EDGE, selected, highlighted, locked);
-            glVertex3f(se->endpoints[0]->x, se->endpoints[0]->y, se->endpoints[0]->z);
-            glVertex3f(se->endpoints[1]->x, se->endpoints[1]->y, se->endpoints[1]->z);
+            glVertex3f(edge->endpoints[0]->x, edge->endpoints[0]->y, edge->endpoints[0]->z);
+            glVertex3f(edge->endpoints[1]->x, edge->endpoints[1]->y, edge->endpoints[1]->z);
             glEnd();
             glPopName();
-            draw_object((Object *)se->endpoints[0], selected, highlighted, parent_lock);
-            draw_object((Object *)se->endpoints[1], selected, highlighted, parent_lock);
+            draw_object((Object *)edge->endpoints[0], selected, highlighted, parent_lock);
+            draw_object((Object *)edge->endpoints[1], selected, highlighted, parent_lock);
             break;
 
-        case EDGE_CIRCLE:
         case EDGE_ARC:
         case EDGE_BEZIER:
             break;
@@ -225,7 +222,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
             {
                 Point   new_point, p1, p3;
                 Point   *p00, *p01, *p02, *p03;
-                StraightEdge *se;
+                Edge *e;
                 Face *rf;
                 Plane norm;
                 char buf[64], buf2[64];
@@ -295,18 +292,18 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                     if (curr_obj == NULL)
                     {
                         curr_obj = (Object *)edge_new(EDGE_STRAIGHT);
-                        se = (StraightEdge *)curr_obj;
+                        e = (Edge *)curr_obj;
                         // TODO: share points if snapped onto an existing edge endpoint,
                         // and the edge is not referenced by a face. For now, just create points...
-                        se->endpoints[0] = point_newp(&picked_point);
-                        se->endpoints[1] = point_newp(&new_point);
+                        e->endpoints[0] = point_newp(&picked_point);
+                        e->endpoints[1] = point_newp(&new_point);
                     }
                     else
                     {
-                        se = (StraightEdge *)curr_obj;
-                        se->endpoints[1]->x = new_point.x;
-                        se->endpoints[1]->y = new_point.y;
-                        se->endpoints[1]->z = new_point.z;
+                        e = (Edge *)curr_obj;
+                        e->endpoints[1]->x = new_point.x;
+                        e->endpoints[1]->y = new_point.y;
+                        e->endpoints[1]->z = new_point.z;
                     }
 
                     // Show the dimensions (length) of the edge.
@@ -457,8 +454,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                         {
                             int i;
                             Face *opposite, *side;
-                            Edge *e, *o;
-                            StraightEdge *se;
+                            Edge *e, *o, *ne;
                             Point *eip, *oip;
                             Volume *vol;
 
@@ -483,10 +479,10 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                                 eip = face->initial_point;
                                 oip = opposite->initial_point;
                                 o = opposite->edges[0];
-                                if (oip == ((StraightEdge *)o)->endpoints[0])    // TODO this only works for EDGE_STRAIGHT
-                                    oip = ((StraightEdge *)o)->endpoints[1];
+                                if (oip == o->endpoints[0])
+                                    oip = o->endpoints[1];
                                 else
-                                    oip = ((StraightEdge *)o)->endpoints[0];
+                                    oip = o->endpoints[0];
 
                                 for (i = 0; i < face->n_edges; i++)
                                 {
@@ -500,38 +496,37 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                                     side->initial_point = eip;
                                     side->vol = vol;
 
-                                    se = (StraightEdge *)edge_new(EDGE_STRAIGHT);
-                                    se->endpoints[0] = eip;
-                                    se->endpoints[1] = oip;
-                                    side->edges[0] = (Edge *)se;
+                                    ne = edge_new(EDGE_STRAIGHT);
+                                    ne->endpoints[0] = eip;
+                                    ne->endpoints[1] = oip;
+                                    side->edges[0] = ne;
                                     side->edges[1] = o;
 
                                     // Move to the next pair of points
-                                    // TODO this only works for EDGE_STRAIGHT - break this out into a routine that works for all types
-                                    if (eip == ((StraightEdge *)e)->endpoints[0])
+                                    if (eip == e->endpoints[0])
                                     {
-                                        eip = ((StraightEdge *)e)->endpoints[1];
+                                        eip = e->endpoints[1];
                                     }
                                     else
                                     {
-                                        ASSERT(eip == ((StraightEdge *)e)->endpoints[1], "Edges don't join up");
-                                        eip = ((StraightEdge *)e)->endpoints[0];
+                                        ASSERT(eip == e->endpoints[1], "Edges don't join up");
+                                        eip = e->endpoints[0];
                                     }
 
-                                    if (oip == ((StraightEdge *)o)->endpoints[0])
+                                    if (oip == o->endpoints[0])
                                     {
-                                        oip = ((StraightEdge *)o)->endpoints[1];
+                                        oip = o->endpoints[1];
                                     }
                                     else
                                     {
-                                        ASSERT(oip == ((StraightEdge *)o)->endpoints[1], "Edges don't join up");
-                                        oip = ((StraightEdge *)o)->endpoints[0];
+                                        ASSERT(oip == o->endpoints[1], "Edges don't join up");
+                                        oip = o->endpoints[0];
                                     }
 
-                                    se = (StraightEdge *)edge_new(EDGE_STRAIGHT);
-                                    se->endpoints[0] = oip;
-                                    se->endpoints[1] = eip;
-                                    side->edges[2] = (Edge *)se;
+                                    ne = edge_new(EDGE_STRAIGHT);
+                                    ne->endpoints[0] = oip;
+                                    ne->endpoints[1] = eip;
+                                    side->edges[2] = ne;
                                     side->edges[3] = e;
                                     side->n_edges = 4;
 

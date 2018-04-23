@@ -18,9 +18,8 @@ typedef enum
 typedef enum
 {
     EDGE_STRAIGHT = 0, 
-    EDGE_CIRCLE = 1,
-    EDGE_ARC = 2,
-    EDGE_BEZIER = 3,
+    EDGE_ARC = 1,
+    EDGE_BEZIER = 2,
     EDGE_CONSTRUCTION = 0x8000      // OR this in to indicate a construction edge
 } EDGE;
 
@@ -104,34 +103,25 @@ typedef struct Edge
 {
     struct Object   hdr;            // Header
     EDGE            type;           // What kind of edge this is
+    struct Point    *endpoints[2];  // Two endpoints (valid for any edge type)
 } Edge;
 
 typedef struct StraightEdge
 {
     struct Edge     edge;           // Edge
-    struct Point    *endpoints[2];  // Two endpoints
 } StraightEdge;
-
-typedef struct CircleEdge
-{
-    struct Edge     edge;           // Edge
-    Plane           normal;         // Normal vector (the refpt is the centre)
-    float           radius;         // Radius
-} CircleEdge;
 
 typedef struct ArcEdge
 {
     struct Edge     edge;           // Edge
     Plane           normal;         // Normal vector (the refpt is the centre)
-    struct Point    *endpoints[2];  // Two endpoints
     // TODO something about which way round it goes...
 } ArcEdge;
 
 typedef struct BezierEdge
 {
     struct Edge     edge;           // Edge
-    struct Point    *endpoints[2];  // Two endpoints
-    struct Point    *ctrlpoints[2];  // Two control points
+    struct Point    *ctrlpoints[2]; // Two control points
 } BezierEdge;
 
 // Face bounded by edges (in a list)

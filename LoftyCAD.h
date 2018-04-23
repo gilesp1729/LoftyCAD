@@ -12,7 +12,7 @@
 #include "draw3d.h"
 
 // States the app can be in.
-typedef enum
+typedef enum STATE
 {
     STATE_NONE,                 // Default state when orbiting with the trackball, panning or zooming
 
@@ -100,5 +100,6 @@ Object * Pick(GLint x_pick, GLint y_pick, OBJECT obj_type);
 void CALLBACK Draw(BOOL picking, GLint x_pick, GLint y_pick);
 void CALLBACK Position(BOOL picking, GLint x_pick, GLint y_pick);
 void display_help(char *key);
+void change_state(STATE new_state);
 
 

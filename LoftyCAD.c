@@ -455,7 +455,7 @@ left_down(AUX_EVENTREC *event)
             left_mouseY = event->data[AUX_MOUSEY];
             left_mouse = TRUE;
             key_status = event->data[AUX_MOUSESTATUS];
-            app_state = STATE_MOVING;
+            change_state(STATE_MOVING);
 
             // Set the picked point on the facing plane for later subtraction
             intersect_ray_plane(left_mouseX, left_mouseY, facing_plane, &picked_point);
@@ -484,7 +484,7 @@ left_down(AUX_EVENTREC *event)
         key_status = event->data[AUX_MOUSESTATUS];
 
         // Move into the corresponding drawing state
-        app_state += STATE_DRAWING_OFFSET;
+        change_state(app_state + STATE_DRAWING_OFFSET);
 
         if (picked_obj == NULL)
         {
@@ -542,7 +542,7 @@ void CALLBACK
 left_up(AUX_EVENTREC *event)
 {
     Face *rf;
-    StraightEdge *se;
+    Edge *e;
     float mv[16], vec[4], nvec[4];
     float eye[4] = { 0, 0, 1, 0 };
     char buf[256];
@@ -620,7 +620,7 @@ left_up(AUX_EVENTREC *event)
     case STATE_MOVING:
         ReleaseCapture();
         left_mouse = FALSE;
-        app_state = STATE_NONE;
+        change_state(STATE_NONE);
         drawing_changed = TRUE;
         break;
 
@@ -638,22 +638,22 @@ left_up(AUX_EVENTREC *event)
             p02 = (Point *)p01->hdr.next;
             p03 = (Point *)p02->hdr.next;
 
-            se = (StraightEdge *)edge_new(EDGE_STRAIGHT);
-            se->endpoints[0] = p00;
-            se->endpoints[1] = p01;
-            rf->edges[0] = (Edge *)se;
-            se = (StraightEdge *)edge_new(EDGE_STRAIGHT);
-            se->endpoints[0] = p01;
-            se->endpoints[1] = p02;
-            rf->edges[1] = (Edge *)se;
-            se = (StraightEdge *)edge_new(EDGE_STRAIGHT);
-            se->endpoints[0] = p02;
-            se->endpoints[1] = p03;
-            rf->edges[2] = (Edge *)se;
-            se = (StraightEdge *)edge_new(EDGE_STRAIGHT);
-            se->endpoints[0] = p03;
-            se->endpoints[1] = p00;
-            rf->edges[3] = (Edge *)se;
+            e = (Edge *)edge_new(EDGE_STRAIGHT);
+            e->endpoints[0] = p00;
+            e->endpoints[1] = p01;
+            rf->edges[0] = e;
+            e = (Edge *)edge_new(EDGE_STRAIGHT);
+            e->endpoints[0] = p01;
+            e->endpoints[1] = p02;
+            rf->edges[1] = e;
+            e = (Edge *)edge_new(EDGE_STRAIGHT);
+            e->endpoints[0] = p02;
+            e->endpoints[1] = p03;
+            rf->edges[2] = e;
+            e = (Edge *)edge_new(EDGE_STRAIGHT);
+            e->endpoints[0] = p03;
+            e->endpoints[1] = p00;
+            rf->edges[3] = e;
 
             // Take the points out of the face's view list, as they are about
             // to be freed when the view list is regenerated.
@@ -689,14 +689,14 @@ left_up(AUX_EVENTREC *event)
 
         ReleaseCapture();
         left_mouse = FALSE;
-        app_state = STATE_NONE;
+        change_state(STATE_NONE);
         hide_hint();
         break;
 
     case STATE_DRAWING_EXTRUDE:
         ReleaseCapture();
         left_mouse = FALSE;
-        app_state = STATE_NONE;
+        change_state(STATE_NONE);
         drawing_changed = TRUE;
         hide_hint();
         break;
@@ -711,11 +711,11 @@ left_up(AUX_EVENTREC *event)
         curr_obj = NULL;
         ReleaseCapture();
         left_mouse = FALSE;
-        app_state = STATE_NONE;
+        change_state(STATE_NONE);
         break;
     }
 
-    key_status = 0;;
+    key_status = 0;
 }
 
 // Remove an object from the selection and return TRUE. If the object was
@@ -762,6 +762,8 @@ left_click(AUX_EVENTREC *event)
     parent = find_top_level_parent(object_tree, picked_obj);
     if (parent->lock >= picked_obj->type)
         return;
+
+    display_help("Selection");
 
     // Pick object (already in picked_obj) and select. If Shift key down, add it to the selection.
     // If it is already selected, remove it from selection.
@@ -866,18 +868,6 @@ micro_move_selection(float x, float y)
         }
     }
 }
-
-#if 0 // this doesn't work - need to register a hotkey instead.
-// ESC key aborts a dragging operation.
-void CALLBACK
-escape_key(void)
-{
-    curr_obj = NULL;
-    ReleaseCapture();
-    left_mouse = FALSE;
-    app_state = STATE_NONE;
-}
-#endif // 0
 
 // U/D/L/R arrow keys move selection by one unit in the facing plane,
 // where one unit is a multiple of grid snap, or of tolerance if snapping is
@@ -993,6 +983,8 @@ right_click(AUX_EVENTREC *event)
         break;
     }
 
+    display_help("Context menu");
+
     // Display and track the menu
     rc = TrackPopupMenu
         (
@@ -1005,6 +997,7 @@ right_click(AUX_EVENTREC *event)
         NULL
         );
 
+    change_state(app_state);  // back to displaying usual state text
     switch (rc)
     {
     case 0:             // no item chosen
@@ -1330,6 +1323,7 @@ Command(int wParam, int lParam)
         break;
 
     case ID_PREFERENCES_SETTINGS:
+        display_help("Preferences");
         DialogBox(hInst, MAKEINTRESOURCE(IDD_PREFS), auxGetHWND(), prefs_dialog);
         strcpy_s(window_title, 256, curr_filename);
         strcat_s(window_title, 256, " - ");
@@ -1419,19 +1413,19 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             switch (LOWORD(wParam))
             {
             case IDB_EDGE:
-                app_state = STATE_STARTING_EDGE;
+                change_state(STATE_STARTING_EDGE);
                 break;
 
             case IDB_RECT:
-                app_state = STATE_STARTING_RECT;
+                change_state(STATE_STARTING_RECT);
                 break;
 
             case IDB_CIRCLE:
-                app_state = STATE_STARTING_CIRCLE;
+                change_state(STATE_STARTING_CIRCLE);
                 break;
 
             case IDB_EXTRUDE:
-                app_state = STATE_STARTING_EXTRUDE;
+                change_state(STATE_STARTING_EXTRUDE);
                 break;
 
             case IDB_XY:
@@ -1535,12 +1529,40 @@ void
 display_help(char *key)
 {
     // Look up whatever.. in some sort of INI file?
-
+    // For now just display the key
 
 
 
     SendDlgItemMessage(hWndHelp, IDC_CONTEXT_HELP, EM_SETSEL, 0, -1);
     SendDlgItemMessage(hWndHelp, IDC_CONTEXT_HELP, EM_REPLACESEL, 0, (LPARAM)key);
+}
+
+char *state_key[] =
+{
+    "Exploring",
+    "Moving",
+    "Starting Edge",
+    "Starting Rect",
+    "Starting Circle",
+    "Starting Bezier",
+    "Starting Arc",
+    "Starting Measure",
+    "Starting Extrude",
+    "Drawing Edge",
+    "Drawing Rect",
+    "Drawing Circle",
+    "Drawing Bezier",
+    "Drawing Arc",
+    "Drawing Measure",
+    "Drawing Extrude"
+};
+
+    // Change app state, displaying any help for the new state
+void
+change_state(STATE new_state)
+{
+    app_state = new_state;
+    display_help(state_key[app_state]);
 }
 
 // Wndproc for help dialog. Contains one large edit box.
@@ -1703,6 +1725,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
             ShowWindow(hWndDebug, SW_SHOW);
 
         // help window
+        LoadLibrary("riched20.dll");
         hWndHelp = CreateDialog
             (
             hInst,
@@ -1744,6 +1767,10 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
         CheckMenuItem(hMenu, ID_VIEW_HELP, view_help ? MF_CHECKED : MF_UNCHECKED);
         CheckMenuItem(hMenu, ID_VIEW_ORTHO, view_ortho ? MF_CHECKED : MF_UNCHECKED);
         CheckMenuItem(hMenu, ID_VIEW_PERSPECTIVE, !view_ortho ? MF_CHECKED : MF_UNCHECKED);
+        
+        // Display help for the resting state
+        change_state(STATE_NONE);
+
 
         hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_LOFTYCAD));
 
