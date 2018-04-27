@@ -193,8 +193,11 @@ void link_tail(Object *new_obj, Object **obj_list);
 Object *copy_obj(Object *obj, float xoffset, float yoffset, float zoffset);
 void move_obj(Object *obj, float xoffset, float yoffset, float zoffset);
 void clear_move_copy_flags(Object *obj);
-Object *find_top_level_parent(Object *tree, Object *obj);
 Face *clone_face_reverse(Face *face);
+
+// Find object in tree or as child of another object
+BOOL find_obj(Object *parent, Object *obj);
+Object *find_top_level_parent(Object *tree, Object *obj);
 
 // Regenerate a view list
 void gen_view_list_face(Face *face);

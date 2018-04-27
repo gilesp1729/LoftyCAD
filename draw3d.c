@@ -247,11 +247,13 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                 Face *rf;
                 Plane norm;
                 char buf[64], buf2[64];
+                Face *f;
+                Object *parent;
 
                 switch (app_state)
                 {
                 case STATE_MOVING:
-                    // Move the selection by a delta in XYZ within the facing plane
+                    // Move the selection, or part thereof, by a delta in XYZ within the facing plane
                     intersect_ray_plane(pt.x, pt.y, facing_plane, &new_point);
                     if (key_status & AUX_SHIFT)
                         snap_to_angle(picked_plane, &picked_point, &new_point, 45);
@@ -259,24 +261,23 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                         snap_to_angle(picked_plane, &picked_point, &new_point, angle_snap);
                     snap_to_grid(facing_plane, &new_point);
 
-                    for (obj = selection; obj != NULL; obj = obj->next)
+                    // TODO: If picked_obj is a part of the selection, just manipulate that.
+                    // Only when a top level object is picked do we want to move the whole
+                    // selection.
+                    parent = find_top_level_parent(object_tree, picked_obj);
+                    if (picked_obj != parent)
                     {
-                        Face *f;
-                        Object *parent;
-
                         move_obj
                             (
-                            obj->prev,
+                            picked_obj,
                             new_point.x - last_point.x,
                             new_point.y - last_point.y,
                             new_point.z - last_point.z
                             );
-                        clear_move_copy_flags(obj->prev);
+                        clear_move_copy_flags(picked_obj);
 
-                        // If we have moved a face:
-                        // Invalidate all the view lists for the volume, as any of them may have changed
-                        // Do this by finding the ultimate parent, so it works for points, edges, etc.
-                        parent = find_top_level_parent(object_tree, obj->prev);
+                        // If we have moved some part of a volume:
+                        // Invalidate all the face view lists for the volume, as any of them may have changed
                         if (parent->type == OBJ_VOLUME)
                         {
                             for (f = ((Volume *)parent)->faces; f != NULL; f = (Face *)f->hdr.next)
@@ -285,6 +286,33 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                         else if (parent->type == OBJ_FACE)
                         {
                             ((Face *)parent)->view_valid = FALSE;
+                        }
+                    }
+                    else // Move the whole selection en bloc
+                    {
+                        for (obj = selection; obj != NULL; obj = obj->next)
+                        {
+                            move_obj
+                                (
+                                obj->prev,
+                                new_point.x - last_point.x,
+                                new_point.y - last_point.y,
+                                new_point.z - last_point.z
+                                );
+                            clear_move_copy_flags(obj->prev);
+
+                            // If we have moved some part of a volume:
+                            // Invalidate all the face view lists for the volume, as any of them may have changed
+                            parent = find_top_level_parent(object_tree, obj->prev);
+                            if (parent->type == OBJ_VOLUME)
+                            {
+                                for (f = ((Volume *)parent)->faces; f != NULL; f = (Face *)f->hdr.next)
+                                    f->view_valid = FALSE;
+                            }
+                            else if (parent->type == OBJ_FACE)
+                            {
+                                ((Face *)parent)->view_valid = FALSE;
+                            }
                         }
                     }
 

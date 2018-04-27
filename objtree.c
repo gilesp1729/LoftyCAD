@@ -727,7 +727,7 @@ gen_view_list_arc(ArcEdge *ae)
     Plane n = ae->normal;
     Point *p;
     float rad = length(&n.refpt, edge->endpoints[0]);
-    float t, theta;
+    float t, theta, step;
     float matrix[16];
     float v[4];
     float res[4];
@@ -743,13 +743,16 @@ gen_view_list_arc(ArcEdge *ae)
     // angle between two vectors c-p0 and c-p1
     theta = angle3(edge->endpoints[0], &ae->normal.refpt, edge->endpoints[1], &n);
     
+    // step for angle
+    step = 2.0f * acosf(1.0f - tolerance / half_size);
+
     if (ae->clockwise)  // Clockwise angles go negative
     {
         if (theta > 0)
             theta -= 2 * PI;
 
-        // draw arc from p1 (on x axis) to p2. Steps of 5 degrees (TODO: make this parametric on tol etc)
-        for (t = 0; t > theta; t -= 5.0f / RAD)
+        // draw arc from p1 (on x axis) to p2. 
+        for (t = 0; t > theta; t -= step)
         {
             v[0] = rad * cosf(t);
             v[1] = rad * sinf(t);
@@ -767,7 +770,7 @@ gen_view_list_arc(ArcEdge *ae)
         if (theta < 0)
             theta += 2 * PI;
 
-        for (t = 0; t < theta; t += 5.0f / RAD)  
+        for (t = 0; t < theta; t += step)  
         {
             v[0] = rad * cosf(t);
             v[1] = rad * sinf(t);

@@ -395,7 +395,7 @@ DrawCB(void)
 // Find if an object is in the selection, returning TRUE if found, and
 // a pointer to the _previous_ element (to aid deletion) if not the first.
 BOOL
-is_selected(Object *obj, Object **prev_in_list)
+is_selected_direct(Object *obj, Object **prev_in_list)
 {
     Object *sel;
     BOOL present = FALSE;
@@ -409,6 +409,33 @@ is_selected(Object *obj, Object **prev_in_list)
             break;
         }
         *prev_in_list = sel;
+    }
+
+    return present;
+}
+
+// Find if an object (or any of its parents) is in the selection.
+BOOL
+is_selected_parent(Object *obj)
+{
+    Object *sel, *parent;
+    BOOL present = FALSE;
+
+    for (sel = selection; sel != NULL; sel = sel->next)
+    {
+        if (sel->prev == obj)
+        {
+            present = TRUE;
+            break;
+        }
+
+        // Make sure the object is not locked at the level of the thing being picked
+        parent = find_top_level_parent(object_tree, sel->prev);
+        if (find_obj(sel->prev, obj) && parent->lock < obj->type)
+        {
+            present = TRUE;
+            break;
+        }
     }
 
     return present;
@@ -438,8 +465,6 @@ clear_selection(void)
 void CALLBACK
 left_down(AUX_EVENTREC *event)
 {
-    Object *dummy;
-
     // In any case, find if there is an object under the cursor, and
     // also find if it is in the selection.
     picked_obj = Pick(event->data[0], event->data[1], OBJ_FACE);
@@ -447,7 +472,7 @@ left_down(AUX_EVENTREC *event)
     switch (app_state)
     {
     case STATE_NONE:
-        if (!is_selected(picked_obj, &dummy))
+        if (!is_selected_parent(picked_obj))
         {
             trackball_MouseDown(event);
         }
@@ -729,7 +754,7 @@ remove_from_selection(Object *obj)
     Object *prev_in_list;
     Object *sel_obj;
 
-    if (is_selected(obj, &prev_in_list))
+    if (is_selected_direct(obj, &prev_in_list))
     {
         if (prev_in_list == NULL)
         {
@@ -768,8 +793,6 @@ left_click(AUX_EVENTREC *event)
 
     // We cannot select objects that are locked at their own level
     parent = find_top_level_parent(object_tree, picked_obj);
-    if (parent == NULL)
-        return;
     if (parent->lock >= picked_obj->type)
         return;
 
