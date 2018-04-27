@@ -2,6 +2,10 @@
 #include "LoftyCAD.h"
 #include <stdio.h>
 
+// A good-sized array of mouse move coordinates. Used to draw out arcs and beziers.
+#define MAX_MOVES   400
+static Point move_points[MAX_MOVES];
+static int num_moves = 0;
 
 // Show a dimension or other hint in the dims window.
 void
@@ -64,7 +68,7 @@ face_shade(Face *face, BOOL selected, BOOL highlighted, BOOL locked)
 {
     Point   *v;
 
-    gen_view_list(face);
+    gen_view_list_face(face);
     glBegin(GL_POLYGON);
     color(OBJ_FACE, selected, highlighted, locked);
     glNormal3f(face->normal.A, face->normal.B, face->normal.C);
@@ -169,11 +173,18 @@ draw_object(Object *obj, BOOL selected, BOOL highlighted, LOCK parent_lock)
             break;
 
         case EDGE_ARC:
-            // TODO draw the arc itself here
             ae = (ArcEdge *)edge;
+            gen_view_list_arc(ae);
+            glBegin(GL_LINE_STRIP);
+            color(OBJ_EDGE, selected, highlighted, locked);
+            for (p = ae->view_list; p != NULL; p = (Point *)p->hdr.next)
+                glVertex3f(p->x, p->y, p->z);
 
+            glEnd();
             glPopName();
             draw_object((Object *)&ae->normal.refpt, selected, highlighted, parent_lock);
+            draw_object((Object *)edge->endpoints[0], selected, highlighted, parent_lock);
+            draw_object((Object *)edge->endpoints[1], selected, highlighted, parent_lock);
             break;
 
         case EDGE_BEZIER:
@@ -231,6 +242,8 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                 Point   new_point, p1, p3;
                 Point   *p00, *p01, *p02, *p03;
                 Edge *e;
+                ArcEdge *ae;
+                BezierEdge *be;
                 Face *rf;
                 Plane norm;
                 char buf[64], buf2[64];
@@ -317,6 +330,124 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                     // Show the dimensions (length) of the edge.
                     sprintf_s(buf, 64, "%s mm", display_rounded(buf2, length(&picked_point, &new_point)));
                     show_hint_at(pt, buf);
+
+                    break;
+
+                case STATE_DRAWING_ARC:
+                    if (picked_plane == NULL)
+                    {
+                        // Uhoh. We don't have a plane yet. TODO: Check if the mouse has moved into
+                        // a face object, and use that. 
+
+
+                    }
+
+                    // Move the end point of the current edge
+                    intersect_ray_plane(pt.x, pt.y, picked_plane, &new_point);
+                    snap_to_grid(picked_plane, &new_point);
+
+                    // If first move, create the edge here.
+                    if (curr_obj == NULL)
+                    {
+                        curr_obj = (Object *)edge_new(EDGE_ARC);
+                        e = (Edge *)curr_obj;
+                        // TODO: share points if snapped onto an existing edge endpoint,
+                        // and the edge is not referenced by a face. For now, just create points...
+                        e->endpoints[0] = point_newp(&picked_point);
+                        e->endpoints[1] = point_newp(&new_point);
+                        num_moves = 0;
+
+                        // Masquerade as a straight edge for the moment, until we get a centre
+                        e->type = EDGE_STRAIGHT;
+                    }
+                    else
+                    {
+                        e = (Edge *)curr_obj;
+                        e->endpoints[1]->x = new_point.x;
+                        e->endpoints[1]->y = new_point.y;
+                        e->endpoints[1]->z = new_point.z;
+                    }
+
+                    // Arc edges: remember all mouse moves, and use the midpoint of them as
+                    // the 3rd point to define the circular arc.
+                    if (num_moves < MAX_MOVES - 1)
+                        move_points[num_moves++] = new_point;
+
+                    ae = (ArcEdge *)curr_obj;
+                    ae->normal = *picked_plane;
+
+                    if (num_moves > 5)   // set a reasonable number before trying to find the midpoint
+                    {
+                        Point centre;
+                        BOOL clockwise;
+
+                        if
+                        (
+                            centre_3pt_circle
+                            (
+                            &picked_point,
+                            &move_points[num_moves / 2],
+                            &new_point,
+                            picked_plane,
+                            &centre,
+                            &clockwise
+                            )
+                        )
+                        {
+                            e->type = EDGE_ARC;
+                            ae->normal.refpt = centre;
+                            ae->normal.refpt.hdr.type = OBJ_POINT;  // so it gets drawn
+                            ae->normal.refpt.hdr.ID = 0;
+                            ae->clockwise = clockwise;
+                            ae->view_valid = FALSE;
+                        }
+                    }
+
+                    break;
+
+                case STATE_DRAWING_BEZIER:
+                    if (picked_plane == NULL)
+                    {
+                        // Uhoh. We don't have a plane yet. TODO: Check if the mouse has moved into
+                        // a face object, and use that. 
+
+
+                    }
+
+                    // Move the end point of the current edge
+                    intersect_ray_plane(pt.x, pt.y, picked_plane, &new_point);
+                    snap_to_grid(picked_plane, &new_point);
+
+                    // If first move, create the edge here.
+                    if (curr_obj == NULL)
+                    {
+                        curr_obj = (Object *)edge_new(EDGE_BEZIER);
+                        e = (Edge *)curr_obj;
+                        // TODO: share points if snapped onto an existing edge endpoint,
+                        // and the edge is not referenced by a face. For now, just create points...
+                        e->endpoints[0] = point_newp(&picked_point);
+                        e->endpoints[1] = point_newp(&new_point);
+                        num_moves = 0;
+                    }
+                    else
+                    {
+                        e = (Edge *)curr_obj;
+                        e->endpoints[1]->x = new_point.x;
+                        e->endpoints[1]->y = new_point.y;
+                        e->endpoints[1]->z = new_point.z;
+                    }
+
+                    // Bezier edges: remember the first and last moves and use their gradients 
+                    // to position the control points.
+                    if (num_moves < MAX_MOVES - 1)
+                        move_points[num_moves++] = new_point;
+                    be = (BezierEdge *)curr_obj;
+#if 0
+                    dist = length(&picked_point, &new_point);
+                    grad0 = gradient of picked to moved[0];
+                    be->ctrlpoints[0] = length of dist / 3 in direction of grad0; 
+                    be->ctrlpoints[1] = sim for grad1;
+#endif
 
                     break;
 
@@ -439,9 +570,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                     show_hint_at(pt, buf);
                     break;
 
-                case STATE_DRAWING_ARC:
                 case STATE_DRAWING_CIRCLE:
-                case STATE_DRAWING_BEZIER:
                 case STATE_DRAWING_MEASURE:
                     ASSERT(FALSE, "Not implemented");
                     break;

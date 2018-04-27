@@ -421,6 +421,9 @@ clear_selection(void)
     Object *sel_obj, *next_obj;
 
     sel_obj = selection;
+    if (sel_obj == NULL)
+        return;
+
     do
     {
         next_obj = sel_obj->next;
@@ -543,7 +546,6 @@ left_up(AUX_EVENTREC *event)
 {
     Face *rf;
     Edge *e;
-    ArcEdge *ae;
     float mv[16], vec[4], nvec[4];
     float eye[4] = { 0, 0, 1, 0 };
     char buf[256];
@@ -663,7 +665,7 @@ left_up(AUX_EVENTREC *event)
             // the face now has its edges. Generate its view list and the normal
             rf->n_edges = 4;
             rf->view_valid = FALSE;
-            gen_view_list(rf);
+            gen_view_list_face(rf);
         }
         // fallthrough
     case STATE_DRAWING_EDGE:
@@ -764,8 +766,10 @@ left_click(AUX_EVENTREC *event)
     if (picked_obj == NULL)
         return;
 
-    // We cannot select objects that are locked at their own level.
+    // We cannot select objects that are locked at their own level
     parent = find_top_level_parent(object_tree, picked_obj);
+    if (parent == NULL)
+        return;
     if (parent->lock >= picked_obj->type)
         return;
 
@@ -1069,6 +1073,7 @@ check_file_changed(HWND hWnd)
         }
     }
 
+    clear_selection();
     purge_tree(object_tree);
     DestroyWindow(hWnd);
 }
@@ -1267,6 +1272,7 @@ Command(int wParam, int lParam)
                 serialise_tree(object_tree, curr_filename);
         }
 
+        clear_selection();
         purge_tree(object_tree);
         object_tree = NULL;
         drawing_changed = FALSE;
@@ -1579,7 +1585,7 @@ change_state(STATE new_state)
     display_help(state_key[app_state]);
 }
 
-// Wndproc for help dialog. Contains one large edit box.
+// Wndproc for help dialog. Contains one large rich edit box.
 int WINAPI
 help_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {

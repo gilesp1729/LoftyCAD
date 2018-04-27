@@ -115,13 +115,23 @@ typedef struct ArcEdge
 {
     struct Edge     edge;           // Edge
     Plane           normal;         // Normal vector (the refpt is the centre)
-    // TODO something about which way round it goes...
+    BOOL            clockwise;      // If TRUE, the points go clockwise from endpoint 0
+                                    // to endpoint 1, as seen from the facing plane.
+                                    // If FALSE they go anticlockwise.
+    struct Point    *view_list;     // List of intermediate points on the arc, generated 
+                                    // between the two endpoints, to be flat within the
+                                    // specified tolerance.
+    BOOL            view_valid;     // is TRUE if the view list is up to date.
 } ArcEdge;
 
 typedef struct BezierEdge
 {
     struct Edge     edge;           // Edge
     struct Point    *ctrlpoints[2]; // Two control points
+    struct Point    *view_list;     // List of intermediate points on the curve, generated 
+                                    // between the two endpoints, to be flat within the
+                                    // specified tolerance.
+    BOOL            view_valid;     // is TRUE if the view list is up to date.
 } BezierEdge;
 
 // Face bounded by edges (in a list)
@@ -186,8 +196,10 @@ void clear_move_copy_flags(Object *obj);
 Object *find_top_level_parent(Object *tree, Object *obj);
 Face *clone_face_reverse(Face *face);
 
-// Regenerate a face's view list
-void gen_view_list(Face *face);
+// Regenerate a view list
+void gen_view_list_face(Face *face);
+void gen_view_list_arc(ArcEdge *ae);
+void gen_view_list_bez(BezierEdge *be);
 
 // Write and read a tree to a file
 void serialise_tree(Object *tree, char *filename);

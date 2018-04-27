@@ -208,6 +208,7 @@ clear_move_copy_flags(Object *obj)
         clear_move_copy_flags((Object *)edge->endpoints[0]);
         clear_move_copy_flags((Object *)edge->endpoints[1]);
         obj->copied_to = NULL;
+#if 0 // probably don't need to do anything else here (arc centres and bezier ctrl points are never shared)
         switch (type)
         {
         case EDGE_STRAIGHT:
@@ -218,7 +219,7 @@ clear_move_copy_flags(Object *obj)
             ASSERT(FALSE, "Not implemented");
             break;
         }
-
+#endif
         break;
 
     case OBJ_FACE:
@@ -328,9 +329,10 @@ copy_obj(Object *obj, float xoffset, float yoffset, float zoffset)
             new_face->initial_point = new_edge->endpoints[1];
         }
 
+#if 0      // TODO do I have to do anything else ehere?
         switch (((Edge *)face->edges[0])->type)
         {
-        case EDGE_STRAIGHT:     // TODO do I have to do anything else ehere?
+        case EDGE_STRAIGHT:
             break;
 
         case EDGE_ARC:     // TODO others
@@ -338,6 +340,7 @@ copy_obj(Object *obj, float xoffset, float yoffset, float zoffset)
             ASSERT(FALSE, "Not implemented");
             break;
         }
+#endif
         break;
 
     case OBJ_VOLUME:
@@ -567,34 +570,58 @@ find_top_level_parent(Object *tree, Object *obj)
     return NULL;
 }
 
-// Clean out the view list for a face, by putting all the points on the free list.
-// The points already have ID's of 0.
+// Clean out a view list, by putting all the points on the free list.
+// The points already have ID's of 0. 
 void
-free_view_list(Face *face)
+free_view_list(Point *view_list)
 {
     Point *p;
 
     if (free_list == NULL)
     {
-        free_list = face->view_list;
+        free_list = view_list;
     }
     else
     {
         for (p = free_list; p->hdr.next != NULL; p = (Point *)p->hdr.next)
             ;   // run down to the last free element
-        p->hdr.next = (Object *)face->view_list;
+        p->hdr.next = (Object *)view_list;
     }
+}
+
+void
+free_view_list_face(Face *face)
+{
+    free_view_list(face->view_list);
     face->view_list = NULL;
     face->view_valid = FALSE;
 }
 
+void
+free_view_list_arc(ArcEdge *edge)
+{
+    free_view_list(edge->view_list);
+    edge->view_list = NULL;
+    edge->view_valid = FALSE;
+}
+
+void
+free_view_list_bez(BezierEdge *edge)
+{
+    free_view_list(edge->view_list);
+    edge->view_list = NULL;
+    edge->view_valid = FALSE;
+}
+
+
 // Regenerate the view list for a face. While here, also calculate the outward
 // normal for the face.
 void
-gen_view_list(Face *face)
+gen_view_list_face(Face *face)
 {
     int i;
     Edge *e;
+    ArcEdge *ae;
     Point *last_point;
     Point *p;
     //char buf[256];
@@ -602,25 +629,14 @@ gen_view_list(Face *face)
     if (face->view_valid)
         return;
 
-    free_view_list(face);
+    free_view_list_face(face);
 
-    // TODO don't bump objid when getting new points in here. They will never go in the tree
-    
     // Add points at tail of list, to preserve order
     // First the start point
-    switch (face->edges[0]->type) 
-    {
-    case EDGE_STRAIGHT:
-        p = point_newp(face->initial_point);
-        p->hdr.ID = 0;
-        link_tail((Object *)p, (Object **)&face->view_list);
-        break;
-
-    case EDGE_ARC:     // TODO others
-    case EDGE_BEZIER:
-        ASSERT(FALSE, "Not implemented");
-        break;
-    }
+    p = point_newp(face->initial_point);
+    p->hdr.ID = 0;
+    objid--;        // prevent explosion of objid's
+    link_tail((Object *)p, (Object **)&face->view_list);
 
 #if 0
     sprintf_s(buf, 256, "Face %d IP %d\r\n", face->hdr.ID, face->initial_point->hdr.ID);
@@ -657,11 +673,41 @@ gen_view_list(Face *face)
 
             p = point_newp(last_point);
             p->hdr.ID = 0;
+            objid--;
             link_tail((Object *)p, (Object **)&face->view_list);
             break;
 
-        case EDGE_ARC:     // TODO others
-        case EDGE_BEZIER:
+        case EDGE_ARC:
+            ae = (ArcEdge *)e;
+            gen_view_list_arc(ae);
+            if (last_point == e->endpoints[0])
+            {
+                last_point = e->endpoints[1];
+                
+                // TODO copy the view list forwards
+
+            }
+            else
+            {
+                ASSERT(last_point == e->endpoints[1], "Point order messed up");
+                last_point = e->endpoints[0];
+
+                // TODO copy the view list backwards
+
+
+            }
+
+            p = point_newp(last_point);
+            p->hdr.ID = 0;
+            objid--;
+            link_tail((Object *)p, (Object **)&face->view_list);
+            break;
+
+
+
+
+
+        case EDGE_BEZIER:     // TODO others
             ASSERT(FALSE, "Not implemented");
             break;
         }
@@ -671,6 +717,76 @@ gen_view_list(Face *face)
 
     // calculate the normal vector
     normal(face->view_list, &face->normal);
+}
+
+// Generate the view list for an arc edge.
+void
+gen_view_list_arc(ArcEdge *ae)
+{
+    Edge *edge = (Edge *)ae;
+    Plane n = ae->normal;
+    Point *p;
+    float rad = length(&n.refpt, edge->endpoints[0]);
+    float t, theta;
+    float matrix[16];
+    float v[4];
+    float res[4];
+
+    if (ae->view_valid)
+        return;
+
+    free_view_list_arc(ae);
+
+    // transform arc to XY plane, centre at origin, endpoint 0 on x axis
+    look_at_centre(n.refpt, *edge->endpoints[0], n, matrix);
+
+    // angle between two vectors c-p0 and c-p1
+    theta = angle3(edge->endpoints[0], &ae->normal.refpt, edge->endpoints[1], &n);
+    
+    if (ae->clockwise)  // Clockwise angles go negative
+    {
+        if (theta > 0)
+            theta -= 2 * PI;
+
+        // draw arc from p1 (on x axis) to p2. Steps of 5 degrees (TODO: make this parametric on tol etc)
+        for (t = 0; t > theta; t -= 5.0f / RAD)
+        {
+            v[0] = rad * cosf(t);
+            v[1] = rad * sinf(t);
+            v[2] = 0;
+            v[3] = 1;
+            mat_mult_by_col(matrix, v, res);
+            p = point_new(res[0], res[1], res[2]);
+            p->hdr.ID = 0;
+            objid--;
+            link_tail((Object *)p, (Object **)&ae->view_list);
+        }
+    }
+    else
+    {
+        if (theta < 0)
+            theta += 2 * PI;
+
+        for (t = 0; t < theta; t += 5.0f / RAD)  
+        {
+            v[0] = rad * cosf(t);
+            v[1] = rad * sinf(t);
+            v[2] = 0;
+            v[3] = 1;
+            mat_mult_by_col(matrix, v, res);
+            p = point_new(res[0], res[1], res[2]);
+            p->hdr.ID = 0;
+            objid--;
+            link_tail((Object *)p, (Object **)&ae->view_list);
+        }
+    }
+}
+
+// Generate the view list for a bezier edge.
+void
+gen_view_list_bez(BezierEdge *be)
+{
+    ASSERT(FALSE, "Not implemented");
 }
 
 // Purge an object. Points are put in the free list.
@@ -714,7 +830,7 @@ purge_obj(Object *obj)
 
     case OBJ_FACE:
         face = (Face *)obj;
-        free_view_list(face);
+        free_view_list_face(face);
         for (i = 0; i < face->n_edges; i++)
             purge_obj((Object *)face->edges[i]);
         free(obj);
@@ -750,7 +866,7 @@ purge_tree(Object *tree)
 // names of things that make the serialised format a little easier to read
 char *objname[] = { "(none)", "POINT", "EDGE", "FACE", "VOLUME" };
 char *locktypes[] = { "N", "P", "E", "F", "V" };
-char *edgetypes[] = { "STRAIGHT", "CIRCLE", "ARC", "BEZIER" };
+char *edgetypes[] = { "STRAIGHT", "ARC", "BEZIER" };
 char *facetypes[] = { "RECT", "CIRCLE", "FLAT", "CYLINDRICAL", "GENERAL" };
 
 // Serialise an object. Children go out before their parents, in general.
@@ -760,6 +876,7 @@ serialise_obj(Object *obj, FILE *f)
     int i;
     Edge *e;
     EDGE type, constr;
+    ArcEdge *ae;
     Face *face;
     Volume *vol;
 
@@ -781,6 +898,7 @@ serialise_obj(Object *obj, FILE *f)
         e = (Edge *)obj;
         serialise_obj((Object *)e->endpoints[0], f);
         serialise_obj((Object *)e->endpoints[1], f);
+#if 0  // probably don't need anything here
         switch (type)
         {
         case EDGE_STRAIGHT:
@@ -791,6 +909,7 @@ serialise_obj(Object *obj, FILE *f)
             ASSERT(FALSE, "Not implemented");
             break;
         }
+#endif
         break;
 
     case OBJ_FACE:
@@ -810,6 +929,7 @@ serialise_obj(Object *obj, FILE *f)
         break;
     }
 
+    // Now write the object itself
     fprintf_s(f, "%s %d %s ", objname[obj->type], obj->ID, locktypes[obj->lock]);
     switch (obj->type)
     {
@@ -827,7 +947,14 @@ serialise_obj(Object *obj, FILE *f)
             fprintf_s(f, "\n");
             break;
 
-        case EDGE_ARC:     // TODO others
+        case EDGE_ARC:
+            ae = (ArcEdge *)obj;
+            fprintf_s(f, "%s %f %f %f %f %f %f",
+                ae->clockwise ? "C" : "AC",
+                ae->normal.refpt.x, ae->normal.refpt.y, ae->normal.refpt.z,
+                ae->normal.A, ae->normal.B, ae->normal.C);
+            break;
+
         case EDGE_BEZIER:
             ASSERT(FALSE, "Not implemented");
             break;
@@ -989,6 +1116,7 @@ deserialise_tree(Object **tree, char *filename)
         {
             int end0, end1;
             Edge *edge;
+            ArcEdge *ae;
 
             tok = strtok_s(NULL, " \t\n", &nexttok);
             id = atoi(tok);
@@ -1008,6 +1136,35 @@ deserialise_tree(Object **tree, char *filename)
                 ASSERT(end1 > 0 && object[end1] != NULL, "Bad endpoint ID");
                 edge->endpoints[0] = (Point *)object[end0];
                 edge->endpoints[1] = (Point *)object[end1];
+            }
+            else if (strcmp(tok, "ARC") == 0)
+            {
+                edge = edge_new(EDGE_ARC);
+                tok = strtok_s(NULL, " \t\n", &nexttok);
+                end0 = atoi(tok);
+                ASSERT(end0 > 0 && object[end0] != NULL, "Bad endpoint ID");
+                tok = strtok_s(NULL, " \t\n", &nexttok);
+                end1 = atoi(tok);
+                ASSERT(end1 > 0 && object[end1] != NULL, "Bad endpoint ID");
+                edge->endpoints[0] = (Point *)object[end0];
+                edge->endpoints[1] = (Point *)object[end1];
+
+                ae = (ArcEdge *)edge;
+                tok = strtok_s(NULL, " \t\n", &nexttok);
+                ae->clockwise = strcmp(tok, "C") == 0;
+
+                tok = strtok_s(NULL, " \t\n", &nexttok);
+                ae->normal.refpt.x = (float)atof(tok);
+                tok = strtok_s(NULL, " \t\n", &nexttok);
+                ae->normal.refpt.y = (float)atof(tok);
+                tok = strtok_s(NULL, " \t\n", &nexttok);
+                ae->normal.refpt.z = (float)atof(tok);
+                tok = strtok_s(NULL, " \t\n", &nexttok);
+                ae->normal.A = (float)atof(tok);
+                tok = strtok_s(NULL, " \t\n", &nexttok);
+                ae->normal.B = (float)atof(tok);
+                tok = strtok_s(NULL, " \t\n", &nexttok);
+                ae->normal.C = (float)atof(tok);
             }
             else
             {

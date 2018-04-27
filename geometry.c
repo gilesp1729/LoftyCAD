@@ -150,6 +150,12 @@ if len(poly) < 3 : # not a plane - no area
 
 #endif /* Python code */
 
+float
+dot(float x0, float y0, float z0, float x1, float y1, float z1)
+{
+    return x0*x1 + y0*y1 + z0*z1;
+}
+
 void
 cross(float x0, float y0, float z0, float x1, float y1, float z1, float *xc, float *yc, float *zc)
 {
@@ -197,6 +203,24 @@ normal3(Point *b, Point *a, Point *c, Plane *norm)
     norm->refpt.z = a->z;
 }
 
+// Returns the angle at a, between b and c, relative to a normal n.
+// The angle can be in [-pi, pi].
+float
+angle3(Point *b, Point *a, Point *c, Plane *n)
+{
+    float cosa = dot(b->x - a->x, b->y - a->y, b->z - a->z, c->x - a->x, c->y - a->y, c->z - a->z);
+    float angle;
+    Plane cp;
+
+    cosa /= length(a, b);
+    cosa /= length(a, c);
+    angle = acosf(cosa);
+    cross(b->x - a->x, b->y - a->y, b->z - a->z, c->x - a->x, c->y - a->y, c->z - a->z, &cp.A, &cp.B, &cp.C);
+    if (pldot(n, &cp) < 0)
+        angle = -angle;
+    return angle;
+}
+
 float
 length(Point *p0, Point *p1)
 {
@@ -208,12 +232,6 @@ length(Point *p0, Point *p1)
     float z1 = p1->z;
 
     return (float)sqrt((x1 - x0)*(x1 - x0) + (y1 - y0)*(y1 - y0) + (z1 - z0)*(z1 - z0));
-}
-
-float
-dot(float x0, float y0, float z0, float x1, float y1, float z1)
-{
-    return x0*x1 + y0*y1 + z0*z1;
 }
 
 #if 0 // not needed
@@ -256,6 +274,15 @@ mat_mult_by_row(float *m, float *v, float *res)
     res[1] = m[4] * v[0] + m[5] * v[1] + m[6] * v[2] + m[7] * v[3];
     res[2] = m[8] * v[0] + m[9] * v[1] + m[10] * v[2] + m[11] * v[3];
     res[3] = m[12] * v[0] + m[13] * v[1] + m[14] * v[2] + m[15] * v[3];
+}
+
+void
+mat_mult_by_col(float *m, float *v, float *res)
+{
+    res[0] = m[0] * v[0] + m[4] * v[1] + m[8] * v[2] + m[12] * v[3];
+    res[1] = m[1] * v[0] + m[5] * v[1] + m[9] * v[2] + m[13] * v[3];
+    res[2] = m[2] * v[0] + m[6] * v[1] + m[10] * v[2] + m[14] * v[3];
+    res[3] = m[3] * v[0] + m[7] * v[1] + m[11] * v[2] + m[15] * v[3];
 }
 
 // test for "near" zero.
@@ -343,3 +370,141 @@ display_rounded(char *buf, float val)
     sprintf_s(buf, 64, "%.*f", tol_log, val); 
     return buf;
 }
+
+// Ensure plane's A,B,C are of unit length.
+void
+normalise_plane(Plane *p)
+{
+    float length = (float)sqrt(p->A * p->A + p->B * p->B + p->C * p->C);
+
+    p->A = p->A / length;
+    p->B = p->B / length;
+    p->C = p->C / length;
+}
+
+// Dot and cross products between two planes.
+float
+pldot(Plane *p1, Plane *p2)
+{
+    return p1->A*p2->A + p1->B*p2->B + p1->C*p2->C;
+}
+
+void
+plcross(Plane *p1, Plane *p2, Plane *cp)
+{
+    cross(p1->A, p1->B,p1->C, p2->A, p2->B, p2->C, &cp->A, &cp->B, &cp->C);
+}
+
+// Ensure vector (represented as a Point) is of unit length.
+void
+normalise_point(Point *p)
+{
+    float length = (float)sqrt(p->x * p->x + p->y * p->y + p->z * p->z);
+
+    p->x = p->x / length;
+    p->y = p->y / length;
+    p->z = p->z / length;
+}
+
+// Dot and cross products between two vectors represented as Points.
+float
+pdot(Point *p1, Point *p2)
+{
+    return p1->x*p2->x + p1->y*p2->y + p1->z*p2->z;
+}
+
+void
+pcross(Point *p1, Point *p2, Point *cp)
+{
+    cross(p1->x, p1->y, p1->z, p2->x, p2->y, p2->z, &cp->x, &cp->y, &cp->z);
+}
+
+// Find the centre of a circle, given 3 points. Returns FALSE if it can't.
+// The 3 points are already known to lie in plane pl. The centre will too.
+// From D. Sunday, "Intersection of Lines and Planes", http://geomalgorithms.com/a05-_intersect-1.html
+BOOL
+centre_3pt_circle(Point *p1, Point *p2, Point *p3, Plane *pl, Point *centre, BOOL *clockwise)
+{
+    Plane n1, n2, n3, n1xn2, n2xn3, n3xn1;
+    float d1, d2, d3, denom;
+
+    // Determine the 3 planes. Two of them bisect the lines p1-p2 and p2-p3.
+    n1 = *pl;
+    //normalise_plane(&n1);  // should not need this, it should already be normalised
+
+    n2.refpt.x = (p1->x + p2->x) / 2;
+    n2.refpt.y = (p1->y + p2->y) / 2;
+    n2.refpt.z = (p1->z + p2->z) / 2;
+    n2.A = p2->x - p1->x;
+    n2.B = p2->y - p1->y;
+    n2.C = p2->z - p1->z;
+    normalise_plane(&n2);
+
+    n3.refpt.x = (p2->x + p3->x) / 2;
+    n3.refpt.y = (p2->y + p3->y) / 2;
+    n3.refpt.z = (p2->z + p3->z) / 2;
+    n3.A = p3->x - p2->x;
+    n3.B = p3->y - p2->y;
+    n3.C = p3->z - p2->z;
+    normalise_plane(&n3);
+
+    // Compute all the cross products
+    plcross(&n1, &n2, &n1xn2);
+    plcross(&n2, &n3, &n2xn3);
+    plcross(&n3, &n1, &n3xn1);
+
+    // test for near-parallel
+    denom = pldot(&n1, &n2xn3);
+    if (nz(denom))
+        return FALSE;
+
+    // compute the "D" terms in the plane equations (Ax + By + Cz + D = 0)
+    // they are negated, as they are used negated in the centre calculation
+    d1 = n1.A * n1.refpt.x + n1.B * n1.refpt.y + n1.C * n1.refpt.z;
+    d2 = n2.A * n2.refpt.x + n2.B * n2.refpt.y + n2.C * n2.refpt.z;
+    d3 = n3.A * n3.refpt.x + n3.B * n3.refpt.y + n3.C * n3.refpt.z;
+
+    // Return the centre, and the sense of the arc (clockwise or a/clock, relative to 
+    // the facing plane)
+    centre->x = (d1 * n2xn3.A + d2 * n3xn1.A + d3 * n1xn2.A) / denom;
+    centre->y = (d1 * n2xn3.B + d2 * n3xn1.B + d3 * n1xn2.B) / denom;
+    centre->z = (d1 * n2xn3.C + d2 * n3xn1.C + d3 * n1xn2.C) / denom;
+    *clockwise = denom < 0;
+
+    return TRUE;
+}
+
+// Translates point c to the origin, then maps c-p1 and n vectors onto XY plane.
+// Returns 4x4 matrix which needs to be post multiplied to the modelview.
+void
+look_at_centre(Point c, Point p1, Plane n, float matrix[16])
+{
+    Plane pp1, nxpp1;
+
+    pp1.A = p1.x - c.x;
+    pp1.B = p1.y - c.y;
+    pp1.C = p1.z - c.z;
+    normalise_plane(&pp1);
+    plcross(&n, &pp1, &nxpp1);
+
+    // set rotation part
+    matrix[0] = pp1.A;
+    matrix[1] = pp1.B;
+    matrix[2] = pp1.C;
+    matrix[3] = 0;
+    matrix[4] = nxpp1.A;
+    matrix[5] = nxpp1.B;
+    matrix[6] = nxpp1.C;
+    matrix[7] = 0;
+    matrix[8] = n.A;
+    matrix[9] = n.B;
+    matrix[10] = n.C;
+    matrix[11] = 0;
+
+    // set translation part (unlike gluLookAt, bring C to the origin)
+    matrix[12] = c.x;
+    matrix[13] = c.y;
+    matrix[14] = c.z;
+    matrix[15] = 1;
+}
+
