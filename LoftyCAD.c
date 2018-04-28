@@ -1436,7 +1436,6 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
         // For now grey out unimplemented ones
         EnableWindow(GetDlgItem(hWnd, IDB_POINT), FALSE);
-        EnableWindow(GetDlgItem(hWnd, IDB_CIRCLE), FALSE);
         EnableWindow(GetDlgItem(hWnd, IDB_CONST_EDGE), FALSE);
         EnableWindow(GetDlgItem(hWnd, IDB_CONST_RECT), FALSE);
         EnableWindow(GetDlgItem(hWnd, IDB_CONST_CIRCLE), FALSE);

@@ -101,6 +101,9 @@
     <ClCompile Include="draw3d.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="registry.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="LoftyCAD.rc">

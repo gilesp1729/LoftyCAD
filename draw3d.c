@@ -178,7 +178,7 @@ draw_object(Object *obj, BOOL selected, BOOL highlighted, LOCK parent_lock)
             gen_view_list_arc(ae);
             glBegin(GL_LINE_STRIP);
             color(OBJ_EDGE, selected, highlighted, locked);
-            for (p = ae->view_list; p != NULL; p = (Point *)p->hdr.next)
+            for (p = edge->view_list; p != NULL; p = (Point *)p->hdr.next)
                 glVertex3f(p->x, p->y, p->z);
 
             glEnd();
@@ -193,7 +193,7 @@ draw_object(Object *obj, BOOL selected, BOOL highlighted, LOCK parent_lock)
             gen_view_list_bez(be);
             glBegin(GL_LINE_STRIP);
             color(OBJ_EDGE, selected, highlighted, locked);
-            for (p = be->view_list; p != NULL; p = (Point *)p->hdr.next)
+            for (p = edge->view_list; p != NULL; p = (Point *)p->hdr.next)
                 glVertex3f(p->x, p->y, p->z);
 
             glEnd();
@@ -440,7 +440,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                             ae->centre->y = centre.y;
                             ae->centre->z = centre.z;
                             ae->clockwise = clockwise;
-                            ae->view_valid = FALSE;
+                            e->view_valid = FALSE;
                         }
                     }
 
@@ -519,7 +519,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                         be->ctrlpoints[1]->y = e->endpoints[1]->y + grad1.B * dist;
                         be->ctrlpoints[1]->z = e->endpoints[1]->z + grad1.C * dist;
 
-                        be->view_valid = FALSE;
+                        e->view_valid = FALSE;
                     }
                     break;
 
@@ -590,7 +590,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                         p3 = swap;
                     }
 
-                    // If first move, create the rect and its edges here.
+                    // If first move, create the rect here.
                     // Create a special rect with no edges but a 4-point view list.
                     // Only create the edges when completed, as we have to keep the anticlockwise
                     // order of the points no matter how the mouse is dragged around.
@@ -643,8 +643,55 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                     break;
 
                 case STATE_DRAWING_CIRCLE:
+                    if (picked_plane == NULL)
+                    {
+                        // Uhoh. We don't have a plane yet. TODO: Check if the mouse has moved into
+                        // a face object, and use that.
+
+
+                    }
+
+                    // Move the circumference point
+                    intersect_ray_plane(pt.x, pt.y, picked_plane, &new_point);
+                    snap_to_grid(picked_plane, &new_point);
+
+                    // First move create an arc edge and a circle face
+                    if (curr_obj == NULL)
+                    {
+                        ae = (ArcEdge *)edge_new(EDGE_ARC);
+                        ae->normal = *picked_plane;
+                        ae->centre = point_newp(&picked_point);
+                        
+                        // Endpoints are coincident
+                        p01 = point_newp(&new_point);
+                        ((Edge *)ae)->endpoints[0] = ((Edge *)ae)->endpoints[1] = p01;
+
+                        rf = face_new(FACE_CIRCLE, *picked_plane);
+                        rf->edges[0] = (Edge *)ae;
+                        rf->n_edges = 1;
+                        rf->initial_point = p01;
+
+                        curr_obj = (Object *)rf;
+                    }
+                    else
+                    {
+                        rf = (Face *)curr_obj;
+                        ae = (ArcEdge *)rf->edges[0];
+                        p01 = ((Edge *)ae)->endpoints[0];
+                        p01->x = new_point.x;
+                        p01->y = new_point.y;
+                        p01->z = new_point.z;
+                        ((Edge *)ae)->view_valid = FALSE;
+                        rf->view_valid = FALSE;
+                    }
+
+                    // Show the dimensions of the circle.
+                    sprintf_s(buf, 64, "%s mm rad", display_rounded(buf, length(ae->centre, p01)));
+                    show_hint_at(pt, buf);
+                    break;
+
                 case STATE_DRAWING_MEASURE:
-                    ASSERT(FALSE, "Draw Circle/Measure Not implemented");
+                    ASSERT(FALSE, "Draw Measure Not implemented");
                     break;
 
                 case STATE_DRAWING_EXTRUDE:

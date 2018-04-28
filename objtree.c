@@ -472,14 +472,14 @@ move_obj(Object *obj, float xoffset, float yoffset, float zoffset)
         case EDGE_ARC:
             ae = (ArcEdge *)obj;
             move_obj((Object *)ae->centre, xoffset, yoffset, zoffset);
-            ae->view_valid = FALSE;
+            edge->view_valid = FALSE;
             break;
 
         case EDGE_BEZIER:
             be = (BezierEdge *)obj;
             move_obj((Object *)be->ctrlpoints[0], xoffset, yoffset, zoffset);
             move_obj((Object *)be->ctrlpoints[1], xoffset, yoffset, zoffset);
-            be->view_valid = FALSE;
+            edge->view_valid = FALSE;
             break;
         }
 
@@ -599,7 +599,6 @@ invalidate_all_view_lists(Object *parent, Object *obj, float dx, float dy, float
 {
     Face *f;
     ArcEdge *ae;
-    BezierEdge *be;
     int i;
 
     if (parent->type == OBJ_VOLUME)
@@ -620,7 +619,7 @@ invalidate_all_view_lists(Object *parent, Object *obj, float dx, float dy, float
         {
         case EDGE_ARC:
             ae = (ArcEdge *)parent;
-            ae->view_valid = FALSE;
+            ((Edge *)parent)->view_valid = FALSE;
 
             // Check that the obj in question is an endpoint or the centre,
             // and update the other point(s) to suit.
@@ -672,8 +671,7 @@ invalidate_all_view_lists(Object *parent, Object *obj, float dx, float dy, float
             break;
 
         case EDGE_BEZIER:
-            be = (BezierEdge *)parent;
-            be->view_valid = FALSE;
+            ((Edge *)parent)->view_valid = FALSE;
             break;
         }
     }
@@ -707,21 +705,12 @@ free_view_list_face(Face *face)
 }
 
 void
-free_view_list_arc(ArcEdge *edge)
+free_view_list_edge(Edge *edge)
 {
     free_view_list(edge->view_list);
     edge->view_list = NULL;
     edge->view_valid = FALSE;
 }
-
-void
-free_view_list_bez(BezierEdge *edge)
-{
-    free_view_list(edge->view_list);
-    edge->view_list = NULL;
-    edge->view_valid = FALSE;
-}
-
 
 // Regenerate the view list for a face. While here, also calculate the outward
 // normal for the face.
@@ -730,9 +719,8 @@ gen_view_list_face(Face *face)
 {
     int i;
     Edge *e;
-    ArcEdge *ae;
     Point *last_point;
-    Point *p;
+    Point *p, *v;
     //char buf[256];
 
     if (face->view_valid)
@@ -787,33 +775,45 @@ gen_view_list_face(Face *face)
             break;
 
         case EDGE_ARC:
-            ae = (ArcEdge *)e;
-            gen_view_list_arc(ae);
+            gen_view_list_arc((ArcEdge *)e);
+            goto copy_view_list;
+
+        case EDGE_BEZIER:
+            gen_view_list_bez((BezierEdge *)e);
+        copy_view_list:
             if (last_point == e->endpoints[0])
             {
                 last_point = e->endpoints[1];
                 
-                // TODO copy the view list forwards. Skip the first point as it has already been added
-
+                // copy the view list forwards. Skip the first point as it has already been added
+                for (v = (Point *)e->view_list->hdr.next; v != NULL; v = (Point *)v->hdr.next)
+                {
+                    p = point_newp(v);
+                    p->hdr.ID = 0;
+                    objid--;
+                    link_tail((Object *)p, (Object **)&face->view_list);
+                }
             }
             else
             {
                 ASSERT(last_point == e->endpoints[1], "Point order messed up");
                 last_point = e->endpoints[0];
 
-                // TODO copy the view list backwards. Skip the last point sim.
-
-
+                // copy the view list backwards, skipping the last point.
+                // Do this by linking to head (effectively reversing the order)
+                for (v = (Point *)e->view_list; v->hdr.next != NULL; v = (Point *)v->hdr.next)
+                {
+                    p = point_newp(v);
+                    p->hdr.ID = 0;
+                    objid--;
+                    link((Object *)p, (Object **)&face->view_list);
+                }
             }
 
             p = point_newp(last_point);
             p->hdr.ID = 0;
             objid--;
             link_tail((Object *)p, (Object **)&face->view_list);
-            break;
-
-        case EDGE_BEZIER:     // TODO others
-            ASSERT(FALSE, "face view list for Bez edges Not implemented");
             break;
         }
     }
@@ -837,16 +837,20 @@ gen_view_list_arc(ArcEdge *ae)
     float v[4];
     float res[4];
 
-    if (ae->view_valid)
+    if (edge->view_valid)
         return;
 
-    free_view_list_arc(ae);
+    free_view_list_edge(edge);
 
     // transform arc to XY plane, centre at origin, endpoint 0 on x axis
     look_at_centre(*ae->centre, *edge->endpoints[0], n, matrix);
 
-    // angle between two vectors c-p0 and c-p1
-    theta = angle3(edge->endpoints[0], ae->centre, edge->endpoints[1], &n);
+    // angle between two vectors c-p0 and c-p1. If the points are the same, we are
+    // drawing a full circle.
+    if (edge->endpoints[0] == edge->endpoints[1])
+        theta = 2 * PI;
+    else
+        theta = angle3(edge->endpoints[0], ae->centre, edge->endpoints[1], &n);
     
     // step for angle
     step = 2.0f * acosf(1.0f - tolerance / rad);
@@ -867,7 +871,7 @@ gen_view_list_arc(ArcEdge *ae)
             p = point_new(res[0], res[1], res[2]);
             p->hdr.ID = 0;
             objid--;
-            link_tail((Object *)p, (Object **)&ae->view_list);
+            link_tail((Object *)p, (Object **)&edge->view_list);
         }
     }
     else
@@ -885,7 +889,7 @@ gen_view_list_arc(ArcEdge *ae)
             p = point_new(res[0], res[1], res[2]);
             p->hdr.ID = 0;
             objid--;
-            link_tail((Object *)p, (Object **)&ae->view_list);
+            link_tail((Object *)p, (Object **)&edge->view_list);
         }
     }
 
@@ -893,9 +897,9 @@ gen_view_list_arc(ArcEdge *ae)
     p = point_newp(edge->endpoints[1]);
     p->hdr.ID = 0;
     objid--;
-    link_tail((Object *)p, (Object **)&ae->view_list);
+    link_tail((Object *)p, (Object **)&edge->view_list);
 
-    ae->view_valid = TRUE;
+    edge->view_valid = TRUE;
 }
 
 // Length squared shortcut
@@ -913,6 +917,7 @@ recurse_bez
 )
 {
     Point *p;
+    Edge *e = (Edge *)be;
 
     // Calculate all the mid-points of the line segments
     float x12 = (x1 + x2) / 2;
@@ -956,7 +961,7 @@ recurse_bez
         p = point_new(x4, y4, z4);
         p->hdr.ID = 0;
         objid--;
-        link_tail((Object *)p, (Object **)&be->view_list);
+        link_tail((Object *)p, (Object **)&e->view_list);
     }
     else
     {
@@ -973,16 +978,16 @@ gen_view_list_bez(BezierEdge *be)
     Edge *e = (Edge *)be;
     Point *p;
 
-    if (be->view_valid)
+    if (e->view_valid)
         return;
 
-    free_view_list_bez(be);
+    free_view_list_edge(e);
 
     // Put the first endpoint on the view list
     p = point_newp(e->endpoints[0]);
     p->hdr.ID = 0;
     objid--;
-    link_tail((Object *)p, (Object **)&be->view_list);
+    link_tail((Object *)p, (Object **)&e->view_list);
 
     // Subdivide the bezier
     recurse_bez
@@ -994,7 +999,7 @@ gen_view_list_bez(BezierEdge *be)
         e->endpoints[1]->x, e->endpoints[1]->y, e->endpoints[1]->z
     );
 
-    be->view_valid = TRUE;
+    e->view_valid = TRUE;
 }
 
 // Purge an object. Points are put in the free list.
@@ -1436,10 +1441,14 @@ deserialise_tree(Object **tree, char *filename)
             {
                 type = FACE_RECT;
             }
+            else if (strcmp(tok, "CIRCLE") == 0)
+            {
+                type = FACE_CIRCLE;
+            }
             else
             {
                 // TODO other types
-                ASSERT(FALSE, "Deserialise Face (not Rect) Not implemented");
+                ASSERT(FALSE, "Deserialise Face (Flat) Not implemented");
             }
 
             tok = strtok_s(NULL, " \t\n", &nexttok);

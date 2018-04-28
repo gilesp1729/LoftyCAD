@@ -104,6 +104,10 @@ typedef struct Edge
     struct Object   hdr;            // Header
     EDGE            type;           // What kind of edge this is
     struct Point    *endpoints[2];  // Two endpoints (valid for any edge type)
+    struct Point    *view_list;     // List of intermediate points on the curve, generated 
+                                    // between the two endpoints, to be flat within the
+                                    // specified tolerance. Only used for arcs and beziers.
+    BOOL            view_valid;     // is TRUE if the view list is up to date.
 } Edge;
 
 typedef struct StraightEdge
@@ -119,20 +123,12 @@ typedef struct ArcEdge
                                     // to endpoint 1, as seen from the facing plane.
                                     // If FALSE they go anticlockwise.
     struct Point    *centre;        // The centre of the arc.
-    struct Point    *view_list;     // List of intermediate points on the arc, generated 
-                                    // between the two endpoints, to be flat within the
-                                    // specified tolerance.
-    BOOL            view_valid;     // is TRUE if the view list is up to date.
 } ArcEdge;
 
 typedef struct BezierEdge
 {
     struct Edge     edge;           // Edge
     struct Point    *ctrlpoints[2]; // Two control points
-    struct Point    *view_list;     // List of intermediate points on the curve, generated 
-                                    // between the two endpoints, to be flat within the
-                                    // specified tolerance.
-    BOOL            view_valid;     // is TRUE if the view list is up to date.
 } BezierEdge;
 
 // Face bounded by edges (in a list)
