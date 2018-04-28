@@ -371,15 +371,19 @@ display_rounded(char *buf, float val)
     return buf;
 }
 
-// Ensure plane's A,B,C are of unit length.
-void
+// Ensure plane's A,B,C are of unit length. Return FALSE if the length is zero.
+BOOL
 normalise_plane(Plane *p)
 {
     float length = (float)sqrt(p->A * p->A + p->B * p->B + p->C * p->C);
 
+    if (nz(length))
+        return FALSE;
+
     p->A = p->A / length;
     p->B = p->B / length;
     p->C = p->C / length;
+    return TRUE;
 }
 
 // Dot and cross products between two planes.
@@ -395,15 +399,19 @@ plcross(Plane *p1, Plane *p2, Plane *cp)
     cross(p1->A, p1->B,p1->C, p2->A, p2->B, p2->C, &cp->A, &cp->B, &cp->C);
 }
 
-// Ensure vector (represented as a Point) is of unit length.
-void
+// Ensure vector (represented as a Point) is of unit length. Return FALSE if the length is zero.
+BOOL
 normalise_point(Point *p)
 {
     float length = (float)sqrt(p->x * p->x + p->y * p->y + p->z * p->z);
 
+    if (nz(length))
+        return FALSE;
+
     p->x = p->x / length;
     p->y = p->y / length;
     p->z = p->z / length;
+    return TRUE;
 }
 
 // Dot and cross products between two vectors represented as Points.

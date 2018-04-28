@@ -183,7 +183,7 @@ draw_object(Object *obj, BOOL selected, BOOL highlighted, LOCK parent_lock)
 
             glEnd();
             glPopName();
-            draw_object((Object *)&ae->normal.refpt, selected, highlighted, parent_lock);
+            draw_object((Object *)ae->centre, selected, highlighted, parent_lock);
             draw_object((Object *)edge->endpoints[0], selected, highlighted, parent_lock);
             draw_object((Object *)edge->endpoints[1], selected, highlighted, parent_lock);
             break;
@@ -263,7 +263,6 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                 Face *rf;
                 Plane norm;
                 char buf[64], buf2[64];
-                Face *f;
                 Object *parent;
 
                 switch (app_state)
@@ -292,17 +291,16 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                             );
                         clear_move_copy_flags(picked_obj);
 
-                        // If we have moved some part of a volume:
-                        // Invalidate all the face view lists for the volume, as any of them may have changed
-                        if (parent->type == OBJ_VOLUME)
-                        {
-                            for (f = ((Volume *)parent)->faces; f != NULL; f = (Face *)f->hdr.next)
-                                f->view_valid = FALSE;
-                        }
-                        else if (parent->type == OBJ_FACE)
-                        {
-                            ((Face *)parent)->view_valid = FALSE;
-                        }
+                        // If we have moved some part of another object containing view lists:
+                        // Invalidate them, as any of them may have changed.
+                        invalidate_all_view_lists
+                            (
+                            parent, 
+                            picked_obj,
+                            new_point.x - last_point.x,
+                            new_point.y - last_point.y,
+                            new_point.z - last_point.z
+                            );
                     }
                     else // Move the whole selection en bloc
                     {
@@ -317,18 +315,15 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                                 );
                             clear_move_copy_flags(obj->prev);
 
-                            // If we have moved some part of a volume:
-                            // Invalidate all the face view lists for the volume, as any of them may have changed
                             parent = find_top_level_parent(object_tree, obj->prev);
-                            if (parent->type == OBJ_VOLUME)
-                            {
-                                for (f = ((Volume *)parent)->faces; f != NULL; f = (Face *)f->hdr.next)
-                                    f->view_valid = FALSE;
-                            }
-                            else if (parent->type == OBJ_FACE)
-                            {
-                                ((Face *)parent)->view_valid = FALSE;
-                            }
+                            invalidate_all_view_lists
+                                (
+                                parent,
+                                obj->prev,
+                                new_point.x - last_point.x,
+                                new_point.y - last_point.y,
+                                new_point.z - last_point.z
+                                );
                         }
                     }
 
@@ -391,6 +386,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                     snap_to_grid(picked_plane, &new_point);
 
                     // If first move, create the edge here.
+                    ae = (ArcEdge *)curr_obj;
                     if (curr_obj == NULL)
                     {
                         curr_obj = (Object *)edge_new(EDGE_ARC);
@@ -399,6 +395,8 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                         // and the edge is not referenced by a face. For now, just create points...
                         e->endpoints[0] = point_newp(&picked_point);
                         e->endpoints[1] = point_newp(&new_point);
+                        ae = (ArcEdge *)curr_obj;
+                        ae->centre = point_new(0, 0, 0);    // will be updated later
                         num_moves = 0;
 
                         // Masquerade as a straight edge for the moment, until we get a centre
@@ -417,7 +415,6 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                     if (num_moves < MAX_MOVES - 1)
                         move_points[num_moves++] = new_point;
 
-                    ae = (ArcEdge *)curr_obj;
                     ae->normal = *picked_plane;
 
                     if (num_moves > 5)   // set a reasonable number before trying to find the midpoint
@@ -439,9 +436,9 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                         )
                         {
                             e->type = EDGE_ARC;
-                            ae->normal.refpt = centre;
-                            ae->normal.refpt.hdr.type = OBJ_POINT;  // so it gets drawn
-                            ae->normal.refpt.hdr.ID = 0;
+                            ae->centre->x = centre.x;
+                            ae->centre->y = centre.y;
+                            ae->centre->z = centre.z;
                             ae->clockwise = clockwise;
                             ae->view_valid = FALSE;
                         }
@@ -491,25 +488,28 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                         be->ctrlpoints[1]->z = new_point.z;
                     }
 
-                    // Bezier edges: remember the first and last moves and use their gradients 
-                    // to position the control points.
+                    // Bezier edges: remember the first and last couple of moves, and use their 
+                    // directions to position the control points.
                     if (num_moves < MAX_MOVES - 1)
                         move_points[num_moves++] = new_point;
 
-                    if (num_moves > 2)
+                    if (num_moves > 3)
                     {
                         dist = length(&picked_point, &new_point) / 3;
 
-                        grad0.A = move_points[1].x - move_points[0].x;
-                        grad0.B = move_points[1].y - move_points[0].y;
-                        grad0.C = move_points[1].z - move_points[0].z;
-                        normalise_plane(&grad0);
+                        // These normalising operations might try to divide by zero. Break if so.
+                        grad0.A = move_points[2].x - move_points[0].x;
+                        grad0.B = move_points[2].y - move_points[0].y;
+                        grad0.C = move_points[2].z - move_points[0].z;
+                        if (!normalise_plane(&grad0))
+                            break;
 
                         // Thank Zarquon for optimising compilers...
-                        grad1.A = move_points[num_moves - 2].x - move_points[num_moves - 1].x;
-                        grad1.B = move_points[num_moves - 2].y - move_points[num_moves - 1].y;
-                        grad1.C = move_points[num_moves - 2].z - move_points[num_moves - 1].z;
-                        normalise_plane(&grad0);
+                        grad1.A = move_points[num_moves - 3].x - move_points[num_moves - 1].x;
+                        grad1.B = move_points[num_moves - 3].y - move_points[num_moves - 1].y;
+                        grad1.C = move_points[num_moves - 3].z - move_points[num_moves - 1].z;
+                        if (!normalise_plane(&grad1))
+                            break;
 
                         be->ctrlpoints[0]->x = e->endpoints[0]->x + grad0.A * dist;
                         be->ctrlpoints[0]->y = e->endpoints[0]->y + grad0.B * dist;
@@ -571,7 +571,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                         break;
 
                     case PLANE_GENERAL:
-                        ASSERT(FALSE, "Not implemented yet");
+                        ASSERT(FALSE, "Draw PLANE_GENERAL Not implemented");
                         break;
                     }
 
@@ -644,7 +644,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
 
                 case STATE_DRAWING_CIRCLE:
                 case STATE_DRAWING_MEASURE:
-                    ASSERT(FALSE, "Not implemented");
+                    ASSERT(FALSE, "Draw Circle/Measure Not implemented");
                     break;
 
                 case STATE_DRAWING_EXTRUDE:
@@ -745,7 +745,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
 
                             case FACE_FLAT:
                             case FACE_CIRCLE:
-                                ASSERT(FALSE, "Not implemented yet");
+                                ASSERT(FALSE, "Draw Face Flat/Circle Not implemented yet");
                                 break;
                             }
 

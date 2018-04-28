@@ -191,6 +191,8 @@ clear_move_copy_flags(Object *obj)
     Point *p;
     EDGE type;
     Edge *edge;
+    ArcEdge *ae;
+    BezierEdge *be;
     Face *face;
     Volume *vol;
 
@@ -208,18 +210,19 @@ clear_move_copy_flags(Object *obj)
         clear_move_copy_flags((Object *)edge->endpoints[0]);
         clear_move_copy_flags((Object *)edge->endpoints[1]);
         obj->copied_to = NULL;
-#if 0 // probably don't need to do anything else here (arc centres and bezier ctrl points are never shared)
         switch (type)
         {
-        case EDGE_STRAIGHT:
+        case EDGE_ARC:
+            ae = (ArcEdge *)obj;
+            clear_move_copy_flags((Object *)ae->centre);
             break;
 
-        case EDGE_ARC:    // TODO others
         case EDGE_BEZIER:
-            ASSERT(FALSE, "Not implemented");
+            be = (BezierEdge *)obj;
+            clear_move_copy_flags((Object *)be->ctrlpoints[0]);
+            clear_move_copy_flags((Object *)be->ctrlpoints[1]);
             break;
         }
-#endif
         break;
 
     case OBJ_FACE:
@@ -294,7 +297,7 @@ copy_obj(Object *obj, float xoffset, float yoffset, float zoffset)
 
             case EDGE_ARC:    // TODO others
             case EDGE_BEZIER:
-                ASSERT(FALSE, "Not implemented");
+                ASSERT(FALSE, "Copy Arc/Bez Not implemented");
                 break;
             }
         }
@@ -412,7 +415,7 @@ Face
 
         case EDGE_ARC:     // TODO others
         case EDGE_BEZIER:
-            ASSERT(FALSE, "Not implemented");
+            ASSERT(FALSE, "CloneReverse Arc/Bez Not implemented");
             break;
         }
     }
@@ -441,6 +444,8 @@ move_obj(Object *obj, float xoffset, float yoffset, float zoffset)
     Point *p;
     EDGE type;
     Edge *edge;
+    ArcEdge *ae;
+    BezierEdge *be;
     Face *face;
     Volume *vol;
 
@@ -464,12 +469,17 @@ move_obj(Object *obj, float xoffset, float yoffset, float zoffset)
         type = ((Edge *)obj)->type & ~EDGE_CONSTRUCTION;
         switch (type)
         {
-        case EDGE_STRAIGHT:
+        case EDGE_ARC:
+            ae = (ArcEdge *)obj;
+            move_obj((Object *)ae->centre, xoffset, yoffset, zoffset);
+            ae->view_valid = FALSE;
             break;
 
-        case EDGE_ARC:     // TODO others
         case EDGE_BEZIER:
-            ASSERT(FALSE, "Not implemented");
+            be = (BezierEdge *)obj;
+            move_obj((Object *)be->ctrlpoints[0], xoffset, yoffset, zoffset);
+            move_obj((Object *)be->ctrlpoints[1], xoffset, yoffset, zoffset);
+            be->view_valid = FALSE;
             break;
         }
 
@@ -500,6 +510,8 @@ find_obj(Object *parent, Object *obj)
     int i;
     EDGE type;
     Edge *edge;
+    ArcEdge *ae;
+    BezierEdge *be;
     Face *face;
     Volume *vol;
 
@@ -518,12 +530,18 @@ find_obj(Object *parent, Object *obj)
         type = ((Edge *)parent)->type & ~EDGE_CONSTRUCTION;
         switch (type)
         {
-        case EDGE_STRAIGHT:
+        case EDGE_ARC:
+            ae = (ArcEdge *)parent;
+            if ((Object *)ae->centre == obj)
+                return TRUE;
             break;
 
-        case EDGE_ARC:    // TODO others
         case EDGE_BEZIER:
-            ASSERT(FALSE, "Not implemented");
+            be = (BezierEdge *)parent;
+            if ((Object *)be->ctrlpoints[0] == obj)
+                return TRUE;
+            if ((Object *)be->ctrlpoints[1] == obj)
+                return TRUE;
             break;
         }
 
@@ -568,6 +586,97 @@ find_top_level_parent(Object *tree, Object *obj)
             return top_level;
     }
     return NULL;
+}
+
+// Mark all view lists as invalid for parts of a parent object, when a part of it
+// has moved.
+//
+// Do this all the way down (even though gen_view_list will recompute all the children anyway)
+// since we may encounter arc edges that need constraints updated when, say, an 
+// endpoint has moved. We also pass in how much it has moved.
+void
+invalidate_all_view_lists(Object *parent, Object *obj, float dx, float dy, float dz)
+{
+    Face *f;
+    ArcEdge *ae;
+    BezierEdge *be;
+    int i;
+
+    if (parent->type == OBJ_VOLUME)
+    {
+        for (f = ((Volume *)parent)->faces; f != NULL; f = (Face *)f->hdr.next)
+            invalidate_all_view_lists((Object *)f, obj, dx, dy, dz);
+    }
+    else if (parent->type == OBJ_FACE)
+    {
+        f = (Face *)parent;
+        f->view_valid = FALSE;
+        for (i = 0; i < f->n_edges; i++)
+            invalidate_all_view_lists((Object *)f->edges[i], obj, dx, dy, dz);
+    }
+    else if (parent->type == OBJ_EDGE)
+    {
+        switch (((Edge *)parent)->type)
+        {
+        case EDGE_ARC:
+            ae = (ArcEdge *)parent;
+            ae->view_valid = FALSE;
+
+            // Check that the obj in question is an endpoint or the centre,
+            // and update the other point(s) to suit.
+            if (obj->type == OBJ_POINT)
+            {
+                Point *p = (Point *)obj;
+                Edge *e = (Edge *)parent;
+
+                if (p == e->endpoints[0])
+                {
+                    // Endpoint 0 has moved, this will force a recalculation of the radius.
+                    // Move endpoint 1 to suit the new radius
+                    float rad = length(ae->centre, e->endpoints[0]);
+                    Plane e1;
+
+                    e1.A = e->endpoints[1]->x - ae->centre->x;
+                    e1.B = e->endpoints[1]->y - ae->centre->y;
+                    e1.C = e->endpoints[1]->z - ae->centre->z;
+                    normalise_plane(&e1);
+                    e->endpoints[1]->x = ae->centre->x + e1.A * rad;
+                    e->endpoints[1]->y = ae->centre->y + e1.B * rad;
+                    e->endpoints[1]->z = ae->centre->z + e1.C * rad;
+                }
+                else if (p == e->endpoints[1])
+                {
+                    // The other endpoint has moved. Update the first one similarly
+                    float rad = length(ae->centre, e->endpoints[1]);
+                    Plane e0;
+
+                    e0.A = e->endpoints[0]->x - ae->centre->x;
+                    e0.B = e->endpoints[0]->y - ae->centre->y;
+                    e0.C = e->endpoints[0]->z - ae->centre->z;
+                    normalise_plane(&e0);
+                    e->endpoints[0]->x = ae->centre->x + e0.A * rad;
+                    e->endpoints[0]->y = ae->centre->y + e0.B * rad;
+                    e->endpoints[0]->z = ae->centre->z + e0.C * rad;
+                }
+                else if (p == ae->centre)
+                {
+                    // The centre has moved. We are moving the whole edge.
+                    e->endpoints[0]->x += dx;
+                    e->endpoints[0]->y += dy;
+                    e->endpoints[0]->z += dz;
+                    e->endpoints[1]->x += dx;
+                    e->endpoints[1]->y += dy;
+                    e->endpoints[1]->z += dz;
+                }
+            }
+            break;
+
+        case EDGE_BEZIER:
+            be = (BezierEdge *)parent;
+            be->view_valid = FALSE;
+            break;
+        }
+    }
 }
 
 // Clean out a view list, by putting all the points on the free list.
@@ -703,12 +812,8 @@ gen_view_list_face(Face *face)
             link_tail((Object *)p, (Object **)&face->view_list);
             break;
 
-
-
-
-
         case EDGE_BEZIER:     // TODO others
-            ASSERT(FALSE, "Not implemented");
+            ASSERT(FALSE, "face view list for Bez edges Not implemented");
             break;
         }
     }
@@ -726,7 +831,7 @@ gen_view_list_arc(ArcEdge *ae)
     Edge *edge = (Edge *)ae;
     Plane n = ae->normal;
     Point *p;
-    float rad = length(&n.refpt, edge->endpoints[0]);
+    float rad = length(ae->centre, edge->endpoints[0]);
     float t, theta, step;
     float matrix[16];
     float v[4];
@@ -738,10 +843,10 @@ gen_view_list_arc(ArcEdge *ae)
     free_view_list_arc(ae);
 
     // transform arc to XY plane, centre at origin, endpoint 0 on x axis
-    look_at_centre(n.refpt, *edge->endpoints[0], n, matrix);
+    look_at_centre(*ae->centre, *edge->endpoints[0], n, matrix);
 
     // angle between two vectors c-p0 and c-p1
-    theta = angle3(edge->endpoints[0], &ae->normal.refpt, edge->endpoints[1], &n);
+    theta = angle3(edge->endpoints[0], ae->centre, edge->endpoints[1], &n);
     
     // step for angle
     step = 2.0f * acosf(1.0f - tolerance / rad);
@@ -783,6 +888,13 @@ gen_view_list_arc(ArcEdge *ae)
             link_tail((Object *)p, (Object **)&ae->view_list);
         }
     }
+
+    // Make sure the last point is in the view list
+    p = point_newp(edge->endpoints[1]);
+    p->hdr.ID = 0;
+    objid--;
+    link_tail((Object *)p, (Object **)&ae->view_list);
+
     ae->view_valid = TRUE;
 }
 
@@ -891,6 +1003,8 @@ purge_obj(Object *obj)
 {
     int i;
     Edge *e;
+    ArcEdge *ae;
+    BezierEdge *be;
     EDGE type;
     Face *face;
     Face *next_face = NULL;
@@ -907,18 +1021,21 @@ purge_obj(Object *obj)
         break;
 
     case OBJ_EDGE:
+        e = (Edge *)obj;
+        purge_obj((Object *)e->endpoints[0]);
+        purge_obj((Object *)e->endpoints[1]);
         type = ((Edge *)obj)->type & ~EDGE_CONSTRUCTION;
         switch (type)
         {
-        case EDGE_STRAIGHT:
-            e = (Edge *)obj;
-            purge_obj((Object *)e->endpoints[0]);
-            purge_obj((Object *)e->endpoints[1]);
+        case EDGE_ARC:
+            ae = (ArcEdge *)obj;
+            purge_obj((Object *)ae->centre);
             break;
 
-        case EDGE_ARC:    // TODO others. Be very careful if Points are ever in a list, as freeing them will cause problems...
         case EDGE_BEZIER:
-            ASSERT(FALSE, "Not implemented");
+            be = (BezierEdge *)obj;
+            purge_obj((Object *)be->ctrlpoints[0]);
+            purge_obj((Object *)be->ctrlpoints[1]);
             break;
         }
         //free(obj);     // TODO: Don't do this. The edge may be shared. (Might need to use a free list or ref counts.)
@@ -998,7 +1115,8 @@ serialise_obj(Object *obj, FILE *f)
         switch (type)
         {
         case EDGE_ARC:
-            // TODO centre as separate point?
+            ae = (ArcEdge *)obj;
+            serialise_obj((Object *)ae->centre, f);
             break;
 
         case EDGE_BEZIER:
@@ -1046,9 +1164,9 @@ serialise_obj(Object *obj, FILE *f)
 
         case EDGE_ARC:
             ae = (ArcEdge *)obj;
-            fprintf_s(f, "%s %f %f %f %f %f %f\n",
+            fprintf_s(f, "%s %d %f %f %f\n",
                 ae->clockwise ? "C" : "AC",
-                ae->normal.refpt.x, ae->normal.refpt.y, ae->normal.refpt.z,
+                ae->centre->hdr.ID,
                 ae->normal.A, ae->normal.B, ae->normal.C);
             break;
 
@@ -1212,7 +1330,7 @@ deserialise_tree(Object **tree, char *filename)
         }
         else if (strcmp(tok, "EDGE") == 0)
         {
-            int end0, end1, ctrl0, ctrl1;
+            int end0, end1, ctrl0, ctrl1, ctr;
             Edge *edge;
             ArcEdge *ae;
             BezierEdge *be;
@@ -1253,12 +1371,9 @@ deserialise_tree(Object **tree, char *filename)
                 ae->clockwise = strcmp(tok, "C") == 0;
 
                 tok = strtok_s(NULL, " \t\n", &nexttok);
-                ae->normal.refpt.x = (float)atof(tok);
-                tok = strtok_s(NULL, " \t\n", &nexttok);
-                ae->normal.refpt.y = (float)atof(tok);
-                tok = strtok_s(NULL, " \t\n", &nexttok);
-                ae->normal.refpt.z = (float)atof(tok);
-                ae->normal.refpt.hdr.type = OBJ_POINT;
+                ctr = atoi(tok);
+                ASSERT(ctr > 0 && object[ctr] != NULL, "Bad centre point ID");
+                ae->centre = (Point *)object[ctr];
 
                 tok = strtok_s(NULL, " \t\n", &nexttok);
                 ae->normal.A = (float)atof(tok);
@@ -1324,7 +1439,7 @@ deserialise_tree(Object **tree, char *filename)
             else
             {
                 // TODO other types
-                ASSERT(FALSE, "Not implemented");
+                ASSERT(FALSE, "Deserialise Face (not Rect) Not implemented");
             }
 
             tok = strtok_s(NULL, " \t\n", &nexttok);

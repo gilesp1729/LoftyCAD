@@ -114,10 +114,11 @@ typedef struct StraightEdge
 typedef struct ArcEdge
 {
     struct Edge     edge;           // Edge
-    Plane           normal;         // Normal vector (the refpt is the centre)
+    Plane           normal;         // Normal vector (only ABC are used)
     BOOL            clockwise;      // If TRUE, the points go clockwise from endpoint 0
                                     // to endpoint 1, as seen from the facing plane.
                                     // If FALSE they go anticlockwise.
+    struct Point    *centre;        // The centre of the arc.
     struct Point    *view_list;     // List of intermediate points on the arc, generated 
                                     // between the two endpoints, to be flat within the
                                     // specified tolerance.
@@ -200,6 +201,7 @@ BOOL find_obj(Object *parent, Object *obj);
 Object *find_top_level_parent(Object *tree, Object *obj);
 
 // Regenerate a view list
+void invalidate_all_view_lists(Object *parent, Object *obj, float dx, float dy, float dz);
 void gen_view_list_face(Face *face);
 void gen_view_list_arc(ArcEdge *ae);
 void gen_view_list_bez(BezierEdge *be);
