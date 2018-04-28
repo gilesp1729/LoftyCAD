@@ -85,6 +85,7 @@ draw_object(Object *obj, BOOL selected, BOOL highlighted, LOCK parent_lock)
     Face *face;
     Edge *edge;
     ArcEdge *ae;
+    BezierEdge *be;
     Point *p;
     BOOL push_name, locked;
 
@@ -188,6 +189,19 @@ draw_object(Object *obj, BOOL selected, BOOL highlighted, LOCK parent_lock)
             break;
 
         case EDGE_BEZIER:
+            be = (BezierEdge *)edge;
+            gen_view_list_bez(be);
+            glBegin(GL_LINE_STRIP);
+            color(OBJ_EDGE, selected, highlighted, locked);
+            for (p = be->view_list; p != NULL; p = (Point *)p->hdr.next)
+                glVertex3f(p->x, p->y, p->z);
+
+            glEnd();
+            glPopName();
+            draw_object((Object *)edge->endpoints[0], selected, highlighted, parent_lock);
+            draw_object((Object *)edge->endpoints[1], selected, highlighted, parent_lock);
+            draw_object((Object *)be->ctrlpoints[0], selected, highlighted, parent_lock);
+            draw_object((Object *)be->ctrlpoints[1], selected, highlighted, parent_lock);
             break;
         }
         break;
@@ -244,6 +258,8 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                 Edge *e;
                 ArcEdge *ae;
                 BezierEdge *be;
+                Plane grad0, grad1;
+                float dist;
                 Face *rf;
                 Plane norm;
                 char buf[64], buf2[64];
@@ -447,14 +463,21 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                     snap_to_grid(picked_plane, &new_point);
 
                     // If first move, create the edge here.
+                    be = (BezierEdge *)curr_obj;
                     if (curr_obj == NULL)
                     {
                         curr_obj = (Object *)edge_new(EDGE_BEZIER);
                         e = (Edge *)curr_obj;
+                        be = (BezierEdge *)curr_obj;
                         // TODO: share points if snapped onto an existing edge endpoint,
                         // and the edge is not referenced by a face. For now, just create points...
                         e->endpoints[0] = point_newp(&picked_point);
                         e->endpoints[1] = point_newp(&new_point);
+
+                        // Create control points. they will be updated shortly
+                        be->ctrlpoints[0] = point_newp(&picked_point);
+                        be->ctrlpoints[1] = point_newp(&new_point);
+
                         num_moves = 0;
                     }
                     else
@@ -463,20 +486,41 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                         e->endpoints[1]->x = new_point.x;
                         e->endpoints[1]->y = new_point.y;
                         e->endpoints[1]->z = new_point.z;
+                        be->ctrlpoints[1]->x = new_point.x;
+                        be->ctrlpoints[1]->y = new_point.y;
+                        be->ctrlpoints[1]->z = new_point.z;
                     }
 
                     // Bezier edges: remember the first and last moves and use their gradients 
                     // to position the control points.
                     if (num_moves < MAX_MOVES - 1)
                         move_points[num_moves++] = new_point;
-                    be = (BezierEdge *)curr_obj;
-#if 0
-                    dist = length(&picked_point, &new_point);
-                    grad0 = gradient of picked to moved[0];
-                    be->ctrlpoints[0] = length of dist / 3 in direction of grad0; 
-                    be->ctrlpoints[1] = sim for grad1;
-#endif
 
+                    if (num_moves > 2)
+                    {
+                        dist = length(&picked_point, &new_point) / 3;
+
+                        grad0.A = move_points[1].x - move_points[0].x;
+                        grad0.B = move_points[1].y - move_points[0].y;
+                        grad0.C = move_points[1].z - move_points[0].z;
+                        normalise_plane(&grad0);
+
+                        // Thank Zarquon for optimising compilers...
+                        grad1.A = move_points[num_moves - 2].x - move_points[num_moves - 1].x;
+                        grad1.B = move_points[num_moves - 2].y - move_points[num_moves - 1].y;
+                        grad1.C = move_points[num_moves - 2].z - move_points[num_moves - 1].z;
+                        normalise_plane(&grad0);
+
+                        be->ctrlpoints[0]->x = e->endpoints[0]->x + grad0.A * dist;
+                        be->ctrlpoints[0]->y = e->endpoints[0]->y + grad0.B * dist;
+                        be->ctrlpoints[0]->z = e->endpoints[0]->z + grad0.C * dist;
+
+                        be->ctrlpoints[1]->x = e->endpoints[1]->x + grad1.A * dist;
+                        be->ctrlpoints[1]->y = e->endpoints[1]->y + grad1.B * dist;
+                        be->ctrlpoints[1]->z = e->endpoints[1]->z + grad1.C * dist;
+
+                        be->view_valid = FALSE;
+                    }
                     break;
 
                 case STATE_DRAWING_RECT:

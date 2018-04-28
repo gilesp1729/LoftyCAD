@@ -684,7 +684,7 @@ gen_view_list_face(Face *face)
             {
                 last_point = e->endpoints[1];
                 
-                // TODO copy the view list forwards
+                // TODO copy the view list forwards. Skip the first point as it has already been added
 
             }
             else
@@ -692,7 +692,7 @@ gen_view_list_face(Face *face)
                 ASSERT(last_point == e->endpoints[1], "Point order messed up");
                 last_point = e->endpoints[0];
 
-                // TODO copy the view list backwards
+                // TODO copy the view list backwards. Skip the last point sim.
 
 
             }
@@ -744,7 +744,7 @@ gen_view_list_arc(ArcEdge *ae)
     theta = angle3(edge->endpoints[0], &ae->normal.refpt, edge->endpoints[1], &n);
     
     // step for angle
-    step = 2.0f * acosf(1.0f - tolerance / half_size);
+    step = 2.0f * acosf(1.0f - tolerance / rad);
 
     if (ae->clockwise)  // Clockwise angles go negative
     {
@@ -783,13 +783,106 @@ gen_view_list_arc(ArcEdge *ae)
             link_tail((Object *)p, (Object **)&ae->view_list);
         }
     }
+    ae->view_valid = TRUE;
+}
+
+// Length squared shortcut
+#define LENSQ(x1, y1, z1, x2, y2, z2) ((x2-x1)*(x2-x1) + (y2-y1)*(y2-y1) + (z2-z1)*(z2-z1))
+
+// Recursive bezier edge drawing.
+void
+recurse_bez
+(
+    BezierEdge *be, 
+    float x1, float y1, float z1, 
+    float x2, float y2, float z2, 
+    float x3, float y3, float z3, 
+    float x4, float y4, float z4
+)
+{
+    Point *p;
+
+    // Calculate all the mid-points of the line segments
+    float x12 = (x1 + x2) / 2;
+    float y12 = (y1 + y2) / 2;
+    float z12 = (z1 + z2) / 2;
+
+    float x23 = (x2 + x3) / 2;
+    float y23 = (y2 + y3) / 2;
+    float z23 = (z2 + z3) / 2;
+
+    float x34 = (x3 + x4) / 2;
+    float y34 = (y3 + y4) / 2;
+    float z34 = (z3 + z4) / 2;
+
+    float x123 = (x12 + x23) / 2;
+    float y123 = (y12 + y23) / 2;
+    float z123 = (z12 + z23) / 2;
+
+    float x234 = (x23 + x34) / 2;
+    float y234 = (y23 + y34) / 2;
+    float z234 = (z23 + z34) / 2;
+
+    float x1234 = (x123 + x234) / 2;
+    float y1234 = (y123 + y234) / 2;
+    float z1234 = (z123 + z234) / 2;
+
+    float x14 = (x1 + x4) / 2;
+    float y14 = (y1 + y4) / 2;
+    float z14 = (z1 + z4) / 2;
+
+    // Do a length test < the grid unit, and a curve flatness test < the tolerance.
+    // Test length squared (to save the sqrts)
+    if 
+    (
+        LENSQ(x1, y1, z1, x4, y4, z4) < grid_snap * grid_snap 
+        || 
+        LENSQ(x1234, y1234, z1234, x14, y14, z14) < tolerance * tolerance
+    )
+    {
+        // Add (x4, y4, z4) as a point to the view list
+        p = point_new(x4, y4, z4);
+        p->hdr.ID = 0;
+        objid--;
+        link_tail((Object *)p, (Object **)&be->view_list);
+    }
+    else
+    {
+        // Continue subdivision
+        recurse_bez(be, x1, y1, z1, x12, y12, z12, x123, y123, z123, x1234, y1234, z1234);
+        recurse_bez(be, x1234, y1234, z1234, x234, y234, z234, x34, y34, z34, x4, y4, z4);
+    }
 }
 
 // Generate the view list for a bezier edge.
 void
 gen_view_list_bez(BezierEdge *be)
 {
-    ASSERT(FALSE, "Not implemented");
+    Edge *e = (Edge *)be;
+    Point *p;
+
+    if (be->view_valid)
+        return;
+
+    free_view_list_bez(be);
+
+    // Put the first endpoint on the view list
+    p = point_newp(e->endpoints[0]);
+    p->hdr.ID = 0;
+    objid--;
+    link_tail((Object *)p, (Object **)&be->view_list);
+
+    // Subdivide the bezier
+    recurse_bez
+    (
+        be,
+        e->endpoints[0]->x, e->endpoints[0]->y, e->endpoints[0]->z,
+        be->ctrlpoints[0]->x, be->ctrlpoints[0]->y, be->ctrlpoints[0]->z,
+        be->ctrlpoints[1]->x, be->ctrlpoints[1]->y, be->ctrlpoints[1]->z,
+        e->endpoints[1]->x, e->endpoints[1]->y, e->endpoints[1]->z
+    );
+
+    be->view_valid = TRUE;
 }
 
 // Purge an object. Points are put in the free list.
@@ -880,6 +973,7 @@ serialise_obj(Object *obj, FILE *f)
     Edge *e;
     EDGE type, constr;
     ArcEdge *ae;
+    BezierEdge *be;
     Face *face;
     Volume *vol;
 
@@ -901,18 +995,18 @@ serialise_obj(Object *obj, FILE *f)
         e = (Edge *)obj;
         serialise_obj((Object *)e->endpoints[0], f);
         serialise_obj((Object *)e->endpoints[1], f);
-#if 0  // probably don't need anything here
         switch (type)
         {
-        case EDGE_STRAIGHT:
+        case EDGE_ARC:
+            // TODO centre as separate point?
             break;
 
-        case EDGE_ARC:     // TODO others
         case EDGE_BEZIER:
-            ASSERT(FALSE, "Not implemented");
+            be = (BezierEdge *)obj;
+            serialise_obj((Object *)be->ctrlpoints[0], f);
+            serialise_obj((Object *)be->ctrlpoints[1], f);
             break;
         }
-#endif
         break;
 
     case OBJ_FACE:
@@ -952,14 +1046,15 @@ serialise_obj(Object *obj, FILE *f)
 
         case EDGE_ARC:
             ae = (ArcEdge *)obj;
-            fprintf_s(f, "%s %f %f %f %f %f %f",
+            fprintf_s(f, "%s %f %f %f %f %f %f\n",
                 ae->clockwise ? "C" : "AC",
                 ae->normal.refpt.x, ae->normal.refpt.y, ae->normal.refpt.z,
                 ae->normal.A, ae->normal.B, ae->normal.C);
             break;
 
         case EDGE_BEZIER:
-            ASSERT(FALSE, "Not implemented");
+            be = (BezierEdge *)obj;
+            fprintf_s(f, "%d %d\n", be->ctrlpoints[0]->hdr.ID, be->ctrlpoints[1]->hdr.ID);
             break;
         }
         break;
@@ -1117,9 +1212,10 @@ deserialise_tree(Object **tree, char *filename)
         }
         else if (strcmp(tok, "EDGE") == 0)
         {
-            int end0, end1;
+            int end0, end1, ctrl0, ctrl1;
             Edge *edge;
             ArcEdge *ae;
+            BezierEdge *be;
 
             tok = strtok_s(NULL, " \t\n", &nexttok);
             id = atoi(tok);
@@ -1162,6 +1258,8 @@ deserialise_tree(Object **tree, char *filename)
                 ae->normal.refpt.y = (float)atof(tok);
                 tok = strtok_s(NULL, " \t\n", &nexttok);
                 ae->normal.refpt.z = (float)atof(tok);
+                ae->normal.refpt.hdr.type = OBJ_POINT;
+
                 tok = strtok_s(NULL, " \t\n", &nexttok);
                 ae->normal.A = (float)atof(tok);
                 tok = strtok_s(NULL, " \t\n", &nexttok);
@@ -1169,10 +1267,31 @@ deserialise_tree(Object **tree, char *filename)
                 tok = strtok_s(NULL, " \t\n", &nexttok);
                 ae->normal.C = (float)atof(tok);
             }
+            else if (strcmp(tok, "BEZIER") == 0)
+            {
+                edge = edge_new(EDGE_BEZIER);
+                tok = strtok_s(NULL, " \t\n", &nexttok);
+                end0 = atoi(tok);
+                ASSERT(end0 > 0 && object[end0] != NULL, "Bad endpoint ID");
+                tok = strtok_s(NULL, " \t\n", &nexttok);
+                end1 = atoi(tok);
+                ASSERT(end1 > 0 && object[end1] != NULL, "Bad endpoint ID");
+                edge->endpoints[0] = (Point *)object[end0];
+                edge->endpoints[1] = (Point *)object[end1];
+
+                tok = strtok_s(NULL, " \t\n", &nexttok);
+                ctrl0 = atoi(tok);
+                ASSERT(ctrl0 > 0 && object[ctrl0] != NULL, "Bad control point ID");
+                tok = strtok_s(NULL, " \t\n", &nexttok);
+                ctrl1 = atoi(tok);
+                ASSERT(ctrl1 > 0 && object[ctrl1] != NULL, "Bad control point ID");
+                be = (BezierEdge *)edge;
+                be->ctrlpoints[0] = (Point *)object[ctrl0];
+                be->ctrlpoints[1] = (Point *)object[ctrl1];
+            }
             else
             {
-                // TODO other edge types
-                ASSERT(FALSE, "Not implemented");
+                ASSERT(FALSE, "Bad edge type");
             }
 
             edge->hdr.ID = id;
