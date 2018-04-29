@@ -64,92 +64,6 @@ snap_ray_edge(GLint x, GLint y, Edge *edge, Point *new_point)
     return TRUE;
 }
 
-#if 0 // not needed
-// Find the area of a rect (the sign gives the direction of the normal vector)
-float
-rect_area2D(Point *p0, Point *p1, Point *p2, Point *p3)
-{
-    float area;
-
-    area = p0->x * p1->y - p1->x * p0->y;
-    area += p1->x * p2->y - p2->x * p1->y;
-    area += p2->x * p3->y - p3->x * p2->y;
-    area += p3->x * p0->y - p0->x * p3->y;
-
-    return 0.5f * area;
-}
-
-// Find the area of a polygon (sign gives direction of normal)
-float
-polygon_area2D(Point *list)
-{
-    float area = 0;
-    Point *p;
-    Point *first = list;
-
-    for (p = list; p->hdr.next != NULL; p = (Point *)p->hdr.next)
-    {
-        Point *q = (Point *)p->hdr.next;
-
-        area += p->x * q->y - q->x * p->y;
-    }
-    area += p->x * first->y - first->x * p->y;
-
-    return 0.5f * area;
-}
-#endif
-
-#if 0 // Python code
-#determinant of matrix a
-def det(a) :
-return a[0][0] * a[1][1] * a[2][2] + a[0][1] * a[1][2] * a[2][0] + a[0][2] * a[1][0] * a[2][1] - a[0][2] * a[1][1] * a[2][0] - a[0][1] * a[1][0] * a[2][2] - a[0][0] * a[1][2] * a[2][1]
-
-#unit normal vector of plane defined by points a, b, and c
-def unit_normal(a, b, c) :
-x = det([[1, a[1], a[2]],
-[1, b[1], b[2]],
-[1, c[1], c[2]]])
-y = det([[a[0], 1, a[2]],
-[b[0], 1, b[2]],
-[c[0], 1, c[2]]])
-z = det([[a[0], a[1], 1],
-[b[0], b[1], 1],
-[c[0], c[1], 1]])
-magnitude = (x**2 + y**2 + z**2)**.5
-return (x / magnitude, y / magnitude, z / magnitude)
-
-#dot product of vectors a and b
-def dot(a, b) :
-return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
-
-#cross product of vectors a and b
-def cross(a, b) :
-x = a[1] * b[2] - a[2] * b[1]
-y = a[2] * b[0] - a[0] * b[2]
-z = a[0] * b[1] - a[1] * b[0]
-return (x, y, z)
-
-#area of polygon poly
-def area(poly) :
-if len(poly) < 3 : # not a plane - no area
-    return 0
-
-    total = [0, 0, 0]
-    for i in range(len(poly)) :
-        vi1 = poly[i]
-        if i is len(poly) - 1 :
-            vi2 = poly[0]
-        else :
-        vi2 = poly[i + 1]
-        prod = cross(vi1, vi2)
-        total[0] += prod[0]
-        total[1] += prod[1]
-        total[2] += prod[2]
-        result = dot(total, unit_normal(poly[0], poly[1], poly[2]))
-        return abs(result / 2)
-
-#endif /* Python code */
-
 float
 dot(float x0, float y0, float z0, float x1, float y1, float z1)
 {
@@ -234,37 +148,33 @@ length(Point *p0, Point *p1)
     return (float)sqrt((x1 - x0)*(x1 - x0) + (y1 - y0)*(y1 - y0) + (z1 - z0)*(z1 - z0));
 }
 
-#if 0 // not needed
-// Area of a 3D polygon, and its normal
-float
-polygon_area(Point *list)
+// Normal of a 3D polygon expressed as a list of Points
+void
+polygon_normal(Point *list, Plane *norm)
 {
-    Point sum;
     Point *p;
     Point *first = list;
     Point cp;
 
-    sum.x = 0;
-    sum.y = 0;
-    sum.z = 0;
+    norm->A = 0;
+    norm->B = 0;
+    norm->C = 0;
     for (p = list; p->hdr.next != NULL; p = (Point *)p->hdr.next)
     {
         Point *q = (Point *)p->hdr.next;
 
-        cross(p->x, p->y, p->z, q->x, q->y, q->z, &cp.x, &cp.y, &cp.z);
-        sum.x += cp.x;
-        sum.y += cp.y;
-        sum.z += cp.z;
+        pcross(p, q, &cp);
+        norm->A += cp.x;
+        norm->B += cp.y;
+        norm->C += cp.z;
     }
-    cross(p->x, p->y, p->z, first->x, first->y, first->z, &cp.x, &cp.y, &cp.z);
-    sum.x += cp.x;
-    sum.y += cp.y;
-    sum.z += cp.z;
+    pcross(p, first, &cp);
+    norm->A += cp.x;
+    norm->B += cp.y;
+    norm->C += cp.z;
 
-    return 0.5f * dot(sum.x, sum.y, sum.z, norm.x, norm.y, norm.z);
+    normalise_plane(norm);
 }
-
-#endif
 
 // multiply a 4x4 by 4-vector 
 void

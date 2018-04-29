@@ -255,6 +255,7 @@ copy_obj(Object *obj, float xoffset, float yoffset, float zoffset)
     Point *p;
     EDGE type;
     Edge *edge, *new_edge;
+    ArcEdge *ae, *nae;
     Face *face, *new_face;
     Volume *vol, *new_vol;
 
@@ -292,12 +293,16 @@ copy_obj(Object *obj, float xoffset, float yoffset, float zoffset)
             type = ((Edge *)obj)->type & ~EDGE_CONSTRUCTION;
             switch (type)
             {
-            case EDGE_STRAIGHT:
+            case EDGE_ARC: 
+                ae = (ArcEdge *)edge;
+                nae = (ArcEdge *)new_edge;
+                nae->centre = (Point *)copy_obj((Object *)ae->centre, xoffset, yoffset, zoffset);
+                nae->clockwise = ae->clockwise;
+                nae->normal = ae->normal;
                 break;
 
-            case EDGE_ARC:    // TODO others
-            case EDGE_BEZIER:
-                ASSERT(FALSE, "Copy Arc/Bez Not implemented");
+            case EDGE_BEZIER:   // TODO others
+                ASSERT(FALSE, "Copy Bez Not implemented");
                 break;
             }
         }
@@ -370,6 +375,7 @@ Face
     Object *e;
     Object *ne = NULL;
     Edge *edge;
+    ArcEdge *ae, *nae;
     Point *last_point;
     int i, idx;
     //char buf[256];
@@ -395,27 +401,33 @@ Face
         clone->edges[idx] = (Edge *)ne;
 
         // Follow the chain of points from e->initial_point
+        edge = (Edge *)e;
+        if (last_point == edge->endpoints[0])
+        {
+            idx = 1;
+        }
+        else
+        {
+            ASSERT(last_point == edge->endpoints[1], "Cloned edges don't join up");
+            idx = 0;
+        }
+        last_point = edge->endpoints[idx];
+        if (i == 0)
+            clone->initial_point = ((Edge *)ne)->endpoints[idx];
+
         switch (face->edges[i]->type)
         {
-        case EDGE_STRAIGHT:
-            edge = (Edge *)e;
-            if (last_point == edge->endpoints[0])
-            {
-                idx = 1;
-            }
-            else
-            {
-                ASSERT(last_point == edge->endpoints[1], "Cloned edges don't join up");
-                idx = 0;
-            }
-            last_point = edge->endpoints[idx];
-            if (i == 0)
-                clone->initial_point = ((Edge *)ne)->endpoints[idx];
+        case EDGE_ARC: 
+            ae = (ArcEdge *)e;
+            nae = (ArcEdge *)ne;
+            nae->clockwise = !ae->clockwise;
+            nae->normal.A = -ae->normal.A;
+            nae->normal.B = -ae->normal.B;
+            nae->normal.C = -ae->normal.C;
             break;
 
-        case EDGE_ARC:     // TODO others
-        case EDGE_BEZIER:
-            ASSERT(FALSE, "CloneReverse Arc/Bez Not implemented");
+        case EDGE_BEZIER:    // TODO others
+            ASSERT(FALSE, "CloneReverse Bez Not implemented");
             break;
         }
     }
@@ -721,6 +733,7 @@ gen_view_list_face(Face *face)
     Edge *e;
     Point *last_point;
     Point *p, *v;
+    BOOL arc_cw;
     //char buf[256];
 
     if (face->view_valid)
@@ -776,12 +789,21 @@ gen_view_list_face(Face *face)
 
         case EDGE_ARC:
             gen_view_list_arc((ArcEdge *)e);
+
+            // Circles have arcs with shared coincident endpoints. In this case, the clockwiseness
+            // of the are will determine whether the view_list is copied forwards or backwards
+            // (since in the below, the last_point will always match endpoint 0)
+            if (e->endpoints[0] == e->endpoints[1])
+                arc_cw = ((ArcEdge *)e)->clockwise;
+            else
+                arc_cw = FALSE;
+
             goto copy_view_list;
 
         case EDGE_BEZIER:
             gen_view_list_bez((BezierEdge *)e);
         copy_view_list:
-            if (last_point == e->endpoints[0])
+            if (last_point == e->endpoints[0] && !arc_cw)
             {
                 last_point = e->endpoints[1];
                 
@@ -820,8 +842,12 @@ gen_view_list_face(Face *face)
 
     face->view_valid = TRUE;
 
-    // calculate the normal vector
-    normal(face->view_list, &face->normal);
+    // calculate the normal vector.
+
+    // TODO: This is a shit way to do this. The face might not even be convex!
+    // need to go round the whole view list, taking account clock/AC on circles,
+    // and build up the normal using a polygon-area calculation.
+    polygon_normal(face->view_list, &face->normal);
 }
 
 // Generate the view list for an arc edge.
@@ -848,7 +874,7 @@ gen_view_list_arc(ArcEdge *ae)
     // angle between two vectors c-p0 and c-p1. If the points are the same, we are
     // drawing a full circle.
     if (edge->endpoints[0] == edge->endpoints[1])
-        theta = 2 * PI;
+        theta = ae->clockwise ? -2 * PI : 2 * PI;
     else
         theta = angle3(edge->endpoints[0], ae->centre, edge->endpoints[1], &n);
     
@@ -858,7 +884,7 @@ gen_view_list_arc(ArcEdge *ae)
     if (ae->clockwise)  // Clockwise angles go negative
     {
         if (theta > 0)
-            theta -= 2 * PI;
+            theta -= 2 * PI;  // TODO!!! This will clobber the full circle!!!!!!
 
         // draw arc from p1 (on x axis) to p2. 
         for (t = 0; t > theta; t -= step)

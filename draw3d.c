@@ -571,7 +571,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                         break;
 
                     case PLANE_GENERAL:
-                        ASSERT(FALSE, "Draw PLANE_GENERAL Not implemented");
+                        ASSERT(FALSE, "Draw rect on PLANE_GENERAL Not implemented");
                         break;
                     }
 
@@ -790,9 +790,27 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                                 }
                                 break;
 
-                            case FACE_FLAT:
                             case FACE_CIRCLE:
-                                ASSERT(FALSE, "Draw Face Flat/Circle Not implemented yet");
+                                // Clone the face with coincident edges/points, but in the
+                                // opposite sense (and with an opposite normal)
+                                opposite = clone_face_reverse(face);
+                                clear_move_copy_flags(picked_obj);
+                                link((Object *)opposite, (Object **)&vol->faces);
+                                opposite->vol = vol;
+
+                                // Create a cylinder face that links the picked face to its clone
+                                eip = face->initial_point;
+                                oip = opposite->initial_point;
+                                o = opposite->edges[0];
+
+                                // TODO
+
+
+
+                                break;
+
+                            case FACE_FLAT:
+                                ASSERT(FALSE, "Extrude Face (Flat) Not implemented yet");
                                 break;
                             }
 
@@ -827,30 +845,23 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                             face->normal.C
                             );
                         snap_to_scale(&length);
-                        if (length == 0)
-                            break;          // come back in when you've got a length
-
-                        // Move the picked face by a delta in XYZ up its own normal
-                        move_obj
-                            (
-                            picked_obj,
-                            face->normal.A * length,
-                            face->normal.B * length,
-                            face->normal.C * length
-                            );
-                        clear_move_copy_flags(picked_obj);
-
-                        // Invalidate all the view lists for the volume, as any of them may have changed
-                        if (face->vol != NULL)
+                        if (length > 0)
                         {
-                            Face *f;
-
-                            for (f = face->vol->faces; f != NULL; f = (Face *)f->hdr.next)
-                                f->view_valid = FALSE;
+                            // Move the picked face by a delta in XYZ up its own normal
+                            move_obj
+                                (
+                                picked_obj,
+                                face->normal.A * length,
+                                face->normal.B * length,
+                                face->normal.C * length
+                                );
+                            clear_move_copy_flags(picked_obj);
+                            picked_point = new_point;
+                            height += length;
                         }
 
-                        picked_point = new_point;
-                        height += length;
+                        // Invalidate all the view lists for the volume, as any of them may have changed
+                        invalidate_all_view_lists((Object *)face->vol, (Object *)face->vol, 0, 0, 0);
 
                         // Show the height of the extrusion.
                         sprintf_s(buf, 64, "%s mm", display_rounded(buf2, height));
