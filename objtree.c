@@ -380,11 +380,16 @@ Face
     int i, idx;
     //char buf[256];
 
+    // Swap the normal around
     clone->normal.A = -clone->normal.A;
     clone->normal.B = -clone->normal.B;
     clone->normal.C = -clone->normal.C;
     clone->n_edges = face->n_edges;
     clone->max_edges = face->max_edges;         // TODO - handle case where face->edges has been grown
+    
+    // pair the face with its clone
+    clone->pair = face;
+    face->pair = clone;
 
     // Set the initial point. 
     last_point = face->initial_point;
@@ -822,13 +827,15 @@ gen_view_list_face(Face *face)
                 last_point = e->endpoints[0];
 
                 // copy the view list backwards, skipping the last point.
-                // Do this by linking to head (effectively reversing the order)
                 for (v = (Point *)e->view_list; v->hdr.next != NULL; v = (Point *)v->hdr.next)
+                    ;
+
+                for ( ; v->hdr.prev != NULL; v = (Point *)v->hdr.prev)
                 {
                     p = point_newp(v);
                     p->hdr.ID = 0;
                     objid--;
-                    link((Object *)p, (Object **)&face->view_list);
+                    link_tail((Object *)p, (Object **)&face->view_list);
                 }
             }
 
@@ -843,10 +850,6 @@ gen_view_list_face(Face *face)
     face->view_valid = TRUE;
 
     // calculate the normal vector.
-
-    // TODO: This is a shit way to do this. The face might not even be convex!
-    // need to go round the whole view list, taking account clock/AC on circles,
-    // and build up the normal using a polygon-area calculation.
     polygon_normal(face->view_list, &face->normal);
 }
 
@@ -878,13 +881,16 @@ gen_view_list_arc(ArcEdge *ae)
     else
         theta = angle3(edge->endpoints[0], ae->centre, edge->endpoints[1], &n);
     
-    // step for angle
-    step = 2.0f * acosf(1.0f - tolerance / rad);
+    // step for angle. This may be fixed in advance.
+    if (edge->stepsize != 0)
+        step = edge->stepsize;
+    else
+        step = 2.0f * acosf(1.0f - tolerance / rad);
 
     if (ae->clockwise)  // Clockwise angles go negative
     {
         if (theta > 0)
-            theta -= 2 * PI;  // TODO!!! This will clobber the full circle!!!!!!
+            theta -= 2 * PI;  
 
         // draw arc from p1 (on x axis) to p2. 
         for (t = 0; t > theta; t -= step)
@@ -1014,6 +1020,8 @@ gen_view_list_bez(BezierEdge *be)
     p->hdr.ID = 0;
     objid--;
     link_tail((Object *)p, (Object **)&e->view_list);
+
+    // TODO: fixed step division if stepsize > 0
 
     // Subdivide the bezier
     recurse_bez
@@ -1471,10 +1479,18 @@ deserialise_tree(Object **tree, char *filename)
             {
                 type = FACE_CIRCLE;
             }
+            else if (strcmp(tok, "FLAT") == 0)
+            {
+                type = FACE_FLAT;
+            }
+            else if (strcmp(tok, "CYLINDRICAL") == 0)
+            {
+                type = FACE_CYLINDRICAL;
+            }
             else
             {
                 // TODO other types
-                ASSERT(FALSE, "Deserialise Face (Flat) Not implemented");
+                ASSERT(FALSE, "Deserialise Face (general) Not implemented");
             }
 
             tok = strtok_s(NULL, " \t\n", &nexttok);

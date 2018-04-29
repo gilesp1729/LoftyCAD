@@ -108,6 +108,9 @@ typedef struct Edge
                                     // between the two endpoints, to be flat within the
                                     // specified tolerance. Only used for arcs and beziers.
     BOOL            view_valid;     // is TRUE if the view list is up to date.
+    float           stepsize;       // If zero, the curve is stepped out dynamically based on 
+                                    // a flatness tolerance. If not, this is the angular step
+                                    // (for arcs), or the parameter step (for beziers).
 } Edge;
 
 typedef struct StraightEdge
@@ -141,18 +144,11 @@ typedef struct Face
     int             max_edges;      // the allocated size of the above array
     Plane           normal;         // What plane is the face lying in (if flat) 
                                     // or a parallel to the cylinder (if bounded by arcs, circles or beziers)
-#if 0 // might bring this back later
-    Plane           ext_normal;     // A normal for extrusion. Initially the same as the normal, but will
-                                    // change if the prism is sheared, e.g. by moving the top face.
-#endif
     struct Volume   *vol;           // What volume references this face
-#if 0 // Not necessary, but kept just in case.
     struct Face     *pair;          // Points to a paired face (end of prism) It is initially a coincident face 
                                     // with the opposite normal; they move apart when extruding. 
-                                    // If a face has a pair it cannot be changed other than by scaling 
-                                    // or moving. Other changes (inserting points, etc) will also be
-                                    // performed on the pair.
-#endif
+                                    // If a face has a pair, some changes (like scaling) have to be
+                                    // performed with reference to the paired face.
     struct Point    *initial_point; // Point in the first edge that the face starts from. Used to allow
                                     // view lists to be built up independent of the order of points
                                     // in any edge.

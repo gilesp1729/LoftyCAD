@@ -66,15 +66,59 @@ color(OBJECT obj_type, BOOL selected, BOOL highlighted, BOOL locked)
 void
 face_shade(Face *face, BOOL selected, BOOL highlighted, BOOL locked)
 {
-    Point   *v;
+    Point   *v, *last;
 
     gen_view_list_face(face);
-    glBegin(GL_POLYGON);
-    color(OBJ_FACE, selected, highlighted, locked);
-    glNormal3f(face->normal.A, face->normal.B, face->normal.C);
-    for (v = face->view_list; v != NULL; v = (Point *)v->hdr.next)
-        glVertex3f(v->x, v->y, v->z);
-    glEnd();
+
+    switch (face->type)
+    {
+    case FACE_RECT:
+    case FACE_CIRCLE:
+    case FACE_FLAT:
+        // Simple traverse of the face's view list.
+        glBegin(GL_POLYGON);
+        color(OBJ_FACE, selected, highlighted, locked);
+        glNormal3f(face->normal.A, face->normal.B, face->normal.C);
+        for (v = face->view_list; v != NULL; v = (Point *)v->hdr.next)
+            glVertex3f(v->x, v->y, v->z);
+        glEnd();
+        break;
+
+    case FACE_CYLINDRICAL:
+        // These view lists need to be read from the bottom edge (forward)
+        // and the top edge (backward) together, and formed into quads.
+        for (last = face->view_list; last->hdr.next != NULL; last = (Point *)last->hdr.next)
+            ;
+#if 0
+        Log("Cyl view list:\r\n");
+        for (v = face->view_list; v->hdr.next != NULL; v = (Point *)v->hdr.next)
+        {
+            char buf[64];
+            sprintf_s(buf, 64, "%f %f %f\r\n", v->x, v->y, v->z);
+            Log(buf);
+        }
+#endif       
+        glBegin(GL_QUADS);
+        color(OBJ_FACE, selected, highlighted, locked);
+        for (v = face->view_list; v->hdr.next != NULL; v = (Point *)v->hdr.next)
+        {
+            Point *vnext = (Point *)v->hdr.next;
+            Point *lprev = (Point *)last->hdr.prev;
+
+            glVertex3f(last->x, last->y, last->z);
+            glVertex3f(lprev->x, lprev->y, lprev->z);
+            glVertex3f(vnext->x, vnext->y, vnext->z);
+            glVertex3f(v->x, v->y, v->z);
+
+            last = lprev;
+        }
+        glEnd();
+        break;
+
+    case FACE_GENERAL:
+        ASSERT(FALSE, "Draw face general not implemented");
+        break;
+    }
 }
 
 // Draw any object.
@@ -799,13 +843,29 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                                 opposite->vol = vol;
 
                                 // Create a cylinder face that links the picked face to its clone
+                                e = face->edges[0];
                                 eip = face->initial_point;
                                 oip = opposite->initial_point;
-                                o = opposite->edges[0];
+                                o = opposite->edges[0];        // The endpoints are coincident
 
-                                // TODO
+                                side = face_new(FACE_CYLINDRICAL, norm);  // Normal not used
+                                side->initial_point = eip;
+                                side->vol = vol;
 
+                                ne = edge_new(EDGE_STRAIGHT);
+                                ne->endpoints[0] = eip;
+                                ne->endpoints[1] = oip;
+                                side->edges[0] = ne;
+                                side->edges[1] = o;
 
+                                ne = edge_new(EDGE_STRAIGHT);
+                                ne->endpoints[0] = oip; 
+                                ne->endpoints[1] = eip;
+                                side->edges[2] = ne;
+                                side->edges[3] = e;
+
+                                side->n_edges = 4;
+                                link((Object *)side, (Object **)&vol->faces);
 
                                 break;
 
