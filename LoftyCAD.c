@@ -228,8 +228,10 @@ Position(BOOL picking, GLint x_pick, GLint y_pick)
     if (view_ortho)
     {
         zoom_factor = -0.5f * zTrans / half_size;
-      //  sprintf_s(buf, 64, "Ortho Ztrans %f zoomf %f\r\n", zTrans, zoom_factor);
-      //  Log(buf);
+#ifdef DEBUG_POSITION_ZOOM
+        sprintf_s(buf, 64, "Ortho Ztrans %f zoomf %f\r\n", zTrans, zoom_factor);
+        Log(buf);
+#endif
         if (width > height)
         {
             w = half_size * zoom_factor * (float)width / height;
@@ -246,8 +248,10 @@ Position(BOOL picking, GLint x_pick, GLint y_pick)
     else
     {
         zoom_factor = ((-0.5f * zTrans / half_size) - 1) * 0.5f + 1;
-       // sprintf_s(buf, 64, "Persp Ztrans %f zoomf %f\r\n", zTrans, zoom_factor);
-       // Log(buf);
+#ifdef DEBUG_POSITION_ZOOM
+        sprintf_s(buf, 64, "Persp Ztrans %f zoomf %f\r\n", zTrans, zoom_factor);
+        Log(buf);
+#endif
         if (width > height)
         {
             w = half_size * zoom_factor * (float)width / height;
@@ -299,10 +303,13 @@ Pick(GLint x_pick, GLint y_pick, OBJECT min_priority)
     if (num_hits > 0)
     {
         int n = 0;
-        int i, j, len;
+        int i;
+#ifdef DEBUG_PICK
+        int j, len;
         char buf[512];
         size_t size = 512;
         char *p = buf;
+#endif
         GLuint min_depth = 0xFFFFFFFF;
         char *obj_prefix[] = { "N", "P", "E", "F", "V" };
 
@@ -332,6 +339,7 @@ Pick(GLint x_pick, GLint y_pick, OBJECT min_priority)
                 min_obj = buffer[n + num_objs + 2];  // top of stack is last element in buffer
             }
 
+#ifdef DEBUG_PICK
             if (view_debug)
             {
                 len = sprintf_s(p, size, "objs %d min %x max %x: ", buffer[n], buffer[n + 1], buffer[n + 2]);
@@ -355,6 +363,7 @@ Pick(GLint x_pick, GLint y_pick, OBJECT min_priority)
                 size -= len;
             }
             else  // not logging, still need to skip the data
+#endif 
             {
                 n += num_objs + 3;
             }
@@ -371,6 +380,7 @@ Pick(GLint x_pick, GLint y_pick, OBJECT min_priority)
                 obj = (Object *)face->vol;
         }
 
+#ifdef DEBUG_PICK
         if (view_debug)
         {
             if (obj == NULL)
@@ -380,6 +390,7 @@ Pick(GLint x_pick, GLint y_pick, OBJECT min_priority)
 
             Log(buf);
         }
+#endif
     }
 
     return obj;
@@ -573,14 +584,17 @@ left_up(AUX_EVENTREC *event)
     Edge *e;
     float mv[16], vec[4], nvec[4];
     float eye[4] = { 0, 0, 1, 0 };
+#ifdef DEBUG_LEFT_UP_FACING
     char buf[256];
+#endif
 
     switch (app_state)
     {
     case STATE_NONE:
         // We have orbited - calculate the facing plane again
         glGetFloatv(GL_MODELVIEW_MATRIX, mv);
-#if 0
+#ifdef DEBUG_LEFT_UP_FACING
+#ifdef DEBUG_LEFT_UP_MODELVIEW
         sprintf_s(buf, 256, "%f %f %f %f\r\n", mv[0], mv[1], mv[2], mv[3]);
         Log(buf);
         sprintf_s(buf, 256, "%f %f %f %f\r\n", mv[4], mv[5], mv[6], mv[7]);
@@ -590,9 +604,12 @@ left_up(AUX_EVENTREC *event)
         sprintf_s(buf, 256, "%f %f %f %f\r\n", mv[12], mv[13], mv[14], mv[15]);
         Log(buf);
 #endif
+#endif
         mat_mult_by_row(mv, eye, nvec);
+#ifdef DEBUG_LEFT_UP_FACING
         sprintf_s(buf, 256, "Eye: %f %f %f\r\n", nvec[0], nvec[1], nvec[2]);
         Log(buf);
+#endif
         vec[0] = fabsf(nvec[0]);
         vec[1] = fabsf(nvec[1]);
         vec[2] = fabsf(nvec[2]);
@@ -602,13 +619,17 @@ left_up(AUX_EVENTREC *event)
             {
                 facing_plane = &plane_YZ;
                 facing_index = PLANE_YZ;
+#ifdef DEBUG_LEFT_UP_FACING
                 Log("Facing plane YZ\r\n");
+#endif
             }
             else
             {
                 facing_plane = &plane_mYZ;
                 facing_index = PLANE_MINUS_YZ;
+#ifdef DEBUG_LEFT_UP_FACING
                 Log("Facing plane -YZ\r\n");
+#endif
             }
         }
         else if (vec[1] > vec[0] && vec[1] > vec[2])
@@ -617,13 +638,17 @@ left_up(AUX_EVENTREC *event)
             {
                 facing_plane = &plane_XZ;
                 facing_index = PLANE_XZ;
+#ifdef DEBUG_LEFT_UP_FACING
                 Log("Facing plane XZ\r\n");
+#endif
             }
             else
             {
                 facing_plane = &plane_mXZ;
                 facing_index = PLANE_MINUS_XZ;
+#ifdef DEBUG_LEFT_UP_FACING
                 Log("Facing plane -XZ\r\n");
+#endif
             }
         }
         else
@@ -632,13 +657,17 @@ left_up(AUX_EVENTREC *event)
             {
                 facing_plane = &plane_XY;
                 facing_index = PLANE_XY;
+#ifdef DEBUG_LEFT_UP_FACING
                 Log("Facing plane XY\r\n");
+#endif
             }
             else
             {
                 facing_plane = &plane_mXY;
                 facing_index = PLANE_MINUS_XY;
+#ifdef DEBUG_LEFT_UP_FACING
                 Log("Facing plane -XY\r\n");
+#endif
             }
         }
 
@@ -1224,42 +1253,54 @@ Command(int wParam, int lParam)
     case ID_VIEW_TOP:
         facing_plane = &plane_XY;
         facing_index = PLANE_XY;
+#ifdef DEBUG_COMMAND_FACING
         Log("Facing plane XY\r\n");
+#endif
         trackball_InitQuat(quat_XY);
         break;
 
     case ID_VIEW_FRONT:
         facing_plane = &plane_YZ;
         facing_index = PLANE_YZ;
+#ifdef DEBUG_COMMAND_FACING
         Log("Facing plane YZ\r\n");
+#endif
         trackball_InitQuat(quat_YZ);
         break;
 
     case ID_VIEW_LEFT:
         facing_plane = &plane_XZ;
         facing_index = PLANE_XZ;
+#ifdef DEBUG_COMMAND_FACING
         Log("Facing plane XZ\r\n");
+#endif
         trackball_InitQuat(quat_XZ);
         break;
 
     case ID_VIEW_BOTTOM:
         facing_plane = &plane_mXY;
         facing_index = PLANE_MINUS_XY;
+#ifdef DEBUG_COMMAND_FACING
         Log("Facing plane -XY\r\n");
+#endif
         trackball_InitQuat(quat_mXY);
         break;
 
     case ID_VIEW_BACK:
         facing_plane = &plane_mYZ;
         facing_index = PLANE_MINUS_YZ;
+#ifdef DEBUG_COMMAND_FACING
         Log("Facing plane -YZ\r\n");
+#endif
         trackball_InitQuat(quat_mYZ);
         break;
 
     case ID_VIEW_RIGHT:
         facing_plane = &plane_mXZ;
         facing_index = PLANE_MINUS_XZ;
+#ifdef DEBUG_COMMAND_FACING
         Log("Facing plane -XZ\r\n");
+#endif
         trackball_InitQuat(quat_mXZ);
         break;
 
@@ -1473,7 +1514,9 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             case IDB_XY:
                 facing_plane = &plane_XY;
                 facing_index = PLANE_XY;
+#ifdef DEBUG_TOOLBAR_FACING
                 Log("Facing plane XY\r\n");
+#endif
                 trackball_InitQuat(quat_XY);
                 SetWindowPos(auxGetHWND(), HWND_TOP, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOREPOSITION);
                 break;
@@ -1481,7 +1524,9 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             case IDB_YZ:
                 facing_plane = &plane_YZ;
                 facing_index = PLANE_YZ;
+#ifdef DEBUG_TOOLBAR_FACING
                 Log("Facing plane YZ\r\n");
+#endif
                 trackball_InitQuat(quat_YZ);
                 SetWindowPos(auxGetHWND(), HWND_TOP, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOREPOSITION);
                 break;
@@ -1489,7 +1534,9 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             case IDB_XZ:
                 facing_plane = &plane_XZ;
                 facing_index = PLANE_XZ;
+#ifdef DEBUG_TOOLBAR_FACING
                 Log("Facing plane XZ\r\n");
+#endif
                 trackball_InitQuat(quat_XZ);
                 SetWindowPos(auxGetHWND(), HWND_TOP, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOREPOSITION);
                 break;
@@ -1497,7 +1544,9 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             case IDB_MINUS_XY:
                 facing_plane = &plane_mXY;
                 facing_index = PLANE_MINUS_XY;
+#ifdef DEBUG_TOOLBAR_FACING
                 Log("Facing plane -XY\r\n");
+#endif
                 trackball_InitQuat(quat_mXY);
                 SetWindowPos(auxGetHWND(), HWND_TOP, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOREPOSITION);
                 break;
@@ -1505,7 +1554,9 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             case IDB_MINUS_YZ:
                 facing_plane = &plane_mYZ;
                 facing_index = PLANE_MINUS_YZ;
+#ifdef DEBUG_TOOLBAR_FACING
                 Log("Facing plane -YZ\r\n");
+#endif
                 trackball_InitQuat(quat_mYZ);
                 SetWindowPos(auxGetHWND(), HWND_TOP, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOREPOSITION);
                 break;
@@ -1513,7 +1564,9 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             case IDB_MINUS_XZ:
                 facing_plane = &plane_mXZ;
                 facing_index = PLANE_MINUS_XZ;
+#ifdef DEBUG_TOOLBAR_FACING
                 Log("Facing plane -XZ\r\n");
+#endif
                 trackball_InitQuat(quat_mXZ);
                 SetWindowPos(auxGetHWND(), HWND_TOP, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOREPOSITION);
                 break;

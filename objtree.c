@@ -437,7 +437,7 @@ Face
         }
     }
 
-#if 0
+#ifdef DEBUG_REVERSE_RECT_FACE
     sprintf_s(buf, 256, "Clone %d IP %d\r\n", clone->hdr.ID, clone->initial_point->hdr.ID);
     Log(buf);
     sprintf_s(buf, 256, "%d %d\r\n", ((StraightEdge *)clone->edges[0])->endpoints[0]->hdr.ID, ((StraightEdge *)clone->edges[0])->endpoints[1]->hdr.ID);
@@ -753,7 +753,7 @@ gen_view_list_face(Face *face)
     objid--;        // prevent explosion of objid's
     link_tail((Object *)p, (Object **)&face->view_list);
 
-#if 0
+#if DEBUG_VIEW_LIST_RECT_FACE
     sprintf_s(buf, 256, "Face %d IP %d\r\n", face->hdr.ID, face->initial_point->hdr.ID);
     Log(buf);
     sprintf_s(buf, 256, "%d %d\r\n", ((StraightEdge *)face->edges[0])->endpoints[0]->hdr.ID, ((StraightEdge *)face->edges[0])->endpoints[1]->hdr.ID);
@@ -827,10 +827,10 @@ gen_view_list_face(Face *face)
                 last_point = e->endpoints[0];
 
                 // copy the view list backwards, skipping the last point.
-                for (v = (Point *)e->view_list; v->hdr.next != NULL; v = (Point *)v->hdr.next)
+                for (v = (Point *)e->view_list; v->hdr.next->next != NULL; v = (Point *)v->hdr.next)
                     ;
 
-                for ( ; v->hdr.prev != NULL; v = (Point *)v->hdr.prev)
+                for ( ; v != NULL; v = (Point *)v->hdr.prev)
                 {
                     p = point_newp(v);
                     p->hdr.ID = 0;
@@ -889,6 +889,9 @@ gen_view_list_arc(ArcEdge *ae)
 
     if (ae->clockwise)  // Clockwise angles go negative
     {
+#ifdef DEBUG_VIEW_LIST_ARC
+        Log("Clockwise arc:");
+#endif
         if (theta > 0)
             theta -= 2 * PI;  
 
@@ -904,10 +907,18 @@ gen_view_list_arc(ArcEdge *ae)
             p->hdr.ID = 0;
             objid--;
             link_tail((Object *)p, (Object **)&edge->view_list);
+#ifdef DEBUG_VIEW_LIST_ARC
+            {
+                char buf[64];
+                sprintf_s(buf, 64, "%f %f %f\r\n", res[0], res[1], res[2]);
+                Log(buf);
+            }
+#endif
         }
     }
     else
     {
+        Log("Anticlockwise arc:");
         if (theta < 0)
             theta += 2 * PI;
 
@@ -922,6 +933,13 @@ gen_view_list_arc(ArcEdge *ae)
             p->hdr.ID = 0;
             objid--;
             link_tail((Object *)p, (Object **)&edge->view_list);
+#ifdef DEBUG_VIEW_LIST_ARC
+            {
+                char buf[64];
+                sprintf_s(buf, 64, "%f %f %f\r\n", res[0], res[1], res[2]);
+                Log(buf);
+            }
+#endif
         }
     }
 

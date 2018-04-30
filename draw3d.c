@@ -7,6 +7,8 @@
 static Point move_points[MAX_MOVES];
 static int num_moves = 0;
 
+static float extrude_height;
+
 // Show a dimension or other hint in the dims window.
 void
 show_hint_at(POINT pt, char *buf)
@@ -89,7 +91,7 @@ face_shade(Face *face, BOOL selected, BOOL highlighted, BOOL locked)
         // and the top edge (backward) together, and formed into quads.
         for (last = face->view_list; last->hdr.next != NULL; last = (Point *)last->hdr.next)
             ;
-#if 0
+#ifdef DEBUG_SHADE_CYL_FACE
         Log("Cyl view list:\r\n");
         for (v = face->view_list; v->hdr.next != NULL; v = (Point *)v->hdr.next)
         {
@@ -104,7 +106,10 @@ face_shade(Face *face, BOOL selected, BOOL highlighted, BOOL locked)
         {
             Point *vnext = (Point *)v->hdr.next;
             Point *lprev = (Point *)last->hdr.prev;
+            Plane norm;
 
+            normal3(vnext, lprev, last, &norm);
+            glNormal3f(norm.A, norm.B, norm.C);
             glVertex3f(last->x, last->y, last->z);
             glVertex3f(lprev->x, lprev->y, lprev->z);
             glVertex3f(vnext->x, vnext->y, vnext->z);
@@ -622,11 +627,13 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                     // Make sure the normal vector is pointing towards the eye,
                     // swapping p1 and p3 if necessary.
                     normal3(&p1, &picked_point, &p3, &norm);
+#ifdef DEBUG_DRAW_RECT_NORMAL
                     {
                         char buf[256];
                         sprintf_s(buf, 256, "%f %f %f\r\n", norm.A, norm.B, norm.C);
                         Log(buf);
                     }
+#endif
                     if (dot(norm.A, norm.B, norm.C, facing_plane->A, facing_plane->B, facing_plane->C) < 0)
                     {
                         Point swap = p1;
@@ -743,7 +750,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                     {
                         Plane proj_plane = *facing_plane;
                         Face *face = (Face *)picked_obj;
-                        float length, height;
+                        float length;
 
                         // Can we extrude this face?
                         if (face->type == FACE_CYLINDRICAL || face->type == FACE_GENERAL)
@@ -874,7 +881,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                                 break;
                             }
 
-                            height = 0;
+                            extrude_height = 0;
 
                             // Link the volume into the object tree. Set its lock to FACES
                             // (default locking is one level down)
@@ -884,8 +891,6 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                         else
                         {
                             // TODO - Find the height of the existing volume
-                            // TODO - make height persist between calls!
-                            height = 0;
                         }
 
                         // Project new_point back to the face's normal wrt. picked_point,
@@ -905,7 +910,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                             face->normal.C
                             );
                         snap_to_scale(&length);
-                        if (length > 0)
+                        if (length != 0)   // TODO fix this - small moves still need to be added up
                         {
                             // Move the picked face by a delta in XYZ up its own normal
                             move_obj
@@ -917,14 +922,14 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                                 );
                             clear_move_copy_flags(picked_obj);
                             picked_point = new_point;
-                            height += length;
+                            extrude_height += length;
                         }
 
                         // Invalidate all the view lists for the volume, as any of them may have changed
                         invalidate_all_view_lists((Object *)face->vol, (Object *)face->vol, 0, 0, 0);
 
                         // Show the height of the extrusion.
-                        sprintf_s(buf, 64, "%s mm", display_rounded(buf2, height));
+                        sprintf_s(buf, 64, "%s mm", display_rounded(buf2, extrude_height));
                         show_hint_at(pt, buf);
                     }
 
