@@ -1149,6 +1149,7 @@ Command(int wParam, int lParam)
     HMENU hMenu;
     OPENFILENAME ofn;
     char window_title[256];
+    char new_filename[256];
 
     switch (LOWORD(wParam))
     {
@@ -1364,6 +1365,9 @@ Command(int wParam, int lParam)
             strcat_s(window_title, 256, " - ");
             strcat_s(window_title, 256, curr_title);
             SetWindowText(auxGetHWND(), window_title);
+            hMenu = GetSubMenu(GetMenu(auxGetHWND()), 0);
+            hMenu = GetSubMenu(hMenu, 8);
+            insert_filename_to_MRU(hMenu, curr_filename);
         }
 
         break;
@@ -1394,6 +1398,9 @@ Command(int wParam, int lParam)
             strcat_s(window_title, 256, " - ");
             strcat_s(window_title, 256, curr_title);
             SetWindowText(auxGetHWND(), window_title);
+            hMenu = GetSubMenu(GetMenu(auxGetHWND()), 0);
+            hMenu = GetSubMenu(hMenu, 8);
+            insert_filename_to_MRU(hMenu, curr_filename);
         }
 
         break;
@@ -1405,6 +1412,45 @@ Command(int wParam, int lParam)
         strcat_s(window_title, 256, " - ");
         strcat_s(window_title, 256, curr_title);
         SetWindowText(auxGetHWND(), window_title);
+        break;
+
+    case ID_MRU_FILE1:
+    case ID_MRU_FILE2:
+    case ID_MRU_FILE3:
+    case ID_MRU_FILE4:
+        if (get_filename_from_MRU(LOWORD(wParam) - ID_MRU_BASE, new_filename))
+        {
+            if (drawing_changed)
+            {
+                int rc = MessageBox(auxGetHWND(), "File modified. Save it?", curr_filename, MB_YESNOCANCEL | MB_ICONWARNING);
+
+                if (rc == IDCANCEL)
+                    break;
+                else if (rc == IDYES)
+                    serialise_tree(object_tree, curr_filename);
+            }
+
+            clear_selection();
+            purge_tree(object_tree);
+            object_tree = NULL;
+            drawing_changed = FALSE;
+            curr_filename[0] = '\0';
+            curr_title[0] = '\0';
+            SetWindowText(auxGetHWND(), "LoftyCAD");
+
+            if (!deserialise_tree(&object_tree, new_filename))
+            {
+                MessageBox(auxGetHWND(), "File not found", new_filename, MB_OK | MB_ICONWARNING);
+            }
+            else
+            {
+                strcpy_s(curr_filename, 256, new_filename);
+                strcpy_s(window_title, 256, curr_filename);
+                strcat_s(window_title, 256, " - ");
+                strcat_s(window_title, 256, curr_title);
+                SetWindowText(auxGetHWND(), window_title);
+            }
+        }
         break;
     }
     return 0;
@@ -1854,7 +1900,8 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 
         // recent files list
         hMenu = GetSubMenu(hMenu, 8);  // zero-based item position, separators count
-        AppendMenu(hMenu, MF_STRING, 0, "New file here");  // TODO store away and display here
+        //AppendMenu(hMenu, MF_STRING, 0, "New file here"); 
+        load_MRU_to_menu(hMenu);
 
         hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
         CheckMenuItem(hMenu, ID_VIEW_TOOLS, view_tools ? MF_CHECKED : MF_UNCHECKED);

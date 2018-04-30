@@ -918,7 +918,9 @@ gen_view_list_arc(ArcEdge *ae)
     }
     else
     {
+#ifdef DEBUG_VIEW_LIST_ARC
         Log("Anticlockwise arc:");
+#endif
         if (theta < 0)
             theta += 2 * PI;
 

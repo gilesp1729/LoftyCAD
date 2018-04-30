@@ -910,7 +910,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                             face->normal.C
                             );
                         snap_to_scale(&length);
-                        if (length != 0)   // TODO fix this - small moves still need to be added up
+                        if (length != 0)
                         {
                             // Move the picked face by a delta in XYZ up its own normal
                             move_obj
