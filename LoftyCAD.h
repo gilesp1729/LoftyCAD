@@ -10,6 +10,8 @@
 #include "objtree.h"
 #include "geometry.h"
 #include "draw3d.h"
+#include "dimensions.h"
+#include "registry.h"
 
 // States the app can be in.
 typedef enum STATE
@@ -42,6 +44,8 @@ typedef enum STATE
 } STATE;
 
 // Externs
+extern HINSTANCE hInst;
+
 extern GLint wWidth, wHeight;
 extern float xTrans, yTrans, zTrans;
 extern int zoom_delta;
@@ -102,15 +106,8 @@ void CALLBACK Position(BOOL picking, GLint x_pick, GLint y_pick);
 void display_help(char *key);
 void change_state(STATE new_state);
 
-// Registry
-void load_MRU_to_menu(HMENU hMenu);
-void insert_filename_to_MRU(HMENU hMenu, char *filename);
-BOOL get_filename_from_MRU(int id, char *filename);
-void remove_filename_from_MRU(HMENU hMenu, char *filename);
-
-#define ID_MRU_BASE 60000
-#define ID_MRU_FILE1 60001
-#define ID_MRU_FILE2 60002
-#define ID_MRU_FILE3 60003
-#define ID_MRU_FILE4 60004
-
+// Forwards for window procedures
+int WINAPI debug_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+int WINAPI toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+int WINAPI dimensions_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+int WINAPI prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);

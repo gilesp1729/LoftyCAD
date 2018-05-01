@@ -27,6 +27,8 @@ load_MRU_to_menu(HMENU hMenu)
     len = VALEN;
     if (RegQueryValueEx(hkey, "File4", 0, NULL, str, &len) == ERROR_SUCCESS)
         AppendMenu(hMenu, MF_BYPOSITION, ID_MRU_FILE4, str);
+
+    RegCloseKey(hkey);
 }
 
 // Insert a new filename to the MRU list
@@ -84,6 +86,7 @@ insert_filename_to_MRU(HMENU hMenu, char *filename)
     if (RegQueryValueEx(hkey, "File4", 0, NULL, str, &len) == ERROR_SUCCESS)
     {
         // For the last slot, just override whatever was in there.
+        // TODO: This is shit. Push down list and insert it in #1 slot ffs.
         if (strcmp(str, filename) == 0)
             return;
         RegSetKeyValue(hkey, NULL, "File4", REG_SZ, filename, strlen(filename) + 1);
@@ -94,6 +97,8 @@ insert_filename_to_MRU(HMENU hMenu, char *filename)
         RegSetKeyValue(hkey, NULL, "File4", REG_SZ, filename, strlen(filename) + 1);
         AppendMenu(hMenu, MF_BYPOSITION, ID_MRU_FILE4, filename);
     }
+
+    RegCloseKey(hkey);
 }
 
 // Get a filename from the MRU list
@@ -111,14 +116,18 @@ get_filename_from_MRU(int id, char *filename)
     if (RegQueryValueEx(hkey, keyval[id-1], 0, NULL, str, &len) == ERROR_SUCCESS)
     {
         strcpy_s(filename, VALEN, str);
+        RegCloseKey(hkey);
         return TRUE;
     }
 
+    RegCloseKey(hkey);
     return FALSE;
 }
 
+#if 0
 // Remove a filename from the MRU list
 void
 remove_filename_from_MRU(HMENU hMenu, char *filename)
 {
 }
+#endif

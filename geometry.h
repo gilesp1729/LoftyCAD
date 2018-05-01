@@ -24,6 +24,7 @@ void pcross(Point *p1, Point *p2, Point *cp);
 void plcross(Plane *p1, Plane *p2, Plane *cp);
 BOOL normalise_point(Point *p);
 BOOL normalise_plane(Plane *p);
+void new_length(Point *p0, Point *p1, float len);
 
 void snap_to_grid(Plane *plane, Point *point);
 void snap_to_scale(float *length);

@@ -118,11 +118,6 @@ float yTrans = 0;
 float zTrans = -200;    // twice the initial half_size
 int zoom_delta = 0;
 
-// Forwards for window procedures
-int WINAPI debug_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
-int WINAPI toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
-int WINAPI dimensions_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
-int WINAPI prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 // Set material and lighting up
 void
@@ -798,6 +793,7 @@ remove_from_selection(Object *obj)
 
         ASSERT(sel_obj->prev == picked_obj, "Selection list broken");
         free(sel_obj);
+        hide_hint();    // in case the dims was displayed
         return TRUE;
     }
     else
@@ -846,6 +842,15 @@ left_click(AUX_EVENTREC *event)
             sel_obj->next = selection;
             selection = sel_obj;
             sel_obj->prev = picked_obj;
+
+            if (sel_obj->next == NULL)      // If a single object is being selected, show its dims
+            {
+                POINT pt;
+
+                pt.x = event->data[AUX_MOUSEX];
+                pt.y = event->data[AUX_MOUSEY];
+                show_dims_at(pt, picked_obj, TRUE);
+            }
         }
     }
 }
@@ -982,7 +987,7 @@ right_click(AUX_EVENTREC *event)
     HMENU hMenu = LoadMenu(hInst, MAKEINTRESOURCE(IDR_CONTEXT));
     int rc;
     POINT pt;
-    Object *parent;
+    Object *parent, *sel_obj;
     char buf[32];
 
     picked_obj = Pick(event->data[0], event->data[1], OBJ_FACE);
@@ -1024,6 +1029,10 @@ right_click(AUX_EVENTREC *event)
         EnableMenuItem(hMenu, ID_OBJ_SELECTPARENTVOLUME, MF_GRAYED);
         break;
     }
+
+    // Disable "enter dimensions" for objects that have no dimensions that can be easily changed
+    if (!has_dims(picked_obj))
+        EnableMenuItem(hMenu, ID_OBJ_ENTERDIMENSIONS, MF_GRAYED);
 
     // Check the right lock state for the parent
     switch (parent->lock)
@@ -1094,7 +1103,15 @@ right_click(AUX_EVENTREC *event)
         break;
 
     case ID_OBJ_SELECTPARENTVOLUME:
+        clear_selection();
+        sel_obj = obj_new();
+        sel_obj->next = selection;
+        selection = sel_obj;
+        sel_obj->prev = parent;
+        break;
+
     case ID_OBJ_ENTERDIMENSIONS:
+        show_dims_at(pt, picked_obj, TRUE);
         break;
     }
 }
@@ -1726,17 +1743,6 @@ help_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 }
 
 
-// Wndproc for the dimensions dialog. Not much to it.
-int WINAPI
-dimensions_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
-{
-    switch (msg)
-    {
-    }
-
-    return 0;
-}
-
 // Preferences dialog.
 int WINAPI
 prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -1797,6 +1803,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 	MSG msg;
 	HACCEL hAccelTable;
     HMENU hMenu;
+    POINT pt = { 0, 0 };
 
 	// Initialize global strings
 	LoadString(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
@@ -1879,13 +1886,15 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
         if (view_help)
             ShowWindow(hWndHelp, SW_SHOW);
 
-        // Dimensions window (looks like a tooltip, but displays and allows input of dimensions)
-        hWndDims = CreateDialog
+        // Dimensions window. It looks like a tooltip, but displays and allows input of dimensions.
+        // It is used both modeless (as here) and also modal (when typing in dimensions)
+        hWndDims = CreateDialogParam
             (
             hInst,
             MAKEINTRESOURCE(IDD_DIMENSIONS),
             auxGetHWND(),
-            dimensions_dialog
+            dimensions_dialog,
+            (LPARAM)NULL
             );
 
         SetWindowPos(hWndDims, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOSIZE);

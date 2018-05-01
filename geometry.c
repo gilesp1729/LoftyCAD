@@ -426,3 +426,17 @@ look_at_centre(Point c, Point p1, Plane n, float matrix[16])
     matrix[15] = 1;
 }
 
+// make the line p0-p1 a new length of len, by moving p1.
+void
+new_length(Point *p0, Point *p1, float len)
+{
+    Point v;
+
+    v.x = p1->x - p0->x;
+    v.y = p1->y - p0->y;
+    v.z = p1->z - p0->z;
+    normalise_point(&v);
+    p1->x = p0->x + v.x * len;
+    p1->y = p0->y + v.y * len;
+    p1->z = p0->z + v.z * len;
+}

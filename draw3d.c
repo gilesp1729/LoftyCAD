@@ -9,26 +9,6 @@ static int num_moves = 0;
 
 static float extrude_height;
 
-// Show a dimension or other hint in the dims window.
-void
-show_hint_at(POINT pt, char *buf)
-{
-    POINT winpt;  // copy the POINT so it doesn't change the caller
-
-    SendDlgItemMessage(hWndDims, IDC_DIMENSIONS, WM_SETTEXT, 0, (LPARAM)buf);
-    winpt.x = pt.x;
-    winpt.y = pt.y;
-    ClientToScreen(auxGetHWND(), &winpt);
-    SetWindowPos(hWndDims, HWND_TOPMOST, winpt.x + 10, winpt.y + 20, 0, 0, SWP_NOSIZE);
-    ShowWindow(hWndDims, SW_SHOW);
-}
-
-void 
-hide_hint()
-{
-    ShowWindow(hWndDims, SW_HIDE);
-}
-
 // Some standard colors sent to GL.
 void
 color(OBJECT obj_type, BOOL selected, BOOL highlighted, BOOL locked)
@@ -416,8 +396,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                     }
 
                     // Show the dimensions (length) of the edge.
-                    sprintf_s(buf, 64, "%s mm", display_rounded(buf2, length(&picked_point, &new_point)));
-                    show_hint_at(pt, buf);
+                    show_dims_at(pt, curr_obj, FALSE);
 
                     break;
 
@@ -491,8 +470,9 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                             ae->clockwise = clockwise;
                             e->view_valid = FALSE;
                         }
-                    }
 
+                        show_dims_at(pt, curr_obj, FALSE);
+                    }
                     break;
 
                 case STATE_DRAWING_BEZIER:
@@ -688,7 +668,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                         p03->z = p3.z;
                     }
 
-                    // Show the dimensions of the rect.
+                    // Show the dimensions of the rect. We can't use show_dims_at here.
                     sprintf_s(buf, 64, "%s,%s mm", display_rounded(buf, length(p00, p01)), display_rounded(buf2, length(p00, p03)));
                     show_hint_at(pt, buf);
                     break;
@@ -737,8 +717,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                     }
 
                     // Show the dimensions of the circle.
-                    sprintf_s(buf, 64, "%s mm rad", display_rounded(buf, length(ae->centre, p01)));
-                    show_hint_at(pt, buf);
+                    show_dims_at(pt, curr_obj, FALSE);
                     break;
 
                 case STATE_DRAWING_MEASURE:
@@ -928,7 +907,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                         // Invalidate all the view lists for the volume, as any of them may have changed
                         invalidate_all_view_lists((Object *)face->vol, (Object *)face->vol, 0, 0, 0);
 
-                        // Show the height of the extrusion.
+                        // Show the height of the extrusion. TODO - show_dims_at for height
                         sprintf_s(buf, 64, "%s mm", display_rounded(buf2, extrude_height));
                         show_hint_at(pt, buf);
                     }
