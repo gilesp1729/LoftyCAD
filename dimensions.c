@@ -85,18 +85,13 @@ show_dims_at(POINT pt, Object *obj, BOOL accept_input)
             break;
         case EDGE_ARC:
             ae = (ArcEdge *)e;
-            angle = RAD * angle3(e->endpoints[0], ae->centre, e->endpoints[1], &ae->normal);
             if (ae->clockwise)
-            {
-                if (angle > 0)
-                    angle -= 360;
-            }
+                angle = RAD * angle3(e->endpoints[1], ae->centre, e->endpoints[0], &ae->normal);
             else
-            {
-                if (angle < 0)
-                    angle += 360;
-            }
-            sprintf_s(buf, 64, "%s,%s mm rad/deg",
+                angle = RAD * angle3(e->endpoints[0], ae->centre, e->endpoints[1], &ae->normal);
+            if (angle < 0)
+                angle += 360;
+            sprintf_s(buf, 64, "%s,%s mmR/deg",
                       display_rounded(buf, length(ae->centre, e->endpoints[0])),
                       display_rounded(buf2, angle)
                       );
@@ -118,7 +113,7 @@ show_dims_at(POINT pt, Object *obj, BOOL accept_input)
         case FACE_CIRCLE:
             e = f->edges[0];
             ae = (ArcEdge *)e;
-            sprintf_s(buf, 64, "%s mm rad", display_rounded(buf2, length(ae->centre, e->endpoints[0])));
+            sprintf_s(buf, 64, "%s mmR", display_rounded(buf2, length(ae->centre, e->endpoints[0])));
             break;
         }
         break;
@@ -131,6 +126,7 @@ show_dims_at(POINT pt, Object *obj, BOOL accept_input)
         char *nexttok = NULL;
         char *tok;
         Object *parent;
+        float matrix[16], v[4], res[4];
 
         id.pt = pt;
         id.buf = buf;
@@ -152,14 +148,35 @@ show_dims_at(POINT pt, Object *obj, BOOL accept_input)
                     break;
                 new_length(e->endpoints[0], e->endpoints[1], len);
                 break;
+
             case EDGE_ARC:
                 ae = (ArcEdge *)e;
-                len = (float)atof(buf);
+                tok = strtok_s(buf, " ,\t\n", &nexttok);
+                len = (float)atof(tok);
                 if (len == 0)
                     break;
-                new_length(ae->centre, e->endpoints[0], len);
+                new_length(ae->centre, e->endpoints[0], len);  // just typing the radius still works
                 new_length(ae->centre, e->endpoints[1], len);
-                // TODO - input the angle and change it. Tricky.
+
+                tok = strtok_s(NULL, " ,\t\n", &nexttok);
+                angle = (float)atof(tok);
+                if (angle == 0)
+                    break;
+                if (ae->clockwise)
+                    angle = -angle / RAD;
+                else
+                    angle = angle / RAD;
+
+                // transform arc to XY plane, centre at origin, endpoint 0 on x axis
+                look_at_centre(*ae->centre, *e->endpoints[0], ae->normal, matrix);
+                v[0] = len * cosf(angle);
+                v[1] = len * sinf(angle);
+                v[2] = 0;
+                v[3] = 1;
+                mat_mult_by_col(matrix, v, res);
+                e->endpoints[1]->x = res[0];
+                e->endpoints[1]->y = res[1];
+                e->endpoints[1]->z = res[2];
                 break;
             }
             break;
