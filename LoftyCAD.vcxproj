@@ -109,6 +109,7 @@
     <ClCompile Include="objtree.c" />
     <ClCompile Include="LoftyCAD.c" />
     <ClCompile Include="registry.c" />
+    <ClCompile Include="serialise.c" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>

@@ -113,6 +113,9 @@
     <ClCompile Include="dimensions.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="serialise.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="LoftyCAD.rc">
