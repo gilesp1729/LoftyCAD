@@ -6,7 +6,7 @@
 // Find a ray through the viewable frustum from the given window location. The XYZ and ABC of the
 // passed Plane struct define a point and direction vector of the ray.
 void
-ray(GLint x, GLint y, Plane *line)
+ray_from_eye(GLint x, GLint y, Plane *line)
 {
     GLdouble modelMatrix[16], projMatrix[16], nearp[3], farp[3];
     GLint    viewport[4];
@@ -34,7 +34,7 @@ intersect_ray_plane(GLint x, GLint y, Plane *picked_plane, Point *new_point)
     float Ldotn, dpdotn, d;
     Point dp;
 
-    ray(x, y, &line);
+    ray_from_eye(x, y, &line);
 
     // Determine parallel
     Ldotn = picked_plane->A * line.A + picked_plane->B * line.B + picked_plane->C * line.C;
@@ -73,7 +73,7 @@ snap_ray_edge(GLint x, GLint y, Edge *edge, Point *new_point)
     u.A = edge->endpoints[1]->x - edge->endpoints[0]->x;
     u.B = edge->endpoints[1]->y - edge->endpoints[0]->y;
     u.C = edge->endpoints[1]->z - edge->endpoints[0]->z;
-    ray(x, y, &v);
+    ray_from_eye(x, y, &v);
     w0.refpt = v.refpt;
     w0.A = u.refpt.x - v.refpt.x;
     w0.B = u.refpt.y - v.refpt.y;

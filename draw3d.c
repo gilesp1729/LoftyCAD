@@ -761,7 +761,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                 case STATE_DRAWING_EXTRUDE:
                     if (picked_obj != NULL && picked_obj->type == OBJ_FACE)
                     {
-                        Plane proj_plane = *facing_plane;
+                        Plane proj_plane;
                         Face *face = (Face *)picked_obj;
                         float length;
 
@@ -907,8 +907,9 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                         }
 
                         // Project new_point back to the face's normal wrt. picked_point,
-                        // as seen from the eye position. First project onto the facing plane
-                        // through the picked point
+                        // as seen from the eye position. First project onto a plane
+                        // through the picked point, perp to the ray from the eye position.
+                        ray_from_eye(pt.x, pt.y, &proj_plane);
                         proj_plane.refpt = picked_point;
                         intersect_ray_plane(pt.x, pt.y, &proj_plane, &new_point);
 

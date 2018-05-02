@@ -51,6 +51,39 @@ load_MRU_to_menu(HMENU hMenu)
     RegCloseKey(hkey);
 }
 
+// Shuffle down the MRU list. Copy 3-4, 2-3 and 1-2. The values are known to exist.
+void
+shuffle_down(HMENU hMenu, HKEY hkey)
+{
+    char str[VALEN];
+    char file2[VALEN];
+    char file3[VALEN];
+    char file4[VALEN];
+    int len;
+
+    len = VALEN;
+    RegQueryValueEx(hkey, "File3", 0, NULL, str, &len);
+    RegSetKeyValue(hkey, NULL, "File4", REG_SZ, str, len);
+    strcpy_s(file4, VALEN, "&4 ");
+    strcat_s(file4, VALEN, str);
+    ModifyMenu(hMenu, 4, MF_BYPOSITION, ID_MRU_FILE4, file4);
+
+    len = VALEN;
+    RegQueryValueEx(hkey, "File2", 0, NULL, str, &len);
+    RegSetKeyValue(hkey, NULL, "File3", REG_SZ, str, len);
+    strcpy_s(file3, VALEN, "&3 ");
+    strcat_s(file3, VALEN, str);
+    ModifyMenu(hMenu, 3, MF_BYPOSITION, ID_MRU_FILE3, file3);
+
+    len = VALEN;
+    RegQueryValueEx(hkey, "File1", 0, NULL, str, &len);
+    RegSetKeyValue(hkey, NULL, "File2", REG_SZ, str, len);
+    strcpy_s(file2, VALEN, "&2 ");
+    strcat_s(file2, VALEN, str);
+    ModifyMenu(hMenu, 2, MF_BYPOSITION, ID_MRU_FILE2, file2);
+}
+
+
 // Insert a new filename to the MRU list
 void
 insert_filename_to_MRU(HMENU hMenu, char *filename)
@@ -115,14 +148,15 @@ insert_filename_to_MRU(HMENU hMenu, char *filename)
     len = VALEN;
     if (RegQueryValueEx(hkey, "File4", 0, NULL, str, &len) == ERROR_SUCCESS)
     {
-        // For the last slot, just override whatever was in there.
-        // TODO: This is shit. Push down list and insert it in #1 slot ffs.
         if (strcmp(str, filename) == 0)
             return;
-        RegSetKeyValue(hkey, NULL, "File4", REG_SZ, filename, strlen(filename) + 1);
-        strcpy_s(file4, VALEN, "&4 ");
-        strcat_s(file4, VALEN, filename);
-        ModifyMenu(hMenu, 4, MF_BYPOSITION, ID_MRU_FILE4, file4);
+
+        // Shuffle the list down and insert the new one at the top.
+        shuffle_down(hMenu, hkey);
+        RegSetKeyValue(hkey, NULL, "File1", REG_SZ, filename, strlen(filename) + 1);
+        strcpy_s(file1, VALEN, "&1 ");
+        strcat_s(file1, VALEN, filename);
+        ModifyMenu(hMenu, 1, MF_BYPOSITION, ID_MRU_FILE1, file1);
     }
     else // Nothing in this slot, insert it here and return
     {
@@ -158,10 +192,3 @@ get_filename_from_MRU(int id, char *filename)
     return FALSE;
 }
 
-#if 0
-// Remove a filename from the MRU list
-void
-remove_filename_from_MRU(HMENU hMenu, char *filename)
-{
-}
-#endif

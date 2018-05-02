@@ -9,6 +9,7 @@
 // test for "near" zero.
 #define nz(val)  (fabsf(val) < 0.00001)
 
+void ray_from_eye(GLint x, GLint y, Plane *line);
 BOOL intersect_ray_plane(GLint x, GLint y, Plane *picked_plane, Point *new_point);
 BOOL snap_ray_edge(GLint x, GLint y, Edge *edge, Point *new_point);
 void normal_list(Point *list, Plane *norm);
