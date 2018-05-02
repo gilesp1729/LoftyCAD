@@ -363,10 +363,17 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                 case STATE_DRAWING_EDGE:
                     if (picked_plane == NULL)
                     {
-                        // Uhoh. We don't have a plane yet. TODO: Check if the mouse has moved into
-                        // a face object, and use that. 
+                        // Uhoh. We don't have a plane yet. Check if the mouse has moved into
+                        // a face object, and use that. Otherwise, just come back and try with the
+                        // next move.
+                        Object *obj = Pick(pt.x, pt.y, OBJ_FACE);
 
-
+                        if (obj == NULL)
+                            picked_plane = facing_plane;
+                        else if (obj->type == OBJ_FACE)
+                            picked_plane = &((Face *)obj)->normal;
+                        else
+                            break;
                     }
 
                     // Move the end point of the current edge
@@ -403,10 +410,15 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                 case STATE_DRAWING_ARC:
                     if (picked_plane == NULL)
                     {
-                        // Uhoh. We don't have a plane yet. TODO: Check if the mouse has moved into
-                        // a face object, and use that. 
+                        // Uhoh. We don't have a plane yet. Check if the mouse has moved into
+                        // a face object, and use that. Otherwise, just come back and try with the
+                        // next move.
+                        Object *obj = Pick(pt.x, pt.y, OBJ_FACE);
 
-
+                        if (obj->type == OBJ_FACE)
+                            picked_plane = &((Face *)obj)->normal;
+                        else
+                            break;
                     }
 
                     // Move the end point of the current edge
@@ -478,10 +490,17 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                 case STATE_DRAWING_BEZIER:
                     if (picked_plane == NULL)
                     {
-                        // Uhoh. We don't have a plane yet. TODO: Check if the mouse has moved into
-                        // a face object, and use that. 
+                        // Uhoh. We don't have a plane yet. Check if the mouse has moved into
+                        // a face object, and use that. Otherwise, just come back and try with the
+                        // next move.
+                        Object *obj = Pick(pt.x, pt.y, OBJ_FACE);
 
-
+                        if (obj == NULL)
+                            picked_plane = facing_plane;
+                        else if (obj->type == OBJ_FACE)
+                            picked_plane = &((Face *)obj)->normal;
+                        else
+                            break;
                     }
 
                     // Move the end point of the current edge
@@ -555,10 +574,17 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                 case STATE_DRAWING_RECT:
                     if (picked_plane == NULL)
                     {
-                        // Uhoh. We don't have a plane yet. TODO: Check if the mouse has moved into
-                        // a face object, and use that.
+                        // Uhoh. We don't have a plane yet. Check if the mouse has moved into
+                        // a face object, and use that. Otherwise, just come back and try with the
+                        // next move.
+                        Object *obj = Pick(pt.x, pt.y, OBJ_FACE);
 
-
+                        if (obj == NULL)
+                            picked_plane = facing_plane;
+                        else if (obj->type == OBJ_FACE)
+                            picked_plane = &((Face *)obj)->normal;
+                        else
+                            break;
                     }
 
                     // Move the opposite corner point
@@ -566,7 +592,8 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                     snap_to_grid(picked_plane, &new_point);
 
                     // generate the other corners. The rect goes in the 
-                    // order picked-p1-new-p3.
+                    // order picked-p1-new-p3. 
+                    // TODO: what if picked plane is on an angle? Do this in a more general way.
                     switch (facing_index)
                     {
                     case PLANE_XY:
@@ -676,10 +703,17 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                 case STATE_DRAWING_CIRCLE:
                     if (picked_plane == NULL)
                     {
-                        // Uhoh. We don't have a plane yet. TODO: Check if the mouse has moved into
-                        // a face object, and use that.
+                        // Uhoh. We don't have a plane yet. Check if the mouse has moved into
+                        // a face object, and use that. Otherwise, just come back and try with the
+                        // next move.
+                        Object *obj = Pick(pt.x, pt.y, OBJ_FACE);
 
-
+                        if (obj == NULL)
+                            picked_plane = facing_plane;
+                        else if (obj->type == OBJ_FACE)
+                            picked_plane = &((Face *)obj)->normal;
+                        else
+                            break;
                     }
 
                     // Move the circumference point
@@ -962,7 +996,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
         // handle zooming. No state change here.
         if (zoom_delta != 0)
         {
-            zTrans += 0.01f * half_size * zoom_delta;
+            zTrans += 0.002f * half_size * zoom_delta;
             if (zTrans > -0.8f * half_size)
                 zTrans = -0.8f * half_size;
             Position(FALSE, 0, 0);

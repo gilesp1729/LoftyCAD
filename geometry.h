@@ -6,9 +6,12 @@
 #define PI 3.1415926f
 #define RAD 57.29577f
 
+// test for "near" zero.
+#define nz(val)  (fabsf(val) < 0.00001)
+
 BOOL intersect_ray_plane(GLint x, GLint y, Plane *picked_plane, Point *new_point);
 BOOL snap_ray_edge(GLint x, GLint y, Edge *edge, Point *new_point);
-void normal(Point *list, Plane *norm);
+void normal_list(Point *list, Plane *norm);
 void polygon_normal(Point *list, Plane *norm);
 void normal3(Point *b, Point *a, Point *c, Plane *norm);
 float angle3(Point *b, Point *a, Point *c, Plane *n);

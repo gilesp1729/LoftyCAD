@@ -11,22 +11,42 @@ load_MRU_to_menu(HMENU hMenu)
 {
     HKEY hkey;
     char str[VALEN];
+    char file1[VALEN];
+    char file2[VALEN];
+    char file3[VALEN];
+    char file4[VALEN];
     int len;
 
     RegCreateKeyEx(HKEY_CURRENT_USER, "Software\\LoftyCAD\\MRUList", 0, NULL, 0, KEY_READ, NULL, &hkey, NULL);
 
     len = VALEN;
     if (RegQueryValueEx(hkey, "File1", 0, NULL, str, &len) == ERROR_SUCCESS)
-        AppendMenu(hMenu, MF_BYPOSITION, ID_MRU_FILE1, str);
+    {
+        strcpy_s(file1, VALEN, "&1 ");
+        strcat_s(file1, VALEN, str);
+        AppendMenu(hMenu, MF_BYPOSITION, ID_MRU_FILE1, file1);
+    }
     len = VALEN;
     if (RegQueryValueEx(hkey, "File2", 0, NULL, str, &len) == ERROR_SUCCESS)
-        AppendMenu(hMenu, MF_BYPOSITION, ID_MRU_FILE2, str);
+    {
+        strcpy_s(file2, VALEN, "&2 ");
+        strcat_s(file2, VALEN, str);
+        AppendMenu(hMenu, MF_BYPOSITION, ID_MRU_FILE2, file2);
+    }
     len = VALEN;
     if (RegQueryValueEx(hkey, "File3", 0, NULL, str, &len) == ERROR_SUCCESS)
-        AppendMenu(hMenu, MF_BYPOSITION, ID_MRU_FILE3, str);
+    {
+        strcpy_s(file3, VALEN, "&3 ");
+        strcat_s(file3, VALEN, str);
+        AppendMenu(hMenu, MF_BYPOSITION, ID_MRU_FILE3, file3);
+    }
     len = VALEN;
     if (RegQueryValueEx(hkey, "File4", 0, NULL, str, &len) == ERROR_SUCCESS)
-        AppendMenu(hMenu, MF_BYPOSITION, ID_MRU_FILE4, str);
+    {
+        strcpy_s(file4, VALEN, "&4 ");
+        strcat_s(file4, VALEN, str);
+        AppendMenu(hMenu, MF_BYPOSITION, ID_MRU_FILE4, file4);
+    }
 
     RegCloseKey(hkey);
 }
@@ -37,6 +57,10 @@ insert_filename_to_MRU(HMENU hMenu, char *filename)
 {
     HKEY hkey;
     char str[VALEN];
+    char file1[VALEN];
+    char file2[VALEN];
+    char file3[VALEN];
+    char file4[VALEN];
     int len;
 
     RegCreateKeyEx(HKEY_CURRENT_USER, "Software\\LoftyCAD\\MRUList", 0, NULL, 0, KEY_ALL_ACCESS, NULL, &hkey, NULL);
@@ -51,7 +75,9 @@ insert_filename_to_MRU(HMENU hMenu, char *filename)
     else // Nothing in this slot, insert it here and return
     {
         RegSetKeyValue(hkey, NULL, "File1", REG_SZ, filename, strlen(filename) + 1);
-        AppendMenu(hMenu, MF_BYPOSITION, ID_MRU_FILE1, filename);
+        strcpy_s(file1, VALEN, "&1 ");
+        strcat_s(file1, VALEN, filename);
+        AppendMenu(hMenu, MF_BYPOSITION, ID_MRU_FILE1, file1);
         return;
     }
 
@@ -65,7 +91,9 @@ insert_filename_to_MRU(HMENU hMenu, char *filename)
     else // Nothing in this slot, insert it here and return
     {
         RegSetKeyValue(hkey, NULL, "File2", REG_SZ, filename, strlen(filename) + 1);
-        AppendMenu(hMenu, MF_BYPOSITION, ID_MRU_FILE2, filename);
+        strcpy_s(file2, VALEN, "&2 ");
+        strcat_s(file2, VALEN, filename);
+        AppendMenu(hMenu, MF_BYPOSITION, ID_MRU_FILE2, file2);
         return;
     }
 
@@ -78,7 +106,9 @@ insert_filename_to_MRU(HMENU hMenu, char *filename)
     else // Nothing in this slot, insert it here and return
     {
         RegSetKeyValue(hkey, NULL, "File3", REG_SZ, filename, strlen(filename) + 1);
-        AppendMenu(hMenu, MF_BYPOSITION, ID_MRU_FILE3, filename);
+        strcpy_s(file3, VALEN, "&3 ");
+        strcat_s(file3, VALEN, filename);
+        AppendMenu(hMenu, MF_BYPOSITION, ID_MRU_FILE3, file3);
         return;
     }
 
@@ -90,12 +120,16 @@ insert_filename_to_MRU(HMENU hMenu, char *filename)
         if (strcmp(str, filename) == 0)
             return;
         RegSetKeyValue(hkey, NULL, "File4", REG_SZ, filename, strlen(filename) + 1);
-        ModifyMenu(hMenu, 4, MF_BYPOSITION, ID_MRU_FILE4, filename);
+        strcpy_s(file4, VALEN, "&4 ");
+        strcat_s(file4, VALEN, filename);
+        ModifyMenu(hMenu, 4, MF_BYPOSITION, ID_MRU_FILE4, file4);
     }
     else // Nothing in this slot, insert it here and return
     {
         RegSetKeyValue(hkey, NULL, "File4", REG_SZ, filename, strlen(filename) + 1);
-        AppendMenu(hMenu, MF_BYPOSITION, ID_MRU_FILE4, filename);
+        strcpy_s(file4, VALEN, "&4 ");
+        strcat_s(file4, VALEN, filename);
+        AppendMenu(hMenu, MF_BYPOSITION, ID_MRU_FILE4, file4);
     }
 
     RegCloseKey(hkey);

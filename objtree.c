@@ -509,6 +509,9 @@ move_obj(Object *obj, float xoffset, float yoffset, float zoffset)
             edge = face->edges[i];
             move_obj((Object *)edge, xoffset, yoffset, zoffset);
         }
+        face->normal.refpt.x += xoffset;    // don't forget to move the normal refpt too
+        face->normal.refpt.y += yoffset;
+        face->normal.refpt.z += zoffset;
         face->view_valid = FALSE;
         break;
 

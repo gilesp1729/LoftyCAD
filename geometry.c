@@ -57,13 +57,51 @@ intersect_ray_plane(GLint x, GLint y, Plane *picked_plane, Point *new_point)
 
 // Intersect a ray through a mouse (window) coordinate with a line (edge).
 // Find the nearest point on an edge to the ray, and return that.
-// (the mouse is snapped to the edge)
+// (the mouse is snapped to the edge). Return FALSE if no point can be found.
+// Algorithm and notation from D. Sunday, "Distance between Lines", http://geomalgorithms.com/a07-_distance.html
 BOOL
 snap_ray_edge(GLint x, GLint y, Edge *edge, Point *new_point)
 {
+    Plane u, v, w0;
+    float a, b, c, d, e, sc, denom;
+
+    if (edge->type != EDGE_STRAIGHT)
+        return FALSE;   // TODO - until we get some idea what to do with beziers and arcs
+
+    // Express the lines in point/direction form (as Plane structs, for easy dotting later)
+    u.refpt = *edge->endpoints[0];
+    u.A = edge->endpoints[1]->x - edge->endpoints[0]->x;
+    u.B = edge->endpoints[1]->y - edge->endpoints[0]->y;
+    u.C = edge->endpoints[1]->z - edge->endpoints[0]->z;
+    ray(x, y, &v);
+    w0.refpt = v.refpt;
+    w0.A = u.refpt.x - v.refpt.x;
+    w0.B = u.refpt.y - v.refpt.y;
+    w0.C = u.refpt.z - v.refpt.z;
+
+    // calculate the dot products used in the solution for the closest points.
+    a = pldot(&u, &u);
+    b = pldot(&u, &v);
+    c = pldot(&v, &v);
+    d = pldot(&u, &w0);
+    e = pldot(&v, &w0);
+    denom = a * c - b * b;
+    if (nz(denom))
+        return FALSE;       // lines are parallel
+   
+    // Solve for the closest point on line u (the edge passed in). We don't care about the
+    // other closest point, or the distance between them here.
+    sc = (b * e - c * d) / denom;
+    //tc = (a * e - b * d) / denom;   // the other point on line v
+
+    new_point->x = u.refpt.x + sc * u.A;
+    new_point->y = u.refpt.y + sc * u.B;
+    new_point->z = u.refpt.z + sc * u.C;
+
     return TRUE;
 }
 
+// Dot and cross products given separate components.
 float
 dot(float x0, float y0, float z0, float x1, float y1, float z1)
 {
@@ -78,9 +116,10 @@ cross(float x0, float y0, float z0, float x1, float y1, float z1, float *xc, flo
     *zc = x0*y1 - y0*x1;
 }
 
+#if 0
 // Unit normal, assuming at least 3 points in list and they are not collinear
 void
-normal(Point *list, Plane *norm)
+normal_list(Point *list, Plane *norm)
 {
     Point *a = list;
     Point *b = (Point *)a->hdr.next;
@@ -99,6 +138,7 @@ normal(Point *list, Plane *norm)
     norm->refpt.y = a->y;
     norm->refpt.z = a->z;
 }
+#endif
 
 // normal from 3 separate points
 void
@@ -194,10 +234,6 @@ mat_mult_by_col(float *m, float *v, float *res)
     res[2] = m[2] * v[0] + m[6] * v[1] + m[10] * v[2] + m[14] * v[3];
     res[3] = m[3] * v[0] + m[7] * v[1] + m[11] * v[2] + m[15] * v[3];
 }
-
-// test for "near" zero.
-#define nz(val)  (fabsf(val) < 0.00001)
-
 
 // Snap a point to the grid. It must lie in the given plane. If the plane is
 // not axis aligned, we can't snap anything (it would move out of plane)

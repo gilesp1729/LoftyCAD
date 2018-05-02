@@ -99,6 +99,21 @@ extern float half_size;
 
 #define ASSERT(exp, msg)    { if (!(exp)) LogShow(msg) }
 
+// Debugging defines
+#undef DEBUG_SHADE_CYL_FACE
+#undef DEBUG_DRAW_RECT_NORMAL
+#undef DEBUG_POSITION_ZOOM
+#undef DEBUG_PICK
+#define DEBUG_LEFT_UP_FACING
+#undef DEBUG_LEFT_UP_MODELVIEW
+#undef DEBUG_COMMAND_FACING
+#undef DEBUG_TOOLBAR_FACING
+#undef DEBUG_REVERSE_RECT_FACE
+#undef DEBUG_VIEW_LIST_ARC
+
+
+
+
 // Some forwards
 Object * Pick(GLint x_pick, GLint y_pick, OBJECT obj_type);
 void CALLBACK Draw(BOOL picking, GLint x_pick, GLint y_pick);

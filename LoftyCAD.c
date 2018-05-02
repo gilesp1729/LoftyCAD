@@ -239,10 +239,13 @@ Position(BOOL picking, GLint x_pick, GLint y_pick)
             h = half_size * zoom_factor * (float)height / width;
             glOrtho(-w, w, -h, h, znear, zfar);
         }
+        glTranslated(xTrans, yTrans, zTrans);
     }
     else
     {
-        zoom_factor = ((-0.5f * zTrans / half_size) - 1) * 0.5f + 1;
+        // In perspective mode, zooming is done more by narrowing the frustum
+        // and less by moving back (zTrans)
+        zoom_factor = ((-0.5f * zTrans / half_size) - 1) * 0.5f + 0.4f;
 #ifdef DEBUG_POSITION_ZOOM
         sprintf_s(buf, 64, "Persp Ztrans %f zoomf %f\r\n", zTrans, zoom_factor);
         Log(buf);
@@ -259,9 +262,8 @@ Position(BOOL picking, GLint x_pick, GLint y_pick)
             h = half_size * zoom_factor * (float)height / width;
             glFrustum(-w, w, -h, h, znear, zfar);
         }
+        glTranslated(xTrans, yTrans, zTrans * 0.5f);
     }
-
-    glTranslated(xTrans, yTrans, zTrans);
 }
 
 // Change the proportions of the viewport when window is resized
@@ -545,12 +547,20 @@ left_down(AUX_EVENTREC *event)
                 break;
 
             case OBJ_EDGE:
-                // Find a picked point in the edge (we don't have a plane yet)
-                snap_ray_edge(left_mouseX, left_mouseY, (Edge *)picked_obj, &picked_point);
+                // Find a picked point in the edge (we don't have a plane yet) and snap
+                // to the edge. If for some reason we can't, abandon the drawing operation.
+                if (!snap_ray_edge(left_mouseX, left_mouseY, (Edge *)picked_obj, &picked_point))
+                {
+                    ReleaseCapture();
+                    left_mouse = FALSE;
+                    change_state(STATE_NONE);
+                    trackball_MouseDown(event);
+                }
                 break;
 
             case OBJ_POINT:
-                // Snap to the point.
+                // Snap to the point. TODO: share with the point if it's a new edge joining
+                // to a free endpoint on an old edge.
                 picked_point = *(Point *)picked_obj;
                 break;
             }
