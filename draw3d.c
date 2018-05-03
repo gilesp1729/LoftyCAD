@@ -669,13 +669,13 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                             ax = fabsf(dn.x);
                             ay = fabsf(dn.y);
                             az = fabsf(dn.z);
-                            if (ax < ay && ax < az)
+                            if (ax <= ay && ax <= az)
                             {
                                 da.x = 1;
                                 da.y = 0;
                                 da.z = 0;
                             }
-                            else if (ay < ax && ay < az)
+                            else if (ay <= ax && ay <= az)
                             {
                                 da.x = 0;
                                 da.y = 1;

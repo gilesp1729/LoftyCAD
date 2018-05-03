@@ -143,7 +143,7 @@ trackball_CalcRotMatrix( GLfloat matRot[4][4] )
     else if (gbLeftMouse)
     {
         auxGetMouseLoc(&pt.x, &pt.y);
-#if 1 //def DEBUG_TRACKBALL_SPIN
+#ifdef DEBUG_TRACKBALL_SPIN
         {
             char buf[64];
             sprintf_s(buf, 64, "Left mouse down %d %d\r\n", pt.x, pt.y);
