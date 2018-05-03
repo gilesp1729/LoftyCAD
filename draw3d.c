@@ -265,7 +265,8 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
     {
         // handle mouse movement actions.
         // Highlight snap targets (use curr_obj for this)
-        if (!left_mouse && !right_mouse)
+        // But if rendering, don't do any picks in here (enables smooth orbiting and spinning)
+        if (!left_mouse && !right_mouse && !view_rendered)
         {
             auxGetMouseLoc(&pt.x, &pt.y);
             curr_obj = Pick(pt.x, pt.y, OBJ_FACE);
@@ -284,6 +285,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
             {
                 Point   new_point, p1, p3;
                 Point   *p00, *p01, *p02, *p03;
+                Point d1, d3, dn, da;
                 Edge *e;
                 ArcEdge *ae;
                 BezierEdge *be;
@@ -580,9 +582,14 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                         Object *obj = Pick(pt.x, pt.y, OBJ_FACE);
 
                         if (obj == NULL)
+                        {
                             picked_plane = facing_plane;
+                        }
                         else if (obj->type == OBJ_FACE)
+                        {
+                            picked_obj = obj;
                             picked_plane = &((Face *)obj)->normal;
+                        }
                         else
                             break;
                     }
@@ -593,59 +600,131 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
 
                     // generate the other corners. The rect goes in the 
                     // order picked-p1-new-p3. 
-                    // TODO: what if picked plane is on an angle? Do this in a more general way.
-                    switch (facing_index)
+                    if (picked_obj == NULL || picked_obj->type != OBJ_FACE)  //TODO: when starting on a volune, wierd things happen
                     {
-                    case PLANE_XY:
-                    case PLANE_MINUS_XY:
-                        p1.x = new_point.x;
-                        p1.y = picked_point.y;
-                        p1.z = picked_point.z;
-                        p3.x = picked_point.x;
-                        p3.y = new_point.y;
-                        p3.z = picked_point.z;
-                        break;
+                        // Drawing on a facing plane derived from standard axes
+                        switch (facing_index)
+                        {
+                        case PLANE_XY:
+                        case PLANE_MINUS_XY:
+                            d1.x = 1;
+                            d1.y = 0;
+                            d1.z = 0;
+                            d3.x = 0;
+                            d3.y = 1;
+                            d3.z = 0;
+                            break;
 
-                    case PLANE_YZ:
-                    case PLANE_MINUS_YZ:
-                        p1.x = picked_point.x;
-                        p1.y = new_point.y;
-                        p1.z = picked_point.z;
-                        p3.x = picked_point.x;
-                        p3.y = picked_point.y;
-                        p3.z = new_point.z;
-                        break;
+                        case PLANE_YZ:
+                        case PLANE_MINUS_YZ:
+                            d1.x = 0;
+                            d1.y = 1;
+                            d1.z = 0;
+                            d3.x = 0;
+                            d3.y = 0;
+                            d3.z = 1;
+                            break;
 
-                    case PLANE_XZ:
-                    case PLANE_MINUS_XZ:
-                        p1.x = new_point.x;
-                        p1.y = picked_point.y;
-                        p1.z = picked_point.z;
-                        p3.x = picked_point.x;
-                        p3.y = picked_point.y;
-                        p3.z = new_point.z;
-                        break;
+                        case PLANE_XZ:
+                        case PLANE_MINUS_XZ:
+                            d1.x = 1;
+                            d1.y = 0;
+                            d1.z = 0;
+                            d3.x = 0;
+                            d3.y = 0;
+                            d3.z = 1;
+                            break;
 
-                    case PLANE_GENERAL:
-                        ASSERT(FALSE, "Draw rect on PLANE_GENERAL Not implemented");
-                        break;
+                        case PLANE_GENERAL:
+                            ASSERT(FALSE, "Facing index must be axis aligned");
+                            break;
+                        }
                     }
+                    else
+                    {
+                        float ax, ay, az;
+
+                        // Drawing on a face on an existing object. Derive rect directions
+                        // from it if it is sensible to do so.
+                        rf = (Face *)picked_obj;
+                        dn.x = rf->normal.A;
+                        dn.y = rf->normal.B;
+                        dn.z = rf->normal.C;
+                        switch (rf->type)
+                        {
+                        case FACE_RECT:
+                            // We're drawing on an existing rect. Make the new rect parallel to its
+                            // principal directions just so it looks nice.
+                            e = (Edge *)rf->edges[0];
+                            d1.x = e->endpoints[1]->x - e->endpoints[0]->x;
+                            d1.y = e->endpoints[1]->y - e->endpoints[0]->y;
+                            d1.z = e->endpoints[1]->z - e->endpoints[0]->z;
+                            normalise_point(&d1);
+                            break;
+
+                        default:
+                            // Some other kind of face. Find a principal direction by looking
+                            // for the smallest component in the normal. If it is axis-aligned
+                            // one or two components of the normal will be zero. Any will do.
+                            ax = fabsf(dn.x);
+                            ay = fabsf(dn.y);
+                            az = fabsf(dn.z);
+                            if (ax < ay && ax < az)
+                            {
+                                da.x = 1;
+                                da.y = 0;
+                                da.z = 0;
+                            }
+                            else if (ay < ax && ay < az)
+                            {
+                                da.x = 0;
+                                da.y = 1;
+                                da.z = 0;
+                            }
+                            else
+                            {
+                                da.x = 0;
+                                da.y = 0;
+                                da.z = 1;
+                            }
+                            pcross(&da, &dn, &d1);
+                            break;
+                        }
+                        // calculate the other principal direction in the plane of the face
+                        pcross(&d1, &dn, &d3);
+                    }
+
+                    // Produce p1 and p3 by projecting picked-new onto the principal
+                    // directions derived above
+                    dn.x = new_point.x - picked_point.x;
+                    dn.y = new_point.y - picked_point.y;
+                    dn.z = new_point.z - picked_point.z;
+                    dist = pdot(&dn, &d1);
+                    p1.x = picked_point.x + d1.x * dist;
+                    p1.y = picked_point.y + d1.y * dist;
+                    p1.z = picked_point.z + d1.z * dist;
+                    dist = pdot(&dn, &d3);
+                    p3.x = picked_point.x + d3.x * dist;
+                    p3.y = picked_point.y + d3.y * dist;
+                    p3.z = picked_point.z + d3.z * dist;
 
                     // Make sure the normal vector is pointing towards the eye,
                     // swapping p1 and p3 if necessary.
-                    normal3(&p1, &picked_point, &p3, &norm);
+                    if (normal3(&p1, &picked_point, &p3, &norm))
+                    {
 #ifdef DEBUG_DRAW_RECT_NORMAL
-                    {
-                        char buf[256];
-                        sprintf_s(buf, 256, "%f %f %f\r\n", norm.A, norm.B, norm.C);
-                        Log(buf);
-                    }
+                        {
+                            char buf[256];
+                            sprintf_s(buf, 256, "%f %f %f\r\n", norm.A, norm.B, norm.C);
+                            Log(buf);
+                        }
 #endif
-                    if (dot(norm.A, norm.B, norm.C, facing_plane->A, facing_plane->B, facing_plane->C) < 0)
-                    {
-                        Point swap = p1;
-                        p1 = p3;
-                        p3 = swap;
+                        if (dot(norm.A, norm.B, norm.C, picked_plane->A, picked_plane->B, picked_plane->C) < 0)
+                        {
+                            Point swap = p1;
+                            p1 = p3;
+                            p3 = swap;
+                        }
                     }
 
                     // If first move, create the rect here.
@@ -957,7 +1036,6 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                 left_mouseX = pt.x;
                 left_mouseY = pt.y;
             }
-
         }
 
         // handle panning with right mouse drag. 

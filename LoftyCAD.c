@@ -473,7 +473,14 @@ clear_selection(void)
 void CALLBACK
 left_down(AUX_EVENTREC *event)
 {
-    // In any case, find if there is an object under the cursor, and
+    // If rendered, don't do anything here except orbit.
+    if (view_rendered)
+    {
+        trackball_MouseDown(event);
+        return;
+    }
+
+    // Find if there is an object under the cursor, and
     // also find if it is in the selection.
     picked_obj = Pick(event->data[0], event->data[1], OBJ_FACE);
 
@@ -818,6 +825,10 @@ left_click(AUX_EVENTREC *event)
     Object *sel_obj;
     Object *parent;
 
+    // If rendering, don't do any of this
+    if (view_rendered)
+        return;
+
     // If we have just clicked on an arc centre, do nothing here
     if (app_state == STATE_STARTING_ARC)
         return;
@@ -999,6 +1010,9 @@ right_click(AUX_EVENTREC *event)
     POINT pt;
     Object *parent, *sel_obj;
     char buf[32];
+
+    if (view_rendered)
+        return;
 
     picked_obj = Pick(event->data[0], event->data[1], OBJ_FACE);
     if (picked_obj == NULL)

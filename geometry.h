@@ -14,7 +14,7 @@ BOOL intersect_ray_plane(GLint x, GLint y, Plane *picked_plane, Point *new_point
 BOOL snap_ray_edge(GLint x, GLint y, Edge *edge, Point *new_point);
 void normal_list(Point *list, Plane *norm);
 void polygon_normal(Point *list, Plane *norm);
-void normal3(Point *b, Point *a, Point *c, Plane *norm);
+BOOL normal3(Point *b, Point *a, Point *c, Plane *norm);
 float angle3(Point *b, Point *a, Point *c, Plane *n);
 void mat_mult_by_row(float *m, float *v, float *res);
 void mat_mult_by_col(float *m, float *v, float *res);

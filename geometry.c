@@ -140,8 +140,8 @@ normal_list(Point *list, Plane *norm)
 }
 #endif
 
-// normal from 3 separate points
-void
+// normal from 3 separate points. Returns FALSE if not defined.
+BOOL
 normal3(Point *b, Point *a, Point *c, Plane *norm)
 {
     Point cp;
@@ -149,12 +149,16 @@ normal3(Point *b, Point *a, Point *c, Plane *norm)
 
     cross(b->x - a->x, b->y - a->y, b->z - a->z, c->x - a->x, c->y - a->y, c->z - a->z, &cp.x, &cp.y, &cp.z);
     length = (float)sqrt(cp.x * cp.x + cp.y * cp.y + cp.z * cp.z);
+    if (nz(length))
+        return FALSE;
+
     norm->A = cp.x / length;
     norm->B = cp.y / length;
     norm->C = cp.z / length;
     norm->refpt.x = a->x;
     norm->refpt.y = a->y;
     norm->refpt.z = a->z;
+    return TRUE;
 }
 
 // Returns the angle at a, between b and c, relative to a normal n.
