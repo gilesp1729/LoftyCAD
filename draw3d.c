@@ -776,7 +776,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
 
                     // Show the dimensions of the rect. We can't use show_dims_at here.
                     sprintf_s(buf, 64, "%s,%s mm", display_rounded(buf, length(p00, p01)), display_rounded(buf2, length(p00, p03)));
-                    show_hint_at(pt, buf);
+                    show_hint_at(pt, buf, FALSE);
                     break;
 
                 case STATE_DRAWING_CIRCLE:
@@ -891,7 +891,8 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                                     else
                                         o = opposite->edges[face->n_edges - i];
                                    
-                                    side = face_new(FACE_RECT, norm);  // Any old norm will do, it will be recalculated with the view list
+                                    side = face_new(FACE_RECT, norm);   // Any old norm will do, its (ABC) will come with the view list
+                                    side->normal.refpt = *eip;          // but we need to set a valid ref point
                                     side->initial_point = eip;
                                     side->vol = vol;
 
@@ -1023,7 +1024,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
 
                         // Show the height of the extrusion. TODO - show_dims_at for height
                         sprintf_s(buf, 64, "%s mm", display_rounded(buf2, extrude_height));
-                        show_hint_at(pt, buf);
+                        show_hint_at(pt, buf, FALSE);
                     }
 
                     break;

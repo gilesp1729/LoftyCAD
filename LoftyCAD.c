@@ -825,6 +825,8 @@ left_click(AUX_EVENTREC *event)
     Object *sel_obj;
     Object *parent;
 
+    hide_hint();
+
     // If rendering, don't do any of this
     if (view_rendered)
         return;

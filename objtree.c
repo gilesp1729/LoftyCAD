@@ -528,7 +528,7 @@ find_obj(Object *parent, Object *obj)
     switch (parent->type)
     {
     case OBJ_POINT:
-        ASSERT(FALSE, "A Point cannot be a parent");
+        // a Point cannot be a parent of anything
         return FALSE;
 
     case OBJ_EDGE:
@@ -842,8 +842,9 @@ gen_view_list_face(Face *face)
 
     face->view_valid = TRUE;
 
-    // calculate the normal vector.
+    // calculate the normal vector.  Store a new refpt here too, in case something has moved.
     polygon_normal(face->view_list, &face->normal);
+    face->normal.refpt = *face->edges[0]->endpoints[0];
 }
 
 // Generate the view list for an arc edge.
