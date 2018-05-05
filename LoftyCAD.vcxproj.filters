@@ -60,6 +60,9 @@
     <ClInclude Include="registry.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="triangulate.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -114,6 +117,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="serialise.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="triangulate.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

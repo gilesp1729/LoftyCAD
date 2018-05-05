@@ -1448,6 +1448,25 @@ Command(int wParam, int lParam)
 
         break;
 
+    case ID_FILE_EXPORT:
+        memset(&ofn, 0, sizeof(OPENFILENAME));
+        ofn.lStructSize = sizeof(OPENFILENAME);
+        ofn.hwndOwner = auxGetHWND();
+        ofn.lpstrFilter = "STL Files\0*.STL\0All Files\0*.*\0\0";
+        ofn.nFilterIndex = 1;
+        ofn.lpstrDefExt = "stl";
+        strcpy_s(new_filename, 256, curr_filename);
+        new_filename[strlen(new_filename) - 4] = '\0';
+        ofn.lpstrFile = new_filename;
+        ofn.nMaxFile = 256;
+        ofn.Flags = OFN_EXPLORER | OFN_OVERWRITEPROMPT;
+        if (GetSaveFileName(&ofn))
+        {
+
+        }
+
+        break;
+
     case ID_PREFERENCES_SETTINGS:
         display_help("Preferences");
         DialogBox(hInst, MAKEINTRESOURCE(IDD_PREFS), auxGetHWND(), prefs_dialog);

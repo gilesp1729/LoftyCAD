@@ -12,6 +12,7 @@
 #include "draw3d.h"
 #include "dimensions.h"
 #include "registry.h"
+#include "triangulate.h"
 
 // States the app can be in.
 typedef enum STATE
