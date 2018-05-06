@@ -2,10 +2,9 @@
 #include "LoftyCAD.h"
 #include <stdio.h>
 
-extern unsigned int objid;
 
 // A free list for Points. Only singly linked.
-static Point *free_list = NULL;
+Point *free_list = NULL;
 
 // Creation functions for objects
 Object *obj_new(void)
@@ -44,7 +43,18 @@ Point *point_new(float x, float y, float z)
 // Copy just the coordinates from the given point.
 Point *point_newp(Point *p)
 {
-    Point   *pt = calloc(1, sizeof(Point));
+    Point   *pt;
+
+    if (free_list != NULL)
+    {
+        pt = free_list;
+        free_list = (Point *)free_list->hdr.next;
+        memset(pt, 0, sizeof(Point));
+    }
+    else
+    {
+        pt = calloc(1, sizeof(Point));
+    }
 
     pt->hdr.type = OBJ_POINT;
     pt->hdr.ID = objid++;
@@ -859,6 +869,7 @@ gen_view_list_arc(ArcEdge *ae)
     float matrix[16];
     float v[4];
     float res[4];
+    int i;
 
     if (edge->view_valid)
         return;
@@ -880,6 +891,7 @@ gen_view_list_arc(ArcEdge *ae)
         step = edge->stepsize;
     else
         step = 2.0f * acosf(1.0f - tolerance / rad);
+    i = 0;
 
     if (ae->clockwise)  // Clockwise angles go negative
     {
@@ -890,7 +902,7 @@ gen_view_list_arc(ArcEdge *ae)
             theta -= 2 * PI;  
 
         // draw arc from p1 (on x axis) to p2. 
-        for (t = 0; t > theta; t -= step)
+        for (t = 0, i = 0; t > theta; t -= step, i++)
         {
             v[0] = rad * cosf(t);
             v[1] = rad * sinf(t);
@@ -918,7 +930,7 @@ gen_view_list_arc(ArcEdge *ae)
         if (theta < 0)
             theta += 2 * PI;
 
-        for (t = 0; t < theta; t += step)  
+        for (t = 0, i = 0; t < theta; t += step, i++)  
         {
             v[0] = rad * cosf(t);
             v[1] = rad * sinf(t);
@@ -938,6 +950,8 @@ gen_view_list_arc(ArcEdge *ae)
 #endif
         }
     }
+
+    edge->nsteps = i;
 
     // Make sure the last point is in the view list
     p = point_newp(edge->endpoints[1]);
@@ -1008,6 +1022,7 @@ recurse_bez
         p->hdr.ID = 0;
         objid--;
         link_tail((Object *)p, (Object **)&e->view_list);
+        e->nsteps++;
     }
     else
     {
@@ -1034,6 +1049,7 @@ gen_view_list_bez(BezierEdge *be)
     p->hdr.ID = 0;
     objid--;
     link_tail((Object *)p, (Object **)&e->view_list);
+    e->nsteps = 0;
 
     // TODO: fixed step division if stepsize > 0
 

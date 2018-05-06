@@ -1859,6 +1859,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
         auxInitDisplayMode(AUX_DEPTH16 | AUX_RGB | AUX_DOUBLE);
         auxInitWindow("LoftyCAD", TRUE, (HMENU)MAKEINTRESOURCE(IDC_LOFTYCAD), TRUE);
         Init();
+        init_triangulator();
 
         hInst = GetModuleHandle(NULL);
 

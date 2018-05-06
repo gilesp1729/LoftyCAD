@@ -111,6 +111,7 @@ typedef struct Edge
     float           stepsize;       // If zero, the curve is stepped out dynamically based on 
                                     // a flatness tolerance. If not, this is the angular step
                                     // (for arcs), or the parameter step (for beziers).
+    int             nsteps;         // The number of steps actually generated (arcs and beziers)
 } Edge;
 
 typedef struct StraightEdge
@@ -166,6 +167,11 @@ typedef struct Volume
                                     // If this face is moved or extruded, other objects will
                                     // move with it.
 } Volume;
+
+extern unsigned int objid;
+extern Point *free_list;
+
+
 
 // Prototypes for object functions: 
 

@@ -44,67 +44,6 @@ color(OBJECT obj_type, BOOL selected, BOOL highlighted, BOOL locked)
     glColor3f(r, g, b);
 }
 
-// Shade in a face.
-void
-face_shade(Face *face, BOOL selected, BOOL highlighted, BOOL locked)
-{
-    Point   *v, *last;
-
-    gen_view_list_face(face);
-
-    switch (face->type)
-    {
-    case FACE_RECT:
-    case FACE_CIRCLE:
-    case FACE_FLAT:
-        // Simple traverse of the face's view list.
-        glBegin(GL_POLYGON);
-        color(OBJ_FACE, selected, highlighted, locked);
-        glNormal3f(face->normal.A, face->normal.B, face->normal.C);
-        for (v = face->view_list; v != NULL; v = (Point *)v->hdr.next)
-            glVertex3f(v->x, v->y, v->z);
-        glEnd();
-        break;
-
-    case FACE_CYLINDRICAL:
-        // These view lists need to be read from the bottom edge (forward)
-        // and the top edge (backward) together, and formed into quads.
-        for (last = face->view_list; last->hdr.next != NULL; last = (Point *)last->hdr.next)
-            ;
-#ifdef DEBUG_SHADE_CYL_FACE
-        Log("Cyl view list:\r\n");
-        for (v = face->view_list; v->hdr.next != NULL; v = (Point *)v->hdr.next)
-        {
-            char buf[64];
-            sprintf_s(buf, 64, "%f %f %f\r\n", v->x, v->y, v->z);
-            Log(buf);
-        }
-#endif       
-        glBegin(GL_QUADS);
-        color(OBJ_FACE, selected, highlighted, locked);
-        for (v = face->view_list; v->hdr.next != NULL; v = (Point *)v->hdr.next)
-        {
-            Point *vnext = (Point *)v->hdr.next;
-            Point *lprev = (Point *)last->hdr.prev;
-            Plane norm;
-
-            normal3(vnext, lprev, last, &norm);
-            glNormal3f(norm.A, norm.B, norm.C);
-            glVertex3f(last->x, last->y, last->z);
-            glVertex3f(lprev->x, lprev->y, lprev->z);
-            glVertex3f(vnext->x, vnext->y, vnext->z);
-            glVertex3f(v->x, v->y, v->z);
-
-            last = lprev;
-        }
-        glEnd();
-        break;
-
-    case FACE_GENERAL:
-        ASSERT(FALSE, "Draw face general not implemented");
-        break;
-    }
-}
 
 // Draw any object.
 void
