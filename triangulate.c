@@ -202,6 +202,7 @@ stl_write(void)
         fprintf_s(stl, "    vertex %f %f %f\n", stl_points[i].x, stl_points[i].y, stl_points[i].z);
     fprintf_s(stl, "  endloop\n");
     fprintf_s(stl, "endfacet\n");
+    stl_tri_count++;
 }
 
 // callbacks for exporting tessellated stuff to an STL file
@@ -232,12 +233,13 @@ export_vertexData(void * vertex_data, void * polygon_data)
         case GL_TRIANGLES:
             stl_write();
             stl_count = 0;
+            stl_points[stl_count++] = *v;
             break;
 
         case GL_TRIANGLE_FAN:
             stl_write();
             stl_points[1] = stl_points[2];
-            stl_count = 2;
+            stl_points[2] = *v;
             break;
 
         case GL_TRIANGLE_STRIP:
@@ -246,7 +248,7 @@ export_vertexData(void * vertex_data, void * polygon_data)
                 stl_points[0] = stl_points[2];
             else
                 stl_points[1] = stl_points[2];
-            stl_count = 2;
+            stl_points[2] = *v;
             break;
         }
     }
@@ -255,6 +257,9 @@ export_vertexData(void * vertex_data, void * polygon_data)
 void 
 export_endData(void * polygon_data)
 {
+    // write out the last triangle
+    if (stl_count == 3)
+        stl_write();
 }
 
 void 
