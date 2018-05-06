@@ -4,9 +4,8 @@
 #define __TRI_H__
 
 void init_triangulator(void);
-void face_shade(Face *face, BOOL selected, BOOL highlighted, BOOL locked);
-void render_object(Object *obj);
-void render_object_tree(Object *tree);
+void face_shade(GLUtesselator *tess, Face *face, BOOL selected, BOOL highlighted, BOOL locked);
+void export_object(GLUtesselator *tess, Object *obj);
 void export_object_tree(Object *tree, char *filename);
 
 extern GLUtesselator *rtess;

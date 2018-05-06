@@ -1462,7 +1462,7 @@ Command(int wParam, int lParam)
         ofn.Flags = OFN_EXPLORER | OFN_OVERWRITEPROMPT;
         if (GetSaveFileName(&ofn))
         {
-
+            export_object_tree(object_tree, new_filename);
         }
 
         break;

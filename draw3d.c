@@ -178,7 +178,7 @@ draw_object(Object *obj, BOOL selected, BOOL highlighted, LOCK parent_lock)
         locked = parent_lock > obj->type;
         glPushName((GLuint)obj);
         face = (Face *)obj;
-        face_shade(face, selected, highlighted, locked);
+        face_shade(rtess, face, selected, highlighted, locked);
         glPopName();
         for (i = 0; i < face->n_edges; i++)
             draw_object((Object *)face->edges[i], selected, highlighted, parent_lock);
