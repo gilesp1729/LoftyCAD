@@ -487,7 +487,11 @@ left_down(AUX_EVENTREC *event)
     switch (app_state)
     {
     case STATE_NONE:
+#ifdef MOVE_ONLY_SELECTED
         if (!is_selected_parent(picked_obj))
+#else
+        if (picked_obj == NULL)
+#endif
         {
             trackball_MouseDown(event);
         }
@@ -846,11 +850,30 @@ left_click(AUX_EVENTREC *event)
 
     display_help("Selection");
 
-    // Pick object (already in picked_obj) and select. If Shift key down, add it to the selection.
+    // Pick object (already in picked_obj) and select. 
+    // If a double click, select its parent volume. 
+    // If Shift key down, add it to the selection.
     // If it is already selected, remove it from selection.
     if (picked_obj != NULL)
     {
-        if (remove_from_selection(picked_obj))
+        if (event->data[AUX_MOUSESTATUS] & AUX_DBLCLK)
+        {
+            if (selection != NULL && (event->data[AUX_MOUSESTATUS] & AUX_SHIFT) == 0)
+                clear_selection();
+
+            // test for this first, as we get called twice and don't want to unselect it
+            // before the double click comes through
+            parent = find_top_level_parent(object_tree, picked_obj);
+            if (parent != NULL)
+            {
+                picked_obj = parent;
+                sel_obj = obj_new();
+                sel_obj->next = selection;
+                selection = sel_obj;
+                sel_obj->prev = picked_obj;
+            }
+        }
+        else if (remove_from_selection(picked_obj))
         {
             if (selection != NULL && (event->data[AUX_MOUSESTATUS] & AUX_SHIFT) == 0)
                 clear_selection();
@@ -1185,303 +1208,200 @@ mouse_move(AUX_EVENTREC *event)
     key_status = event->data[AUX_MOUSESTATUS];
 }
 
-// Process WM_COMMAND from TK window proc
+// Process WM_COMMAND, INITMENUPOPUP and the like, from TK window proc
 int CALLBACK
-Command(int wParam, int lParam)
+Command(int message, int wParam, int lParam)
 {
     HMENU hMenu;
     OPENFILENAME ofn;
     char window_title[256];
     char new_filename[256];
 
-    switch (LOWORD(wParam))
+    switch (message)
     {
-    case IDM_EXIT:
-        check_file_changed(auxGetHWND());
-        break;
-
-    case IDM_ABOUT:
-        DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), auxGetHWND(), About);
-        break;
-
-    case ID_PREFERENCES_SNAPTOGRID:
-        hMenu = GetSubMenu(GetMenu(auxGetHWND()), 0);
-        if (snapping_to_grid)
+    case WM_COMMAND:
+        switch (LOWORD(wParam))
         {
-            snapping_to_grid = FALSE;
-            CheckMenuItem(hMenu, ID_PREFERENCES_SNAPTOGRID, MF_UNCHECKED);
-        }
-        else
-        {
-            snapping_to_grid = TRUE;
-            CheckMenuItem(hMenu, ID_PREFERENCES_SNAPTOGRID, MF_CHECKED);
-        }
-        break;
-
-    case ID_PREFERENCES_SNAPTOANGLE:
-        hMenu = GetSubMenu(GetMenu(auxGetHWND()), 0);
-        if (snapping_to_angle)
-        {
-            snapping_to_angle = FALSE;
-            CheckMenuItem(hMenu, ID_PREFERENCES_SNAPTOANGLE, MF_UNCHECKED);
-        }
-        else
-        {
-            snapping_to_angle = TRUE;
-            CheckMenuItem(hMenu, ID_PREFERENCES_SNAPTOANGLE, MF_CHECKED);
-        }
-        break;
-
-    case ID_VIEW_TOOLS:
-        hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
-        if (view_tools)
-        {
-            ShowWindow(hWndToolbar, SW_HIDE);
-            view_tools = FALSE;
-            CheckMenuItem(hMenu, ID_VIEW_TOOLS, MF_UNCHECKED);
-        }
-        else
-        {
-            ShowWindow(hWndToolbar, SW_SHOW);
-            view_tools = TRUE;
-            CheckMenuItem(hMenu, ID_VIEW_TOOLS, MF_CHECKED);
-        }
-        break;
-
-    case ID_VIEW_DEBUGLOG:
-        hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
-        if (view_debug)
-        {
-            ShowWindow(hWndDebug, SW_HIDE);
-            view_debug = FALSE;
-            CheckMenuItem(hMenu, ID_VIEW_DEBUGLOG, MF_UNCHECKED);
-        }
-        else
-        {
-            ShowWindow(hWndDebug, SW_SHOW);
-            view_debug = TRUE;
-            CheckMenuItem(hMenu, ID_VIEW_DEBUGLOG, MF_CHECKED);
-        }
-        break;
-
-    case ID_VIEW_HELP:
-        hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
-        if (view_help)
-        {
-            ShowWindow(hWndHelp, SW_HIDE);
-            view_help = FALSE;
-            CheckMenuItem(hMenu, ID_VIEW_HELP, MF_UNCHECKED);
-        }
-        else
-        {
-            ShowWindow(hWndHelp, SW_SHOW);
-            view_help = TRUE;
-            CheckMenuItem(hMenu, ID_VIEW_HELP, MF_CHECKED);
-        }
-        break;
-
-    case ID_VIEW_RENDEREDVIEW:
-        hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
-        if (view_rendered)
-        {
-            view_rendered = FALSE;
-            CheckMenuItem(hMenu, ID_VIEW_RENDEREDVIEW, MF_UNCHECKED);
-        }
-        else
-        {
-            view_rendered = TRUE;
-            CheckMenuItem(hMenu, ID_VIEW_RENDEREDVIEW, MF_CHECKED);
-        }
-        break;
-
-    case ID_VIEW_TOP:
-        facing_plane = &plane_XY;
-        facing_index = PLANE_XY;
-#ifdef DEBUG_COMMAND_FACING
-        Log("Facing plane XY\r\n");
-#endif
-        trackball_InitQuat(quat_XY);
-        break;
-
-    case ID_VIEW_FRONT:
-        facing_plane = &plane_YZ;
-        facing_index = PLANE_YZ;
-#ifdef DEBUG_COMMAND_FACING
-        Log("Facing plane YZ\r\n");
-#endif
-        trackball_InitQuat(quat_YZ);
-        break;
-
-    case ID_VIEW_LEFT:
-        facing_plane = &plane_XZ;
-        facing_index = PLANE_XZ;
-#ifdef DEBUG_COMMAND_FACING
-        Log("Facing plane XZ\r\n");
-#endif
-        trackball_InitQuat(quat_XZ);
-        break;
-
-    case ID_VIEW_BOTTOM:
-        facing_plane = &plane_mXY;
-        facing_index = PLANE_MINUS_XY;
-#ifdef DEBUG_COMMAND_FACING
-        Log("Facing plane -XY\r\n");
-#endif
-        trackball_InitQuat(quat_mXY);
-        break;
-
-    case ID_VIEW_BACK:
-        facing_plane = &plane_mYZ;
-        facing_index = PLANE_MINUS_YZ;
-#ifdef DEBUG_COMMAND_FACING
-        Log("Facing plane -YZ\r\n");
-#endif
-        trackball_InitQuat(quat_mYZ);
-        break;
-
-    case ID_VIEW_RIGHT:
-        facing_plane = &plane_mXZ;
-        facing_index = PLANE_MINUS_XZ;
-#ifdef DEBUG_COMMAND_FACING
-        Log("Facing plane -XZ\r\n");
-#endif
-        trackball_InitQuat(quat_mXZ);
-        break;
-
-    case ID_VIEW_ORTHO:
-        hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
-        if (!view_ortho)
-        {
-            view_ortho = TRUE;
-            CheckMenuItem(hMenu, ID_VIEW_PERSPECTIVE, MF_UNCHECKED);
-            CheckMenuItem(hMenu, ID_VIEW_ORTHO, MF_CHECKED);
-        }
-        break;
-
-    case ID_VIEW_PERSPECTIVE:
-        hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
-        if (view_ortho)
-        {
-            view_ortho = FALSE;
-            CheckMenuItem(hMenu, ID_VIEW_ORTHO, MF_UNCHECKED);
-            CheckMenuItem(hMenu, ID_VIEW_PERSPECTIVE, MF_CHECKED);
-        }
-        break;
-
-    case ID_FILE_NEW:
-    case ID_FILE_OPEN:
-        if (drawing_changed)
-        {
-            int rc = MessageBox(auxGetHWND(), "File modified. Save it?", curr_filename, MB_YESNOCANCEL | MB_ICONWARNING);
-
-            if (rc == IDCANCEL)
-                break;
-            else if (rc == IDYES)
-                serialise_tree(object_tree, curr_filename);
-        }
-
-        clear_selection();
-        purge_tree(object_tree);
-        object_tree = NULL;
-        drawing_changed = FALSE;
-        curr_filename[0] = '\0';
-        curr_title[0] = '\0';
-        SetWindowText(auxGetHWND(), "LoftyCAD");
-
-        if (LOWORD(wParam) == ID_FILE_NEW)
+        case IDM_EXIT:
+            check_file_changed(auxGetHWND());
             break;
 
-        memset(&ofn, 0, sizeof(OPENFILENAME));
-        ofn.lStructSize = sizeof(OPENFILENAME);
-        ofn.hwndOwner = auxGetHWND();
-        ofn.lpstrFilter = "LoftyCAD Files\0*.LCD\0All Files\0*.*\0\0";
-        ofn.nFilterIndex = 1;
-        ofn.lpstrDefExt = "lcd";
-        ofn.lpstrFile = curr_filename;
-        ofn.nMaxFile = 256;
-        ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST;
-        if (GetOpenFileName(&ofn))
-        {
-            deserialise_tree(&object_tree, curr_filename);
-            drawing_changed = FALSE;
-            strcpy_s(window_title, 256, curr_filename);
-            strcat_s(window_title, 256, " - ");
-            strcat_s(window_title, 256, curr_title);
-            SetWindowText(auxGetHWND(), window_title);
-            hMenu = GetSubMenu(GetMenu(auxGetHWND()), 0);
-            hMenu = GetSubMenu(hMenu, 8);
-            insert_filename_to_MRU(hMenu, curr_filename);
-        }
-
-        break;
-
-    case ID_FILE_SAVE:
-        if (curr_filename[0] != '\0')
-        {
-            serialise_tree(object_tree, curr_filename);
-            drawing_changed = FALSE;
+        case IDM_ABOUT:
+            DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), auxGetHWND(), About);
             break;
-        }
-        // If no filename, fall through to save as...
-    case ID_FILE_SAVEAS:
-        memset(&ofn, 0, sizeof(OPENFILENAME));
-        ofn.lStructSize = sizeof(OPENFILENAME);
-        ofn.hwndOwner = auxGetHWND();
-        ofn.lpstrFilter = "LoftyCAD Files\0*.LCD\0All Files\0*.*\0\0";
-        ofn.nFilterIndex = 1;
-        ofn.lpstrDefExt = "lcd";
-        ofn.lpstrFile = curr_filename;
-        ofn.nMaxFile = 256;
-        ofn.Flags = OFN_EXPLORER | OFN_OVERWRITEPROMPT;
-        if (GetSaveFileName(&ofn))
-        {
-            serialise_tree(object_tree, curr_filename);
-            drawing_changed = FALSE;
-            strcpy_s(window_title, 256, curr_filename);
-            strcat_s(window_title, 256, " - ");
-            strcat_s(window_title, 256, curr_title);
-            SetWindowText(auxGetHWND(), window_title);
+
+        case ID_PREFERENCES_SNAPTOGRID:
             hMenu = GetSubMenu(GetMenu(auxGetHWND()), 0);
-            hMenu = GetSubMenu(hMenu, 8);
-            insert_filename_to_MRU(hMenu, curr_filename);
-        }
+            if (snapping_to_grid)
+            {
+                snapping_to_grid = FALSE;
+                CheckMenuItem(hMenu, ID_PREFERENCES_SNAPTOGRID, MF_UNCHECKED);
+            }
+            else
+            {
+                snapping_to_grid = TRUE;
+                CheckMenuItem(hMenu, ID_PREFERENCES_SNAPTOGRID, MF_CHECKED);
+            }
+            break;
 
-        break;
+        case ID_PREFERENCES_SNAPTOANGLE:
+            hMenu = GetSubMenu(GetMenu(auxGetHWND()), 0);
+            if (snapping_to_angle)
+            {
+                snapping_to_angle = FALSE;
+                CheckMenuItem(hMenu, ID_PREFERENCES_SNAPTOANGLE, MF_UNCHECKED);
+            }
+            else
+            {
+                snapping_to_angle = TRUE;
+                CheckMenuItem(hMenu, ID_PREFERENCES_SNAPTOANGLE, MF_CHECKED);
+            }
+            break;
 
-    case ID_FILE_EXPORT:
-        memset(&ofn, 0, sizeof(OPENFILENAME));
-        ofn.lStructSize = sizeof(OPENFILENAME);
-        ofn.hwndOwner = auxGetHWND();
-        ofn.lpstrFilter = "STL Files\0*.STL\0All Files\0*.*\0\0";
-        ofn.nFilterIndex = 1;
-        ofn.lpstrDefExt = "stl";
-        strcpy_s(new_filename, 256, curr_filename);
-        new_filename[strlen(new_filename) - 4] = '\0';
-        ofn.lpstrFile = new_filename;
-        ofn.nMaxFile = 256;
-        ofn.Flags = OFN_EXPLORER | OFN_OVERWRITEPROMPT;
-        if (GetSaveFileName(&ofn))
-        {
-            export_object_tree(object_tree, new_filename);
-        }
+        case ID_VIEW_TOOLS:
+            hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
+            if (view_tools)
+            {
+                ShowWindow(hWndToolbar, SW_HIDE);
+                view_tools = FALSE;
+                CheckMenuItem(hMenu, ID_VIEW_TOOLS, MF_UNCHECKED);
+            }
+            else
+            {
+                ShowWindow(hWndToolbar, SW_SHOW);
+                view_tools = TRUE;
+                CheckMenuItem(hMenu, ID_VIEW_TOOLS, MF_CHECKED);
+            }
+            break;
 
-        break;
+        case ID_VIEW_DEBUGLOG:
+            hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
+            if (view_debug)
+            {
+                ShowWindow(hWndDebug, SW_HIDE);
+                view_debug = FALSE;
+                CheckMenuItem(hMenu, ID_VIEW_DEBUGLOG, MF_UNCHECKED);
+            }
+            else
+            {
+                ShowWindow(hWndDebug, SW_SHOW);
+                view_debug = TRUE;
+                CheckMenuItem(hMenu, ID_VIEW_DEBUGLOG, MF_CHECKED);
+            }
+            break;
 
-    case ID_PREFERENCES_SETTINGS:
-        display_help("Preferences");
-        DialogBox(hInst, MAKEINTRESOURCE(IDD_PREFS), auxGetHWND(), prefs_dialog);
-        strcpy_s(window_title, 256, curr_filename);
-        strcat_s(window_title, 256, " - ");
-        strcat_s(window_title, 256, curr_title);
-        SetWindowText(auxGetHWND(), window_title);
-        break;
+        case ID_VIEW_HELP:
+            hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
+            if (view_help)
+            {
+                ShowWindow(hWndHelp, SW_HIDE);
+                view_help = FALSE;
+                CheckMenuItem(hMenu, ID_VIEW_HELP, MF_UNCHECKED);
+            }
+            else
+            {
+                ShowWindow(hWndHelp, SW_SHOW);
+                view_help = TRUE;
+                CheckMenuItem(hMenu, ID_VIEW_HELP, MF_CHECKED);
+            }
+            break;
 
-    case ID_MRU_FILE1:
-    case ID_MRU_FILE2:
-    case ID_MRU_FILE3:
-    case ID_MRU_FILE4:
-        if (get_filename_from_MRU(LOWORD(wParam) - ID_MRU_BASE, new_filename))
-        {
+        case ID_VIEW_RENDEREDVIEW:
+            hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
+            if (view_rendered)
+            {
+                view_rendered = FALSE;
+                CheckMenuItem(hMenu, ID_VIEW_RENDEREDVIEW, MF_UNCHECKED);
+            }
+            else
+            {
+                view_rendered = TRUE;
+                CheckMenuItem(hMenu, ID_VIEW_RENDEREDVIEW, MF_CHECKED);
+            }
+            EnableWindow(GetDlgItem(hWndToolbar, IDB_EDGE), !view_rendered);
+            EnableWindow(GetDlgItem(hWndToolbar, IDB_RECT), !view_rendered);
+            EnableWindow(GetDlgItem(hWndToolbar, IDB_CIRCLE), !view_rendered);
+            EnableWindow(GetDlgItem(hWndToolbar, IDB_ARC_EDGE), !view_rendered);
+            EnableWindow(GetDlgItem(hWndToolbar, IDB_BEZIER_EDGE), !view_rendered);
+            EnableWindow(GetDlgItem(hWndToolbar, IDB_EXTRUDE), !view_rendered);
+            break;
+
+        case ID_VIEW_TOP:
+            facing_plane = &plane_XY;
+            facing_index = PLANE_XY;
+#ifdef DEBUG_COMMAND_FACING
+            Log("Facing plane XY\r\n");
+#endif
+            trackball_InitQuat(quat_XY);
+            break;
+
+        case ID_VIEW_FRONT:
+            facing_plane = &plane_YZ;
+            facing_index = PLANE_YZ;
+#ifdef DEBUG_COMMAND_FACING
+            Log("Facing plane YZ\r\n");
+#endif
+            trackball_InitQuat(quat_YZ);
+            break;
+
+        case ID_VIEW_LEFT:
+            facing_plane = &plane_XZ;
+            facing_index = PLANE_XZ;
+#ifdef DEBUG_COMMAND_FACING
+            Log("Facing plane XZ\r\n");
+#endif
+            trackball_InitQuat(quat_XZ);
+            break;
+
+        case ID_VIEW_BOTTOM:
+            facing_plane = &plane_mXY;
+            facing_index = PLANE_MINUS_XY;
+#ifdef DEBUG_COMMAND_FACING
+            Log("Facing plane -XY\r\n");
+#endif
+            trackball_InitQuat(quat_mXY);
+            break;
+
+        case ID_VIEW_BACK:
+            facing_plane = &plane_mYZ;
+            facing_index = PLANE_MINUS_YZ;
+#ifdef DEBUG_COMMAND_FACING
+            Log("Facing plane -YZ\r\n");
+#endif
+            trackball_InitQuat(quat_mYZ);
+            break;
+
+        case ID_VIEW_RIGHT:
+            facing_plane = &plane_mXZ;
+            facing_index = PLANE_MINUS_XZ;
+#ifdef DEBUG_COMMAND_FACING
+            Log("Facing plane -XZ\r\n");
+#endif
+            trackball_InitQuat(quat_mXZ);
+            break;
+
+        case ID_VIEW_ORTHO:
+            hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
+            if (!view_ortho)
+            {
+                view_ortho = TRUE;
+                CheckMenuItem(hMenu, ID_VIEW_PERSPECTIVE, MF_UNCHECKED);
+                CheckMenuItem(hMenu, ID_VIEW_ORTHO, MF_CHECKED);
+            }
+            break;
+
+        case ID_VIEW_PERSPECTIVE:
+            hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
+            if (view_ortho)
+            {
+                view_ortho = FALSE;
+                CheckMenuItem(hMenu, ID_VIEW_ORTHO, MF_UNCHECKED);
+                CheckMenuItem(hMenu, ID_VIEW_PERSPECTIVE, MF_CHECKED);
+            }
+            break;
+
+        case ID_FILE_NEW:
+        case ID_FILE_OPEN:
             if (drawing_changed)
             {
                 int rc = MessageBox(auxGetHWND(), "File modified. Save it?", curr_filename, MB_YESNOCANCEL | MB_ICONWARNING);
@@ -1500,19 +1420,149 @@ Command(int wParam, int lParam)
             curr_title[0] = '\0';
             SetWindowText(auxGetHWND(), "LoftyCAD");
 
-            if (!deserialise_tree(&object_tree, new_filename))
+            if (LOWORD(wParam) == ID_FILE_NEW)
+                break;
+
+            memset(&ofn, 0, sizeof(OPENFILENAME));
+            ofn.lStructSize = sizeof(OPENFILENAME);
+            ofn.hwndOwner = auxGetHWND();
+            ofn.lpstrFilter = "LoftyCAD Files\0*.LCD\0All Files\0*.*\0\0";
+            ofn.nFilterIndex = 1;
+            ofn.lpstrDefExt = "lcd";
+            ofn.lpstrFile = curr_filename;
+            ofn.nMaxFile = 256;
+            ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST;
+            if (GetOpenFileName(&ofn))
             {
-                MessageBox(auxGetHWND(), "File not found", new_filename, MB_OK | MB_ICONWARNING);
-            }
-            else
-            {
-                strcpy_s(curr_filename, 256, new_filename);
+                deserialise_tree(&object_tree, curr_filename);
+                drawing_changed = FALSE;
                 strcpy_s(window_title, 256, curr_filename);
                 strcat_s(window_title, 256, " - ");
                 strcat_s(window_title, 256, curr_title);
                 SetWindowText(auxGetHWND(), window_title);
+                hMenu = GetSubMenu(GetMenu(auxGetHWND()), 0);
+                hMenu = GetSubMenu(hMenu, 8);
+                insert_filename_to_MRU(hMenu, curr_filename);
             }
+
+            break;
+
+        case ID_FILE_SAVE:
+            if (curr_filename[0] != '\0')
+            {
+                serialise_tree(object_tree, curr_filename);
+                drawing_changed = FALSE;
+                break;
+            }
+            // If no filename, fall through to save as...
+        case ID_FILE_SAVEAS:
+            memset(&ofn, 0, sizeof(OPENFILENAME));
+            ofn.lStructSize = sizeof(OPENFILENAME);
+            ofn.hwndOwner = auxGetHWND();
+            ofn.lpstrFilter = "LoftyCAD Files\0*.LCD\0All Files\0*.*\0\0";
+            ofn.nFilterIndex = 1;
+            ofn.lpstrDefExt = "lcd";
+            ofn.lpstrFile = curr_filename;
+            ofn.nMaxFile = 256;
+            ofn.Flags = OFN_EXPLORER | OFN_OVERWRITEPROMPT;
+            if (GetSaveFileName(&ofn))
+            {
+                serialise_tree(object_tree, curr_filename);
+                drawing_changed = FALSE;
+                strcpy_s(window_title, 256, curr_filename);
+                strcat_s(window_title, 256, " - ");
+                strcat_s(window_title, 256, curr_title);
+                SetWindowText(auxGetHWND(), window_title);
+                hMenu = GetSubMenu(GetMenu(auxGetHWND()), 0);
+                hMenu = GetSubMenu(hMenu, 8);
+                insert_filename_to_MRU(hMenu, curr_filename);
+            }
+
+            break;
+
+        case ID_FILE_EXPORT:
+            memset(&ofn, 0, sizeof(OPENFILENAME));
+            ofn.lStructSize = sizeof(OPENFILENAME);
+            ofn.hwndOwner = auxGetHWND();
+            ofn.lpstrFilter = "STL Files\0*.STL\0All Files\0*.*\0\0";
+            ofn.nFilterIndex = 1;
+            ofn.lpstrDefExt = "stl";
+            strcpy_s(new_filename, 256, curr_filename);
+            new_filename[strlen(new_filename) - 4] = '\0';
+            ofn.lpstrFile = new_filename;
+            ofn.nMaxFile = 256;
+            ofn.Flags = OFN_EXPLORER | OFN_OVERWRITEPROMPT;
+            if (GetSaveFileName(&ofn))
+            {
+                export_object_tree(object_tree, new_filename);
+            }
+
+            break;
+
+        case ID_PREFERENCES_SETTINGS:
+            display_help("Preferences");
+            DialogBox(hInst, MAKEINTRESOURCE(IDD_PREFS), auxGetHWND(), prefs_dialog);
+            strcpy_s(window_title, 256, curr_filename);
+            strcat_s(window_title, 256, " - ");
+            strcat_s(window_title, 256, curr_title);
+            SetWindowText(auxGetHWND(), window_title);
+            break;
+
+        case ID_MRU_FILE1:
+        case ID_MRU_FILE2:
+        case ID_MRU_FILE3:
+        case ID_MRU_FILE4:
+            if (get_filename_from_MRU(LOWORD(wParam) - ID_MRU_BASE, new_filename))
+            {
+                if (drawing_changed)
+                {
+                    int rc = MessageBox(auxGetHWND(), "File modified. Save it?", curr_filename, MB_YESNOCANCEL | MB_ICONWARNING);
+
+                    if (rc == IDCANCEL)
+                        break;
+                    else if (rc == IDYES)
+                        serialise_tree(object_tree, curr_filename);
+                }
+
+                clear_selection();
+                purge_tree(object_tree);
+                object_tree = NULL;
+                drawing_changed = FALSE;
+                curr_filename[0] = '\0';
+                curr_title[0] = '\0';
+                SetWindowText(auxGetHWND(), "LoftyCAD");
+
+                if (!deserialise_tree(&object_tree, new_filename))
+                {
+                    MessageBox(auxGetHWND(), "File not found", new_filename, MB_OK | MB_ICONWARNING);
+                }
+                else
+                {
+                    strcpy_s(curr_filename, 256, new_filename);
+                    strcpy_s(window_title, 256, curr_filename);
+                    strcat_s(window_title, 256, " - ");
+                    strcat_s(window_title, 256, curr_title);
+                    SetWindowText(auxGetHWND(), window_title);
+                }
+            }
+            break;
         }
+        break;
+
+    case WM_INITMENUPOPUP:
+        if ((HMENU)wParam == GetSubMenu(GetMenu(auxGetHWND()), 0))
+        {
+            EnableMenuItem((HMENU)wParam, ID_FILE_SAVE, drawing_changed ? MF_ENABLED : MF_GRAYED);
+            EnableMenuItem((HMENU)wParam, ID_FILE_SAVEAS, drawing_changed ? MF_ENABLED : MF_GRAYED);
+            EnableMenuItem((HMENU)wParam, ID_FILE_EXPORT, drawing_changed ? MF_ENABLED : MF_GRAYED);
+        }
+        else if ((HMENU)wParam == GetSubMenu(GetMenu(auxGetHWND()), 1))
+        {
+            EnableMenuItem((HMENU)wParam, ID_EDIT_CUT, selection != NULL ? MF_ENABLED : MF_GRAYED);
+            EnableMenuItem((HMENU)wParam, ID_EDIT_COPY, selection != NULL ? MF_ENABLED : MF_GRAYED);
+            EnableMenuItem((HMENU)wParam, ID_EDIT_DELETE, selection != NULL ? MF_ENABLED : MF_GRAYED);
+        }
+
         break;
     }
     return 0;
@@ -1582,6 +1632,14 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         LoadAndDisplayIcon(hWnd, 0, IDB_MINUS_XY, IDS_MINUS_XY);
         LoadAndDisplayIcon(hWnd, 0, IDB_MINUS_YZ, IDS_MINUS_YZ);
         LoadAndDisplayIcon(hWnd, 0, IDB_MINUS_XZ, IDS_MINUS_XZ);
+
+        // Tools are disabled when in render view
+        EnableWindow(GetDlgItem(hWnd, IDB_EDGE), !view_rendered);
+        EnableWindow(GetDlgItem(hWnd, IDB_RECT), !view_rendered);
+        EnableWindow(GetDlgItem(hWnd, IDB_CIRCLE), !view_rendered);
+        EnableWindow(GetDlgItem(hWnd, IDB_ARC_EDGE), !view_rendered);
+        EnableWindow(GetDlgItem(hWnd, IDB_BEZIER_EDGE), !view_rendered);
+        EnableWindow(GetDlgItem(hWnd, IDB_EXTRUDE), !view_rendered);
 
         // For now grey out unimplemented ones
         EnableWindow(GetDlgItem(hWnd, IDB_POINT), FALSE);

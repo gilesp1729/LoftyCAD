@@ -140,6 +140,7 @@ typedef struct _AUX_EVENTREC {
 #define AUX_MIDDLEBUTTON        4
 #define AUX_SHIFT               8
 #define AUX_CONTROL             16
+#define AUX_DBLCLK              32
 
 /* 
 ** ToolKit Key Codes
@@ -288,7 +289,7 @@ void APIENTRY auxKeyFunc(int, AUXKEYPROC);
 typedef void (CALLBACK* AUXMOUSEPROC)(AUX_EVENTREC *);
 void APIENTRY auxMouseFunc(int, int, AUXMOUSEPROC);
 
-typedef int (CALLBACK* AUXCOMMANDPROC)(int, int);
+typedef int (CALLBACK* AUXCOMMANDPROC)(int, int, int);
 void APIENTRY auxCommandFunc(AUXCOMMANDPROC);
 
 typedef void (CALLBACK* AUXDESTROYPROC)(HWND);

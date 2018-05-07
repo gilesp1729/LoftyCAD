@@ -213,8 +213,10 @@ static GLenum (CALLBACK *MouseUpFunc)(int, int, GLenum)   = NULL;
 static GLenum(CALLBACK *MouseMoveFunc)(int, int, GLenum)  = NULL;
 static GLenum(CALLBACK *MouseWheelFunc)(int, int, int)    = NULL;
 static void (CALLBACK *IdleFunc)(void)                    = NULL;
-static int (CALLBACK *CommandFunc)(int, int)              = NULL;
-static void (CALLBACK *DestroyFunc)(HWND)                  = NULL;
+static int (CALLBACK *CommandFunc)(int, int, int)         = NULL;
+static void (CALLBACK *DestroyFunc)(HWND)                 = NULL;
+
+static BOOL double_click = FALSE;
 
 static char     *lpszClassName = "tkLibWClass";
 static WCHAR    *lpszClassNameW = L"tkLibWClass";
@@ -528,7 +530,7 @@ void tkIdleFunc(void (CALLBACK *Func)(void))
     IdleFunc = Func;
 }
 
-void tkCommandFunc(int (CALLBACK *Func)(int, int))
+void tkCommandFunc(int (CALLBACK *Func)(int, int, int))
 {
     CommandFunc = Func;
 }
@@ -1067,8 +1069,17 @@ PIXELFORMATDESCRIPTOR pfd;
          return(0);
 
       case WM_TIMER:
-          // GP - this timer makes it redraw
-          ForceRedraw(hWnd);
+          switch (wParam)
+          {
+          case 9999:
+              // GP - this timer makes it redraw
+              ForceRedraw(hWnd);
+              break;
+          case 9998:
+              // This timer is the double click timer
+              double_click = FALSE;
+              break;
+          }
           break;
 
       case WM_SIZE:
@@ -1258,6 +1269,18 @@ PIXELFORMATDESCRIPTOR pfd;
                  mask |= TK_SHIFT;
              if (wParam & MK_CONTROL)
                  mask |= TK_CONTROL;
+             if (double_click)
+             {
+                 double_click = FALSE;
+                 mask |= TK_DBLCLK;
+                 KillTimer(hWnd, 9998);
+             }
+             else
+             {
+                 double_click = TRUE;
+                 SetTimer(hWnd, 9998, GetDoubleClickTime(), NULL);
+             }
+
              if ((*MouseUpFunc)(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam), mask))
                {
                ForceRedraw( hWnd );
@@ -1417,9 +1440,10 @@ PIXELFORMATDESCRIPTOR pfd;
             }
          return (0);
 
+      case WM_INITMENUPOPUP:
       case WM_COMMAND:
           if (CommandFunc)
-              return (*CommandFunc)(wParam, lParam);
+              return (*CommandFunc)(message, wParam, lParam);
           break;
 
       case WM_CLOSE:

@@ -90,8 +90,9 @@ enum {
 #define	TK_LEFTBUTTON		1
 #define	TK_RIGHTBUTTON		2
 #define	TK_MIDDLEBUTTON		4
-#define	TK_SHIFT		8
-#define	TK_CONTROL		16
+#define	TK_SHIFT		    8
+#define	TK_CONTROL		    16
+#define TK_DBLCLK           32
 
 /* 
 ** Key Codes
@@ -220,7 +221,7 @@ extern void tkMouseUpFunc(GLenum (CALLBACK *)(int, int, GLenum));
 extern void tkMouseMoveFunc(GLenum(CALLBACK *)(int, int, GLenum));
 extern void tkMouseWheelFunc(GLenum(CALLBACK *)(int, int, int));
 extern void tkIdleFunc(void (CALLBACK *)(void));
-extern void tkCommandFunc(int (CALLBACK *)(int, int));
+extern void tkCommandFunc(int (CALLBACK *)(int, int, int));
 extern void tkDestroyFunc(void (CALLBACK *)(HWND));
 
 extern void tkSwapBuffers(void);

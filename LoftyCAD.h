@@ -121,6 +121,7 @@ void CALLBACK Draw(BOOL picking, GLint x_pick, GLint y_pick);
 void CALLBACK Position(BOOL picking, GLint x_pick, GLint y_pick);
 void display_help(char *key);
 void change_state(STATE new_state);
+BOOL is_selected_parent(Object *obj);
 
 // Forwards for window procedures
 int WINAPI debug_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);

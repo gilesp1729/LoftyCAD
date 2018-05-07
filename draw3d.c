@@ -245,12 +245,16 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick)
                     else if (snapping_to_angle)
                         snap_to_angle(picked_plane, &picked_point, &new_point, angle_snap);
                     snap_to_grid(facing_plane, &new_point);
-
+#ifdef MOVE_ONLY_SELECTED
                     // TODO: If picked_obj is a part of the selection, just manipulate that.
                     // Only when a top level object is picked do we want to move the whole
                     // selection.
                     parent = find_top_level_parent(object_tree, picked_obj);
                     if (picked_obj != parent)
+#else
+                    parent = find_top_level_parent(object_tree, picked_obj);
+                    if (!is_selected_parent(picked_obj))
+#endif
                     {
                         move_obj
                             (
