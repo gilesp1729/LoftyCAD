@@ -197,6 +197,7 @@ Face *clone_face_reverse(Face *face);
 // Find object in tree or as child of another object
 BOOL find_obj(Object *parent, Object *obj);
 Object *find_top_level_parent(Object *tree, Object *obj);
+BOOL is_top_level_object(Object *obj, Object *obj_list);
 
 // Regenerate a view list
 void invalidate_all_view_lists(Object *parent, Object *obj, float dx, float dy, float dz);
@@ -207,6 +208,9 @@ void gen_view_list_bez(BezierEdge *be);
 // Write and read a tree to a file
 void serialise_tree(Object *tree, char *filename);
 BOOL deserialise_tree(Object **tree, char *filename);
+void write_checkpoint(Object *tree, char *filename);
+BOOL read_checkpoint(Object **tree, char *filename, int generation);
+void clean_checkpoints(char *filename);
 
 // Delete an object, or the whole tree
 void purge_obj(Object *obj);

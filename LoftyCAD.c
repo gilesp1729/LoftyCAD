@@ -40,8 +40,10 @@ BOOL view_help = TRUE;
 STATE app_state = STATE_NONE;
 
 // A list of objects that are currently selected. The "prev" pointer points to 
-// the actual object (it's a singly linked list)
+// the actual object (it's a singly linked list). There is also a clipboard,
+// which is arranged similarly.
 Object *selection = NULL;
+Object *clipboard = NULL;
 
 // List of objects to be drawn
 Object *object_tree = NULL;
@@ -119,6 +121,13 @@ float yTrans = 0;
 float zTrans = -200;    // twice the initial half_size
 int zoom_delta = 0;
 
+// Clipboard paste offsets
+float clip_xoffset, clip_yoffset, clip_zoffset;
+
+// Undo (checkpoint) generation, the latest generation to be written, and the highest to be written
+int generation = 0;
+int latest_generation = 0;
+int max_generation = 0;
 
 // Set material and lighting up
 void
@@ -566,13 +575,13 @@ is_selected_parent(Object *obj)
     return present;
 }
 
-// Clear the selection
+// Clear the selection, or the clipboard.
 void
-clear_selection(void)
+clear_selection(Object **sel_list)
 {
     Object *sel_obj, *next_obj;
 
-    sel_obj = selection;
+    sel_obj = *sel_list;
     if (sel_obj == NULL)
         return;
 
@@ -583,7 +592,7 @@ clear_selection(void)
         sel_obj = next_obj;
     } while (next_obj != NULL);
 
-    selection = NULL;
+    *sel_list = NULL;
 }
 
 // Mouse handlers
@@ -829,7 +838,8 @@ left_up(AUX_EVENTREC *event)
         ReleaseCapture();
         left_mouse = FALSE;
         change_state(STATE_NONE);
-        drawing_changed = TRUE;
+        drawing_changed = TRUE;  // TODO test for a real change (poss just a click)
+        write_checkpoint(object_tree, curr_filename);
         break;
 
     case STATE_DRAWING_RECT:
@@ -888,10 +898,8 @@ left_up(AUX_EVENTREC *event)
             curr_obj->lock = 
                 (app_state == STATE_DRAWING_RECT || app_state == STATE_DRAWING_CIRCLE) ? LOCK_EDGES : LOCK_NONE;
 
-            // TODO push tree to undo stack
-
-
             drawing_changed = TRUE;
+            write_checkpoint(object_tree, curr_filename);
             curr_obj = NULL;
         }
 
@@ -906,6 +914,7 @@ left_up(AUX_EVENTREC *event)
         left_mouse = FALSE;
         change_state(STATE_NONE);
         drawing_changed = TRUE;
+        write_checkpoint(object_tree, curr_filename);
         hide_hint();
         break;
 
@@ -994,7 +1003,7 @@ left_click(AUX_EVENTREC *event)
         if (event->data[AUX_MOUSESTATUS] & AUX_DBLCLK)
         {
             if (selection != NULL && (event->data[AUX_MOUSESTATUS] & AUX_SHIFT) == 0)
-                clear_selection();
+                clear_selection(&selection);
 
             // test for this first, as we get called twice and don't want to unselect it
             // before the double click comes through
@@ -1011,12 +1020,12 @@ left_click(AUX_EVENTREC *event)
         else if (remove_from_selection(picked_obj))
         {
             if (selection != NULL && (event->data[AUX_MOUSESTATUS] & AUX_SHIFT) == 0)
-                clear_selection();
+                clear_selection(&selection);
         }
         else
         {
             if (selection != NULL && (event->data[AUX_MOUSESTATUS] & AUX_SHIFT) == 0)
-                clear_selection();
+                clear_selection(&selection);
 
             // select it
             sel_obj = obj_new();
@@ -1287,7 +1296,7 @@ right_click(AUX_EVENTREC *event)
         break;
 
     case ID_OBJ_SELECTPARENTVOLUME:
-        clear_selection();
+        clear_selection(&selection);
         sel_obj = obj_new();
         sel_obj->next = selection;
         selection = sel_obj;
@@ -1326,7 +1335,9 @@ check_file_changed(HWND hWnd)
         }
     }
 
-    clear_selection();
+    clean_checkpoints(curr_filename);
+    clear_selection(&selection);
+    clear_selection(&clipboard);
     purge_tree(object_tree);
     DestroyWindow(hWnd);
 }
@@ -1351,6 +1362,7 @@ Command(int message, int wParam, int lParam)
     OPENFILENAME ofn;
     char window_title[256];
     char new_filename[256];
+    Object *obj, *sel_obj;
 
     switch (message)
     {
@@ -1547,10 +1559,12 @@ Command(int message, int wParam, int lParam)
                     serialise_tree(object_tree, curr_filename);
             }
 
-            clear_selection();
+            clear_selection(&selection);
             purge_tree(object_tree);
             object_tree = NULL;
             drawing_changed = FALSE;
+            clean_checkpoints(curr_filename);
+            generation = 0;
             curr_filename[0] = '\0';
             curr_title[0] = '\0';
             SetWindowText(auxGetHWND(), "LoftyCAD");
@@ -1623,7 +1637,7 @@ Command(int message, int wParam, int lParam)
             ofn.nFilterIndex = 1;
             ofn.lpstrDefExt = "stl";
             strcpy_s(new_filename, 256, curr_filename);
-            new_filename[strlen(new_filename) - 4] = '\0';
+            new_filename[strlen(new_filename) - 4] = '\0';   // TODO do this better
             ofn.lpstrFile = new_filename;
             ofn.nMaxFile = 256;
             ofn.Flags = OFN_EXPLORER | OFN_OVERWRITEPROMPT;
@@ -1659,7 +1673,7 @@ Command(int message, int wParam, int lParam)
                         serialise_tree(object_tree, curr_filename);
                 }
 
-                clear_selection();
+                clear_selection(&selection);
                 purge_tree(object_tree);
                 object_tree = NULL;
                 drawing_changed = FALSE;
@@ -1681,6 +1695,104 @@ Command(int message, int wParam, int lParam)
                 }
             }
             break;
+
+        case ID_EDIT_CUT:
+            clear_selection(&clipboard);
+            clipboard = selection;
+            selection = NULL;
+
+            // You can't cut a component, only a top-level object (in the object tree).
+            // Check that they are in fact top-level before unlinking them.
+            for (obj = clipboard; obj != NULL; obj = obj->next)
+            {
+                if (is_top_level_object(obj->prev, object_tree))
+                    delink(obj->prev, &object_tree);
+                // TODO else: remove the object in the clipboard here, because re-pasting will put it in the same place...
+            }
+            clip_xoffset = 0;
+            clip_yoffset = 0;
+            clip_zoffset = 0;
+            drawing_changed = TRUE;
+            write_checkpoint(object_tree, curr_filename);
+            break;
+
+        case ID_EDIT_COPY:
+            // As above, but don't unlink the objects. The clipboard is a reference to 
+            // existing objects, not a copy of them. TODO: Make sure this is still OK.
+            // Excel does it like this, and it drives me nuts sometimes.
+            clear_selection(&clipboard);
+            clipboard = selection;
+            selection = NULL;
+            clip_xoffset = 10;
+            clip_yoffset = 10;
+            clip_zoffset = 0;
+            break;
+
+        case ID_EDIT_PASTE:
+            clear_selection(&selection);
+
+            // Link the objects in the clipboard to the object tree. Do this by making a 
+            // copy of them, as we might want to paste the same thing multiple times.
+            // Each successive copy will go in at an increasing offset in the facing plane.
+            for (obj = clipboard; obj != NULL; obj = obj->next)
+            {
+                Object * new_obj = copy_obj(obj->prev, clip_xoffset, clip_yoffset, clip_zoffset);
+
+                clear_move_copy_flags(obj->prev);
+                link_tail(new_obj, &object_tree);
+                sel_obj = obj_new();
+                sel_obj->next = selection;
+                selection = sel_obj;
+                sel_obj->prev = new_obj;
+            }
+
+            clip_xoffset += 10;  // very temporary (it needs to be scaled rasonably, and in the facing plane)
+            clip_yoffset += 10;
+            drawing_changed = TRUE;
+            write_checkpoint(object_tree, curr_filename);
+            break;
+
+        case ID_EDIT_DELETE:
+            // You can't delete a component, only a top-level object (in the object tree).
+            // Check that they are in fact top-level before deleting them.
+            for (obj = selection; obj != NULL; obj = obj->next)
+            {
+                if (is_top_level_object(obj->prev, object_tree))
+                {
+                    delink(obj->prev, &object_tree);
+                    purge_obj(obj->prev);
+                }
+            }
+            clear_selection(&selection);
+            drawing_changed = TRUE;
+            write_checkpoint(object_tree, curr_filename);
+            break;
+
+        case ID_EDIT_SELECTALL:
+            // Put all top-level objects on the selection list.
+            clear_selection(&selection);
+            for (obj = object_tree; obj != NULL; obj = obj->next)
+            {
+                sel_obj = obj_new();
+                sel_obj->next = selection;
+                selection = sel_obj;
+                sel_obj->prev = obj;
+            }
+            break;
+
+        case ID_EDIT_SELECTNONE:
+            clear_selection(&selection);
+            break;
+
+        case ID_EDIT_UNDO:
+            generation--;
+            read_checkpoint(&object_tree, curr_filename, generation);
+            break;
+
+        case ID_EDIT_REDO:
+            generation++;
+            read_checkpoint(&object_tree, curr_filename, generation);
+            break;
         }
         break;
 
@@ -1693,6 +1805,8 @@ Command(int message, int wParam, int lParam)
         }
         else if ((HMENU)wParam == GetSubMenu(GetMenu(auxGetHWND()), 1))
         {
+            EnableMenuItem((HMENU)wParam, ID_EDIT_UNDO, generation > 0 ? MF_ENABLED : MF_GRAYED);
+            EnableMenuItem((HMENU)wParam, ID_EDIT_REDO, generation < latest_generation ? MF_ENABLED : MF_GRAYED);
             EnableMenuItem((HMENU)wParam, ID_EDIT_CUT, selection != NULL ? MF_ENABLED : MF_GRAYED);
             EnableMenuItem((HMENU)wParam, ID_EDIT_COPY, selection != NULL ? MF_ENABLED : MF_GRAYED);
             EnableMenuItem((HMENU)wParam, ID_EDIT_DELETE, selection != NULL ? MF_ENABLED : MF_GRAYED);
@@ -2019,6 +2133,8 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             angle_snap = atoi(buf);
 
             drawing_changed = TRUE;   // TODO test for a real change
+            // Note: we can't undo this.
+
             EndDialog(hWnd, 1);
             break;
 

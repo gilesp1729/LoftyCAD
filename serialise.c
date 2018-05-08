@@ -491,3 +491,56 @@ deserialise_tree(Object **tree, char *filename)
     return TRUE;
 }
 
+// Write a checkpoint (a file in the undo stack).
+void
+write_checkpoint(Object *tree, char *filename)
+{
+    char basename[256], check[256];
+    int baselen;
+
+    strcpy_s(basename, 256, filename);
+    baselen = strlen(basename);
+    if (baselen > 4)
+        basename[baselen - 4] = '\0';    // cut off ".lcd"     // TODO do this better
+    sprintf_s(check, 256, "%s_%04d.lcd", basename, ++generation);
+    serialise_tree(tree, check);
+    latest_generation = generation;
+    if (generation > max_generation)
+        max_generation = generation;  // TODO - do I need this for anything?
+}
+
+// Read back a given generation of checkpoint. Generation zero is the
+// original file (or an empty tree). Clean out the existing tree first.
+BOOL
+read_checkpoint(Object **tree, char *filename, int generation)
+{
+    char basename[256], check[256];
+    int baselen;
+
+    clear_selection(&selection);
+    clear_selection(&clipboard);
+    purge_tree(*tree);
+    *tree = NULL;
+
+    if (generation > 0)
+    {
+        strcpy_s(basename, 256, filename);
+        baselen = strlen(basename);
+        if (baselen > 4)
+            basename[baselen - 4] = '\0';    // cut off ".lcd"     // TODO do this better
+        sprintf_s(check, 256, "%s_%04d.lcd", basename, generation);
+        return deserialise_tree(tree, check);
+    }
+    else if (filename[0] != '\0')
+    {
+        return deserialise_tree(tree, filename);
+    }
+
+    return TRUE;
+}
+
+// Clean out all the checkpoint files for a filename.
+void
+clean_checkpoints(char *filename)
+{
+}

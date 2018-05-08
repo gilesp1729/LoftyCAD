@@ -67,6 +67,7 @@ extern BOOL view_rendered;
 
 extern STATE app_state;
 extern Object *selection;
+extern Object *clipboard;
 extern Object *object_tree;
 extern BOOL drawing_changed;
 extern Object *curr_obj;
@@ -85,7 +86,10 @@ extern int angle_snap;
 extern BOOL snapping_to_grid;
 extern BOOL snapping_to_angle;
 extern float half_size;
-
+extern float clip_xoffset, clip_yoffset, clip_zoffset;
+extern int generation;
+extern int latest_generation;
+extern int max_generation;
 
 
 // Debug stuff
@@ -105,8 +109,8 @@ extern float half_size;
 #undef DEBUG_SHADE_CYL_FACE
 #undef DEBUG_DRAW_RECT_NORMAL
 #undef DEBUG_POSITION_ZOOM
-#define DEBUG_PICK
-#define DEBUG_PICK_ALL
+#undef DEBUG_PICK
+#undef DEBUG_PICK_ALL
 #undef DEBUG_LEFT_UP_FACING
 #undef DEBUG_LEFT_UP_MODELVIEW
 #undef DEBUG_COMMAND_FACING
@@ -122,7 +126,7 @@ void CALLBACK Position(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, G
 void display_help(char *key);
 void change_state(STATE new_state);
 BOOL is_selected_parent(Object *obj);
-void clear_selection(void);
+void clear_selection(Object **sel_list);
 
 // Forwards for window procedures
 int WINAPI debug_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);

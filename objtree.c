@@ -182,6 +182,20 @@ link_tail(Object *new_obj, Object **obj_list)
     }
 }
 
+// Test if an object is in the object tree at the top level.
+BOOL
+is_top_level_object(Object *obj, Object *tree)
+{
+    Object *o;
+
+    for (o = tree; o != NULL; o = o->next)
+    {
+        if (obj == o)
+            return TRUE;
+    }
+    return FALSE;
+}
+
 // Clear the moved and copied_to flags on all points referenced by the object.
 // Call this after move_obj or copy_obj.
 void
@@ -270,6 +284,7 @@ copy_obj(Object *obj, float xoffset, float yoffset, float zoffset)
         else
         {
             new_obj = (Object *)point_new(p->x + xoffset, p->y + yoffset, p->z + zoffset);
+            new_obj->lock = obj->lock;
             obj->copied_to = new_obj;
         }
         break;
@@ -283,6 +298,7 @@ copy_obj(Object *obj, float xoffset, float yoffset, float zoffset)
         {
             // Copy the edge.
             new_obj = (Object *)edge_new(((Edge *)obj)->type);
+            new_obj->lock = obj->lock;
             obj->copied_to = new_obj;
 
             // Copy the points
@@ -313,6 +329,7 @@ copy_obj(Object *obj, float xoffset, float yoffset, float zoffset)
         face = (Face *)obj;
         new_face = face_new(face->type, face->normal);
         new_obj = (Object *)new_face;
+        new_obj->lock = obj->lock;
 
         // Copy the edges
         for (i = 0; i < face->n_edges; i++)
@@ -327,7 +344,7 @@ copy_obj(Object *obj, float xoffset, float yoffset, float zoffset)
         // Set the initial point corresponding to the original
         edge = face->edges[0];
         new_edge = new_face->edges[0];
-        if (face->initial_point = edge->endpoints[0])
+        if (face->initial_point == edge->endpoints[0])
         {
             new_face->initial_point = new_edge->endpoints[0];
         }
@@ -355,9 +372,11 @@ copy_obj(Object *obj, float xoffset, float yoffset, float zoffset)
         vol = (Volume *)obj;
         new_vol = vol_new(NULL);
         new_obj = (Object *)new_vol;
+        new_obj->lock = obj->lock;
         for (face = vol->faces; face != NULL; face = (Face *)face->hdr.next)
         {
             new_face = (Face *)copy_obj((Object *)face, xoffset, yoffset, zoffset);
+            new_face->vol = new_vol;
             link_tail((Object *)new_face, (Object **)&new_vol->faces);
         }
         break;

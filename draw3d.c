@@ -244,7 +244,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                 case STATE_DRAGGING_SELECT:
                     // Each move, clear the selection, then pick all objects lying within
                     // the selection rectangle, adding their top-level parents to the selection.
-                    clear_selection();
+                    clear_selection(&selection);
                     selection = 
                         Pick_all_in_rect
                         (
