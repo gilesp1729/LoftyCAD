@@ -21,6 +21,7 @@ GLint wWidth = 800, wHeight = 800;
 
 // Mouse movements recorded here
 int	left_mouseX, left_mouseY;
+int	orig_left_mouseX, orig_left_mouseY;
 int	right_mouseX, right_mouseY;
 int key_status;
 BOOL	left_mouse = FALSE;
@@ -201,9 +202,10 @@ Init(void)
     glEnable(GL_CULL_FACE);    // don't show back facing faces
 }
 
-// Set up frustum and possibly picking matrix
+// Set up frustum and possibly picking matrix. If picking, pass the centre of the
+// picking region and its width and height.
 void CALLBACK
-Position(BOOL picking, GLint x_pick, GLint y_pick)
+Position(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
 {
     GLint viewport[4], width, height;
     float h, w, znear, zfar, zoom_factor;
@@ -216,7 +218,7 @@ Position(BOOL picking, GLint x_pick, GLint y_pick)
     width = viewport[2];
     height = viewport[3];
     if (picking)
-        gluPickMatrix(x_pick, height - y_pick, 3, 3, viewport);  // Y window coords need inverting for GL
+        gluPickMatrix(x_pick, height - y_pick, w_pick, h_pick, viewport);  // Y window coords need inverting for GL
 
     znear = 0.5f * half_size;
     zfar = 50 * half_size;
@@ -274,7 +276,7 @@ Reshape(int width, int height)
 
     glViewport(0, 0, (GLint)width, (GLint)height);
 
-    Position(FALSE, 0, 0);
+    Position(FALSE, 0, 0, 0, 0);
 }
 
 // Pick an object: find the frontmost object under the cursor, or NULL if nothing is there.
@@ -284,7 +286,6 @@ Object *
 Pick(GLint x_pick, GLint y_pick, OBJECT min_priority)
 {
     GLuint buffer[512];
-    GLint viewport[4];
     GLint num_hits;
     GLuint min_obj = 0;
     OBJECT priority = OBJ_MAX;
@@ -293,8 +294,7 @@ Pick(GLint x_pick, GLint y_pick, OBJECT min_priority)
     // Find the object under the cursor, if any
     glSelectBuffer(512, buffer);
     glRenderMode(GL_SELECT);
-    glGetIntegerv(GL_VIEWPORT, viewport);
-    Draw(TRUE, x_pick, y_pick);
+    Draw(TRUE, x_pick, y_pick, 3, 3);
     num_hits = glRenderMode(GL_RENDER);
 
     if (num_hits > 0)
@@ -306,9 +306,9 @@ Pick(GLint x_pick, GLint y_pick, OBJECT min_priority)
         char buf[512];
         size_t size = 512;
         char *p = buf;
+        char *obj_prefix[] = { "N", "P", "E", "F", "V" };
 #endif
         GLuint min_depth = 0xFFFFFFFF;
-        char *obj_prefix[] = { "N", "P", "E", "F", "V" };
 
         for (i = 0; i < num_hits; i++)
         {
@@ -336,7 +336,7 @@ Pick(GLint x_pick, GLint y_pick, OBJECT min_priority)
                 min_obj = buffer[n + num_objs + 2];  // top of stack is last element in buffer
             }
 
-#ifdef DEBUG_PICK
+#ifdef DEBUG_PICK_ALL
             if (view_debug)
             {
                 len = sprintf_s(p, size, "objs %d min %x max %x: ", buffer[n], buffer[n + 1], buffer[n + 2]);
@@ -356,8 +356,9 @@ Pick(GLint x_pick, GLint y_pick, OBJECT min_priority)
                     n++;
                 }
                 len = sprintf_s(p, size, "\r\n");
-                p += len;
-                size -= len;
+                Log(buf);
+                p = buf;
+                size = 512;
             }
             else  // not logging, still need to skip the data
 #endif 
@@ -393,11 +394,127 @@ Pick(GLint x_pick, GLint y_pick, OBJECT min_priority)
     return obj;
 }
 
+// Pick all top-level objects intersecting the given rect. Return a list
+// suitable for assigning to the selection.
+Object * 
+Pick_all_in_rect(GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
+{
+    GLuint buffer[4096];
+    GLint num_hits;
+    Object *obj = NULL;
+    Object *list = NULL;
+    Object *parent, *sel_obj;
+
+    // Find the objects within the rect
+    glSelectBuffer(4096, buffer);           // TODO: This may be too small. There are a lot of null hits.
+    glRenderMode(GL_SELECT);
+    Draw(TRUE, x_pick, y_pick, w_pick, h_pick);
+    num_hits = glRenderMode(GL_RENDER);
+
+    if (num_hits > 0)
+    {
+        int n = 0;
+        int i;
+#ifdef DEBUG_PICK
+        int j, len;
+        char buf[512];
+        size_t size = 512;
+        char *p = buf;
+        char *obj_prefix[] = { "N", "P", "E", "F", "V" };
+#endif
+
+        for (i = 0; i < num_hits; i++)
+        {
+            int num_objs = buffer[n];
+
+            if (num_objs == 0)
+            {
+                n += 3;  // skip count, min and max
+                break;
+            }
+
+            // buffer = {{num objs, min depth, max depth, obj name, ...}, ...}
+
+            // find top-of-stack and its parent
+            obj = (Object *)buffer[n + num_objs + 2];
+            if (obj != NULL)
+            {
+                parent = find_top_level_parent(object_tree, obj);
+                if (parent == NULL)
+                {
+                    n += num_objs + 3;
+                    break;
+                }
+
+                // If parent is not already in the list, add it
+                for (obj = list; obj != NULL; obj = obj->next)
+                {
+                    if (obj->prev == parent)
+                        break;
+                }
+
+                if (obj == NULL)
+                {
+                    sel_obj = obj_new();
+                    sel_obj->next = list;
+                    list = sel_obj;
+                    sel_obj->prev = parent;
+                }
+
+#ifdef DEBUG_PICK_ALL
+                if (view_debug)
+                {
+                    len = sprintf_s(p, size, "(%d) objs %d min %x max %x: ", n, buffer[n], buffer[n + 1], buffer[n + 2]);
+                    p += len;
+                    size -= len;
+                    n += 3;
+                    for (j = 0; j < num_objs; j++)
+                    {
+                        Object *obj = (Object *)buffer[n];
+
+                        if (obj == NULL)
+                            len = sprintf_s(p, size, "NULL ");
+                        else
+                            len = sprintf_s(p, size, "%s%d ", obj_prefix[obj->type], obj->ID);
+                        p += len;
+                        size -= len;
+                        n++;
+                    }
+                    len = sprintf_s(p, size, "\r\n");
+                    Log(buf);
+                    p = buf;
+                    size = 512;
+                }
+                else  // not logging, still need to skip the data
+#endif
+                {
+                    n += num_objs + 3;
+                }
+            }
+            else
+            {
+                n += num_objs + 3;
+            }
+        }
+
+#ifdef DEBUG_PICK
+        if (view_debug)
+        {
+            len = sprintf_s(p, size, "Select buffer used: %d\r\n", n);
+            Log(buf);
+        }
+#endif
+        return list;
+    }
+
+    return NULL;
+}
+
 // callback version of Draw for AUX/TK
 void CALLBACK
 DrawCB(void)
 {
-    Draw(FALSE, 0, 0);
+    Draw(FALSE, 0, 0, 0, 0);
 }
 
 // Find if an object is in the selection, returning TRUE if found, and
@@ -462,7 +579,7 @@ clear_selection(void)
     do
     {
         next_obj = sel_obj->next;
-        free(sel_obj);
+        free(sel_obj);              // TODO use a free list - these are tiny
         sel_obj = next_obj;
     } while (next_obj != NULL);
 
@@ -487,16 +604,28 @@ left_down(AUX_EVENTREC *event)
     switch (app_state)
     {
     case STATE_NONE:
+        if (event->data[AUX_MOUSESTATUS] & AUX_SHIFT)
+        {
+            // Starting a shift-drag. 
+            SetCapture(auxGetHWND());
+            orig_left_mouseX = left_mouseX = event->data[AUX_MOUSEX];
+            orig_left_mouseY = left_mouseY = event->data[AUX_MOUSEY];
+            left_mouse = TRUE;
+            key_status = event->data[AUX_MOUSESTATUS];
+            change_state(STATE_DRAGGING_SELECT);
+        }
 #ifdef MOVE_ONLY_SELECTED
-        if (!is_selected_parent(picked_obj))
+        else if (!is_selected_parent(picked_obj))
 #else
-        if (picked_obj == NULL)
+        else if (picked_obj == NULL)
 #endif
         {
+            // Orbiting the view
             trackball_MouseDown(event);
         }
         else
         {
+            // Starting a move on an object, or on the selection
             SetCapture(auxGetHWND());
             left_mouseX = event->data[AUX_MOUSEX];
             left_mouseY = event->data[AUX_MOUSEY];
@@ -688,6 +817,12 @@ left_up(AUX_EVENTREC *event)
         }
 
         trackball_MouseUp(event);
+        break;
+
+    case STATE_DRAGGING_SELECT:
+        ReleaseCapture();
+        left_mouse = FALSE;
+        change_state(STATE_NONE);
         break;
 
     case STATE_MOVING:
@@ -1802,6 +1937,7 @@ char *state_key[] =
 {
     "Exploring",
     "Moving",
+    "Dragging Selection",
     "Starting Edge",
     "Starting Rect",
     "Starting Circle",

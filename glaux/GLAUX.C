@@ -230,7 +230,7 @@ static GLenum CALLBACK MouseDown(int x, int y, GLenum button)
 	        info.event = AUX_MOUSEDOWN;
 	        info.data[AUX_MOUSEX] = left_x = x;
 	        info.data[AUX_MOUSEY] = left_y = y;
-	        info.data[AUX_MOUSESTATUS] = AUX_LEFTBUTTON;
+            info.data[AUX_MOUSESTATUS] = button;
 	        (*mouseDownTable[i].MouseFunc)(&info);
 	        flag |= GL_TRUE;
 	    }
@@ -239,7 +239,7 @@ static GLenum CALLBACK MouseDown(int x, int y, GLenum button)
 	        info.event = AUX_MOUSEDOWN;
 	        info.data[AUX_MOUSEX] = right_x = x;
 	        info.data[AUX_MOUSEY] = right_y = y;
-	        info.data[AUX_MOUSESTATUS] = AUX_RIGHTBUTTON;
+            info.data[AUX_MOUSESTATUS] = button;
 	        (*mouseDownTable[i].MouseFunc)(&info);
 	        flag |= GL_TRUE;
 	    }
@@ -248,7 +248,7 @@ static GLenum CALLBACK MouseDown(int x, int y, GLenum button)
 	        info.event = AUX_MOUSEDOWN;
 	        info.data[AUX_MOUSEX] = middle_x = x;
 	        info.data[AUX_MOUSEY] = middle_y = y;
-	        info.data[AUX_MOUSESTATUS] = AUX_MIDDLEBUTTON;
+            info.data[AUX_MOUSESTATUS] = button;
 	        (*mouseDownTable[i].MouseFunc)(&info);
 	        flag |= GL_TRUE;
 	    }
