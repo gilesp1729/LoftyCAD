@@ -46,9 +46,9 @@ color(OBJECT obj_type, BOOL selected, BOOL highlighted, BOOL locked)
 
 
 // Draw any object. Control select/highlight colors per object type, how the parent is locked,
-// anf whether to draw components or just the top-level object.
+// and whether to draw components or just the top-level object, among other things.
 void
-draw_object(Object *obj, BOOL selected, BOOL highlighted, LOCK parent_lock, BOOL top_level_only)
+draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
 {
     int i;
     Face *face;
@@ -57,11 +57,15 @@ draw_object(Object *obj, BOOL selected, BOOL highlighted, LOCK parent_lock, BOOL
     BezierEdge *be;
     Point *p;
     BOOL push_name, locked;
+    BOOL selected = pres & DRAW_SELECTED;
+    BOOL highlighted = pres & DRAW_HIGHLIGHT;
+    BOOL top_level_only = pres & DRAW_TOP_LEVEL_ONLY;   // don't draw the components
+    BOOL snapping = pres & DRAW_HIGHLIGHT_LOCKED;       // highlight components, even if locked
 
     switch (obj->type)
     {
     case OBJ_POINT:
-        push_name = parent_lock < obj->type;  // TODO for snapping, use <= or don't test at all
+        push_name = snapping || parent_lock < obj->type;
         locked = parent_lock >= obj->type;
         glPushName(push_name ? (GLuint)obj : 0);
         if ((selected || highlighted) && !push_name)
@@ -122,7 +126,7 @@ draw_object(Object *obj, BOOL selected, BOOL highlighted, LOCK parent_lock, BOOL
         break;
 
     case OBJ_EDGE:
-        push_name = parent_lock < obj->type;  // TODO for snapping, use <= or don't test at all
+        push_name = snapping || parent_lock < obj->type;
         locked = parent_lock >= obj->type;
         glPushName(push_name ? (GLuint)obj : 0);
         if ((selected || highlighted) && !push_name)
@@ -138,8 +142,8 @@ draw_object(Object *obj, BOOL selected, BOOL highlighted, LOCK parent_lock, BOOL
             glVertex3f(edge->endpoints[1]->x, edge->endpoints[1]->y, edge->endpoints[1]->z);
             glEnd();
             glPopName();
-            draw_object((Object *)edge->endpoints[0], selected, highlighted, parent_lock, top_level_only);
-            draw_object((Object *)edge->endpoints[1], selected, highlighted, parent_lock, top_level_only);
+            draw_object((Object *)edge->endpoints[0], pres, parent_lock);
+            draw_object((Object *)edge->endpoints[1], pres, parent_lock);
             break;
 
         case EDGE_ARC:
@@ -152,9 +156,9 @@ draw_object(Object *obj, BOOL selected, BOOL highlighted, LOCK parent_lock, BOOL
 
             glEnd();
             glPopName();
-            draw_object((Object *)ae->centre, selected, highlighted, parent_lock, top_level_only);
-            draw_object((Object *)edge->endpoints[0], selected, highlighted, parent_lock, top_level_only);
-            draw_object((Object *)edge->endpoints[1], selected, highlighted, parent_lock, top_level_only);
+            draw_object((Object *)ae->centre, pres, parent_lock);
+            draw_object((Object *)edge->endpoints[0], pres, parent_lock);
+            draw_object((Object *)edge->endpoints[1], pres, parent_lock);
             break;
 
         case EDGE_BEZIER:
@@ -167,10 +171,10 @@ draw_object(Object *obj, BOOL selected, BOOL highlighted, LOCK parent_lock, BOOL
 
             glEnd();
             glPopName();
-            draw_object((Object *)edge->endpoints[0], selected, highlighted, parent_lock, top_level_only);
-            draw_object((Object *)edge->endpoints[1], selected, highlighted, parent_lock, top_level_only);
-            draw_object((Object *)be->ctrlpoints[0], selected, highlighted, parent_lock, top_level_only);
-            draw_object((Object *)be->ctrlpoints[1], selected, highlighted, parent_lock, top_level_only);
+            draw_object((Object *)edge->endpoints[0], pres, parent_lock);
+            draw_object((Object *)edge->endpoints[1], pres, parent_lock);
+            draw_object((Object *)be->ctrlpoints[0], pres, parent_lock);
+            draw_object((Object *)be->ctrlpoints[1], pres, parent_lock);
             break;
         }
         break;
@@ -184,13 +188,13 @@ draw_object(Object *obj, BOOL selected, BOOL highlighted, LOCK parent_lock, BOOL
         if (!top_level_only)            // if top level only, don't draw parts of faces to save pick buffer space
         {
             for (i = 0; i < face->n_edges; i++)
-                draw_object((Object *)face->edges[i], selected, highlighted, parent_lock, top_level_only);
+                draw_object((Object *)face->edges[i], pres, parent_lock);
         }
         break;
 
     case OBJ_VOLUME:
         for (face = ((Volume *)obj)->faces; face != NULL; face = (Face *)face->hdr.next)
-            draw_object((Object *)face, selected, highlighted, parent_lock, top_level_only);
+            draw_object((Object *)face, pres, parent_lock);
         break;
     }
 }
@@ -202,7 +206,8 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
     float matRot[4][4];
     POINT   pt;
     Object  *obj;
-    BOOL highlit, top_level_only;
+    BOOL highlit;
+    PRESENTATION pres;
 
     if (!picking)
     {
@@ -1058,10 +1063,12 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
     glMultMatrixf(&(matRot[0][0]));
 
     // traverse object tree. Send their own locks, as they are always at top level.
-    top_level_only = picking && app_state == STATE_DRAGGING_SELECT;
+    pres = 0;
+    if (picking && app_state == STATE_DRAGGING_SELECT)
+        pres = DRAW_TOP_LEVEL_ONLY;
     glInitNames();
     for (obj = object_tree; obj != NULL; obj = obj->next)
-        draw_object(obj, FALSE, FALSE, obj->lock, top_level_only);
+        draw_object(obj, pres, obj->lock);
 
     // draw selection. Watch for highlighted objects appearing in the selection list.
     // Pass lock state of top-level parent to determine what is shown.
@@ -1074,12 +1081,14 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
 
             if (obj->prev == curr_obj)
             {
-                draw_object(obj->prev, TRUE, TRUE, parent->lock, FALSE);
+                pres = DRAW_SELECTED | DRAW_HIGHLIGHT;
+                draw_object(obj->prev, pres, parent->lock);
                 highlit = TRUE;
             }
             else
             {
-                draw_object(obj->prev, TRUE, FALSE, parent->lock, FALSE);
+                pres = DRAW_SELECTED;
+                draw_object(obj->prev, pres, parent->lock);
             }
         }
 
@@ -1090,7 +1099,8 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
         {
             Object *parent = find_top_level_parent(object_tree, curr_obj);
 
-            draw_object(curr_obj, FALSE, TRUE, parent != NULL ? parent->lock : LOCK_NONE, FALSE);
+            pres = DRAW_HIGHLIGHT;
+            draw_object(curr_obj, pres, parent != NULL ? parent->lock : LOCK_NONE);
         }
 
         // Draw axes XYZ in RGB. 
