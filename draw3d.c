@@ -64,10 +64,16 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
     BezierEdge *be;
     Point *p;
     BOOL push_name, locked;
+    // This object is selected. Color it and all its components.
     BOOL selected = pres & DRAW_SELECTED;
+    // This object is highlighted because the mouse is hovering on it.
     BOOL highlighted = pres & DRAW_HIGHLIGHT;
-    BOOL top_level_only = pres & DRAW_TOP_LEVEL_ONLY;   // don't draw the components
-    BOOL snapping = pres & DRAW_HIGHLIGHT_LOCKED;       // highlight components, even if locked
+    // We're picking, so only draw the top level, not the components (to save select buffer space)
+    BOOL top_level_only = pres & DRAW_TOP_LEVEL_ONLY;
+    // We're drawing, so we want to see the snap targets even if they are locked. But only under the mouse.
+    BOOL snapping = pres & DRAW_HIGHLIGHT_LOCKED;
+
+    BOOL draw_components = !highlighted || !snapping;
 
     switch (obj->type)
     {
@@ -91,7 +97,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             {
             case PLANE_XY:
             case PLANE_MINUS_XY:
-                dx = 1;
+                dx = 1;         // TODO - scale this unit so it is not too large when zoomed in
                 dy = 1;
                 glVertex3f(p->x - dx, p->y - dy, p->z);
                 glVertex3f(p->x + dx, p->y - dy, p->z);
@@ -149,9 +155,13 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             glVertex3f(edge->endpoints[1]->x, edge->endpoints[1]->y, edge->endpoints[1]->z);
             glEnd();
             glPopName();
-            draw_object((Object *)edge->endpoints[0], pres, parent_lock);
-            draw_object((Object *)edge->endpoints[1], pres, parent_lock);
+            if (draw_components)
+            {
+                draw_object((Object *)edge->endpoints[0], pres, parent_lock);
+                draw_object((Object *)edge->endpoints[1], pres, parent_lock);
+            }
             break;
+
 
         case EDGE_ARC:
             ae = (ArcEdge *)edge;
@@ -163,9 +173,12 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
 
             glEnd();
             glPopName();
-            draw_object((Object *)ae->centre, pres, parent_lock);
-            draw_object((Object *)edge->endpoints[0], pres, parent_lock);
-            draw_object((Object *)edge->endpoints[1], pres, parent_lock);
+            if (draw_components)
+            {
+                draw_object((Object *)ae->centre, pres, parent_lock);
+                draw_object((Object *)edge->endpoints[0], pres, parent_lock);
+                draw_object((Object *)edge->endpoints[1], pres, parent_lock);
+            }
             break;
 
         case EDGE_BEZIER:
@@ -178,10 +191,13 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
 
             glEnd();
             glPopName();
-            draw_object((Object *)edge->endpoints[0], pres, parent_lock);
-            draw_object((Object *)edge->endpoints[1], pres, parent_lock);
-            draw_object((Object *)be->ctrlpoints[0], pres, parent_lock);
-            draw_object((Object *)be->ctrlpoints[1], pres, parent_lock);
+            if (draw_components)
+            {
+                draw_object((Object *)edge->endpoints[0], pres, parent_lock);
+                draw_object((Object *)edge->endpoints[1], pres, parent_lock);
+                draw_object((Object *)be->ctrlpoints[0], pres, parent_lock);
+                draw_object((Object *)be->ctrlpoints[1], pres, parent_lock);
+            }
             break;
         }
         break;
@@ -192,7 +208,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         face = (Face *)obj;
         face_shade(rtess, face, selected, highlighted, locked);
         glPopName();
-        if (!top_level_only)            // if top level only, don't draw parts of faces to save pick buffer space
+        if (draw_components && !top_level_only)
         {
             for (i = 0; i < face->n_edges; i++)
                 draw_object((Object *)face->edges[i], pres, parent_lock);
@@ -245,9 +261,20 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
     {
         // handle mouse movement actions.
         // Highlight snap targets (use highlight_obj for this)
-        // But if rendering, don't do any picks in here (enables smooth orbiting and spinning)
-
-        if (!right_mouse && !view_rendered && app_state != STATE_DRAGGING_SELECT && app_state != STATE_MOVING)
+        // If just moving or selecting, don't pick, as snapping is not useful.
+        // If rendering, don't do any picks in here (enables smooth orbiting and spinning)
+        if 
+        (
+            !right_mouse 
+            && 
+            !view_rendered 
+            && 
+            app_state != STATE_DRAGGING_SELECT 
+            && 
+            app_state != STATE_MOVING
+            && 
+            !trackball_IsOrbiting()
+        )
         {
             auxGetMouseLoc(&pt.x, &pt.y);
             highlight_obj = Pick(pt.x, pt.y, OBJ_FACE);
@@ -295,23 +322,16 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                     break;
 
                 case STATE_MOVING:
-                    // Move the selection, or part thereof, by a delta in XYZ within the facing plane
+                    // Move the selection, or an object, by a delta in XYZ within the facing plane
                     intersect_ray_plane(pt.x, pt.y, facing_plane, &new_point);
                     if (key_status & AUX_SHIFT)
                         snap_to_angle(picked_plane, &picked_point, &new_point, 45);
                     else if (snapping_to_angle)
                         snap_to_angle(picked_plane, &picked_point, &new_point, angle_snap);
                     snap_to_grid(facing_plane, &new_point);
-#ifdef MOVE_ONLY_SELECTED
-                    // TODO: If picked_obj is a part of the selection, just manipulate that.
-                    // Only when a top level object is picked do we want to move the whole
-                    // selection.
+
                     parent = find_top_level_parent(object_tree, picked_obj);
-                    if (picked_obj != parent)
-#else
-                    parent = find_top_level_parent(object_tree, picked_obj);
-                    if (!is_selected_parent(picked_obj))
-#endif
+                    if (!is_selected_parent(picked_obj) && parent->lock < parent->type)
                     {
                         move_obj
                             (

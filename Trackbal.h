@@ -22,6 +22,10 @@ trackball_MouseDown( AUX_EVENTREC *event );
 extern void CALLBACK
 trackball_MouseUp( AUX_EVENTREC *event );
 
+extern BOOL
+trackball_IsOrbiting(void);
+
+
 /* These next Mouse fns are required if both the trackbal and user
  * need mouse events.  Otherwise, can just supply above two functions
  * to tk to call

@@ -106,6 +106,13 @@ trackball_MouseUp( AUX_EVENTREC *event )
     gbLeftMouse = FALSE;
 }
 
+BOOL
+trackball_IsOrbiting(void)
+{
+    return gbLeftMouse;
+}
+
+
 /* these 4 not used yet */
 void
 trackball_MouseDownEvent( int mouseX, int mouseY, GLenum button )
