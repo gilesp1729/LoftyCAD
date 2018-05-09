@@ -201,6 +201,10 @@ Init(void)
 
     SetMaterial(FALSE);
 
+    // Enable alpha blending, so we can have transparency
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glEnable(GL_BLEND);
+
     plane_XY.C = 1.0;           // set up planes
     plane_XZ.B = 1.0;
     plane_YZ.A = 1.0;

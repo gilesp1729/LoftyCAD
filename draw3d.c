@@ -15,7 +15,7 @@ static Plane temp_plane;
 void
 color(OBJECT obj_type, BOOL selected, BOOL highlighted, BOOL locked)
 {
-    float r, g, b;
+    float r, g, b, a;
 
     switch (obj_type)
     {
@@ -25,6 +25,7 @@ color(OBJECT obj_type, BOOL selected, BOOL highlighted, BOOL locked)
     case OBJ_POINT:
     case OBJ_EDGE:
         r = g = b = 0.3f;
+        a = 1.0f;
         if (selected)
             r += 0.4f;
         if (highlighted)
@@ -35,15 +36,19 @@ color(OBJECT obj_type, BOOL selected, BOOL highlighted, BOOL locked)
 
     case OBJ_FACE:
         r = g = b = 0.8f;
+        a = 0.6f;
         if (selected)
             r += 0.2f;
         if (highlighted)
+        {
             g += 0.2f;
+            a += 0.2f;      // Looks nice, but TODO: some way to get double-highlighting to show up better
+        }
         if (highlighted && locked)
             r = g = b = 0.6f;
         break;
     }
-    glColor3f(r, g, b);
+    glColor4f(r, g, b, a);
 }
 
 
@@ -242,7 +247,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
         // Highlight snap targets (use highlight_obj for this)
         // But if rendering, don't do any picks in here (enables smooth orbiting and spinning)
 
-        if (!right_mouse && !view_rendered)
+        if (!right_mouse && !view_rendered && app_state != STATE_DRAGGING_SELECT && app_state != STATE_MOVING)
         {
             auxGetMouseLoc(&pt.x, &pt.y);
             highlight_obj = Pick(pt.x, pt.y, OBJ_FACE);
