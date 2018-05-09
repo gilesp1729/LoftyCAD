@@ -9,6 +9,8 @@ static int num_moves = 0;
 
 static float extrude_height;
 
+static Plane temp_plane;
+
 // Some standard colors sent to GL.
 void
 color(OBJECT obj_type, BOOL selected, BOOL highlighted, BOOL locked)
@@ -199,6 +201,30 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
     }
 }
 
+// Assign a picked_plane, based on where the mouse has moved to. We still might
+// not have a picked_plane after calling this, but we will be back.
+void
+assign_picked_plane(POINT pt)
+{
+    Object *obj = Pick(pt.x, pt.y, OBJ_FACE);
+
+    if (obj == NULL)
+    {
+        // We may have started on an edge or at a point, which is not necessarily on the
+        // facing plane. Make a plane through the first point picked.
+        temp_plane = *facing_plane;
+        temp_plane.refpt = picked_point;
+        picked_plane = &temp_plane;
+    }
+    else if (obj->type == OBJ_FACE)
+    {
+        picked_plane = &((Face *)obj)->normal;  // Move onto face - stay on its plane
+        picked_obj = obj;
+    }
+    // other picked obj types just wait till the mouse moves off them
+}
+
+
 // Draw the contents of the main window. Everything happens in here.
 void CALLBACK
 Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
@@ -208,16 +234,18 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
     Object  *obj;
     BOOL highlit;
     PRESENTATION pres;
+    Object *highlight_obj = NULL;
 
     if (!picking)
     {
         // handle mouse movement actions.
-        // Highlight snap targets (use curr_obj for this)
+        // Highlight snap targets (use highlight_obj for this)
         // But if rendering, don't do any picks in here (enables smooth orbiting and spinning)
-        if (!left_mouse && !right_mouse && !view_rendered)
+
+        if (!right_mouse && !view_rendered)
         {
             auxGetMouseLoc(&pt.x, &pt.y);
-            curr_obj = Pick(pt.x, pt.y, OBJ_FACE);
+            highlight_obj = Pick(pt.x, pt.y, OBJ_FACE);
         }
 
         // handle left mouse dragging actions. We must be moving or drawing,
@@ -331,19 +359,12 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
 
                 case STATE_DRAWING_EDGE:
                     if (picked_plane == NULL)
-                    {
                         // Uhoh. We don't have a plane yet. Check if the mouse has moved into
                         // a face object, and use that. Otherwise, just come back and try with the
                         // next move.
-                        Object *obj = Pick(pt.x, pt.y, OBJ_FACE);
-
-                        if (obj == NULL)
-                            picked_plane = facing_plane;
-                        else if (obj->type == OBJ_FACE)
-                            picked_plane = &((Face *)obj)->normal;
-                        else
-                            break;
-                    }
+                        assign_picked_plane(pt);
+                    if (picked_plane == NULL)
+                        break;
 
                     // Move the end point of the current edge
                     intersect_ray_plane(pt.x, pt.y, picked_plane, &new_point);
@@ -378,17 +399,9 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
 
                 case STATE_DRAWING_ARC:
                     if (picked_plane == NULL)
-                    {
-                        // Uhoh. We don't have a plane yet. Check if the mouse has moved into
-                        // a face object, and use that. Otherwise, just come back and try with the
-                        // next move.
-                        Object *obj = Pick(pt.x, pt.y, OBJ_FACE);
-
-                        if (obj->type == OBJ_FACE)
-                            picked_plane = &((Face *)obj)->normal;
-                        else
-                            break;
-                    }
+                        assign_picked_plane(pt);
+                    if (picked_plane == NULL)
+                        break;
 
                     // Move the end point of the current edge
                     intersect_ray_plane(pt.x, pt.y, picked_plane, &new_point);
@@ -458,19 +471,9 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
 
                 case STATE_DRAWING_BEZIER:
                     if (picked_plane == NULL)
-                    {
-                        // Uhoh. We don't have a plane yet. Check if the mouse has moved into
-                        // a face object, and use that. Otherwise, just come back and try with the
-                        // next move.
-                        Object *obj = Pick(pt.x, pt.y, OBJ_FACE);
-
-                        if (obj == NULL)
-                            picked_plane = facing_plane;
-                        else if (obj->type == OBJ_FACE)
-                            picked_plane = &((Face *)obj)->normal;
-                        else
-                            break;
-                    }
+                        assign_picked_plane(pt);
+                    if (picked_plane == NULL)
+                        break;
 
                     // Move the end point of the current edge
                     intersect_ray_plane(pt.x, pt.y, picked_plane, &new_point);
@@ -542,24 +545,9 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
 
                 case STATE_DRAWING_RECT:
                     if (picked_plane == NULL)
-                    {
-                        // Uhoh. We don't have a plane yet. Check if the mouse has moved into
-                        // a face object, and use that. Otherwise, just come back and try with the
-                        // next move.
-                        Object *obj = Pick(pt.x, pt.y, OBJ_FACE);
-
-                        if (obj == NULL)
-                        {
-                            picked_plane = facing_plane;
-                        }
-                        else if (obj->type == OBJ_FACE)
-                        {
-                            picked_obj = obj;
-                            picked_plane = &((Face *)obj)->normal;
-                        }
-                        else
-                            break;
-                    }
+                        assign_picked_plane(pt);
+                    if (picked_plane == NULL)
+                        break;
 
                     // Move the opposite corner point
                     intersect_ray_plane(pt.x, pt.y, picked_plane, &new_point);
@@ -748,19 +736,9 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
 
                 case STATE_DRAWING_CIRCLE:
                     if (picked_plane == NULL)
-                    {
-                        // Uhoh. We don't have a plane yet. Check if the mouse has moved into
-                        // a face object, and use that. Otherwise, just come back and try with the
-                        // next move.
-                        Object *obj = Pick(pt.x, pt.y, OBJ_FACE);
-
-                        if (obj == NULL)
-                            picked_plane = facing_plane;
-                        else if (obj->type == OBJ_FACE)
-                            picked_plane = &((Face *)obj)->normal;
-                        else
-                            break;
-                    }
+                        assign_picked_plane(pt);
+                    if (picked_plane == NULL)
+                        break;
 
                     // Move the circumference point
                     intersect_ray_plane(pt.x, pt.y, picked_plane, &new_point);
@@ -1066,6 +1044,8 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
     pres = 0;
     if (picking && app_state == STATE_DRAGGING_SELECT)
         pres = DRAW_TOP_LEVEL_ONLY;
+    if (app_state >= STATE_STARTING_EDGE)
+        pres |= DRAW_HIGHLIGHT_LOCKED;
     glInitNames();
     for (obj = object_tree; obj != NULL; obj = obj->next)
         draw_object(obj, pres, obj->lock);
@@ -1079,11 +1059,13 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
         {
             Object *parent = find_top_level_parent(object_tree, obj->prev);
 
-            if (obj->prev == curr_obj)
+            if (obj->prev == curr_obj || obj->prev == highlight_obj)
             {
                 pres = DRAW_SELECTED | DRAW_HIGHLIGHT;
+                if (app_state >= STATE_STARTING_EDGE)
+                    pres |= DRAW_HIGHLIGHT_LOCKED;
                 draw_object(obj->prev, pres, parent->lock);
-                highlit = TRUE;
+                //highlit = TRUE;
             }
             else
             {
@@ -1094,13 +1076,24 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
 
         // draw any current object not yet added to the object tree,
         // or any under highlighting. Handle the case where it doesn't have a
-        // parent yet.
+        // parent yet. Same for the picked highlighted object, if any.
         if (curr_obj != NULL && !highlit)
         {
             Object *parent = find_top_level_parent(object_tree, curr_obj);
 
             pres = DRAW_HIGHLIGHT;
+            if (app_state >= STATE_STARTING_EDGE)
+                pres |= DRAW_HIGHLIGHT_LOCKED;
             draw_object(curr_obj, pres, parent != NULL ? parent->lock : LOCK_NONE);
+        }
+        if (highlight_obj != NULL && !highlit)
+        {
+            Object *parent = find_top_level_parent(object_tree, highlight_obj);
+
+            pres = DRAW_HIGHLIGHT;
+            if (app_state >= STATE_STARTING_EDGE)
+                pres |= DRAW_HIGHLIGHT_LOCKED;
+            draw_object(highlight_obj, pres, parent != NULL ? parent->lock : LOCK_NONE);
         }
 
         // Draw axes XYZ in RGB. 
@@ -1141,10 +1134,6 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
         glVertex2f((float)orig_left_mouseX, (float)vp[3] - orig_left_mouseY);
         glVertex2f((float)pt.x, (float)vp[3] - orig_left_mouseY);
         glEnd();
-
-        // TODO: somehow highlight all objects in rect window?
-        // Drawing the rect above inhibits picking (the rect itself is picked!)
-        // Draw a dotted rect which isn't actually at the mouse pos?
     }
 
     glFlush();

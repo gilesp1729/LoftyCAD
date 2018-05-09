@@ -682,10 +682,8 @@ left_down(AUX_EVENTREC *event)
         {
             picked_plane = NULL;
 
-            // TODO: snap to any valid snap target and remember the (x,y,z) position of the
+            // snap to a valid snap target and remember the (x,y,z) position of the
             // first point.
-            // - find intersection of projection ray with picked_obj
-
             switch (picked_obj->type)
             {
             case OBJ_FACE:
@@ -709,7 +707,7 @@ left_down(AUX_EVENTREC *event)
 
             case OBJ_POINT:
                 // Snap to the point. TODO: share with the point if it's a new edge joining
-                // to a free endpoint on an old edge.
+                // to a free endpoint on an old edge. Or if it's a construction edge.
                 picked_point = *(Point *)picked_obj;
                 break;
             }
