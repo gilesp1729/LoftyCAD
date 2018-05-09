@@ -444,7 +444,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         e->endpoints[1] = point_newp(&new_point);
                         ae = (ArcEdge *)curr_obj;
                         ae->centre = point_new(0, 0, 0);    // will be updated later
-                        num_moves = 0;
+                        num_moves = 0; 
 
                         // Masquerade as a straight edge for the moment, until we get a centre
                         e->type = EDGE_STRAIGHT;
