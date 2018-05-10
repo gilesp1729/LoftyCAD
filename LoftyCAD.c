@@ -92,6 +92,9 @@ BOOL view_ortho = FALSE;
 // TRUE if viewing rendered representation
 BOOL view_rendered = FALSE;
 
+// TRUE to display construction edges
+BOOL view_constr = TRUE;
+
 // Current filename and title
 char curr_filename[256] = { 0, };
 char curr_title[256] = { 0, };
@@ -191,8 +194,8 @@ Init(void)
 
     glClearColor(1.0, 1.0, 1.0, 1.0);
 
-    glDepthFunc(GL_LEQUAL);
-    glEnable(GL_DEPTH_TEST);
+   // glDepthFunc(GL_LEQUAL);
+   // glEnable(GL_DEPTH_TEST);      // TODO disable this for multiply blending, but then can pick edges that lie behind.
 
     glLightfv(GL_LIGHT0, GL_AMBIENT, ambient);
     glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuse);
@@ -205,7 +208,8 @@ Init(void)
     SetMaterial(FALSE);
 
     // Enable alpha blending, so we can have transparency
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glBlendFunc(GL_ZERO, GL_SRC_COLOR);     // TODO this is multiply blending. 
     glEnable(GL_BLEND);
 
     plane_XY.C = 1.0;           // set up planes
@@ -1498,6 +1502,23 @@ Command(int message, int wParam, int lParam)
             }
             break;
 
+        case ID_VIEW_CONSTRUCTIONEDGES:
+            hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
+            if (view_constr)
+            {
+                view_constr = FALSE;
+                CheckMenuItem(hMenu, ID_VIEW_CONSTRUCTIONEDGES, MF_UNCHECKED);
+            }
+            else
+            {
+                view_constr = TRUE;
+                CheckMenuItem(hMenu, ID_VIEW_CONSTRUCTIONEDGES, MF_CHECKED);
+            }
+            EnableWindow(GetDlgItem(hWndToolbar, IDB_CONST_EDGE), view_constr);
+            EnableWindow(GetDlgItem(hWndToolbar, IDB_CONST_RECT), view_constr);
+            EnableWindow(GetDlgItem(hWndToolbar, IDB_CONST_CIRCLE), view_constr);
+            break;
+
         case ID_VIEW_RENDEREDVIEW:
             hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
             if (view_rendered)
@@ -1516,6 +1537,9 @@ Command(int message, int wParam, int lParam)
             EnableWindow(GetDlgItem(hWndToolbar, IDB_ARC_EDGE), !view_rendered);
             EnableWindow(GetDlgItem(hWndToolbar, IDB_BEZIER_EDGE), !view_rendered);
             EnableWindow(GetDlgItem(hWndToolbar, IDB_EXTRUDE), !view_rendered);
+            EnableWindow(GetDlgItem(hWndToolbar, IDB_CONST_EDGE), !view_rendered);
+            EnableWindow(GetDlgItem(hWndToolbar, IDB_CONST_RECT), !view_rendered);
+            EnableWindow(GetDlgItem(hWndToolbar, IDB_CONST_CIRCLE), !view_rendered);
             break;
 
         case ID_VIEW_TOP:
@@ -1855,6 +1879,10 @@ Command(int message, int wParam, int lParam)
             EnableMenuItem((HMENU)wParam, ID_EDIT_CUT, selection != NULL ? MF_ENABLED : MF_GRAYED);
             EnableMenuItem((HMENU)wParam, ID_EDIT_COPY, selection != NULL ? MF_ENABLED : MF_GRAYED);
             EnableMenuItem((HMENU)wParam, ID_EDIT_DELETE, selection != NULL ? MF_ENABLED : MF_GRAYED);
+        }
+        else if ((HMENU)wParam == GetSubMenu(GetMenu(auxGetHWND()), 2))
+        {
+            EnableMenuItem((HMENU)wParam, ID_VIEW_CONSTRUCTIONEDGES, view_rendered ? MF_GRAYED : MF_ENABLED);
         }
 
         break;

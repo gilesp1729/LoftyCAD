@@ -64,6 +64,7 @@ extern HWND hWndDims;
 extern BOOL view_tools;
 extern BOOL view_debug;
 extern BOOL view_rendered;
+extern BOOL view_constr;
 
 extern STATE app_state;
 extern BOOL construction;

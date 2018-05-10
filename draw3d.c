@@ -158,11 +158,14 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
     case OBJ_EDGE:
         push_name = snapping || parent_lock < obj->type;
         locked = parent_lock >= obj->type;
+        edge = (Edge *)obj;
+        if ((edge->type & EDGE_CONSTRUCTION) && !view_constr)
+            return;
+
         glPushName(push_name ? (GLuint)obj : 0);
         if ((selected || highlighted) && !push_name)
             return;
 
-        edge = (Edge *)obj;
         switch (edge->type & ~EDGE_CONSTRUCTION)
         {
         case EDGE_STRAIGHT:
@@ -221,8 +224,11 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
 
     case OBJ_FACE:
         locked = parent_lock > obj->type;  // allow picking faces to get to the volume
-        glPushName((GLuint)obj);
         face = (Face *)obj;
+        if ((face->type & FACE_CONSTRUCTION) && !view_constr)
+            return;
+
+        glPushName((GLuint)obj);
         face_shade(rtess, face, selected, highlighted, locked);
         glPopName();
         if (draw_components && !top_level_only)

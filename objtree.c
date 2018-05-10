@@ -782,7 +782,7 @@ gen_view_list_face(Face *face)
 
         // Then the subsequent points. Edges will follow in order, but their points
         // may be reversed.
-        switch (e->type & !EDGE_CONSTRUCTION)
+        switch (e->type & ~EDGE_CONSTRUCTION)
         {
         case EDGE_STRAIGHT:
             if (last_point == e->endpoints[0])

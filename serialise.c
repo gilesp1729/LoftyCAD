@@ -379,7 +379,7 @@ deserialise_tree(Object **tree, char *filename)
             {
                 type = FACE_RECT;
             }
-            if (strcmp(tok, "RECT(C)") == 0)
+            else if (strcmp(tok, "RECT(C)") == 0)
             {
                 type = FACE_RECT | FACE_CONSTRUCTION;
             }
@@ -519,7 +519,7 @@ write_checkpoint(Object *tree, char *filename)
     serialise_tree(tree, check);
     latest_generation = generation;
     if (generation > max_generation)
-        max_generation = generation;  // TODO - do I need this for anything?
+        max_generation = generation;
 }
 
 // Read back a given generation of checkpoint. Generation zero is the
@@ -546,6 +546,7 @@ read_checkpoint(Object **tree, char *filename, int generation)
     }
     else if (filename[0] != '\0')
     {
+        drawing_changed = FALSE;
         return deserialise_tree(tree, filename);
     }
 
@@ -556,4 +557,17 @@ read_checkpoint(Object **tree, char *filename, int generation)
 void
 clean_checkpoints(char *filename)
 {
+    char basename[256], check[256];
+    int baselen, gen;
+
+    strcpy_s(basename, 256, filename);
+    baselen = strlen(basename);
+    if (baselen > 4)
+        basename[baselen - 4] = '\0';    // cut off ".lcd"     // TODO do this better
+
+    for (gen = 1; gen <= max_generation; gen++)
+    {
+        sprintf_s(check, 256, "%s_%04d.lcd", basename, gen);
+        DeleteFile(check);
+    }
 }
