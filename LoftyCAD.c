@@ -194,8 +194,8 @@ Init(void)
 
     glClearColor(1.0, 1.0, 1.0, 1.0);
 
-   // glDepthFunc(GL_LEQUAL);
-   // glEnable(GL_DEPTH_TEST);      // TODO disable this for multiply blending, but then can pick edges that lie behind.
+    glDepthFunc(GL_LEQUAL);
+    glEnable(GL_DEPTH_TEST); 
 
     glLightfv(GL_LIGHT0, GL_AMBIENT, ambient);
     glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuse);
@@ -208,8 +208,8 @@ Init(void)
     SetMaterial(FALSE);
 
     // Enable alpha blending, so we can have transparency
-    //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glBlendFunc(GL_ZERO, GL_SRC_COLOR);     // TODO this is multiply blending. 
+    //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);      // alpha blending
+    glBlendFunc(GL_ZERO, GL_SRC_COLOR);     // multiply blending. 
     glEnable(GL_BLEND);
 
     plane_XY.C = 1.0;           // set up planes
@@ -2353,7 +2353,8 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
         CheckMenuItem(hMenu, ID_VIEW_HELP, view_help ? MF_CHECKED : MF_UNCHECKED);
         CheckMenuItem(hMenu, ID_VIEW_ORTHO, view_ortho ? MF_CHECKED : MF_UNCHECKED);
         CheckMenuItem(hMenu, ID_VIEW_PERSPECTIVE, !view_ortho ? MF_CHECKED : MF_UNCHECKED);
-        
+        CheckMenuItem(hMenu, ID_VIEW_CONSTRUCTIONEDGES, view_constr ? MF_CHECKED : MF_UNCHECKED);
+
         // Display help for the resting state
         change_state(STATE_NONE);
 

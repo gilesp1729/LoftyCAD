@@ -92,6 +92,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
 
     BOOL draw_components = !highlighted || !snapping;
 
+    glEnable(GL_BLEND);
     switch (obj->type)
     {
     case OBJ_POINT:
@@ -161,10 +162,14 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         edge = (Edge *)obj;
         if ((edge->type & EDGE_CONSTRUCTION) && !view_constr)
             return;
-
-        glPushName(push_name ? (GLuint)obj : 0);
         if ((selected || highlighted) && !push_name)
             return;
+
+        glPushName(push_name ? (GLuint)obj : 0);
+
+        // Disable blending here so highlight shows up with multiply-blending
+        if (selected || highlighted)
+            glDisable(GL_BLEND);
 
         switch (edge->type & ~EDGE_CONSTRUCTION)
         {
@@ -1105,9 +1110,15 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
         // Only clear pixel buffer stuff if not picking (reduces flashing)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         if (view_rendered)
+        {
+            glEnable(GL_DEPTH_TEST);
             glEnable(GL_LIGHTING);
+        }
         else
+        {
+            glDisable(GL_DEPTH_TEST);
             glDisable(GL_LIGHTING);
+        }
     }
 
     // handle picking, or just position for viewing
