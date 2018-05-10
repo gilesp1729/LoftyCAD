@@ -39,6 +39,9 @@ BOOL view_help = TRUE;
 // State the app is in.
 STATE app_state = STATE_NONE;
 
+// TRUE when drawing a construction edge or other construction object.
+BOOL construction = FALSE;
+
 // A list of objects that are currently selected. The "prev" pointer points to 
 // the actual object (it's a singly linked list). There is also a clipboard,
 // which is arranged similarly.
@@ -711,7 +714,7 @@ left_down(AUX_EVENTREC *event)
 
             case OBJ_POINT:
                 // Snap to the point. TODO: share with the point if it's a new edge joining
-                // to a free endpoint on an old edge. Or if it's a construction edge.
+                // to a free endpoint on an old edge. Or if we're drawing a construction edge.
                 picked_point = *(Point *)picked_obj;
                 break;
             }
@@ -848,6 +851,7 @@ left_up(AUX_EVENTREC *event)
         if (curr_obj != NULL)
         {
             Point *p00, *p01, *p02, *p03;
+            EDGE type;
 
             // Create the edges for the rect here as a special case, as the order
             // is not known till the mouse is released.
@@ -858,31 +862,66 @@ left_up(AUX_EVENTREC *event)
             p02 = (Point *)p01->hdr.next;
             p03 = (Point *)p02->hdr.next;
 
-            e = (Edge *)edge_new(EDGE_STRAIGHT);
-            e->endpoints[0] = p00;
-            e->endpoints[1] = p01;
-            rf->edges[0] = e;
-            e = (Edge *)edge_new(EDGE_STRAIGHT);
-            e->endpoints[0] = p01;
-            e->endpoints[1] = p02;
-            rf->edges[1] = e;
-            e = (Edge *)edge_new(EDGE_STRAIGHT);
-            e->endpoints[0] = p02;
-            e->endpoints[1] = p03;
-            rf->edges[2] = e;
-            e = (Edge *)edge_new(EDGE_STRAIGHT);
-            e->endpoints[0] = p03;
-            e->endpoints[1] = p00;
-            rf->edges[3] = e;
+#if 0
+            // For construction edges, just link the edges directly into the object tree
+            // and ditch the face, as it's no longer needed.
+            if (construction)
+            {
+                e = (Edge *)edge_new(EDGE_STRAIGHT | EDGE_CONSTRUCTION);
+                e->endpoints[0] = p00;
+                e->endpoints[1] = p01;
+                link((Object *)e, &object_tree);
+                e = (Edge *)edge_new(EDGE_STRAIGHT | EDGE_CONSTRUCTION);
+                e->endpoints[0] = p01;
+                e->endpoints[1] = p02;
+                link((Object *)e, &object_tree);
+                e = (Edge *)edge_new(EDGE_STRAIGHT | EDGE_CONSTRUCTION);
+                e->endpoints[0] = p02;
+                e->endpoints[1] = p03;
+                link((Object *)e, &object_tree);
+                e = (Edge *)edge_new(EDGE_STRAIGHT | EDGE_CONSTRUCTION);
+                e->endpoints[0] = p03;
+                e->endpoints[1] = p00;
+                link((Object *)e, &object_tree);
 
-            // Take the points out of the face's view list, as they are about
-            // to be freed when the view list is regenerated.
-            rf->view_list = NULL;
+                rf->view_list = NULL;
+                purge_obj(curr_obj);
+                drawing_changed = TRUE;
+                write_checkpoint(object_tree, curr_filename);
+                curr_obj = NULL;
+            }
+            else
+#endif
+            {
+                type = EDGE_STRAIGHT;
+                if (construction)
+                    type |= EDGE_CONSTRUCTION;
+                e = (Edge *)edge_new(type);
+                e->endpoints[0] = p00;
+                e->endpoints[1] = p01;
+                rf->edges[0] = e;
+                e = (Edge *)edge_new(type);
+                e->endpoints[0] = p01;
+                e->endpoints[1] = p02;
+                rf->edges[1] = e;
+                e = (Edge *)edge_new(type);
+                e->endpoints[0] = p02;
+                e->endpoints[1] = p03;
+                rf->edges[2] = e;
+                e = (Edge *)edge_new(type);
+                e->endpoints[0] = p03;
+                e->endpoints[1] = p00;
+                rf->edges[3] = e;
 
-            // the face now has its edges. Generate its view list and the normal
-            rf->n_edges = 4;
-            rf->view_valid = FALSE;
-            gen_view_list_face(rf);
+                // Take the points out of the face's view list, as they are about
+                // to be freed when the view list is regenerated.
+                rf->view_list = NULL;
+
+                // the face now has its edges. Generate its view list and the normal
+                rf->n_edges = 4;
+                rf->view_valid = FALSE;
+                gen_view_list_face(rf);
+            }
         }
         // fallthrough
     case STATE_DRAWING_EDGE:
@@ -897,8 +936,11 @@ left_up(AUX_EVENTREC *event)
 
             // Set its lock to EDGES for rect/circle faces, but no lock for edges (we will
             // very likely need to move the points soon)
-            curr_obj->lock = 
-                (app_state == STATE_DRAWING_RECT || app_state == STATE_DRAWING_CIRCLE) ? LOCK_EDGES : LOCK_NONE;
+            //if (!construction)
+            {
+                curr_obj->lock =
+                    (app_state == STATE_DRAWING_RECT || app_state == STATE_DRAWING_CIRCLE) ? LOCK_EDGES : LOCK_NONE;
+            }
 
             drawing_changed = TRUE;
             write_checkpoint(object_tree, curr_filename);
@@ -908,6 +950,7 @@ left_up(AUX_EVENTREC *event)
         ReleaseCapture();
         left_mouse = FALSE;
         change_state(STATE_NONE);
+        construction = FALSE;
         hide_hint();
         break;
 
@@ -1894,20 +1937,22 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
         // For now grey out unimplemented ones
         EnableWindow(GetDlgItem(hWnd, IDB_POINT), FALSE);
-        EnableWindow(GetDlgItem(hWnd, IDB_CONST_EDGE), FALSE);
-        EnableWindow(GetDlgItem(hWnd, IDB_CONST_RECT), FALSE);
-        EnableWindow(GetDlgItem(hWnd, IDB_CONST_CIRCLE), FALSE);
         break;
 
     case WM_COMMAND:
         if (HIWORD(wParam) == BN_CLICKED)
         {
+            construction = FALSE;
             switch (LOWORD(wParam))
             {
+            case IDB_CONST_EDGE:
+                construction = TRUE;
             case IDB_EDGE:
                 change_state(STATE_STARTING_EDGE);
                 break;
 
+         //   case IDB_CONST_ARC:         // TODO put this in the toolbar
+         //       construction = TRUE;
             case IDB_ARC_EDGE:
                 change_state(STATE_STARTING_ARC);
                 break;
@@ -1916,10 +1961,14 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 change_state(STATE_STARTING_BEZIER);
                 break;
 
+            case IDB_CONST_RECT:
+                construction = TRUE;
             case IDB_RECT:
                 change_state(STATE_STARTING_RECT);
                 break;
 
+            case IDB_CONST_CIRCLE:
+                construction = TRUE;
             case IDB_CIRCLE:
                 change_state(STATE_STARTING_CIRCLE);
                 break;

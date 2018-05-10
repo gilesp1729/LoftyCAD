@@ -31,7 +31,8 @@ typedef enum
     FACE_FLAT,                      // Any number of edges making a closed face, lying in one plane.
                                     // Only flat faces (up to here) may be extruded.
     FACE_CYLINDRICAL,               // A simply curved face (2 straight edges opposite, and 2 curved)
-    FACE_GENERAL                    // A compound-curved face (e.g. 4 bezier edges)
+    FACE_GENERAL,                   // A compound-curved face (e.g. 4 bezier edges)
+    FACE_CONSTRUCTION = 0x8000      // OR this in to indicate a construction face
 } FACE;
 
 // Locking level. They must agree with the object types.

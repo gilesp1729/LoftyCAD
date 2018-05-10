@@ -117,8 +117,9 @@ serialise_obj(Object *obj, FILE *f)
 
     case OBJ_FACE:
         face = (Face *)obj;
-        fprintf_s(f, "%s %d %f %f %f %f %f %f ",
-                  facetypes[face->type],
+        fprintf_s(f, "%s%s %d %f %f %f %f %f %f ",
+                  facetypes[face->type & ~FACE_CONSTRUCTION],
+                  (face->type & FACE_CONSTRUCTION) ? "(C)" : "",
                   face->initial_point->hdr.ID,
                   face->normal.refpt.x, face->normal.refpt.y, face->normal.refpt.z,
                   face->normal.A, face->normal.B, face->normal.C);
@@ -280,9 +281,11 @@ deserialise_tree(Object **tree, char *filename)
             lock = locktype_of(tok);
 
             tok = strtok_s(NULL, " \t\n", &nexttok);
-            if (strcmp(tok, "STRAIGHT") == 0)
+            if (strcmp(tok, "STRAIGHT") == 0 || strcmp(tok, "STRAIGHT(C)") == 0)
             {
                 edge = edge_new(EDGE_STRAIGHT);
+                if (strcmp(tok, "STRAIGHT(C)") == 0)
+                    edge->type |= EDGE_CONSTRUCTION;
                 tok = strtok_s(NULL, " \t\n", &nexttok);
                 end0 = atoi(tok);
                 ASSERT(end0 > 0 && object[end0] != NULL, "Bad endpoint ID");
@@ -292,9 +295,11 @@ deserialise_tree(Object **tree, char *filename)
                 edge->endpoints[0] = (Point *)object[end0];
                 edge->endpoints[1] = (Point *)object[end1];
             }
-            else if (strcmp(tok, "ARC") == 0)
+            else if (strcmp(tok, "ARC") == 0 || strcmp(tok, "ARC(C)") == 0)
             {
                 edge = edge_new(EDGE_ARC);
+                if (strcmp(tok, "ARC(C)") == 0)
+                    edge->type |= EDGE_CONSTRUCTION;
                 tok = strtok_s(NULL, " \t\n", &nexttok);
                 end0 = atoi(tok);
                 ASSERT(end0 > 0 && object[end0] != NULL, "Bad endpoint ID");
@@ -374,9 +379,17 @@ deserialise_tree(Object **tree, char *filename)
             {
                 type = FACE_RECT;
             }
+            if (strcmp(tok, "RECT(C)") == 0)
+            {
+                type = FACE_RECT | FACE_CONSTRUCTION;
+            }
             else if (strcmp(tok, "CIRCLE") == 0)
             {
                 type = FACE_CIRCLE;
+            }
+            else if (strcmp(tok, "CIRCLE(C)") == 0)
+            {
+                type = FACE_CIRCLE | FACE_CONSTRUCTION;
             }
             else if (strcmp(tok, "FLAT") == 0)
             {

@@ -82,19 +82,12 @@ face_shade(GLUtesselator *tess, Face *face, BOOL selected, BOOL highlighted, BOO
 
     switch (face->type)
     {
+    case FACE_RECT | FACE_CONSTRUCTION:
+    case FACE_CIRCLE | FACE_CONSTRUCTION:
     case FACE_RECT:
     case FACE_CIRCLE:
     case FACE_FLAT:
-#ifdef OLD_FACE_SHADE
-        // Simple traverse of the face's view list.
-        glBegin(GL_POLYGON);
-        color(OBJ_FACE, selected, highlighted, locked);
-        glNormal3f(face->normal.A, face->normal.B, face->normal.C);
-        for (v = face->view_list; v != NULL; v = (Point *)v->hdr.next)
-            glVertex3f(v->x, v->y, v->z);
-        glEnd();
-#else
-        color(OBJ_FACE, selected, highlighted, locked);
+        color(OBJ_FACE, face->type & FACE_CONSTRUCTION, selected, highlighted, locked);
      // This doesn't seem to work - put it in the begin callback
      //   gluTessNormal(rtess, face->normal.A, face->normal.B, face->normal.C);
         gluTessBeginPolygon(tess, &face->normal);
@@ -103,7 +96,6 @@ face_shade(GLUtesselator *tess, Face *face, BOOL selected, BOOL highlighted, BOO
             tess_vertex(tess, v);
         gluTessEndContour(tess);
         gluTessEndPolygon(tess);
-#endif
         break;
 
     case FACE_CYLINDRICAL:
@@ -120,28 +112,7 @@ face_shade(GLUtesselator *tess, Face *face, BOOL selected, BOOL highlighted, BOO
             Log(buf);
         }
 #endif       
-
-#if 0 //def OLD_FACE_SHADE
-        glBegin(GL_QUADS);
-        color(OBJ_FACE, selected, highlighted, locked);
-        for (v = face->view_list; v->hdr.next != NULL; v = (Point *)v->hdr.next)
-        {
-            Point *vnext = (Point *)v->hdr.next;
-            Point *lprev = (Point *)last->hdr.prev;
-            Plane norm;
-
-            normal3(vnext, lprev, last, &norm);
-            glNormal3f(norm.A, norm.B, norm.C);
-            glVertex3f(last->x, last->y, last->z);
-            glVertex3f(lprev->x, lprev->y, lprev->z);
-            glVertex3f(vnext->x, vnext->y, vnext->z);
-            glVertex3f(v->x, v->y, v->z);
-
-            last = lprev;
-        }
-        glEnd();
-#else
-        color(OBJ_FACE, selected, highlighted, locked);
+        color(OBJ_FACE, FALSE, selected, highlighted, locked);
         for (i = 0, v = face->view_list; v->hdr.next != NULL; v = (Point *)v->hdr.next, i++)
         {
             Point *vnext = (Point *)v->hdr.next;
@@ -162,7 +133,6 @@ face_shade(GLUtesselator *tess, Face *face, BOOL selected, BOOL highlighted, BOO
             if (i >= face->edges[1]->nsteps)
                 break;
         }
-#endif
         break;
 
     case FACE_GENERAL:

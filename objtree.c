@@ -106,7 +106,7 @@ Face *face_new(FACE face_type, Plane norm)
     face->type = face_type;
     face->normal = norm;
 
-    switch (face_type)
+    switch (face_type & ~FACE_CONSTRUCTION)
     {
     case FACE_RECT:
     case FACE_CIRCLE:
@@ -353,19 +353,6 @@ copy_obj(Object *obj, float xoffset, float yoffset, float zoffset)
             ASSERT(face->initial_point == edge->endpoints[1], "Point order messed up");
             new_face->initial_point = new_edge->endpoints[1];
         }
-
-#if 0      // TODO do I have to do anything else ehere?
-        switch (((Edge *)face->edges[0])->type)
-        {
-        case EDGE_STRAIGHT:
-            break;
-
-        case EDGE_ARC:     // TODO others
-        case EDGE_BEZIER:
-            ASSERT(FALSE, "Not implemented");
-            break;
-        }
-#endif
         break;
 
     case OBJ_VOLUME:
@@ -654,7 +641,7 @@ invalidate_all_view_lists(Object *parent, Object *obj, float dx, float dy, float
     }
     else if (parent->type == OBJ_EDGE)
     {
-        switch (((Edge *)parent)->type)
+        switch (((Edge *)parent)->type & ~EDGE_CONSTRUCTION)
         {
         case EDGE_ARC:
             ae = (ArcEdge *)parent;
@@ -795,7 +782,7 @@ gen_view_list_face(Face *face)
 
         // Then the subsequent points. Edges will follow in order, but their points
         // may be reversed.
-        switch (e->type)
+        switch (e->type & !EDGE_CONSTRUCTION)
         {
         case EDGE_STRAIGHT:
             if (last_point == e->endpoints[0])

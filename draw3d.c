@@ -13,7 +13,7 @@ static Plane temp_plane;
 
 // Some standard colors sent to GL.
 void
-color(OBJECT obj_type, BOOL selected, BOOL highlighted, BOOL locked)
+color(OBJECT obj_type, BOOL construction, BOOL selected, BOOL highlighted, BOOL locked)
 {
     float r, g, b, a;
 
@@ -24,8 +24,18 @@ color(OBJECT obj_type, BOOL selected, BOOL highlighted, BOOL locked)
 
     case OBJ_POINT:
     case OBJ_EDGE:
-        r = g = b = 0.3f;
+        if (construction)
+        {
+            r = 0.3f;
+            g = 0.3f;
+            b = 0.5f;
+        }
+        else
+        {
+            r = g = b = 0.5f;
+        }
         a = 1.0f;
+
         if (selected)
             r += 0.4f;
         if (highlighted)
@@ -35,15 +45,22 @@ color(OBJECT obj_type, BOOL selected, BOOL highlighted, BOOL locked)
         break;
 
     case OBJ_FACE:
-        r = g = b = 0.8f;
+        if (construction)
+        {
+            r = 0.7f;
+            g = 0.7f;
+            b = 0.8f;
+        }
+        else
+        {
+            r = g = b = 0.8f;
+        }
         a = 0.6f;
+
         if (selected)
             r += 0.2f;
         if (highlighted)
-        {
             g += 0.2f;
-            a += 0.2f;      // Looks nice, but TODO: some way to get double-highlighting to show up better
-        }
         if (highlighted && locked)
             r = g = b = 0.6f;
         break;
@@ -92,7 +109,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             // Draw a square blob in the facing plane, so it's more easily seen
             glDisable(GL_CULL_FACE);
             glBegin(GL_POLYGON);
-            color(OBJ_POINT, selected, highlighted, locked);
+            color(OBJ_POINT, FALSE, selected, highlighted, locked);
             switch (facing_index)
             {
             case PLANE_XY:
@@ -131,7 +148,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         {
             // Just draw the point, the picking will still work
             glBegin(GL_POINTS);
-            color(OBJ_POINT, selected, highlighted, locked);
+            color(OBJ_POINT, FALSE, selected, highlighted, locked);
             glVertex3f(p->x, p->y, p->z);
             glEnd();
         }
@@ -146,11 +163,11 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             return;
 
         edge = (Edge *)obj;
-        switch (edge->type)
+        switch (edge->type & ~EDGE_CONSTRUCTION)
         {
         case EDGE_STRAIGHT:
             glBegin(GL_LINES);
-            color(OBJ_EDGE, selected, highlighted, locked);
+            color(OBJ_EDGE, edge->type & EDGE_CONSTRUCTION, selected, highlighted, locked);
             glVertex3f(edge->endpoints[0]->x, edge->endpoints[0]->y, edge->endpoints[0]->z);
             glVertex3f(edge->endpoints[1]->x, edge->endpoints[1]->y, edge->endpoints[1]->z);
             glEnd();
@@ -167,7 +184,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             ae = (ArcEdge *)edge;
             gen_view_list_arc(ae);
             glBegin(GL_LINE_STRIP);
-            color(OBJ_EDGE, selected, highlighted, locked);
+            color(OBJ_EDGE, edge->type & EDGE_CONSTRUCTION, selected, highlighted, locked);
             for (p = edge->view_list; p != NULL; p = (Point *)p->hdr.next)
                 glVertex3f(p->x, p->y, p->z);
 
@@ -185,7 +202,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             be = (BezierEdge *)edge;
             gen_view_list_bez(be);
             glBegin(GL_LINE_STRIP);
-            color(OBJ_EDGE, selected, highlighted, locked);
+            color(OBJ_EDGE, edge->type & EDGE_CONSTRUCTION, selected, highlighted, locked);
             for (p = edge->view_list; p != NULL; p = (Point *)p->hdr.next)
                 glVertex3f(p->x, p->y, p->z);
 
@@ -399,11 +416,31 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         snap_to_angle(picked_plane, &picked_point, &new_point, angle_snap);
                     snap_to_grid(picked_plane, &new_point);
 
+                    // test for snapping
+                    if (highlight_obj != NULL)
+                    {
+                        switch (highlight_obj->type)
+                        {
+                        case OBJ_POINT:
+                            p00 = (Point *)highlight_obj;
+                            new_point.x = p00->x;
+                            new_point.y = p00->y;
+                            new_point.z = p00->z;
+                            break;
+
+                        case OBJ_EDGE:
+                            snap_ray_edge(pt.x, pt.y, (Edge *)highlight_obj, &new_point);
+                            break;
+                        }
+                    }
+
                     // If first move, create the edge here.
                     if (curr_obj == NULL)
                     {
                         curr_obj = (Object *)edge_new(EDGE_STRAIGHT);
                         e = (Edge *)curr_obj;
+                        if (construction)
+                            e->type |= EDGE_CONSTRUCTION;
                         // TODO: share points if snapped onto an existing edge endpoint,
                         // and the edge is not referenced by a face. For now, just create points...
                         e->endpoints[0] = point_newp(&picked_point);
@@ -438,6 +475,8 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                     {
                         curr_obj = (Object *)edge_new(EDGE_ARC);
                         e = (Edge *)curr_obj;
+                        if (construction)
+                            e->type |= EDGE_CONSTRUCTION;
                         // TODO: share points if snapped onto an existing edge endpoint,
                         // and the edge is not referenced by a face. For now, just create points...
                         e->endpoints[0] = point_newp(&picked_point);
@@ -483,6 +522,8 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         )
                         {
                             e->type = EDGE_ARC;
+                            if (construction)
+                                e->type |= EDGE_CONSTRUCTION;
                             ae->centre->x = centre.x;
                             ae->centre->y = centre.y;
                             ae->centre->z = centre.z;
@@ -630,7 +671,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         dn.x = rf->normal.A;
                         dn.y = rf->normal.B;
                         dn.z = rf->normal.C;
-                        switch (rf->type)
+                        switch (rf->type & ~FACE_CONSTRUCTION)
                         {
                         case FACE_RECT:
                             // We're drawing on an existing rect. Make the new rect parallel to its
@@ -714,6 +755,8 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                     if (curr_obj == NULL)
                     {
                         rf = face_new(FACE_RECT, *picked_plane);
+                        if (construction)
+                            rf->type |= FACE_CONSTRUCTION;
 
                         // generate four points for the view list
                         p00 = point_newp(&picked_point);
@@ -773,6 +816,8 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                     if (curr_obj == NULL)
                     {
                         ae = (ArcEdge *)edge_new(EDGE_ARC);
+                        if (construction)
+                            ((Edge *)ae)->type |= EDGE_CONSTRUCTION;
                         ae->normal = *picked_plane;
                         ae->centre = point_newp(&picked_point);
                         
@@ -781,10 +826,11 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         ((Edge *)ae)->endpoints[0] = ((Edge *)ae)->endpoints[1] = p01;
 
                         rf = face_new(FACE_CIRCLE, *picked_plane);
+                        if (construction)
+                            rf->type |= FACE_CONSTRUCTION;
                         rf->edges[0] = (Edge *)ae;
                         rf->n_edges = 1;
                         rf->initial_point = p01;
-
                         curr_obj = (Object *)rf;
                     }
                     else
@@ -815,6 +861,8 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         float length;
 
                         // Can we extrude this face?
+                        if (face->type & FACE_CONSTRUCTION)
+                            break;
                         if (face->type == FACE_CYLINDRICAL || face->type == FACE_GENERAL)
                             break;
 

@@ -11,7 +11,7 @@ has_dims(Object *obj)
         return FALSE;
 
     case OBJ_EDGE:
-        switch (((Edge *)obj)->type)
+        switch (((Edge *)obj)->type & ~EDGE_CONSTRUCTION)
         {
         case EDGE_BEZIER:
             return FALSE;
@@ -78,7 +78,7 @@ update_dims(Object *obj, char *buf)
     {
     case OBJ_EDGE:
         e = (Edge *)obj;
-        switch (e->type)
+        switch (e->type & ~EDGE_CONSTRUCTION)
         {
         case EDGE_STRAIGHT:
             len = (float)atof(buf);
@@ -121,7 +121,7 @@ update_dims(Object *obj, char *buf)
 
     case OBJ_FACE:
         f = (Face *)obj;
-        switch (f->type)
+        switch (f->type & ~FACE_CONSTRUCTION)
         {
         case FACE_RECT:
             e0 = f->edges[0];
@@ -184,7 +184,7 @@ show_dims_at(POINT pt, Object *obj, BOOL accept_input)
     {
     case OBJ_EDGE:
         e = (Edge *)obj;
-        switch (e->type)
+        switch (e->type & ~EDGE_CONSTRUCTION)
         {
         case EDGE_STRAIGHT:
             sprintf_s(buf, 64, "%s mm", display_rounded(buf2, length(e->endpoints[0], e->endpoints[1])));
@@ -207,7 +207,7 @@ show_dims_at(POINT pt, Object *obj, BOOL accept_input)
 
     case OBJ_FACE:
         f = (Face *)obj;
-        switch (f->type)
+        switch (f->type & ~FACE_CONSTRUCTION)
         {
         case FACE_RECT:
             e0 = f->edges[0];

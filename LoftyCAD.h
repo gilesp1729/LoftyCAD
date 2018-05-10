@@ -66,6 +66,7 @@ extern BOOL view_debug;
 extern BOOL view_rendered;
 
 extern STATE app_state;
+extern BOOL construction;
 extern Object *selection;
 extern Object *clipboard;
 extern Object *object_tree;

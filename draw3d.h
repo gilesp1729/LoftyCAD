@@ -13,7 +13,7 @@ typedef enum
     DRAW_HIGHLIGHT_LOCKED = 8
 } PRESENTATION;
 
-void color(OBJECT obj_type, BOOL selected, BOOL highlighted, BOOL locked);
+void color(OBJECT obj_type, BOOL construction, BOOL selected, BOOL highlighted, BOOL locked);
 void draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock);
 
 #endif // __DRAW3D_H__
