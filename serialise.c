@@ -75,8 +75,8 @@ serialise_obj(Object *obj, FILE *f)
     case OBJ_VOLUME:
         fprintf_s(f, "BEGIN %d\n", obj->ID);
         vol = (Volume *)obj;
-        if (vol->attached_to != NULL)
-            serialise_obj((Object *)vol->attached_to, f);
+       // if (vol->attached_to != NULL)   // TODO replace with SNAP record
+       //     serialise_obj((Object *)vol->attached_to, f);
         for (face = vol->faces; face != NULL; face = (Face *)face->hdr.next)
             serialise_obj((Object *)face, f);
         break;
@@ -130,7 +130,7 @@ serialise_obj(Object *obj, FILE *f)
 
     case OBJ_VOLUME:
         vol = (Volume *)obj;
-        fprintf_s(f, "%d ", vol->attached_to != NULL ? vol->attached_to->hdr.ID : 0);
+      //  fprintf_s(f, "%d ", vol->attached_to != NULL ? vol->attached_to->hdr.ID : 0);
         for (face = vol->faces; face != NULL; face = (Face *)face->hdr.next)
             fprintf_s(f, "%d ", face->hdr.ID);
         fprintf_s(f, "\n");
@@ -456,8 +456,8 @@ deserialise_tree(Object **tree, char *filename)
         else if (strcmp(tok, "VOLUME") == 0)
         {
             Volume *vol;
-            Face *attached_to = NULL;
-            int fid;
+         //   Face *attached_to = NULL;
+         //   int fid;
 
             tok = strtok_s(NULL, " \t\n", &nexttok);
             id = atoi(tok);
@@ -465,12 +465,12 @@ deserialise_tree(Object **tree, char *filename)
             tok = strtok_s(NULL, " \t\n", &nexttok);
             lock = locktype_of(tok);
 
-            tok = strtok_s(NULL, " \t\n", &nexttok);
-            fid = atoi(tok);
-            if (fid != 0)
-                attached_to = (Face *)object[fid];
+        //    tok = strtok_s(NULL, " \t\n", &nexttok);
+        //    fid = atoi(tok);
+        //    if (fid != 0)
+        //        attached_to = (Face *)object[fid];   // TODO replace this with the SNAP record
 
-            vol = vol_new(attached_to);
+            vol = vol_new();
             vol->hdr.ID = id;
             vol->hdr.lock = lock;
             object[id] = (Object *)vol;

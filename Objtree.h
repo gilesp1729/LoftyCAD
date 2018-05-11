@@ -59,6 +59,8 @@ typedef struct Object
                                     // the copy here. This allows sharing to be kept the same.
     LOCK            lock;           // The locking level of this object. It is only relevant
                                     // for top level objects (i.e. in the object tree)
+    struct Face     *attached_to;   // Object that this object was snapped to or drawn on, if any.
+    float           attached_dist;  // If attached to an edge, the distance along the edge.
     struct Object   *next;          // The next object in any list, e.g. the entire object tree, 
                                     // or the list of faces in a volume, etc. Not always used if
                                     // there is a fixed array of objects, e.g. two end points
@@ -164,9 +166,6 @@ typedef struct Volume
 {
     struct Object   hdr;            // Header
     struct Face     *faces;         // Doubly linked list of faces making up the volume
-    struct Face     *attached_to;   // Face this volume was started and extruded from, if any.
-                                    // If this face is moved or extruded, other objects will
-                                    // move with it.
 } Volume;
 
 extern unsigned int objid;
@@ -182,7 +181,7 @@ Point *point_new(float x, float y, float z);
 Point *point_newp(Point *p);
 Edge *edge_new(EDGE edge_type);
 Face *face_new(FACE face_type, Plane norm);
-Volume *vol_new();
+Volume *vol_new(void);
 
 // Link and delink from lists
 void link(Object *new_obj, Object **obj_list);

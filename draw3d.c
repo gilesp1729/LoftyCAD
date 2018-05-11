@@ -887,7 +887,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                             Volume *vol;
 
                             delink((Object *)face, &object_tree);
-                            vol = vol_new(NULL);
+                            vol = vol_new();
                             link((Object *)face, (Object **)&vol->faces);
                             face->vol = vol;
                             face->view_valid = FALSE;

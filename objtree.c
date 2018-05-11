@@ -124,13 +124,12 @@ Face *face_new(FACE face_type, Plane norm)
     return face;
 }
 
-Volume *vol_new(Face *attached_to)
+Volume *vol_new(void)
 {
     Volume *vol = calloc(1, sizeof(Volume));
 
     vol->hdr.type = OBJ_VOLUME;
     vol->hdr.ID = objid++;
-    vol->attached_to = attached_to;
     return vol;
 }
 
@@ -357,7 +356,7 @@ copy_obj(Object *obj, float xoffset, float yoffset, float zoffset)
 
     case OBJ_VOLUME:
         vol = (Volume *)obj;
-        new_vol = vol_new(NULL);
+        new_vol = vol_new();
         new_obj = (Object *)new_vol;
         new_obj->lock = obj->lock;
         for (face = vol->faces; face != NULL; face = (Face *)face->hdr.next)
