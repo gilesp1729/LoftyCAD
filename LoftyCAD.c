@@ -51,6 +51,12 @@ Object *clipboard = NULL;
 // List of objects to be drawn
 Object *object_tree = NULL;
 
+// List of snapped objects
+Snap *snap_list = NULL;
+
+// Current snap for endpoint of object being drawn
+Snap curr_snap;
+
 // Set TRUE whenever something is changed and the tree needs to be saved
 BOOL drawing_changed = FALSE;
 
@@ -100,7 +106,7 @@ char curr_filename[256] = { 0, };
 char curr_title[256] = { 0, };
 
 // Grid (for snapping points) and unit tolerance (for display of dims)
-// When snapping is turned off, points are still snapped to the tolerance.
+// When grid snapping is turned off, points are still snapped to the tolerance.
 // grid_snap must be a power of 10; tolerance must be a power of 10, and less
 // than or equal to the grid scale. (e.g. 1, 0.1)
 float grid_snap = 1.0f;
@@ -726,6 +732,7 @@ left_down(AUX_EVENTREC *event)
         // Don't add the object yet until we have moved the mouse, as a click will
         // need to be handled harmlessly and silently.
         curr_obj = NULL;
+        curr_snap.attached_to = NULL;
 
         break;
 
@@ -946,9 +953,20 @@ left_up(AUX_EVENTREC *event)
                     (app_state == STATE_DRAWING_RECT || app_state == STATE_DRAWING_CIRCLE) ? LOCK_EDGES : LOCK_NONE;
             }
 
+            // Create a snap for the endpoint, if there is one (the snap for the start point has
+            // already been created with the first move)
+            if (curr_snap.attached_to != NULL)  // TODO check for valid snap (to point or edge only)
+            {
+                Snap *snap = snap_new(curr_snap.snapped, curr_snap.attached_to, curr_snap.attached_dist);
+
+                snap->next = snap_list;
+                snap_list = snap;
+            }
+
             drawing_changed = TRUE;
             write_checkpoint(object_tree, curr_filename);
             curr_obj = NULL;
+            curr_snap.attached_to = NULL;
         }
 
         ReleaseCapture();
@@ -1082,6 +1100,7 @@ left_click(AUX_EVENTREC *event)
             selection = sel_obj;
             sel_obj->prev = picked_obj;
 
+#if 0  // TODO remove this, pending some other way to bring up the dims box to type in
             if (sel_obj->next == NULL)      // If a single object is being selected, show its dims
             {
                 POINT pt;
@@ -1090,6 +1109,7 @@ left_click(AUX_EVENTREC *event)
                 pt.y = event->data[AUX_MOUSEY];
                 show_dims_at(pt, picked_obj, TRUE);
             }
+#endif
         }
     }
 }

@@ -281,7 +281,6 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
     float matRot[4][4];
     POINT   pt;
     Object  *obj;
-    BOOL highlit;
     PRESENTATION pres;
     Object *highlight_obj = NULL;
 
@@ -330,7 +329,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                 Face *rf;
                 Plane norm;
                 char buf[64], buf2[64];
-                Object *parent;
+                Object *parent, *first_picked_obj;
 
                 switch (app_state)
                 {
@@ -359,7 +358,8 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                     snap_to_grid(facing_plane, &new_point);
 
                     parent = find_top_level_parent(object_tree, picked_obj);
-                    if (!is_selected_parent(picked_obj) && parent->lock < parent->type)
+                    // allow moving handles
+                    if (/* !is_selected_parent(picked_obj) && */ parent->lock < parent->type)
                     {
                         move_obj
                             (
@@ -411,6 +411,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                     break;
 
                 case STATE_DRAWING_EDGE:
+                    first_picked_obj = picked_obj;  // it may change when picked plane is assigned
                     if (picked_plane == NULL)
                         // Uhoh. We don't have a plane yet. Check if the mouse has moved into
                         // a face object, and use that. Otherwise, just come back and try with the
@@ -456,6 +457,20 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         // and the edge is not referenced by a face. For now, just create points...
                         e->endpoints[0] = point_newp(&picked_point);
                         e->endpoints[1] = point_newp(&new_point);
+                        if (first_picked_obj != NULL)
+                        {
+                            Snap *snap = snap_new
+                            (
+                                (Object *)e->endpoints[0],
+                                first_picked_obj,
+                                (first_picked_obj != NULL && first_picked_obj->type == OBJ_EDGE)
+                                    ? length(&picked_point, ((Edge *)first_picked_obj)->endpoints[0])
+                                    : 0
+                            );
+                            snap->next = snap_list;
+                            snap_list = snap;
+
+                        }
                     }
                     else
                     {
@@ -463,11 +478,13 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         e->endpoints[1]->x = new_point.x;
                         e->endpoints[1]->y = new_point.y;
                         e->endpoints[1]->z = new_point.z;
+                        curr_snap.snapped = (Object *)e->endpoints[1];
+                        curr_snap.attached_to = highlight_obj;
+                        curr_snap.attached_dist = 
+                            (highlight_obj != NULL && highlight_obj->type == OBJ_EDGE)
+                                ? length(&new_point, ((Edge *)highlight_obj)->endpoints[0]) 
+                                : 0;
                     }
-
-                    // Show the dimensions (length) of the edge.
-                    show_dims_at(pt, curr_obj, FALSE);
-
                     break;
 
                 case STATE_DRAWING_ARC:
@@ -541,8 +558,6 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                             ae->clockwise = clockwise;
                             e->view_valid = FALSE;
                         }
-
-                        show_dims_at(pt, curr_obj, FALSE);
                     }
                     break;
 
@@ -808,9 +823,6 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         p03->z = p3.z;
                     }
 
-                    // Show the dimensions of the rect. We can't use show_dims_at here.
-                    sprintf_s(buf, 64, "%s,%s mm", display_rounded(buf, length(p00, p01)), display_rounded(buf2, length(p00, p03)));
-                    show_hint_at(pt, buf, FALSE);
                     break;
 
                 case STATE_DRAWING_CIRCLE:
@@ -856,8 +868,6 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         rf->view_valid = FALSE;
                     }
 
-                    // Show the dimensions of the circle.
-                    show_dims_at(pt, curr_obj, FALSE);
                     break;
 
                 case STATE_DRAWING_MEASURE:
@@ -1053,7 +1063,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
 
                         // Show the height of the extrusion. TODO - show_dims_at for height
                         sprintf_s(buf, 64, "%s mm", display_rounded(buf2, extrude_height));
-                        show_hint_at(pt, buf, FALSE);
+                        show_hint_on(picked_obj, buf);
                     }
 
                     break;
@@ -1142,50 +1152,44 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
 
     // draw selection. Watch for highlighted objects appearing in the selection list.
     // Pass lock state of top-level parent to determine what is shown.
-    if (!picking)
+    for (obj = selection; obj != NULL; obj = obj->next)
     {
-        highlit = FALSE;
-        for (obj = selection; obj != NULL; obj = obj->next)
+        Object *parent = find_top_level_parent(object_tree, obj->prev);
+
+        if (obj->prev != curr_obj && obj->prev != highlight_obj)
         {
-            Object *parent = find_top_level_parent(object_tree, obj->prev);
-
-            if (obj->prev == curr_obj || obj->prev == highlight_obj)
-            {
-                pres = DRAW_SELECTED | DRAW_HIGHLIGHT;
-                if (app_state >= STATE_STARTING_EDGE)
-                    pres |= DRAW_HIGHLIGHT_LOCKED;
-                draw_object(obj->prev, pres, parent->lock);
-                //highlit = TRUE;
-            }
-            else
-            {
-                pres = DRAW_SELECTED;
-                draw_object(obj->prev, pres, parent->lock);
-            }
+            pres = DRAW_SELECTED;
+            draw_object(obj->prev, pres, parent->lock);
+            show_dims_on(obj->prev);
         }
+    }
 
-        // draw any current object not yet added to the object tree,
-        // or any under highlighting. Handle the case where it doesn't have a
-        // parent yet. Same for the picked highlighted object, if any.
-        if (curr_obj != NULL && !highlit)
-        {
-            Object *parent = find_top_level_parent(object_tree, curr_obj);
+    // draw any current object not yet added to the object tree,
+    // or any under highlighting. Handle the case where it doesn't have a
+    // parent yet. Same for the picked highlighted object, if any.
+    if (curr_obj != NULL)
+    {
+        Object *parent = find_top_level_parent(object_tree, curr_obj);
 
-            pres = DRAW_HIGHLIGHT;
-            if (app_state >= STATE_STARTING_EDGE)
-                pres |= DRAW_HIGHLIGHT_LOCKED;
-            draw_object(curr_obj, pres, parent != NULL ? parent->lock : LOCK_NONE);
-        }
-        if (highlight_obj != NULL && !highlit)
-        {
-            Object *parent = find_top_level_parent(object_tree, highlight_obj);
+        pres = DRAW_HIGHLIGHT;
+        if (app_state >= STATE_STARTING_EDGE)
+            pres |= DRAW_HIGHLIGHT_LOCKED;
+        draw_object(curr_obj, pres, parent != NULL ? parent->lock : LOCK_NONE);
+        show_dims_on(curr_obj);
+    }
+    if (highlight_obj != NULL)
+    {
+        Object *parent = find_top_level_parent(object_tree, highlight_obj);
 
-            pres = DRAW_HIGHLIGHT;
-            if (app_state >= STATE_STARTING_EDGE)
-                pres |= DRAW_HIGHLIGHT_LOCKED;
-            draw_object(highlight_obj, pres, parent != NULL ? parent->lock : LOCK_NONE);
-        }
-
+        pres = DRAW_HIGHLIGHT;
+        if (app_state >= STATE_STARTING_EDGE)
+            pres |= DRAW_HIGHLIGHT_LOCKED;
+        draw_object(highlight_obj, pres, parent != NULL ? parent->lock : LOCK_NONE);
+        show_dims_on(highlight_obj);
+    }
+    
+    if(!picking)
+    {
         // Draw axes XYZ in RGB. 
         glPushName(0);
         glBegin(GL_LINES);
@@ -1224,6 +1228,38 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
         glVertex2f((float)orig_left_mouseX, (float)vp[3] - orig_left_mouseY);
         glVertex2f((float)pt.x, (float)vp[3] - orig_left_mouseY);
         glEnd();
+    }
+
+    // echo highlighting of snap targets at cursor
+    if (highlight_obj != NULL)
+    {
+        HDC hdc = auxGetHDC();
+        GLint vp[4];
+
+        glMatrixMode(GL_MODELVIEW);
+        glLoadIdentity();
+        glMatrixMode(GL_PROJECTION);
+        glLoadIdentity();
+        glGetIntegerv(GL_VIEWPORT, vp);
+        glOrtho(vp[0], vp[0] + vp[2], vp[1], vp[1] + vp[3], 0.1, 10);
+        glTranslatef(0, 0, -1);
+
+        wglUseFontBitmaps(hdc, 0, 256, 1000);
+        glListBase(1000);
+        glColor3f(0.4f, 0.4f, 0.4f);
+        glRasterPos2f((float)pt.x + 10, (float)vp[3] - pt.y - 20);
+        switch (highlight_obj->type)
+        {
+        case OBJ_POINT:
+            glCallLists(5, GL_UNSIGNED_BYTE, "Point");
+            break;
+        case OBJ_EDGE:
+            glCallLists(4, GL_UNSIGNED_BYTE, "Edge");
+            break;
+        case OBJ_FACE:
+            glCallLists(4, GL_UNSIGNED_BYTE, "Face");
+            break;
+        }
     }
 
     glFlush();

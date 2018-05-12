@@ -71,6 +71,8 @@ extern BOOL construction;
 extern Object *selection;
 extern Object *clipboard;
 extern Object *object_tree;
+extern Snap *snap_list;
+extern Snap curr_snap;
 extern BOOL drawing_changed;
 extern Object *curr_obj;
 extern Object *picked_obj;

@@ -59,8 +59,6 @@ typedef struct Object
                                     // the copy here. This allows sharing to be kept the same.
     LOCK            lock;           // The locking level of this object. It is only relevant
                                     // for top level objects (i.e. in the object tree)
-    struct Face     *attached_to;   // Object that this object was snapped to or drawn on, if any.
-    float           attached_dist;  // If attached to an edge, the distance along the edge.
     struct Object   *next;          // The next object in any list, e.g. the entire object tree, 
                                     // or the list of faces in a volume, etc. Not always used if
                                     // there is a fixed array of objects, e.g. two end points
@@ -168,9 +166,19 @@ typedef struct Volume
     struct Face     *faces;         // Doubly linked list of faces making up the volume
 } Volume;
 
+// Snap list entries
+typedef struct Snap
+{
+    struct Object   *snapped;       // Object that is snapped or attached
+    struct Snap     *next;          // Next entry in snap list
+    struct Object   *attached_to;   // Object that is snapped to, drawn on, or extruded from
+    float           attached_dist;  // If attached_to is an edge, the distance along the edge.
+} Snap;
+
+// Externs
+
 extern unsigned int objid;
 extern Point *free_list;
-
 
 
 // Prototypes for object functions: 
@@ -182,6 +190,7 @@ Point *point_newp(Point *p);
 Edge *edge_new(EDGE edge_type);
 Face *face_new(FACE face_type, Plane norm);
 Volume *vol_new(void);
+Snap *snap_new(Object *snapped, Object *attached_to, float attached_dist);
 
 // Link and delink from lists
 void link(Object *new_obj, Object **obj_list);

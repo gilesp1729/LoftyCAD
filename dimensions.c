@@ -163,23 +163,17 @@ update_dims(Object *obj, char *buf)
     invalidate_all_view_lists(parent, obj, 0, 0, 0);
 }
 
-// Show the dimensions of an existing object, and optionally accept changes to them. 
-// If accepting input, display them in a modal dialog.
-// Note that objects under construction don't always use this, as the object may not be
-// fully valid yet.
+// Get the dims into a string, if they are available for an object.
 void
-show_dims_at(POINT pt, Object *obj, BOOL accept_input)
+get_dims_string(Object *obj, char buf[64])
 {
-    char buf[64], buf2[64];
-    Edge *e, *e0, *e1;
+    char buf2[64];
+    Point *p0, *p1, *p2;
+    Edge *e;
     ArcEdge *ae;
     Face *f;
     float angle;
 
-    if (!has_dims(obj))
-        return;
-
-    // get the dimension(s) into a string, depending on the type of object we have picked.
     switch (obj->type)
     {
     case OBJ_EDGE:
@@ -210,11 +204,13 @@ show_dims_at(POINT pt, Object *obj, BOOL accept_input)
         switch (f->type & ~FACE_CONSTRUCTION)
         {
         case FACE_RECT:
-            e0 = f->edges[0];
-            e1 = f->edges[1];
-            sprintf_s(buf, 64, "%s,%s mm", 
-                      display_rounded(buf, length(e0->endpoints[0], e0->endpoints[1])), 
-                      display_rounded(buf2, length(e1->endpoints[0], e1->endpoints[1])));
+            // use view list here, then it works for drawing rects
+            p0 = f->view_list;
+            p1 = (Point *)p0->hdr.next;
+            p2 = (Point *)p1->hdr.next;
+            sprintf_s(buf, 64, "%s,%s mm",
+                      display_rounded(buf, length(p0, p1)),
+                      display_rounded(buf2, length(p1, p2)));
             break;
         case FACE_CIRCLE:
             e = f->edges[0];
@@ -224,10 +220,80 @@ show_dims_at(POINT pt, Object *obj, BOOL accept_input)
         }
         break;
     }
+}
 
+// Show the dimensions of an existing object, and optionally accept changes to them. 
+// If accepting input, display them in a modal dialog.
+// Note that objects under construction don't always use this, as the object may not be
+// fully valid yet.
+void
+show_dims_at(POINT pt, Object *obj, BOOL accept_input)
+{
+    char buf[64];
+
+    if (!has_dims(obj))
+        return;
+
+    get_dims_string(obj, buf);
     SetWindowLongPtr(hWndDims, DWL_USER, (LONG_PTR)obj);
     show_hint_at(pt, buf, accept_input);
 }
+
+// show a string on an object.
+void
+show_hint_on(Object *obj, char buf[64])
+{
+}
+
+// Show dimensions on an object during drawing.
+void
+show_dims_on(Object *obj)
+{
+    HDC hdc = auxGetHDC();
+    Edge *e;
+    Point *p0, *p1, *p2;
+
+    char buf[64];
+
+    if (!has_dims(obj))
+        return;
+
+    get_dims_string(obj, buf);
+
+    color(obj->type, FALSE, FALSE, TRUE, TRUE);  // TODO fix up params OR just use glColor3f
+    switch (obj->type)
+    {
+    case OBJ_EDGE:
+        e = (Edge *)obj;
+        glRasterPos3f
+            (
+            (e->endpoints[0]->x + e->endpoints[1]->x) / 2,
+            (e->endpoints[0]->y + e->endpoints[1]->y) / 2,
+            (e->endpoints[0]->z + e->endpoints[1]->z) / 2
+            );
+        wglUseFontBitmaps(hdc, 0, 256, 1000);       // TODO hsould only have to do this once
+        glListBase(1000);
+        glCallLists(strlen(buf), GL_UNSIGNED_BYTE, buf);
+        break;
+
+    case OBJ_FACE:
+        // use view list here, then it works for drawing rects
+        p0 = ((Face *)obj)->view_list;
+        p1 = (Point *)p0->hdr.next;
+        p2 = (Point *)p1->hdr.next;
+        glRasterPos3f
+        (
+            (p0->x + p2->x) / 2,
+            (p0->y + p2->y) / 2,
+            (p0->z + p2->z) / 2
+        );
+        wglUseFontBitmaps(hdc, 0, 256, 1000);
+        glListBase(1000);
+        glCallLists(strlen(buf), GL_UNSIGNED_BYTE, buf);
+        break;
+    }
+}
+
 
 // Wndproc for the dimensions dialog. Normally it's only for display while dragging
 // but we can also type dimensions into it.

@@ -133,6 +133,17 @@ Volume *vol_new(void)
     return vol;
 }
 
+Snap *snap_new(Object *snapped, Object *attached_to, float attached_dist)
+{
+    Snap *snap = calloc(1, sizeof(Snap));     // TODO use a free list for these, or combine with objs, points
+
+    snap->snapped = snapped;
+    snap->attached_to = attached_to;
+    snap->attached_dist = attached_dist;
+
+    return snap;
+}
+
 // Link and unlink objects in a double linked list
 void link(Object *new_obj, Object **obj_list)
 {
@@ -1072,6 +1083,7 @@ gen_view_list_bez(BezierEdge *be)
 }
 
 // Purge an object. Points are put in the free list.
+// TODO - purge any snaps that mention this object
 void
 purge_obj(Object *obj)
 {
@@ -1150,3 +1162,23 @@ purge_tree(Object *tree)
     }
 }
 
+// Return a list of things that are snapped to a given Object
+// (as a list of Snaps)
+Snap *
+snapped_to_list(Object *obj)
+{
+    Snap *snap;
+    Snap *entry;
+    Snap *list = NULL;
+
+    for (snap = snap_list; snap != NULL; snap = snap->next)
+    {
+        if (snap->attached_to == obj)
+        {
+            entry = snap_new(snap->snapped, snap->attached_to, snap->attached_dist);
+            entry->next = list;
+            list = entry;
+        }
+    }
+    return list;
+}

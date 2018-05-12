@@ -130,7 +130,6 @@ serialise_obj(Object *obj, FILE *f)
 
     case OBJ_VOLUME:
         vol = (Volume *)obj;
-      //  fprintf_s(f, "%d ", vol->attached_to != NULL ? vol->attached_to->hdr.ID : 0);
         for (face = vol->faces; face != NULL; face = (Face *)face->hdr.next)
             fprintf_s(f, "%d ", face->hdr.ID);
         fprintf_s(f, "\n");
@@ -146,6 +145,7 @@ serialise_tree(Object *tree, char *filename)
 {
     FILE *f;
     Object *obj;
+    Snap *snap;
 
     fopen_s(&f, filename, "wt");
     fprintf_s(f, "TITLE %s\n", curr_title);
@@ -154,6 +154,12 @@ serialise_tree(Object *tree, char *filename)
     save_count++;
     for (obj = tree; obj != NULL; obj = obj->next)
         serialise_obj(obj, f);
+
+    for (snap = snap_list; snap != NULL; snap = snap->next)
+    {
+        fprintf_s(f, "SNAP %d %d %f\n",
+                  snap->snapped->ID, snap->attached_to->ID, snap->attached_dist);
+    }
 
     fclose(f);
 }
@@ -456,19 +462,12 @@ deserialise_tree(Object **tree, char *filename)
         else if (strcmp(tok, "VOLUME") == 0)
         {
             Volume *vol;
-         //   Face *attached_to = NULL;
-         //   int fid;
 
             tok = strtok_s(NULL, " \t\n", &nexttok);
             id = atoi(tok);
             check_and_grow(id, &object, &objsize);
             tok = strtok_s(NULL, " \t\n", &nexttok);
             lock = locktype_of(tok);
-
-        //    tok = strtok_s(NULL, " \t\n", &nexttok);
-        //    fid = atoi(tok);
-        //    if (fid != 0)
-        //        attached_to = (Face *)object[fid];   // TODO replace this with the SNAP record
 
             vol = vol_new();
             vol->hdr.ID = id;
@@ -493,6 +492,26 @@ deserialise_tree(Object **tree, char *filename)
             stkptr--;
             ASSERT(stkptr == 0, "ID stack not empty");
             link_tail((Object *)vol, tree);
+        }
+        else if (strcmp(tok, "SNAP") == 0)
+        {
+            int aid;
+            float a_dist;
+            Snap *snap;
+
+            // Snaps will be written out last, so all the ID's should be valid by now.
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            id = atoi(tok);
+            ASSERT(id > 0 && object[id] != NULL, "Bad snapped ID");
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            aid = atoi(tok);
+            ASSERT(aid > 0 && object[aid] != NULL, "Bad attached_to ID");
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            a_dist = (float)atof(tok);
+
+            snap = snap_new(object[id], object[aid], a_dist);
+            snap->next = snap_list;
+            snap_list = snap;
         }
     }
 
