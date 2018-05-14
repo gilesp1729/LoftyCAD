@@ -92,7 +92,9 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
 
     BOOL draw_components = !highlighted || !snapping;
 
-    glEnable(GL_BLEND);
+    if (!view_rendered)
+        glEnable(GL_BLEND);
+
     switch (obj->type)
     {
     case OBJ_POINT:
@@ -806,6 +808,15 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         rf->view_valid = TRUE;
 
                         curr_obj = (Object *)rf;
+
+                        // If we're starting on a face, snap to it
+                        if (picked_obj != NULL && picked_obj->type == OBJ_FACE)
+                        {
+                            Snap *snap = snap_new(curr_obj, picked_obj, 0);
+
+                            snap->next = snap_list;
+                            snap_list = snap;
+                        }
                     }
                     else
                     {
@@ -857,6 +868,14 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         rf->n_edges = 1;
                         rf->initial_point = p01;
                         curr_obj = (Object *)rf;
+
+                        if (picked_obj != NULL && picked_obj->type == OBJ_FACE)
+                        {
+                            Snap *snap = snap_new(curr_obj, picked_obj, 0);
+
+                            snap->next = snap_list;
+                            snap_list = snap;
+                        }
                     }
                     else
                     {
@@ -897,6 +916,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                             Edge *e, *o, *ne;
                             Point *eip, *oip;
                             Volume *vol;
+                            Snap *snap;
 
                             delink((Object *)face, &object_tree);
                             vol = vol_new();
@@ -1021,6 +1041,14 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                             // (default locking is one level down)
                             link((Object *)vol, &object_tree);
                             ((Object *)vol)->lock = LOCK_FACES;
+
+                            // Snap the opposite to any face it was built on (the top face is
+                            // about to be moved, which will destroy the snap)
+                            for (snap = snap_list; snap != NULL; snap = snap->next)
+                            {
+                                if (snap->snapped == picked_obj)
+                                    snap->snapped = (Object *)opposite;
+                            }
                         }
                         else
                         {
@@ -1182,12 +1210,35 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
     if (highlight_obj != NULL)
     {
         Object *parent = find_top_level_parent(object_tree, highlight_obj);
+        Snap *snap;
 
         pres = DRAW_HIGHLIGHT;
         if (app_state >= STATE_STARTING_EDGE)
             pres |= DRAW_HIGHLIGHT_LOCKED;
         draw_object(highlight_obj, pres, parent != NULL ? parent->lock : LOCK_NONE);
         show_dims_on(highlight_obj, pres, parent != NULL ? parent->lock : LOCK_NONE);
+
+        // If anything is snapped to this object, highlight it as well.
+        for (snap = snap_list; snap != NULL; snap = snap->next)
+        {
+            if (snap->attached_to == highlight_obj)
+            {
+                pres = DRAW_HIGHLIGHT;
+                if (snap->snapped->type == OBJ_FACE)
+                {
+                    Face *f = (Face *)snap->snapped;
+
+                    if (f->vol != NULL)
+                        draw_object((Object *)f->vol, pres, LOCK_FACES);
+                    else
+                        draw_object(snap->snapped, pres, LOCK_EDGES);
+                }
+                else if (snap->snapped->type == OBJ_POINT)
+                {
+                    draw_object(snap->snapped, pres, LOCK_NONE);
+                }
+            }
+        }
     }
     
     if(!picking)

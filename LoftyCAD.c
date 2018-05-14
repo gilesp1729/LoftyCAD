@@ -1529,11 +1529,13 @@ Command(int message, int wParam, int lParam)
             if (view_rendered)
             {
                 view_rendered = FALSE;
+                glEnable(GL_BLEND);
                 CheckMenuItem(hMenu, ID_VIEW_RENDEREDVIEW, MF_UNCHECKED);
             }
             else
             {
                 view_rendered = TRUE;
+                glDisable(GL_BLEND);
                 CheckMenuItem(hMenu, ID_VIEW_RENDEREDVIEW, MF_CHECKED);
             }
             EnableWindow(GetDlgItem(hWndToolbar, IDB_EDGE), !view_rendered);

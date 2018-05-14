@@ -189,6 +189,7 @@ link_tail(Object *new_obj, Object **obj_list)
     {
         Object *last;
 
+        // TODO - this could be slow! Keep a tail pointer?
         for (last = *obj_list; last->next != NULL; last = last->next)
             ;
 
@@ -280,7 +281,13 @@ clear_move_copy_flags(Object *obj)
     for (snap = snap_list; snap != NULL; snap = snap->next)
     {
         if (snap->attached_to == obj)
-            clear_move_copy_flags(snap->snapped);
+        {
+            if (snap->snapped->type == OBJ_FACE && ((Face *)snap->snapped)->vol != NULL)
+                // If obj is a face, and has a volume, clear all of it
+                clear_move_copy_flags((Object *)((Face *)snap->snapped)->vol);
+            else
+                clear_move_copy_flags(snap->snapped);
+        }
     }
 }
 
@@ -508,20 +515,16 @@ move_obj(Object *obj, float xoffset, float yoffset, float zoffset)
             p->z += zoffset;
             p->moved = TRUE;
 
-            // Move all points snapped to this point. Don't recall move_obj for
-            // this, as the code below will also be triggered.
+            // Move all points snapped to this point. 
             for (snap = snap_list; snap != NULL; snap = snap->next)
             {
                 if (snap->attached_to == obj)
                 {
-                    p = (Point *)snap->snapped;
-                    if (!p->moved)
-                    {
-                        p->x += xoffset;
-                        p->y += yoffset;
-                        p->z += zoffset;
-                        p->moved = TRUE;
-                    }
+                    Object *saved_obj = snap->snapped;
+                    // temporarily NULL this, so it doesn't trigger the below code..
+                    snap->snapped = NULL;
+                    move_obj(saved_obj, xoffset, yoffset, zoffset);
+                    snap->snapped = saved_obj;
                 }
             }
 
@@ -563,8 +566,15 @@ move_obj(Object *obj, float xoffset, float yoffset, float zoffset)
         for (snap = snap_list; snap != NULL; snap = snap->next)
         {
             if (snap->attached_to == obj)
-                move_obj(snap->snapped, xoffset, yoffset, zoffset);
+            {
+                Object *saved_obj = snap->snapped;
+
+                snap->snapped = NULL;
+                move_obj(saved_obj, xoffset, yoffset, zoffset);
+                snap->snapped = saved_obj;
+            }
         }
+
         break;
 
     case OBJ_FACE:
@@ -583,13 +593,28 @@ move_obj(Object *obj, float xoffset, float yoffset, float zoffset)
         {
             if (snap->attached_to == obj)
             {
+                Object *saved_obj;
+
                 ASSERT(snap->snapped->type = OBJ_FACE, "Only a face can be snapped to a face");
                 vol = ((Face *)snap->snapped)->vol;
+                saved_obj = snap->snapped;
+                snap->snapped = NULL;
                 if (vol == NULL)
-                    move_obj(snap->snapped, xoffset, yoffset, zoffset);
+                    move_obj(saved_obj, xoffset, yoffset, zoffset);
                 else
                     move_obj((Object *)vol, xoffset, yoffset, zoffset);
-                // TODO how do I break snaps? move_obj has to be recalled here..
+                snap->snapped = saved_obj;
+            }
+        }
+
+        // if I move a face that is snapped, the snap must be broken.
+        // Just set snap object pointers to NULL, and clean the list up later.
+        for (snap = snap_list; snap != NULL; snap = snap->next)
+        {
+            if (snap->snapped == obj)
+            {
+                snap->snapped = NULL;
+                snap->attached_to = NULL;
             }
         }
         break;
