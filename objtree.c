@@ -224,6 +224,7 @@ clear_move_copy_flags(Object *obj)
     BezierEdge *be;
     Face *face;
     Volume *vol;
+    Snap *snap;
 
     switch (obj->type)
     {
@@ -272,6 +273,14 @@ clear_move_copy_flags(Object *obj)
             clear_move_copy_flags((Object *)face);
         obj->copied_to = NULL;
         break;
+    }
+
+    // Clear move/copy flags on on points and edges that may have been moved
+    // because they were snapped.
+    for (snap = snap_list; snap != NULL; snap = snap->next)
+    {
+        if (snap->attached_to == obj)
+            clear_move_copy_flags(snap->snapped);
     }
 }
 
@@ -486,6 +495,7 @@ move_obj(Object *obj, float xoffset, float yoffset, float zoffset)
     BezierEdge *be;
     Face *face;
     Volume *vol;
+    Snap *snap;
 
     switch (obj->type)
     {
@@ -497,6 +507,34 @@ move_obj(Object *obj, float xoffset, float yoffset, float zoffset)
             p->y += yoffset;
             p->z += zoffset;
             p->moved = TRUE;
+
+            // Move all points snapped to this point. Don't recall move_obj for
+            // this, as the code below will also be triggered.
+            for (snap = snap_list; snap != NULL; snap = snap->next)
+            {
+                if (snap->attached_to == obj)
+                {
+                    p = (Point *)snap->snapped;
+                    if (!p->moved)
+                    {
+                        p->x += xoffset;
+                        p->y += yoffset;
+                        p->z += zoffset;
+                        p->moved = TRUE;
+                    }
+                }
+            }
+
+            // if I move a point that is snapped, the snap must be broken.
+            // Just set snap object pointers to NULL, and clean the list up later.
+            for (snap = snap_list; snap != NULL; snap = snap->next)
+            {
+                if (snap->snapped == obj)
+                {
+                    snap->snapped = NULL;
+                    snap->attached_to = NULL;
+                }
+            }
         }
         break;
 
@@ -521,6 +559,12 @@ move_obj(Object *obj, float xoffset, float yoffset, float zoffset)
             break;
         }
 
+        // move all points snapped to this edge
+        for (snap = snap_list; snap != NULL; snap = snap->next)
+        {
+            if (snap->attached_to == obj)
+                move_obj(snap->snapped, xoffset, yoffset, zoffset);
+        }
         break;
 
     case OBJ_FACE:
@@ -534,6 +578,20 @@ move_obj(Object *obj, float xoffset, float yoffset, float zoffset)
         face->normal.refpt.y += yoffset;
         face->normal.refpt.z += zoffset;
         face->view_valid = FALSE;
+        // move faces (and volumes) attached to this face
+        for (snap = snap_list; snap != NULL; snap = snap->next)
+        {
+            if (snap->attached_to == obj)
+            {
+                ASSERT(snap->snapped->type = OBJ_FACE, "Only a face can be snapped to a face");
+                vol = ((Face *)snap->snapped)->vol;
+                if (vol == NULL)
+                    move_obj(snap->snapped, xoffset, yoffset, zoffset);
+                else
+                    move_obj((Object *)vol, xoffset, yoffset, zoffset);
+                // TODO how do I break snaps? move_obj has to be recalled here..
+            }
+        }
         break;
 
     case OBJ_VOLUME:
@@ -1100,6 +1158,7 @@ purge_obj(Object *obj)
     Face *face;
     Face *next_face = NULL;
     Volume *vol;
+    Snap *snap;
 
     switch (obj->type)
     {
@@ -1150,6 +1209,16 @@ purge_obj(Object *obj)
         free(obj);
         break;
     }
+
+    // Purge all snaps that mention this object.
+    for (snap = snap_list; snap != NULL; snap = snap->next)
+    {
+        if (snap->attached_to == obj || snap->snapped == obj)
+        {
+            snap->attached_to = NULL;
+            snap->snapped = NULL;
+        }
+    }
 }
 
 // Purge a tree, freeing everything in it, except for Points, which are
@@ -1167,23 +1236,3 @@ purge_tree(Object *tree)
     }
 }
 
-// Return a list of things that are snapped to a given Object
-// (as a list of Snaps)
-Snap *
-snapped_to_list(Object *obj)
-{
-    Snap *snap;
-    Snap *entry;
-    Snap *list = NULL;
-
-    for (snap = snap_list; snap != NULL; snap = snap->next)
-    {
-        if (snap->attached_to == obj)
-        {
-            entry = snap_new(snap->snapped, snap->attached_to, snap->attached_dist);
-            entry->next = list;
-            list = entry;
-        }
-    }
-    return list;
-}

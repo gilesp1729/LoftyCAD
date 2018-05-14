@@ -456,17 +456,24 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         e->endpoints[1] = point_newp(&new_point);
                         if (first_picked_obj != NULL)
                         {
-                            Snap *snap = snap_new
-                            (
-                                (Object *)e->endpoints[0],
-                                first_picked_obj,
-                                (first_picked_obj != NULL && first_picked_obj->type == OBJ_EDGE)
+                            Snap *snap;
+
+                            switch (first_picked_obj->type)
+                            {
+                            case OBJ_POINT:
+                            case OBJ_EDGE:
+                                snap = snap_new
+                                    (
+                                    (Object *)e->endpoints[0],
+                                    first_picked_obj,
+                                    (first_picked_obj != NULL && first_picked_obj->type == OBJ_EDGE)
                                     ? length(&picked_point, ((Edge *)first_picked_obj)->endpoints[0])
                                     : 0
-                            );
-                            snap->next = snap_list;
-                            snap_list = snap;
-
+                                    );
+                                snap->next = snap_list;
+                                snap_list = snap;
+                                break;
+                            }
                         }
                     }
                     else
@@ -475,12 +482,15 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         e->endpoints[1]->x = new_point.x;
                         e->endpoints[1]->y = new_point.y;
                         e->endpoints[1]->z = new_point.z;
-                        curr_snap.snapped = (Object *)e->endpoints[1];
-                        curr_snap.attached_to = highlight_obj;
-                        curr_snap.attached_dist = 
-                            (highlight_obj != NULL && highlight_obj->type == OBJ_EDGE)
-                                ? length(&new_point, ((Edge *)highlight_obj)->endpoints[0]) 
+                        if (highlight_obj != curr_obj)
+                        {
+                            curr_snap.snapped = (Object *)e->endpoints[1];
+                            curr_snap.attached_to = highlight_obj;
+                            curr_snap.attached_dist =
+                                (highlight_obj != NULL && highlight_obj->type == OBJ_EDGE)
+                                ? length(&new_point, ((Edge *)highlight_obj)->endpoints[0])
                                 : 0;
+                        }
                     }
                     break;
 

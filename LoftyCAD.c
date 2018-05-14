@@ -924,12 +924,19 @@ left_up(AUX_EVENTREC *event)
 
             // Create a snap for the endpoint, if there is one (the snap for the start point has
             // already been created with the first move)
-            if (curr_snap.attached_to != NULL)  // TODO check for valid snap (to point or edge only)
+            if (curr_snap.attached_to != NULL) 
             {
-                Snap *snap = snap_new(curr_snap.snapped, curr_snap.attached_to, curr_snap.attached_dist);
+                Snap *snap;
 
-                snap->next = snap_list;
-                snap_list = snap;
+                switch (curr_snap.attached_to->type)
+                {
+                case OBJ_POINT:
+                case OBJ_EDGE:
+                    snap = snap_new(curr_snap.snapped, curr_snap.attached_to, curr_snap.attached_dist);
+                    snap->next = snap_list;
+                    snap_list = snap;
+                    break;
+                }
             }
 
             drawing_changed = TRUE;

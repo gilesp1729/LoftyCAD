@@ -157,8 +157,11 @@ serialise_tree(Object *tree, char *filename)
 
     for (snap = snap_list; snap != NULL; snap = snap->next)
     {
-        fprintf_s(f, "SNAP %d %d %f\n",
-                  snap->snapped->ID, snap->attached_to->ID, snap->attached_dist);
+        if (snap->snapped != NULL)
+        {
+            fprintf_s(f, "SNAP %d %d %f\n",
+                      snap->snapped->ID, snap->attached_to->ID, snap->attached_dist);
+        }
     }
 
     fclose(f);
