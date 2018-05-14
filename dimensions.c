@@ -5,6 +5,9 @@
 BOOL
 has_dims(Object *obj)
 {
+    if (obj == NULL)
+        return FALSE;
+
     switch (obj->type)
     {
     case OBJ_POINT:
@@ -239,19 +242,25 @@ show_dims_at(POINT pt, Object *obj, BOOL accept_input)
     show_hint_at(pt, buf, accept_input);
 }
 
+#if 0
 // show a string on an object.
 void
 show_hint_on(Object *obj, char buf[64])
 {
 }
+#endif
 
 // Show dimensions on an object during drawing.
 void
-show_dims_on(Object *obj)
+show_dims_on(Object *obj, PRESENTATION pres, LOCK parent_lock)
 {
     HDC hdc = auxGetHDC();
+    Face *f;
     Edge *e;
     Point *p0, *p1, *p2;
+    BOOL locked;
+    BOOL selected = pres & DRAW_SELECTED;
+    BOOL highlighted = pres & DRAW_HIGHLIGHT;
 
     char buf[64];
 
@@ -260,25 +269,27 @@ show_dims_on(Object *obj)
 
     get_dims_string(obj, buf);
 
-    color(obj->type, FALSE, FALSE, TRUE, TRUE);  // TODO fix up params OR just use glColor3f
-    switch (obj->type)
+    locked = parent_lock >= obj->type;
+    switch (obj->type & ~EDGE_CONSTRUCTION)
     {
     case OBJ_EDGE:
         e = (Edge *)obj;
+        color(obj->type, e->type & EDGE_CONSTRUCTION, selected, highlighted, locked);
         glRasterPos3f
-            (
+        (
             (e->endpoints[0]->x + e->endpoints[1]->x) / 2,
             (e->endpoints[0]->y + e->endpoints[1]->y) / 2,
             (e->endpoints[0]->z + e->endpoints[1]->z) / 2
-            );
-        wglUseFontBitmaps(hdc, 0, 256, 1000);       // TODO hsould only have to do this once
+        );
         glListBase(1000);
         glCallLists(strlen(buf), GL_UNSIGNED_BYTE, buf);
         break;
 
     case OBJ_FACE:
-        // use view list here, then it works for drawing rects
-        p0 = ((Face *)obj)->view_list;
+        f = (Face *)obj;
+        color(obj->type, f->type & FACE_CONSTRUCTION, selected, highlighted, locked);
+        // use view list here, then it works for drawing rects. TODO: use edges once they exist
+        p0 = f->view_list;
         p1 = (Point *)p0->hdr.next;
         p2 = (Point *)p1->hdr.next;
         glRasterPos3f
@@ -287,7 +298,6 @@ show_dims_on(Object *obj)
             (p0->y + p2->y) / 2,
             (p0->z + p2->z) / 2
         );
-        wglUseFontBitmaps(hdc, 0, 256, 1000);
         glListBase(1000);
         glCallLists(strlen(buf), GL_UNSIGNED_BYTE, buf);
         break;

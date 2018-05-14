@@ -218,6 +218,9 @@ Init(void)
     glBlendFunc(GL_ZERO, GL_SRC_COLOR);     // multiply blending. 
     glEnable(GL_BLEND);
 
+    // For text annotations, horizontal characters start at 1000
+    wglUseFontBitmaps(auxGetHDC(), 0, 256, 1000);
+
     plane_XY.C = 1.0;           // set up planes
     plane_XZ.B = 1.0;
     plane_YZ.A = 1.0;
@@ -873,66 +876,32 @@ left_up(AUX_EVENTREC *event)
             p02 = (Point *)p01->hdr.next;
             p03 = (Point *)p02->hdr.next;
 
-#if 0
-            // For construction edges, just link the edges directly into the object tree
-            // and ditch the face, as it's no longer needed.
-            if (construction)
-            {
-                e = (Edge *)edge_new(EDGE_STRAIGHT | EDGE_CONSTRUCTION);
-                e->endpoints[0] = p00;
-                e->endpoints[1] = p01;
-                link((Object *)e, &object_tree);
-                e = (Edge *)edge_new(EDGE_STRAIGHT | EDGE_CONSTRUCTION);
-                e->endpoints[0] = p01;
-                e->endpoints[1] = p02;
-                link((Object *)e, &object_tree);
-                e = (Edge *)edge_new(EDGE_STRAIGHT | EDGE_CONSTRUCTION);
-                e->endpoints[0] = p02;
-                e->endpoints[1] = p03;
-                link((Object *)e, &object_tree);
-                e = (Edge *)edge_new(EDGE_STRAIGHT | EDGE_CONSTRUCTION);
-                e->endpoints[0] = p03;
-                e->endpoints[1] = p00;
-                link((Object *)e, &object_tree);
+            type = EDGE_STRAIGHT | (construction ? EDGE_CONSTRUCTION : 0);
+            e = (Edge *)edge_new(type);
+            e->endpoints[0] = p00;
+            e->endpoints[1] = p01;
+            rf->edges[0] = e;
+            e = (Edge *)edge_new(type);
+            e->endpoints[0] = p01;
+            e->endpoints[1] = p02;
+            rf->edges[1] = e;
+            e = (Edge *)edge_new(type);
+            e->endpoints[0] = p02;
+            e->endpoints[1] = p03;
+            rf->edges[2] = e;
+            e = (Edge *)edge_new(type);
+            e->endpoints[0] = p03;
+            e->endpoints[1] = p00;
+            rf->edges[3] = e;
 
-                rf->view_list = NULL;
-                purge_obj(curr_obj);
-                drawing_changed = TRUE;
-                write_checkpoint(object_tree, curr_filename);
-                curr_obj = NULL;
-            }
-            else
-#endif
-            {
-                type = EDGE_STRAIGHT;
-                if (construction)
-                    type |= EDGE_CONSTRUCTION;
-                e = (Edge *)edge_new(type);
-                e->endpoints[0] = p00;
-                e->endpoints[1] = p01;
-                rf->edges[0] = e;
-                e = (Edge *)edge_new(type);
-                e->endpoints[0] = p01;
-                e->endpoints[1] = p02;
-                rf->edges[1] = e;
-                e = (Edge *)edge_new(type);
-                e->endpoints[0] = p02;
-                e->endpoints[1] = p03;
-                rf->edges[2] = e;
-                e = (Edge *)edge_new(type);
-                e->endpoints[0] = p03;
-                e->endpoints[1] = p00;
-                rf->edges[3] = e;
+            // Take the points out of the face's view list, as they are about
+            // to be freed when the view list is regenerated.
+            rf->view_list = NULL;
 
-                // Take the points out of the face's view list, as they are about
-                // to be freed when the view list is regenerated.
-                rf->view_list = NULL;
-
-                // the face now has its edges. Generate its view list and the normal
-                rf->n_edges = 4;
-                rf->view_valid = FALSE;
-                gen_view_list_face(rf);
-            }
+            // the face now has its edges. Generate its view list and the normal
+            rf->n_edges = 4;
+            rf->view_valid = FALSE;
+            gen_view_list_face(rf);
         }
         // fallthrough
     case STATE_DRAWING_EDGE:
@@ -1099,17 +1068,6 @@ left_click(AUX_EVENTREC *event)
             sel_obj->next = selection;
             selection = sel_obj;
             sel_obj->prev = picked_obj;
-
-#if 0  // TODO remove this, pending some other way to bring up the dims box to type in
-            if (sel_obj->next == NULL)      // If a single object is being selected, show its dims
-            {
-                POINT pt;
-
-                pt.x = event->data[AUX_MOUSEX];
-                pt.y = event->data[AUX_MOUSEY];
-                show_dims_at(pt, picked_obj, TRUE);
-            }
-#endif
         }
     }
 }
@@ -1294,7 +1252,14 @@ right_click(AUX_EVENTREC *event)
 
     // Disable "enter dimensions" for objects that have no dimensions that can be easily changed
     if (!has_dims(picked_obj))
+    {
+        EnableMenuItem(hMenu, ID_OBJ_ALWAYSSHOWDIMS, MF_GRAYED);
         EnableMenuItem(hMenu, ID_OBJ_ENTERDIMENSIONS, MF_GRAYED);
+    }
+    else
+    {
+        CheckMenuItem(hMenu, ID_OBJ_ALWAYSSHOWDIMS, picked_obj->show_dims ? MF_CHECKED : MF_UNCHECKED);
+    }
 
     // Check the right lock state for the parent
     switch (parent->lock)
@@ -1374,6 +1339,19 @@ right_click(AUX_EVENTREC *event)
 
     case ID_OBJ_ENTERDIMENSIONS:
         show_dims_at(pt, picked_obj, TRUE);
+        break;
+
+    case ID_OBJ_ALWAYSSHOWDIMS:
+        if (picked_obj->show_dims)
+        {
+            picked_obj->show_dims = FALSE;
+            CheckMenuItem(hMenu, ID_OBJ_ALWAYSSHOWDIMS, MF_UNCHECKED);
+        }
+        else
+        {
+            picked_obj->show_dims = TRUE;
+            CheckMenuItem(hMenu, ID_OBJ_ALWAYSSHOWDIMS, MF_CHECKED);
+        }
         break;
     }
 }

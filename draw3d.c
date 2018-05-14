@@ -328,7 +328,6 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                 float dist;
                 Face *rf;
                 Plane norm;
-                char buf[64], buf2[64];
                 Object *parent, *first_picked_obj;
 
                 switch (app_state)
@@ -449,10 +448,8 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                     // If first move, create the edge here.
                     if (curr_obj == NULL)
                     {
-                        curr_obj = (Object *)edge_new(EDGE_STRAIGHT);
+                        curr_obj = (Object *)edge_new(EDGE_STRAIGHT | (construction ? EDGE_CONSTRUCTION : 0));
                         e = (Edge *)curr_obj;
-                        if (construction)
-                            e->type |= EDGE_CONSTRUCTION;
                         // TODO: share points if snapped onto an existing edge endpoint,
                         // and the edge is not referenced by a face. For now, just create points...
                         e->endpoints[0] = point_newp(&picked_point);
@@ -501,10 +498,8 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                     ae = (ArcEdge *)curr_obj;
                     if (curr_obj == NULL)
                     {
-                        curr_obj = (Object *)edge_new(EDGE_ARC);
+                        curr_obj = (Object *)edge_new(EDGE_ARC | (construction ? EDGE_CONSTRUCTION : 0));
                         e = (Edge *)curr_obj;
-                        if (construction)
-                            e->type |= EDGE_CONSTRUCTION;
                         // TODO: share points if snapped onto an existing edge endpoint,
                         // and the edge is not referenced by a face. For now, just create points...
                         e->endpoints[0] = point_newp(&picked_point);
@@ -551,7 +546,10 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         {
                             e->type = EDGE_ARC;
                             if (construction)
+                            {
                                 e->type |= EDGE_CONSTRUCTION;
+                                curr_obj->show_dims = TRUE;
+                            }
                             ae->centre->x = centre.x;
                             ae->centre->y = centre.y;
                             ae->centre->z = centre.z;
@@ -780,9 +778,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                     // order of the points no matter how the mouse is dragged around.
                     if (curr_obj == NULL)
                     {
-                        rf = face_new(FACE_RECT, *picked_plane);
-                        if (construction)
-                            rf->type |= FACE_CONSTRUCTION;
+                        rf = face_new(FACE_RECT | (construction ? FACE_CONSTRUCTION : 0), *picked_plane);
 
                         // generate four points for the view list
                         p00 = point_newp(&picked_point);
@@ -838,9 +834,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                     // First move create an arc edge and a circle face
                     if (curr_obj == NULL)
                     {
-                        ae = (ArcEdge *)edge_new(EDGE_ARC);
-                        if (construction)
-                            ((Edge *)ae)->type |= EDGE_CONSTRUCTION;
+                        ae = (ArcEdge *)edge_new(EDGE_ARC | (construction ? EDGE_CONSTRUCTION : 0));
                         ae->normal = *picked_plane;
                         ae->centre = point_newp(&picked_point);
                         
@@ -848,9 +842,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         p01 = point_newp(&new_point);
                         ((Edge *)ae)->endpoints[0] = ((Edge *)ae)->endpoints[1] = p01;
 
-                        rf = face_new(FACE_CIRCLE, *picked_plane);
-                        if (construction)
-                            rf->type |= FACE_CONSTRUCTION;
+                        rf = face_new(FACE_CIRCLE | (construction ? FACE_CONSTRUCTION : 0), *picked_plane);
                         rf->edges[0] = (Edge *)ae;
                         rf->n_edges = 1;
                         rf->initial_point = p01;
@@ -1060,10 +1052,6 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
 
                         // Invalidate all the view lists for the volume, as any of them may have changed
                         invalidate_all_view_lists((Object *)face->vol, (Object *)face->vol, 0, 0, 0);
-
-                        // Show the height of the extrusion. TODO - show_dims_at for height
-                        sprintf_s(buf, 64, "%s mm", display_rounded(buf2, extrude_height));
-                        show_hint_on(picked_obj, buf);
                     }
 
                     break;
@@ -1148,7 +1136,11 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
         pres |= DRAW_HIGHLIGHT_LOCKED;
     glInitNames();
     for (obj = object_tree; obj != NULL; obj = obj->next)
+    {
         draw_object(obj, pres, obj->lock);
+        if (obj->show_dims)
+            show_dims_on(obj, pres, obj->lock);
+    }
 
     // draw selection. Watch for highlighted objects appearing in the selection list.
     // Pass lock state of top-level parent to determine what is shown.
@@ -1160,7 +1152,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
         {
             pres = DRAW_SELECTED;
             draw_object(obj->prev, pres, parent->lock);
-            show_dims_on(obj->prev);
+            show_dims_on(obj->prev, pres, parent->lock);
         }
     }
 
@@ -1175,7 +1167,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
         if (app_state >= STATE_STARTING_EDGE)
             pres |= DRAW_HIGHLIGHT_LOCKED;
         draw_object(curr_obj, pres, parent != NULL ? parent->lock : LOCK_NONE);
-        show_dims_on(curr_obj);
+        show_dims_on(curr_obj, pres, parent != NULL ? parent->lock : LOCK_NONE);
     }
     if (highlight_obj != NULL)
     {
@@ -1185,7 +1177,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
         if (app_state >= STATE_STARTING_EDGE)
             pres |= DRAW_HIGHLIGHT_LOCKED;
         draw_object(highlight_obj, pres, parent != NULL ? parent->lock : LOCK_NONE);
-        show_dims_on(highlight_obj);
+        show_dims_on(highlight_obj, pres, parent != NULL ? parent->lock : LOCK_NONE);
     }
     
     if(!picking)
@@ -1244,7 +1236,6 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
         glOrtho(vp[0], vp[0] + vp[2], vp[1], vp[1] + vp[3], 0.1, 10);
         glTranslatef(0, 0, -1);
 
-        wglUseFontBitmaps(hdc, 0, 256, 1000);
         glListBase(1000);
         glColor3f(0.4f, 0.4f, 0.4f);
         glRasterPos2f((float)pt.x + 10, (float)vp[3] - pt.y - 20);

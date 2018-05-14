@@ -35,7 +35,7 @@ typedef enum
     FACE_CONSTRUCTION = 0x8000      // OR this in to indicate a construction face
 } FACE;
 
-// Locking level. They must agree with the object types.
+// Locking level. They must agree with the object types, and be ascending.
 typedef enum
 {
     LOCK_NONE = OBJ_NONE,           // Fully unlocked
@@ -57,6 +57,7 @@ typedef struct Object
                                     // with the current save count for the tree.
     struct Object   *copied_to;     // When an object is copied, the original is set to point to
                                     // the copy here. This allows sharing to be kept the same.
+    BOOL            show_dims;      // If this object has dimensions, they will be shown all the time.
     LOCK            lock;           // The locking level of this object. It is only relevant
                                     // for top level objects (i.e. in the object tree)
     struct Object   *next;          // The next object in any list, e.g. the entire object tree, 
@@ -174,6 +175,7 @@ typedef struct Snap
     struct Object   *attached_to;   // Object that is snapped to, drawn on, or extruded from
     float           attached_dist;  // If attached_to is an edge, the distance along the edge.
 } Snap;
+
 
 // Externs
 

@@ -78,6 +78,7 @@ Edge *edge_new(EDGE edge_type)
         se = calloc(1, sizeof(StraightEdge));
         se->edge.hdr.type = OBJ_EDGE;
         se->edge.hdr.ID = objid++;
+        se->edge.hdr.show_dims = edge_type & EDGE_CONSTRUCTION;
         se->edge.type = edge_type;
         return (Edge *)se;
 
@@ -85,6 +86,7 @@ Edge *edge_new(EDGE edge_type)
         ae = calloc(1, sizeof(ArcEdge));
         ae->edge.hdr.type = OBJ_EDGE;
         ae->edge.hdr.ID = objid++;
+        ae->edge.hdr.show_dims = edge_type & EDGE_CONSTRUCTION;
         ae->edge.type = edge_type;
         return (Edge *)ae;
 
@@ -92,6 +94,7 @@ Edge *edge_new(EDGE edge_type)
         be = calloc(1, sizeof(BezierEdge));
         be->edge.hdr.type = OBJ_EDGE;
         be->edge.hdr.ID = objid++;
+        be->edge.hdr.show_dims = edge_type & EDGE_CONSTRUCTION;
         be->edge.type = edge_type;
         return (Edge *)be;
     }
@@ -110,6 +113,8 @@ Face *face_new(FACE face_type, Plane norm)
     {
     case FACE_RECT:
     case FACE_CIRCLE:
+        face->hdr.show_dims = face_type & FACE_CONSTRUCTION;
+        // fallthrough
     case FACE_CYLINDRICAL:
         face->max_edges = 4;
         break;
