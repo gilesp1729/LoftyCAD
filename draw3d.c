@@ -47,9 +47,9 @@ color(OBJECT obj_type, BOOL construction, BOOL selected, BOOL highlighted, BOOL 
     case OBJ_FACE:
         if (construction)
         {
-            r = 0.7f;
-            g = 0.7f;
-            b = 0.8f;
+            r = 0.9f;
+            g = 0.9f;
+            b = 1.0f;
         }
         else
         {

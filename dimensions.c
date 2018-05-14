@@ -274,6 +274,9 @@ show_dims_on(Object *obj, PRESENTATION pres, LOCK parent_lock)
     {
     case OBJ_EDGE:
         e = (Edge *)obj;
+        if ((e->type & EDGE_CONSTRUCTION) && !view_constr)
+            return;
+
         color(obj->type, e->type & EDGE_CONSTRUCTION, selected, highlighted, locked);
         glRasterPos3f
         (
@@ -287,7 +290,11 @@ show_dims_on(Object *obj, PRESENTATION pres, LOCK parent_lock)
 
     case OBJ_FACE:
         f = (Face *)obj;
-        color(obj->type, f->type & FACE_CONSTRUCTION, selected, highlighted, locked);
+        if ((f->type & FACE_CONSTRUCTION) && !view_constr)
+            return;
+
+        // color face dims in the edge color, so they can be easily read
+        color(OBJ_EDGE, f->type & FACE_CONSTRUCTION, selected, highlighted, locked);
         // use view list here, then it works for drawing rects. TODO: use edges once they exist
         p0 = f->view_list;
         p1 = (Point *)p0->hdr.next;
