@@ -289,27 +289,31 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
     if (!picking)
     {
         // handle mouse movement actions.
-        // Highlight snap targets (use highlight_obj for this)
-        // If just moving or selecting, don't pick, as snapping is not useful.
+        // Highlight pick targets (use highlight_obj for this)
         // If rendering, don't do any picks in here (enables smooth orbiting and spinning)
-        if 
-        (
-            !right_mouse 
-            && 
-            !view_rendered 
-            && 
-            app_state != STATE_DRAGGING_SELECT 
-            && 
-            app_state != STATE_MOVING
-            && 
-            !trackball_IsOrbiting()
-        )
+        if (!left_mouse && !right_mouse && !view_rendered)
         {
             auxGetMouseLoc(&pt.x, &pt.y);
             highlight_obj = Pick(pt.x, pt.y, OBJ_FACE);
         }
+        else if (left_mouse && app_state != STATE_DRAGGING_SELECT)
+        {
+            Object *match_obj;
 
-        // handle left mouse dragging actions. We must be moving or drawing,
+            // If we're performing a left mouse action, we are dragging an object
+            // and so picking is unreliable (there are always self-picks). Also, we
+            // need a full XYZ coordinate to perform snapping properly, and we're
+            // not necessarily snappibng things at the mouse position. So we can't use
+            // picking here.
+            if (app_state == STATE_MOVING)
+                match_obj = picked_obj;
+            else
+                match_obj = curr_obj;
+
+            highlight_obj = find_in_neighbourhood(match_obj);
+        }
+
+        // Handle left mouse dragging actions. We must be moving or drawing,
         // otherwise the trackball would have it and we wouldn't be here.
         if (left_mouse)
         {
@@ -330,7 +334,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                 float dist;
                 Face *rf;
                 Plane norm;
-                Object *parent, *first_picked_obj;
+                Object *parent, *first_picked_obj, *dummy;
 
                 switch (app_state)
                 {
@@ -359,8 +363,10 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                     snap_to_grid(facing_plane, &new_point);
 
                     parent = find_top_level_parent(object_tree, picked_obj);
-                    // allow moving handles
-                    if (/* !is_selected_parent(picked_obj) && */ parent->lock < parent->type)
+                    
+                    // moving a single object under the cursor
+                    // allow moving handles even if selected
+                    if (!is_selected_direct(picked_obj, &dummy) && parent->lock < parent->type)
                     {
                         move_obj
                             (
@@ -460,6 +466,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         {
                             Snap *snap;
 
+                            // Create a snap for the first picked point, now that we have an object.
                             switch (first_picked_obj->type)
                             {
                             case OBJ_POINT:
@@ -486,6 +493,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         e->endpoints[1]->z = new_point.z;
                         if (highlight_obj != curr_obj)
                         {
+                            // Update the snap. If not highlighting anything, attached_to will be NULL.
                             curr_snap.snapped = (Object *)e->endpoints[1];
                             curr_snap.attached_to = highlight_obj;
                             curr_snap.attached_dist =
@@ -1284,7 +1292,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
     }
 
     // echo highlighting of snap targets at cursor
-    if (highlight_obj != NULL)
+    if (!picking && highlight_obj != NULL)
     {
         HDC hdc = auxGetHDC();
         GLint vp[4];
@@ -1292,6 +1300,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
         glMatrixMode(GL_MODELVIEW);
         glLoadIdentity();
         glMatrixMode(GL_PROJECTION);
+        glPushMatrix();
         glLoadIdentity();
         glGetIntegerv(GL_VIEWPORT, vp);
         glOrtho(vp[0], vp[0] + vp[2], vp[1], vp[1] + vp[3], 0.1, 10);
@@ -1312,6 +1321,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
             glCallLists(4, GL_UNSIGNED_BYTE, "Face");
             break;
         }
+        glPopMatrix();
     }
 
     glFlush();

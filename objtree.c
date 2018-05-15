@@ -712,6 +712,96 @@ find_top_level_parent(Object *tree, Object *obj)
     return NULL;
 }
 
+// Helper for find_in_neighbourhood:
+// Find any snappable component in obj, within snapping distance of match_obj.
+Object *
+find_in_neighbourhood_object(Object *match_obj, Object *obj)
+{
+    Face *face, *face1, *face2;
+    Volume *vol;
+    float dx, dy, dz;
+
+    switch (obj->type)
+    {
+    case OBJ_POINT:
+
+
+        break;
+
+    case OBJ_EDGE:
+
+
+        break;
+
+    case OBJ_FACE:
+        face1 = (Face *)obj;
+        face2 = (Face *)match_obj;
+        // Easy tests first.
+        // Test if normals are the same, and the refpts lie in close to the same plane
+        if (!nz(face1->normal.A - face2->normal.A))
+            return NULL;
+        if (!nz(face1->normal.B - face2->normal.B))
+            return NULL;
+        if (!nz(face1->normal.C - face2->normal.C))
+            return NULL;
+
+        dx = face2->normal.refpt.x - face1->normal.refpt.x;
+        dy = face2->normal.refpt.y - face1->normal.refpt.y;
+        dz = face2->normal.refpt.z - face1->normal.refpt.z;
+        if (fabsf(face1->normal.A * dx + face1->normal.B * dy + face1->normal.C * dz) > tolerance)
+            return NULL;
+
+        // If we got through that, now test if face2 and face1 overlap
+
+
+
+        return obj;
+
+    case OBJ_VOLUME:
+        vol = (Volume *)obj;
+        for (face = vol->faces; face != NULL; face = (Face *)face->hdr.next)
+        {
+            Object *test = find_in_neighbourhood_object(match_obj, (Object *)face);
+
+            if (test != NULL)
+                return test;
+        }
+        break;
+    }
+
+    return NULL;
+}
+
+
+
+// Find any object within snapping distance of the given object:
+// For points, returns all objects at or passing near the coordinate.
+// For edges, returns faces parallel and close to the edge.
+// For faces, returns faces parallel and close to the face.
+// For volumes, returns faces parallel and close to any face.
+Object *
+find_in_neighbourhood(Object *match_obj)
+{
+    Object *obj, *ret_obj = NULL;
+
+    if (match_obj == NULL)
+        return NULL;
+
+    for (obj = object_tree; obj != NULL; obj = obj->next)
+    {
+        Object *test = find_in_neighbourhood_object(match_obj, obj);
+
+        if (test != NULL)
+        {
+            // return the lowest priority object.
+            if (ret_obj == NULL || test->type < ret_obj->type)
+                ret_obj = test;
+        }
+    }
+
+    return ret_obj;
+}
+
 // Mark all view lists as invalid for parts of a parent object, when a part of it
 // has moved.
 //

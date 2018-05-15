@@ -129,6 +129,7 @@ void CALLBACK Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint
 void CALLBACK Position(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick);
 void display_help(char *key);
 void change_state(STATE new_state);
+BOOL is_selected_direct(Object *obj, Object **prev_in_list);
 BOOL is_selected_parent(Object *obj);
 void clear_selection(Object **sel_list);
 

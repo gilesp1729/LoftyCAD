@@ -205,8 +205,9 @@ void move_obj(Object *obj, float xoffset, float yoffset, float zoffset);
 void clear_move_copy_flags(Object *obj);
 Face *clone_face_reverse(Face *face);
 
-// Find object in tree or as child of another object
+// Find object in tree, at a location, or as child of another object
 BOOL find_obj(Object *parent, Object *obj);
+Object *find_in_neighbourhood(Object *match_obj);
 Object *find_top_level_parent(Object *tree, Object *obj);
 BOOL is_top_level_object(Object *obj, Object *obj_list);
 

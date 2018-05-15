@@ -643,11 +643,7 @@ left_down(AUX_EVENTREC *event)
             key_status = event->data[AUX_MOUSESTATUS];
             change_state(STATE_DRAGGING_SELECT);
         }
-#ifdef MOVE_ONLY_SELECTED
-        else if (!is_selected_parent(picked_obj))
-#else
         else if (picked_obj == NULL)
-#endif
         {
             // Orbiting the view
             trackball_MouseDown(event);
@@ -661,6 +657,7 @@ left_down(AUX_EVENTREC *event)
             left_mouse = TRUE;
             key_status = event->data[AUX_MOUSESTATUS];
             change_state(STATE_MOVING);
+            curr_snap.attached_to = NULL;
 
             // Set the picked point on the facing plane for later subtraction
             intersect_ray_plane(left_mouseX, left_mouseY, facing_plane, &picked_point);
@@ -856,6 +853,26 @@ left_up(AUX_EVENTREC *event)
     case STATE_MOVING:
         ReleaseCapture();
         left_mouse = FALSE;
+
+#if 0
+        // Check for snapping if we have moved a point.
+        if (curr_snap.attached_to != NULL)
+        {
+            Snap *snap;
+
+            switch (curr_snap.attached_to->type)
+            {
+            case OBJ_POINT:
+            case OBJ_EDGE:
+                snap = snap_new(curr_snap.snapped, curr_snap.attached_to, curr_snap.attached_dist);
+                snap->next = snap_list;
+                snap_list = snap;
+                break;
+            }
+        }
+#endif
+        curr_snap.attached_to = NULL;
+
         change_state(STATE_NONE);
         drawing_changed = TRUE;  // TODO test for a real change (poss just a click)
         write_checkpoint(object_tree, curr_filename);
@@ -1632,7 +1649,7 @@ Command(int message, int wParam, int lParam)
                 if (rc == IDCANCEL)
                     break;
                 else if (rc == IDYES)
-                    serialise_tree(object_tree, curr_filename);
+                    serialise_tree(object_tree, curr_filename);     // TODO curr_filename NULL --> save file box
             }
 
             clear_selection(&selection);
