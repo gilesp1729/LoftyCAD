@@ -671,7 +671,6 @@ left_down(AUX_EVENTREC *event)
     case STATE_STARTING_CIRCLE:
     case STATE_STARTING_BEZIER:
     case STATE_STARTING_ARC:
-    case STATE_STARTING_MEASURE:
     case STATE_STARTING_EXTRUDE:
         // We can't always determine plane in which the new edge will be drawn.
         // This only works with a mouse move within a face, and we will often have
@@ -740,7 +739,6 @@ left_down(AUX_EVENTREC *event)
     case STATE_DRAWING_CIRCLE:
     case STATE_DRAWING_ARC:
     case STATE_DRAWING_BEZIER:
-    case STATE_DRAWING_MEASURE:
     case STATE_DRAWING_EXTRUDE:
         ASSERT(FALSE, "Mouse down in drawing state");
         break;
@@ -925,7 +923,6 @@ left_up(AUX_EVENTREC *event)
     case STATE_DRAWING_CIRCLE:
     case STATE_DRAWING_BEZIER:
     case STATE_DRAWING_ARC:
-    case STATE_DRAWING_MEASURE:
         // add new object to the object tree
         if (curr_obj != NULL)
         {
@@ -939,21 +936,17 @@ left_up(AUX_EVENTREC *event)
                     (app_state == STATE_DRAWING_RECT || app_state == STATE_DRAWING_CIRCLE) ? LOCK_EDGES : LOCK_NONE;
             }
 
+            // For edges:
             // Create a snap for the endpoint, if there is one (the snap for the start point has
             // already been created with the first move)
+            // For faces, there is only one snap possible, create it here.
             if (curr_snap.attached_to != NULL) 
             {
                 Snap *snap;
 
-                switch (curr_snap.attached_to->type)
-                {
-                case OBJ_POINT:
-                case OBJ_EDGE:
-                    snap = snap_new(curr_snap.snapped, curr_snap.attached_to, curr_snap.attached_dist);
-                    snap->next = snap_list;
-                    snap_list = snap;
-                    break;
-                }
+                snap = snap_new(curr_snap.snapped, curr_snap.attached_to, curr_snap.attached_dist);
+                snap->next = snap_list;
+                snap_list = snap;
             }
 
             drawing_changed = TRUE;
@@ -982,7 +975,6 @@ left_up(AUX_EVENTREC *event)
     case STATE_STARTING_CIRCLE:
     case STATE_STARTING_ARC:
     case STATE_STARTING_BEZIER:
-    case STATE_STARTING_MEASURE:
     case STATE_STARTING_EXTRUDE:
         ASSERT(FALSE, "Mouse up in starting state");
         curr_obj = NULL;
@@ -1893,8 +1885,6 @@ Command(int message, int wParam, int lParam)
         if ((HMENU)wParam == GetSubMenu(GetMenu(auxGetHWND()), 0))
         {
             EnableMenuItem((HMENU)wParam, ID_FILE_SAVE, drawing_changed ? MF_ENABLED : MF_GRAYED);
-            EnableMenuItem((HMENU)wParam, ID_FILE_SAVEAS, drawing_changed ? MF_ENABLED : MF_GRAYED);
-            EnableMenuItem((HMENU)wParam, ID_FILE_EXPORT, drawing_changed ? MF_ENABLED : MF_GRAYED);
         }
         else if ((HMENU)wParam == GetSubMenu(GetMenu(auxGetHWND()), 1))
         {
@@ -1970,7 +1960,6 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         LoadAndDisplayIcon(hWnd, IDI_CONST_CIRCLE, IDB_CONST_CIRCLE, IDS_CONST_CIRCLE);
         LoadAndDisplayIcon(hWnd, IDI_BEZIER_EDGE, IDB_BEZIER_EDGE, IDS_BEZIER_EDGE);
         LoadAndDisplayIcon(hWnd, IDI_ARC_EDGE, IDB_ARC_EDGE, IDS_ARC_EDGE);
-        //  LoadAndDisplayIcon(hWnd, IDI_MEASURE, IDB_MEASURE, IDS_MEASURE);
         LoadAndDisplayIcon(hWnd, IDI_EXTRUDE, IDB_EXTRUDE, IDS_EXTRUDE);
         LoadAndDisplayIcon(hWnd, 0, IDB_XY, IDS_XY);
         LoadAndDisplayIcon(hWnd, 0, IDB_YZ, IDS_YZ);

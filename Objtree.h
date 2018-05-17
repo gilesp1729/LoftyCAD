@@ -78,6 +78,13 @@ typedef struct Point
                                     // points from being moved twice.
 } Point;
 
+// 2D point struct.
+typedef struct Point2D
+{
+    float x;
+    float y;
+} Point2D;
+
 // Plane definition
 typedef struct Plane
 {
@@ -159,6 +166,10 @@ typedef struct Face
                                     // (for the edges) and a polygon (for the face). Regenerated whenever
                                     // something has changed. Doubly linked list.
     BOOL            view_valid;     // is TRUE if the view list is up to date.
+    struct Point2D  *view_list2D;   // Array of 2D points for the view list, for quick point-in-polygon
+                                    // testing. Indexed [0] to [N-1], with [N] = [0].
+    int             n_view;         // Number of points in the 2D view list.
+    int             n_alloc;        // Alloced size of 2D view list (in units of sizeof(Point2D))
 } Face;
 
 typedef struct Volume
@@ -182,6 +193,15 @@ typedef struct Snap
 extern unsigned int objid;
 extern Point *free_list;
 
+// Flatness test
+#define IS_FLAT(face)       \
+    (       \
+        ((face)->type & ~FACE_CONSTRUCTION) == FACE_RECT     \
+        || \
+        ((face)->type & ~FACE_CONSTRUCTION) == FACE_CIRCLE    \
+        || \
+        ((face)->type & ~FACE_CONSTRUCTION) == FACE_FLAT    \
+    )
 
 // Prototypes for object functions: 
 
@@ -214,6 +234,7 @@ BOOL is_top_level_object(Object *obj, Object *obj_list);
 // Regenerate a view list
 void invalidate_all_view_lists(Object *parent, Object *obj, float dx, float dy, float dz);
 void gen_view_list_face(Face *face);
+void update_view_list_2D(Face *face);
 void gen_view_list_arc(ArcEdge *ae);
 void gen_view_list_bez(BezierEdge *be);
 

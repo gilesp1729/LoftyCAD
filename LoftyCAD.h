@@ -29,7 +29,6 @@ typedef enum STATE
     STATE_STARTING_CIRCLE,
     STATE_STARTING_BEZIER,
     STATE_STARTING_ARC,
-    STATE_STARTING_MEASURE,
     STATE_STARTING_EXTRUDE,
 
     STATE_DRAWING_EDGE,         // Actually drawing something (left mouse down and dragging)
@@ -37,7 +36,6 @@ typedef enum STATE
     STATE_DRAWING_CIRCLE,
     STATE_DRAWING_BEZIER,
     STATE_DRAWING_ARC,
-    STATE_DRAWING_MEASURE,
     STATE_DRAWING_EXTRUDE,
 
     // The offset between members of the above two sets of possible states.

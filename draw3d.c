@@ -816,15 +816,6 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         rf->view_valid = TRUE;
 
                         curr_obj = (Object *)rf;
-
-                        // If we're starting on a face, snap to it
-                        if (picked_obj != NULL && picked_obj->type == OBJ_FACE)
-                        {
-                            Snap *snap = snap_new(curr_obj, picked_obj, 0);
-
-                            snap->next = snap_list;
-                            snap_list = snap;
-                        }
                     }
                     else
                     {
@@ -846,6 +837,16 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         p03->x = p3.x;
                         p03->y = p3.y;
                         p03->z = p3.z;
+
+                        update_view_list_2D(rf);
+
+                        if (highlight_obj != curr_obj)
+                        {
+                            // Update the snap. If not highlighting anything, attached_to will be NULL.
+                            curr_snap.snapped = curr_obj;
+                            curr_snap.attached_to = highlight_obj;
+                            curr_snap.attached_dist = 0;
+                        }
                     }
 
                     break;
@@ -895,12 +896,16 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         p01->z = new_point.z;
                         ((Edge *)ae)->view_valid = FALSE;
                         rf->view_valid = FALSE;
+
+                        if (highlight_obj != curr_obj)
+                        {
+                            // Update the snap. If not highlighting anything, attached_to will be NULL.
+                            curr_snap.snapped = curr_obj;
+                            curr_snap.attached_to = highlight_obj;
+                            curr_snap.attached_dist = 0;
+                        }
                     }
 
-                    break;
-
-                case STATE_DRAWING_MEASURE:
-                    ASSERT(FALSE, "Draw Measure Not implemented");
                     break;
 
                 case STATE_DRAWING_EXTRUDE:
@@ -1276,8 +1281,10 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
         GLint vp[4];
 
         glMatrixMode(GL_MODELVIEW);
+        glPushMatrix();
         glLoadIdentity();
         glMatrixMode(GL_PROJECTION);
+        glPushMatrix();
         glLoadIdentity();
         glGetIntegerv(GL_VIEWPORT, vp);
         glOrtho(vp[0], vp[0] + vp[2], vp[1], vp[1] + vp[3], 0.1, 10);
@@ -1289,6 +1296,9 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
         glVertex2f((float)orig_left_mouseX, (float)vp[3] - orig_left_mouseY);
         glVertex2f((float)pt.x, (float)vp[3] - orig_left_mouseY);
         glEnd();
+        glPopMatrix();
+        glMatrixMode(GL_MODELVIEW);
+        glPopMatrix();
     }
 
     // echo highlighting of snap targets at cursor
@@ -1298,6 +1308,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
         GLint vp[4];
 
         glMatrixMode(GL_MODELVIEW);
+        glPushMatrix();
         glLoadIdentity();
         glMatrixMode(GL_PROJECTION);
         glPushMatrix();
@@ -1321,6 +1332,8 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
             glCallLists(4, GL_UNSIGNED_BYTE, "Face");
             break;
         }
+        glPopMatrix();
+        glMatrixMode(GL_MODELVIEW);
         glPopMatrix();
     }
 

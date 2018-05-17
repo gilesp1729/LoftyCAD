@@ -122,6 +122,9 @@
     <ClCompile Include="triangulate.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="neighbourhood.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="LoftyCAD.rc">

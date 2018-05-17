@@ -109,6 +109,7 @@ Face *face_new(FACE face_type, Plane norm)
     face->type = face_type;
     face->normal = norm;
 
+    // Have a stab at allocating the edge array
     switch (face_type & ~FACE_CONSTRUCTION)
     {
     case FACE_RECT:
@@ -125,6 +126,13 @@ Face *face_new(FACE face_type, Plane norm)
     }
 
     face->edges = (Edge **)malloc(face->max_edges * sizeof(struct Edge *));
+
+    // Allocate the 2D view list array
+    if (IS_FLAT(face))
+    {
+        face->n_alloc = 512;
+        face->view_list2D = malloc(face->n_alloc * sizeof(Point2D));
+    }
 
     return face;
 }
@@ -712,96 +720,6 @@ find_top_level_parent(Object *tree, Object *obj)
     return NULL;
 }
 
-// Helper for find_in_neighbourhood:
-// Find any snappable component in obj, within snapping distance of match_obj.
-Object *
-find_in_neighbourhood_object(Object *match_obj, Object *obj)
-{
-    Face *face, *face1, *face2;
-    Volume *vol;
-    float dx, dy, dz;
-
-    switch (obj->type)
-    {
-    case OBJ_POINT:
-
-
-        break;
-
-    case OBJ_EDGE:
-
-
-        break;
-
-    case OBJ_FACE:
-        face1 = (Face *)obj;
-        face2 = (Face *)match_obj;
-        // Easy tests first.
-        // Test if normals are the same, and the refpts lie in close to the same plane
-        if (!nz(face1->normal.A - face2->normal.A))
-            return NULL;
-        if (!nz(face1->normal.B - face2->normal.B))
-            return NULL;
-        if (!nz(face1->normal.C - face2->normal.C))
-            return NULL;
-
-        dx = face2->normal.refpt.x - face1->normal.refpt.x;
-        dy = face2->normal.refpt.y - face1->normal.refpt.y;
-        dz = face2->normal.refpt.z - face1->normal.refpt.z;
-        if (fabsf(face1->normal.A * dx + face1->normal.B * dy + face1->normal.C * dz) > tolerance)
-            return NULL;
-
-        // If we got through that, now test if face2 and face1 overlap
-
-
-
-        return obj;
-
-    case OBJ_VOLUME:
-        vol = (Volume *)obj;
-        for (face = vol->faces; face != NULL; face = (Face *)face->hdr.next)
-        {
-            Object *test = find_in_neighbourhood_object(match_obj, (Object *)face);
-
-            if (test != NULL)
-                return test;
-        }
-        break;
-    }
-
-    return NULL;
-}
-
-
-
-// Find any object within snapping distance of the given object:
-// For points, returns all objects at or passing near the coordinate.
-// For edges, returns faces parallel and close to the edge.
-// For faces, returns faces parallel and close to the face.
-// For volumes, returns faces parallel and close to any face.
-Object *
-find_in_neighbourhood(Object *match_obj)
-{
-    Object *obj, *ret_obj = NULL;
-
-    if (match_obj == NULL)
-        return NULL;
-
-    for (obj = object_tree; obj != NULL; obj = obj->next)
-    {
-        Object *test = find_in_neighbourhood_object(match_obj, obj);
-
-        if (test != NULL)
-        {
-            // return the lowest priority object.
-            if (ret_obj == NULL || test->type < ret_obj->type)
-                ret_obj = test;
-        }
-    }
-
-    return ret_obj;
-}
-
 // Mark all view lists as invalid for parts of a parent object, when a part of it
 // has moved.
 //
@@ -916,6 +834,7 @@ free_view_list_face(Face *face)
     free_view_list(face->view_list);
     face->view_list = NULL;
     face->view_valid = FALSE;
+    face->n_view = 0;
 }
 
 void
@@ -1008,7 +927,7 @@ gen_view_list_face(Face *face)
             if (last_point == e->endpoints[0] && !arc_cw)
             {
                 last_point = e->endpoints[1];
-                
+
                 // copy the view list forwards. Skip the first point as it has already been added
                 for (v = (Point *)e->view_list->hdr.next; v != NULL; v = (Point *)v->hdr.next)
                 {
@@ -1027,7 +946,7 @@ gen_view_list_face(Face *face)
                 for (v = (Point *)e->view_list; v->hdr.next->next != NULL; v = (Point *)v->hdr.next)
                     ;
 
-                for ( ; v != NULL; v = (Point *)v->hdr.prev)
+                for (; v != NULL; v = (Point *)v->hdr.prev)
                 {
                     p = point_newp(v);
                     p->hdr.ID = 0;
@@ -1049,6 +968,34 @@ gen_view_list_face(Face *face)
     // calculate the normal vector.  Store a new refpt here too, in case something has moved.
     polygon_normal(face->view_list, &face->normal);
     face->normal.refpt = *face->edges[0]->endpoints[0];
+
+    // Update the 2D view list
+    update_view_list_2D(face);
+}
+
+void
+update_view_list_2D(Face *face)
+{
+    int i;
+    Point *v;
+
+    // Update the 2D view list as seen from the facing plane closest to the face normal,
+    // to facilitate quick point-in-polygon testing.
+    if (!IS_FLAT(face))
+        return;
+
+    for (i = 0, v = face->view_list; v != NULL; v = (Point *)v->hdr.next, i++)
+    {
+        face->view_list2D[i].x = v->x;    // TODO make this according to face normal
+        face->view_list2D[i].y = v->y;
+        if (i == face->n_alloc - 1)
+        {
+            face->n_alloc *= 2;
+            face->view_list2D = realloc(face->view_list2D, face->n_alloc * sizeof(Point2D));
+        }
+    }
+    face->view_list2D[i] = face->view_list2D[0];    // copy first point for fast poly testing
+    face->n_view = i;
 }
 
 // Generate the view list for an arc edge.
@@ -1303,7 +1250,7 @@ purge_obj(Object *obj)
             purge_obj((Object *)be->ctrlpoints[1]);
             break;
         }
-        //free(obj);     // TODO: Don't do this. The edge may be shared. (Might need to use a free list or ref counts.)
+        //free(obj);     // TODO: Don't do this!! The edge may be shared. (use a free list?)
         break;
 
     case OBJ_FACE:
@@ -1311,6 +1258,8 @@ purge_obj(Object *obj)
         free_view_list_face(face);
         for (i = 0; i < face->n_edges; i++)
             purge_obj((Object *)face->edges[i]);
+        free(face->edges);
+        free(face->view_list2D);
         free(obj);
         break;
 
