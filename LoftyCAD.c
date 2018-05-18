@@ -2163,6 +2163,8 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         SendDlgItemMessage(hWnd, IDC_PREFS_TOL, WM_SETTEXT, 0, (LPARAM)buf);
         sprintf_s(buf, 16, "%d", angle_snap);
         SendDlgItemMessage(hWnd, IDC_PREFS_ANGLE, WM_SETTEXT, 0, (LPARAM)buf);
+        SetFocus(GetDlgItem(hWnd, IDC_PREFS_TITLE));
+        break;
 
     case WM_COMMAND:
         switch (LOWORD(wParam))
@@ -2334,7 +2336,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
         // Main message loop:
         while (GetMessage(&msg, NULL, 0, 0))
         {
-            if (!IsDialogMessage(hWndToolbar, &msg))
+            if (!IsDialogMessage(hWndToolbar, &msg) && !IsDialogMessage(hWndDims, &msg))
             {
                 /*
                 * Send accelerator keys straight to the 3D window, if it is in front.
