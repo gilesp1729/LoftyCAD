@@ -230,8 +230,11 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         break;
 
     case OBJ_FACE:
-        locked = parent_lock > obj->type;  // allow picking faces to get to the volume
         face = (Face *)obj;
+        if (face->vol != NULL)
+            locked = parent_lock > obj->type;  // allow picking faces to get to the volume
+        else
+            locked = parent_lock >= obj->type;
         if ((face->type & FACE_CONSTRUCTION) && !view_constr)
             return;
 
