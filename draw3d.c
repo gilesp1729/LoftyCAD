@@ -62,7 +62,7 @@ color(OBJECT obj_type, BOOL construction, BOOL selected, BOOL highlighted, BOOL 
         if (highlighted)
             g += 0.2f;
         if (highlighted && locked)
-            r = g = b = 0.6f;
+            r = g = b = 0.9f;
         break;
     }
     glColor4f(r, g, b, a);
@@ -462,28 +462,6 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         // and the edge is not referenced by a face. For now, just create points...
                         e->endpoints[0] = point_newp(&picked_point);
                         e->endpoints[1] = point_newp(&new_point);
-                        if (first_picked_obj != NULL)
-                        {
-                            Snap *snap;
-
-                            // Create a snap for the first picked point, now that we have an object.
-                            switch (first_picked_obj->type)
-                            {
-                            case OBJ_POINT:
-                            case OBJ_EDGE:
-                                snap = snap_new
-                                    (
-                                    (Object *)e->endpoints[0],
-                                    first_picked_obj,
-                                    (first_picked_obj != NULL && first_picked_obj->type == OBJ_EDGE)
-                                    ? length(&picked_point, ((Edge *)first_picked_obj)->endpoints[0])
-                                    : 0
-                                    );
-                                snap->next = snap_list;
-                                snap_list = snap;
-                                break;
-                            }
-                        }
                     }
                     else
                     {
@@ -491,16 +469,6 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         e->endpoints[1]->x = new_point.x;
                         e->endpoints[1]->y = new_point.y;
                         e->endpoints[1]->z = new_point.z;
-                        if (highlight_obj != curr_obj)
-                        {
-                            // Update the snap. If not highlighting anything, attached_to will be NULL.
-                            curr_snap.snapped = (Object *)e->endpoints[1];
-                            curr_snap.attached_to = highlight_obj;
-                            curr_snap.attached_dist =
-                                (highlight_obj != NULL && highlight_obj->type == OBJ_EDGE)
-                                ? length(&new_point, ((Edge *)highlight_obj)->endpoints[0])
-                                : 0;
-                        }
                     }
                     break;
 
@@ -839,14 +807,6 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         p03->z = p3.z;
 
                         update_view_list_2D(rf);
-
-                        if (highlight_obj != curr_obj)
-                        {
-                            // Update the snap. If not highlighting anything, attached_to will be NULL.
-                            curr_snap.snapped = curr_obj;
-                            curr_snap.attached_to = highlight_obj;
-                            curr_snap.attached_dist = 0;
-                        }
                     }
 
                     break;
@@ -877,14 +837,6 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         rf->n_edges = 1;
                         rf->initial_point = p01;
                         curr_obj = (Object *)rf;
-
-                        if (picked_obj != NULL && picked_obj->type == OBJ_FACE)
-                        {
-                            Snap *snap = snap_new(curr_obj, picked_obj, 0);
-
-                            snap->next = snap_list;
-                            snap_list = snap;
-                        }
                     }
                     else
                     {
@@ -896,14 +848,6 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         p01->z = new_point.z;
                         ((Edge *)ae)->view_valid = FALSE;
                         rf->view_valid = FALSE;
-
-                        if (highlight_obj != curr_obj)
-                        {
-                            // Update the snap. If not highlighting anything, attached_to will be NULL.
-                            curr_snap.snapped = curr_obj;
-                            curr_snap.attached_to = highlight_obj;
-                            curr_snap.attached_dist = 0;
-                        }
                     }
 
                     break;
@@ -929,7 +873,6 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                             Edge *e, *o, *ne;
                             Point *eip, *oip;
                             Volume *vol;
-                            Snap *snap;
 
                             delink((Object *)face, &object_tree);
                             vol = vol_new();
@@ -1054,14 +997,6 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                             // (default locking is one level down)
                             link((Object *)vol, &object_tree);
                             ((Object *)vol)->lock = LOCK_FACES;
-
-                            // Snap the opposite to any face it was built on (the top face is
-                            // about to be moved, which will destroy the snap)
-                            for (snap = snap_list; snap != NULL; snap = snap->next)
-                            {
-                                if (snap->snapped == picked_obj)
-                                    snap->snapped = (Object *)opposite;
-                            }
                         }
                         else
                         {
@@ -1223,7 +1158,6 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
     if (highlight_obj != NULL)
     {
         Object *parent = find_top_level_parent(object_tree, highlight_obj);
-        Snap *snap;
 
         pres = DRAW_HIGHLIGHT;
         if (app_state >= STATE_STARTING_EDGE)
@@ -1231,6 +1165,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
         draw_object(highlight_obj, pres, parent != NULL ? parent->lock : LOCK_NONE);
         show_dims_on(highlight_obj, pres, parent != NULL ? parent->lock : LOCK_NONE);
 
+#if 0  // TODO: when grouping, use code like this to HL it
         // If anything is snapped to this object, highlight it as well.
         for (snap = snap_list; snap != NULL; snap = snap->next)
         {
@@ -1252,6 +1187,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                 }
             }
         }
+#endif
     }
     
     if(!picking)

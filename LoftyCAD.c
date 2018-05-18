@@ -51,12 +51,6 @@ Object *clipboard = NULL;
 // List of objects to be drawn
 Object *object_tree = NULL;
 
-// List of snapped objects
-Snap *snap_list = NULL;
-
-// Current snap for endpoint of object being drawn
-Snap curr_snap;
-
 // Set TRUE whenever something is changed and the tree needs to be saved
 BOOL drawing_changed = FALSE;
 
@@ -657,7 +651,6 @@ left_down(AUX_EVENTREC *event)
             left_mouse = TRUE;
             key_status = event->data[AUX_MOUSESTATUS];
             change_state(STATE_MOVING);
-            curr_snap.attached_to = NULL;
 
             // Set the picked point on the facing plane for later subtraction
             intersect_ray_plane(left_mouseX, left_mouseY, facing_plane, &picked_point);
@@ -731,8 +724,6 @@ left_down(AUX_EVENTREC *event)
         // Don't add the object yet until we have moved the mouse, as a click will
         // need to be handled harmlessly and silently.
         curr_obj = NULL;
-        curr_snap.attached_to = NULL;
-
         break;
 
     case STATE_DRAWING_RECT:
@@ -851,26 +842,6 @@ left_up(AUX_EVENTREC *event)
     case STATE_MOVING:
         ReleaseCapture();
         left_mouse = FALSE;
-
-#if 0
-        // Check for snapping if we have moved a point.
-        if (curr_snap.attached_to != NULL)
-        {
-            Snap *snap;
-
-            switch (curr_snap.attached_to->type)
-            {
-            case OBJ_POINT:
-            case OBJ_EDGE:
-                snap = snap_new(curr_snap.snapped, curr_snap.attached_to, curr_snap.attached_dist);
-                snap->next = snap_list;
-                snap_list = snap;
-                break;
-            }
-        }
-#endif
-        curr_snap.attached_to = NULL;
-
         change_state(STATE_NONE);
         drawing_changed = TRUE;  // TODO test for a real change (poss just a click)
         write_checkpoint(object_tree, curr_filename);
@@ -936,23 +907,9 @@ left_up(AUX_EVENTREC *event)
                     (app_state == STATE_DRAWING_RECT || app_state == STATE_DRAWING_CIRCLE) ? LOCK_EDGES : LOCK_NONE;
             }
 
-            // For edges:
-            // Create a snap for the endpoint, if there is one (the snap for the start point has
-            // already been created with the first move)
-            // For faces, there is only one snap possible, create it here.
-            if (curr_snap.attached_to != NULL) 
-            {
-                Snap *snap;
-
-                snap = snap_new(curr_snap.snapped, curr_snap.attached_to, curr_snap.attached_dist);
-                snap->next = snap_list;
-                snap_list = snap;
-            }
-
             drawing_changed = TRUE;
             write_checkpoint(object_tree, curr_filename);
             curr_obj = NULL;
-            curr_snap.attached_to = NULL;
         }
 
         ReleaseCapture();

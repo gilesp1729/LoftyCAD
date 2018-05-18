@@ -146,17 +146,6 @@ Volume *vol_new(void)
     return vol;
 }
 
-Snap *snap_new(Object *snapped, Object *attached_to, float attached_dist)
-{
-    Snap *snap = calloc(1, sizeof(Snap));     // TODO use a free list for these, or combine with objs, points
-
-    snap->snapped = snapped;
-    snap->attached_to = attached_to;
-    snap->attached_dist = attached_dist;
-
-    return snap;
-}
-
 // Link and unlink objects in a double linked list
 void link(Object *new_obj, Object **obj_list)
 {
@@ -233,7 +222,6 @@ clear_move_copy_flags(Object *obj)
     BezierEdge *be;
     Face *face;
     Volume *vol;
-    Snap *snap;
 
     switch (obj->type)
     {
@@ -282,20 +270,6 @@ clear_move_copy_flags(Object *obj)
             clear_move_copy_flags((Object *)face);
         obj->copied_to = NULL;
         break;
-    }
-
-    // Clear move/copy flags on on points and edges that may have been moved
-    // because they were snapped.
-    for (snap = snap_list; snap != NULL; snap = snap->next)
-    {
-        if (snap->attached_to == obj)
-        {
-            if (snap->snapped->type == OBJ_FACE && ((Face *)snap->snapped)->vol != NULL)
-                // If obj is a face, and has a volume, clear all of it
-                clear_move_copy_flags((Object *)((Face *)snap->snapped)->vol);
-            else
-                clear_move_copy_flags(snap->snapped);
-        }
     }
 }
 
@@ -510,7 +484,6 @@ move_obj(Object *obj, float xoffset, float yoffset, float zoffset)
     BezierEdge *be;
     Face *face;
     Volume *vol;
-    Snap *snap;
 
     switch (obj->type)
     {
@@ -523,6 +496,7 @@ move_obj(Object *obj, float xoffset, float yoffset, float zoffset)
             p->z += zoffset;
             p->moved = TRUE;
 
+#if 0 // TODO - use code like this for moving grouped objects?
             // Move all points snapped to this point. 
             for (snap = snap_list; snap != NULL; snap = snap->next)
             {
@@ -535,17 +509,7 @@ move_obj(Object *obj, float xoffset, float yoffset, float zoffset)
                     snap->snapped = saved_obj;
                 }
             }
-
-            // if I move a point that is snapped, the snap must be broken.
-            // Just set snap object pointers to NULL, and clean the list up later.
-            for (snap = snap_list; snap != NULL; snap = snap->next)
-            {
-                if (snap->snapped == obj)
-                {
-                    snap->snapped = NULL;
-                    snap->attached_to = NULL;
-                }
-            }
+#endif
         }
         break;
 
@@ -569,20 +533,6 @@ move_obj(Object *obj, float xoffset, float yoffset, float zoffset)
             edge->view_valid = FALSE;
             break;
         }
-
-        // move all points snapped to this edge
-        for (snap = snap_list; snap != NULL; snap = snap->next)
-        {
-            if (snap->attached_to == obj)
-            {
-                Object *saved_obj = snap->snapped;
-
-                snap->snapped = NULL;
-                move_obj(saved_obj, xoffset, yoffset, zoffset);
-                snap->snapped = saved_obj;
-            }
-        }
-
         break;
 
     case OBJ_FACE:
@@ -596,6 +546,7 @@ move_obj(Object *obj, float xoffset, float yoffset, float zoffset)
         face->normal.refpt.y += yoffset;
         face->normal.refpt.z += zoffset;
         face->view_valid = FALSE;
+#if 0 // TODO use something like this for grouping
         // move faces (and volumes) attached to this face
         for (snap = snap_list; snap != NULL; snap = snap->next)
         {
@@ -614,17 +565,7 @@ move_obj(Object *obj, float xoffset, float yoffset, float zoffset)
                 snap->snapped = saved_obj;
             }
         }
-
-        // if I move a face that is snapped, the snap must be broken.
-        // Just set snap object pointers to NULL, and clean the list up later.
-        for (snap = snap_list; snap != NULL; snap = snap->next)
-        {
-            if (snap->snapped == obj)
-            {
-                snap->snapped = NULL;
-                snap->attached_to = NULL;
-            }
-        }
+#endif
         break;
 
     case OBJ_VOLUME:
@@ -986,8 +927,26 @@ update_view_list_2D(Face *face)
 
     for (i = 0, v = face->view_list; v != NULL; v = (Point *)v->hdr.next, i++)
     {
-        face->view_list2D[i].x = v->x;    // TODO make this according to face normal
-        face->view_list2D[i].y = v->y;
+        float a = fabsf(face->normal.A);
+        float b = fabsf(face->normal.B);
+        float c = fabsf(face->normal.C);
+
+        if (c > b && c > a)
+        {
+            face->view_list2D[i].x = v->x;
+            face->view_list2D[i].y = v->y;
+        }
+        else if (b > a && b > c)
+        {
+            face->view_list2D[i].x = v->x;
+            face->view_list2D[i].y = v->z;
+        }
+        else
+        {
+            face->view_list2D[i].x = v->y;
+            face->view_list2D[i].y = v->z;
+        }
+
         if (i == face->n_alloc - 1)
         {
             face->n_alloc *= 2;
@@ -1208,7 +1167,6 @@ gen_view_list_bez(BezierEdge *be)
 }
 
 // Purge an object. Points are put in the free list.
-// TODO - purge any snaps that mention this object
 void
 purge_obj(Object *obj)
 {
@@ -1220,7 +1178,6 @@ purge_obj(Object *obj)
     Face *face;
     Face *next_face = NULL;
     Volume *vol;
-    Snap *snap;
 
     switch (obj->type)
     {
@@ -1272,16 +1229,6 @@ purge_obj(Object *obj)
         }
         free(obj);
         break;
-    }
-
-    // Purge all snaps that mention this object.
-    for (snap = snap_list; snap != NULL; snap = snap->next)
-    {
-        if (snap->attached_to == obj || snap->snapped == obj)
-        {
-            snap->attached_to = NULL;
-            snap->snapped = NULL;
-        }
     }
 }
 

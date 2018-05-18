@@ -82,11 +82,12 @@ find_in_neighbourhood_face(Face *face, Object *obj)
 
         // Easy tests first.
         // Test if normals are the same, and the refpts lie in close to the same plane
-        if (!nz(face1->normal.A - face->normal.A))
+        // Allow normals to be exactly opposite (e.g. one up one down)
+        if (!nz(fabsf(face1->normal.A) - fabsf(face->normal.A)))
             return NULL;
-        if (!nz(face1->normal.B - face->normal.B))
+        if (!nz(fabsf(face1->normal.B) - fabsf(face->normal.B)))
             return NULL;
-        if (!nz(face1->normal.C - face->normal.C))
+        if (!nz(fabsf(face1->normal.C) - fabsf(face->normal.C)))
             return NULL;
 
         dx = face->normal.refpt.x - face1->normal.refpt.x;
@@ -144,6 +145,8 @@ find_in_neighbourhood(Object *match_obj)
         case OBJ_FACE:
             test = find_in_neighbourhood_face((Face *)match_obj, obj);
             break;
+
+            // TODO case OBJ_VOLUME - when moving volumes, need to HL faces
         }
 
         if (test != NULL)
