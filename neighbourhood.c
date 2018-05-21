@@ -132,7 +132,7 @@ find_in_neighbourhood(Object *match_obj)
     if (match_obj == NULL)
         return NULL;
 
-    for (obj = object_tree; obj != NULL; obj = obj->next)
+    for (obj = object_tree.obj_list; obj != NULL; obj = obj->next)
     {
         Object *test = NULL;
 

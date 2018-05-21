@@ -61,6 +61,8 @@ typedef struct Object
     BOOL            show_dims;      // If this object has dimensions, they will be shown all the time.
     LOCK            lock;           // The locking level of this object. It is only relevant
                                     // for top level objects (i.e. in the object tree)
+    struct Group    *parent_group;  // For top level objects, the parent group into whose list this
+                                    // object is linked.
     struct Object   *next;          // The next object in any list, e.g. the entire object tree, 
                                     // or the list of faces in a volume, etc. Not always used if
                                     // there is a fixed array of objects, e.g. two end points
@@ -173,12 +175,14 @@ typedef struct Face
     int             n_alloc;        // Alloced size of 2D view list (in units of sizeof(Point2D))
 } Face;
 
+// Volume struct. This is the usual top-level 3D object.
 typedef struct Volume
 {
     struct Object   hdr;            // Header
     struct Face     *faces;         // Doubly linked list of faces making up the volume
 } Volume;
 
+// The group struct is used for groups, and also for the main object tree.
 typedef struct Group
 {
     struct Object   hdr;            // Header
@@ -216,6 +220,9 @@ Face *make_flat_face(Edge *edge);
 void link(Object *new_obj, Object **obj_list);
 void delink(Object *obj, Object **obj_list);
 void link_tail(Object *new_obj, Object **obj_list);
+void link_group(Object *new_obj, Group *group);
+void delink_group(Object *obj, Group *group);
+void link_tail_group(Object *new_obj, Group *group);
 
 // Copy and move object
 Object *copy_obj(Object *obj, float xoffset, float yoffset, float zoffset);
@@ -226,9 +233,9 @@ Face *clone_face_reverse(Face *face);
 // Find object in tree, at a location, or as child of another object
 BOOL find_obj(Object *parent, Object *obj);
 Object *find_in_neighbourhood(Object *match_obj);
-Object *find_parent_object(Object *tree, Object *obj);
-Object *find_top_level_parent(Object *tree, Object *obj);
-BOOL is_top_level_object(Object *obj, Object *obj_list);
+Object *find_parent_object(Group *tree, Object *obj);
+Object *find_top_level_parent(Group *tree, Object *obj);
+BOOL is_top_level_object(Object *obj, Group *tree);
 
 // Regenerate a view list
 void invalidate_all_view_lists(Object *parent, Object *obj, float dx, float dy, float dz);
@@ -238,10 +245,10 @@ void gen_view_list_arc(ArcEdge *ae);
 void gen_view_list_bez(BezierEdge *be);
 
 // Write and read a tree to a file (serialise.c)
-void serialise_tree(Object *tree, char *filename);
-BOOL deserialise_tree(Object **tree, char *filename);
-void write_checkpoint(Object *tree, char *filename);
-BOOL read_checkpoint(Object **tree, char *filename, int generation);
+void serialise_tree(Group *tree, char *filename);
+BOOL deserialise_tree(Group *tree, char *filename);
+void write_checkpoint(Group *tree, char *filename);
+BOOL read_checkpoint(Group *tree, char *filename, int generation);
 void clean_checkpoints(char *filename);
 
 // Delete an object, or the whole tree

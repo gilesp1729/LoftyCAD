@@ -50,8 +50,8 @@ BOOL construction = FALSE;
 Object *selection = NULL;
 Object *clipboard = NULL;
 
-// List of objects to be drawn
-Object *object_tree = NULL;
+// Top level group of objects to be drawn
+Group object_tree = { 0, };
 
 // Set TRUE whenever something is changed and the tree needs to be saved
 BOOL drawing_changed = FALSE;
@@ -225,6 +225,8 @@ Init(void)
     plane_mYZ.A = -1.0;
 
     glEnable(GL_CULL_FACE);    // don't show back facing faces
+
+    object_tree.hdr.type = OBJ_GROUP;  // set up object tree group
 }
 
 // Set up frustum and possibly picking matrix. If picking, pass the centre of the
@@ -464,7 +466,7 @@ Pick_all_in_rect(GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
             obj = (Object *)buffer[n + num_objs + 2];
             if (obj != NULL)
             {
-                parent = find_parent_object(object_tree, obj);
+                parent = find_parent_object(&object_tree, obj);
                 if (parent == NULL)
                 {
                     n += num_objs + 3;
@@ -580,7 +582,7 @@ is_selected_parent(Object *obj)
         }
 
         // Make sure the object is not locked at the level of the thing being picked
-        parent = find_parent_object(object_tree, sel->prev);
+        parent = find_parent_object(&object_tree, sel->prev);
         if (find_obj(sel->prev, obj) && parent->lock < obj->type)
         {
             present = TRUE;
@@ -846,7 +848,7 @@ left_up(AUX_EVENTREC *event)
         left_mouse = FALSE;
         change_state(STATE_NONE);
         drawing_changed = TRUE;  // TODO test for a real change (poss just a click)
-        write_checkpoint(object_tree, curr_filename);
+        write_checkpoint(&object_tree, curr_filename);
         break;
 
     case STATE_DRAWING_RECT:
@@ -899,7 +901,7 @@ left_up(AUX_EVENTREC *event)
         // add new object to the object tree
         if (curr_obj != NULL)
         {
-            link(curr_obj, &object_tree);
+            link_group(curr_obj, &object_tree);
 
             // Set its lock to EDGES for rect/circle faces, but no lock for edges (we will
             // very likely need to move the points soon)
@@ -910,7 +912,7 @@ left_up(AUX_EVENTREC *event)
             }
 
             drawing_changed = TRUE;
-            write_checkpoint(object_tree, curr_filename);
+            write_checkpoint(&object_tree, curr_filename);
             curr_obj = NULL;
         }
 
@@ -926,7 +928,7 @@ left_up(AUX_EVENTREC *event)
         left_mouse = FALSE;
         change_state(STATE_NONE);
         drawing_changed = TRUE;
-        write_checkpoint(object_tree, curr_filename);
+        write_checkpoint(&object_tree, curr_filename);
         hide_hint();
         break;
 
@@ -999,7 +1001,7 @@ left_click(AUX_EVENTREC *event)
         return;
 
     // We cannot select objects that are locked at their own level
-    parent = find_parent_object(object_tree, picked_obj);
+    parent = find_parent_object(&object_tree, picked_obj);
     if (parent->lock >= picked_obj->type)
         return;
 
@@ -1018,7 +1020,7 @@ left_click(AUX_EVENTREC *event)
 
             // test for this first, as we get called twice and don't want to unselect it
             // before the double click comes through
-            parent = find_top_level_parent(object_tree, picked_obj);
+            parent = find_top_level_parent(&object_tree, picked_obj);
             if (parent != NULL)
             {
                 picked_obj = parent;
@@ -1115,7 +1117,7 @@ micro_move_selection(float x, float y)
         // If we have moved a face:
         // Invalidate all the view lists for the volume, as any of them may have changed
         // Do this by finding the ultimate parent, so it works for points, edges, etc.
-        parent = find_parent_object(object_tree, obj->prev);
+        parent = find_parent_object(&object_tree, obj->prev);
         if (parent->type == OBJ_VOLUME)
         {
             for (f = ((Volume *)parent)->faces; f != NULL; f = (Face *)f->hdr.next)
@@ -1215,7 +1217,7 @@ right_click(AUX_EVENTREC *event)
 
     // Find the top-level parent. Disable irrelevant menu items
     // TODO: Do somethign different with OBJ_GROUP. This call must find the immediate parent group
-    parent = find_parent_object(object_tree, picked_obj);
+    parent = find_parent_object(&object_tree, picked_obj);
     switch (parent->type)
     {
     case OBJ_EDGE:
@@ -1336,7 +1338,7 @@ right_click(AUX_EVENTREC *event)
     {
         // we have changed the drawing - write an undo checkpoint
         drawing_changed = TRUE;
-        write_checkpoint(object_tree, curr_filename);
+        write_checkpoint(&object_tree, curr_filename);
     }
 }
 
@@ -1362,14 +1364,14 @@ check_file_changed(HWND hWnd)
             if (curr_filename[0] == '\0')
                 SendMessage(hWnd, WM_COMMAND, ID_FILE_SAVEAS, 0);
             else
-                serialise_tree(object_tree, curr_filename);
+                serialise_tree(&object_tree, curr_filename);
         }
     }
 
     clean_checkpoints(curr_filename);
     clear_selection(&selection);
     clear_selection(&clipboard);
-    purge_tree(object_tree);
+    purge_tree(object_tree.obj_list);
     DestroyWindow(hWnd);
 }
 
@@ -1625,12 +1627,12 @@ Command(int message, int wParam, int lParam)
                 if (rc == IDCANCEL)
                     break;
                 else if (rc == IDYES)
-                    serialise_tree(object_tree, curr_filename);     // TODO curr_filename NULL --> save file box
+                    serialise_tree(&object_tree, curr_filename);     // TODO curr_filename NULL --> save file box
             }
 
             clear_selection(&selection);
-            purge_tree(object_tree);
-            object_tree = NULL;
+            purge_tree(object_tree.obj_list);
+            object_tree.obj_list = NULL;
             drawing_changed = FALSE;
             clean_checkpoints(curr_filename);
             generation = 0;
@@ -1669,7 +1671,7 @@ Command(int message, int wParam, int lParam)
         case ID_FILE_SAVE:
             if (curr_filename[0] != '\0')
             {
-                serialise_tree(object_tree, curr_filename);
+                serialise_tree(&object_tree, curr_filename);
                 drawing_changed = FALSE;
                 break;
             }
@@ -1686,7 +1688,7 @@ Command(int message, int wParam, int lParam)
             ofn.Flags = OFN_EXPLORER | OFN_OVERWRITEPROMPT;
             if (GetSaveFileName(&ofn))
             {
-                serialise_tree(object_tree, curr_filename);
+                serialise_tree(&object_tree, curr_filename);
                 drawing_changed = FALSE;
                 strcpy_s(window_title, 256, curr_filename);
                 strcat_s(window_title, 256, " - ");
@@ -1713,7 +1715,7 @@ Command(int message, int wParam, int lParam)
             ofn.Flags = OFN_EXPLORER | OFN_OVERWRITEPROMPT;
             if (GetSaveFileName(&ofn))
             {
-                export_object_tree(object_tree, new_filename);
+                export_object_tree(&object_tree, new_filename);
             }
 
             break;
@@ -1740,12 +1742,12 @@ Command(int message, int wParam, int lParam)
                     if (rc == IDCANCEL)
                         break;
                     else if (rc == IDYES)
-                        serialise_tree(object_tree, curr_filename);
+                        serialise_tree(&object_tree, curr_filename);
                 }
 
                 clear_selection(&selection);
-                purge_tree(object_tree);
-                object_tree = NULL;
+                purge_tree(object_tree.obj_list);
+                object_tree.obj_list = NULL;
                 drawing_changed = FALSE;
                 curr_filename[0] = '\0';
                 curr_title[0] = '\0';
@@ -1776,15 +1778,15 @@ Command(int message, int wParam, int lParam)
             // Check that they are in fact top-level before unlinking them.
             for (obj = clipboard; obj != NULL; obj = obj->next)
             {
-                if (is_top_level_object(obj->prev, object_tree))
-                    delink(obj->prev, &object_tree);
+                if (is_top_level_object(obj->prev, &object_tree))
+                    delink_group(obj->prev, &object_tree);
                 // TODO else: remove the object in the clipboard here, because re-pasting will put it in the same place...
             }
             clip_xoffset = 0;
             clip_yoffset = 0;
             clip_zoffset = 0;
             drawing_changed = TRUE;
-            write_checkpoint(object_tree, curr_filename);
+            write_checkpoint(&object_tree, curr_filename);
             break;
 
         case ID_EDIT_COPY:
@@ -1810,7 +1812,7 @@ Command(int message, int wParam, int lParam)
                 Object * new_obj = copy_obj(obj->prev, clip_xoffset, clip_yoffset, clip_zoffset);
 
                 clear_move_copy_flags(obj->prev);
-                link_tail(new_obj, &object_tree);
+                link_tail_group(new_obj, &object_tree);
                 sel_obj = obj_new();
                 sel_obj->next = selection;
                 selection = sel_obj;
@@ -1820,7 +1822,7 @@ Command(int message, int wParam, int lParam)
             clip_xoffset += 10;  // very temporary (it needs to be scaled rasonably, and in the facing plane)
             clip_yoffset += 10;
             drawing_changed = TRUE;
-            write_checkpoint(object_tree, curr_filename);
+            write_checkpoint(&object_tree, curr_filename);
             break;
 
         case ID_EDIT_DELETE:
@@ -1828,21 +1830,21 @@ Command(int message, int wParam, int lParam)
             // Check that they are in fact top-level before deleting them.
             for (obj = selection; obj != NULL; obj = obj->next)
             {
-                if (is_top_level_object(obj->prev, object_tree))
+                if (is_top_level_object(obj->prev, &object_tree))
                 {
-                    delink(obj->prev, &object_tree);
+                    delink_group(obj->prev, &object_tree);
                     purge_obj(obj->prev);
                 }
             }
             clear_selection(&selection);
             drawing_changed = TRUE;
-            write_checkpoint(object_tree, curr_filename);
+            write_checkpoint(&object_tree, curr_filename);
             break;
 
         case ID_EDIT_SELECTALL:
             // Put all top-level objects on the selection list.
             clear_selection(&selection);
-            for (obj = object_tree; obj != NULL; obj = obj->next)
+            for (obj = object_tree.obj_list; obj != NULL; obj = obj->next)
             {
                 sel_obj = obj_new();
                 sel_obj->next = selection;

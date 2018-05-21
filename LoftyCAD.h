@@ -70,7 +70,7 @@ extern STATE app_state;
 extern BOOL construction;
 extern Object *selection;
 extern Object *clipboard;
-extern Object *object_tree;
+extern Group object_tree;
 extern BOOL drawing_changed;
 extern Object *curr_obj;
 extern Object *picked_obj;

@@ -6,7 +6,7 @@
 void init_triangulator(void);
 void face_shade(GLUtesselator *tess, Face *face, BOOL selected, BOOL highlighted, BOOL locked);
 void export_object(GLUtesselator *tess, Object *obj);
-void export_object_tree(Object *tree, char *filename);
+void export_object_tree(Group *tree, char *filename);
 
 extern GLUtesselator *rtess;
 

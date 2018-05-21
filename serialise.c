@@ -150,7 +150,7 @@ serialise_obj(Object *obj, FILE *f)
 
 // Serialise an object tree to a file.
 void
-serialise_tree(Object *tree, char *filename)
+serialise_tree(Group *tree, char *filename)
 {
     FILE *f;
     Object *obj;
@@ -160,7 +160,7 @@ serialise_tree(Object *tree, char *filename)
     fprintf_s(f, "SCALE %f %f %f %d\n", half_size, grid_snap, tolerance, angle_snap);
 
     save_count++;
-    for (obj = tree; obj != NULL; obj = obj->next)
+    for (obj = tree->obj_list; obj != NULL; obj = obj->next)
         serialise_obj(obj, f);
 
     fclose(f);
@@ -199,7 +199,7 @@ locktype_of(char *tok)
 
 // Deserialise a tree from file. 
 BOOL
-deserialise_tree(Object **tree, char *filename)
+deserialise_tree(Group *tree, char *filename)
 {
     FILE *f;
     char buf[512];
@@ -286,9 +286,9 @@ deserialise_tree(Object **tree, char *filename)
             p->hdr.ID = id;
             object[id] = (Object *)p;
             if (stkptr == 0)
-                link_tail((Object *)p, tree);
+                link_tail_group((Object *)p, tree);
             else if (stack[stkptr - 1] < 0)
-                link_tail((Object *)p, &((Group *)object[stack[stkptr - 1]])->obj_list);
+                link_tail_group((Object *)p, (Group *)object[stack[stkptr - 1]]);
         }
         else if (strcmp(tok, "EDGE") == 0)
         {
@@ -381,9 +381,9 @@ deserialise_tree(Object **tree, char *filename)
             ASSERT(stkptr > 0 && id == stack[stkptr - 1], "Badly formed edge record");
             stkptr--;
             if (stkptr == 0)
-                link_tail((Object *)edge, tree);
+                link_tail_group((Object *)edge, tree);
             else if (stack[stkptr - 1] < 0)
-                link_tail((Object *)edge, &((Group *)object[stack[stkptr - 1]])->obj_list);
+                link_tail_group((Object *)edge, (Group *)object[stack[stkptr - 1]]);
         }
         else if (strcmp(tok, "FACE") == 0)
         {
@@ -476,9 +476,9 @@ deserialise_tree(Object **tree, char *filename)
             ASSERT(stkptr > 0 && id == stack[stkptr - 1], "Badly formed face record");
             stkptr--;
             if (stkptr == 0)
-                link_tail((Object *)face, tree);
+                link_tail_group((Object *)face, tree);
             else if (stack[stkptr - 1] < 0)
-                link_tail((Object *)face, &((Group *)object[stack[stkptr - 1]])->obj_list);
+                link_tail_group((Object *)face, (Group *)object[stack[stkptr - 1]]);
         }
         else if (strcmp(tok, "VOLUME") == 0)
         {
@@ -512,9 +512,9 @@ deserialise_tree(Object **tree, char *filename)
             ASSERT(stkptr > 0 && id == stack[stkptr - 1], "Badly formed volume record");
             stkptr--;
             if (stkptr == 0)
-                link_tail((Object *)vol, tree);
+                link_tail_group((Object *)vol, tree);
             else if (stack[stkptr - 1] < 0)
-                link_tail((Object *)vol, &((Group *)object[stack[stkptr - 1]])->obj_list);
+                link_tail_group((Object *)vol, (Group *)object[stack[stkptr - 1]]);
         }
         else if (strcmp(tok, "ENDGROUP") == 0)
         {
@@ -534,7 +534,7 @@ deserialise_tree(Object **tree, char *filename)
 
 // Write a checkpoint (a file in the undo stack).
 void
-write_checkpoint(Object *tree, char *filename)
+write_checkpoint(Group *tree, char *filename)
 {
     char basename[256], check[256];
     int baselen;
@@ -554,7 +554,7 @@ write_checkpoint(Object *tree, char *filename)
 // Read back a given generation of checkpoint. Generation zero is the
 // original file (or an empty tree). Clean out the existing tree first.
 BOOL
-read_checkpoint(Object **tree, char *filename, int generation)
+read_checkpoint(Group *tree, char *filename, int generation)
 {
     char basename[256], check[256];
     int baselen;
@@ -562,8 +562,8 @@ read_checkpoint(Object **tree, char *filename, int generation)
 
     clear_selection(&selection);
     clear_selection(&clipboard);
-    purge_tree(*tree);
-    *tree = NULL;
+    purge_tree(tree->obj_list);
+    tree->obj_list = NULL;
 
     if (generation > 0)
     {

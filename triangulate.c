@@ -278,7 +278,7 @@ export_object(GLUtesselator *tess, Object *obj)
 
 // Tessellate every solid object in the tree to triangles and export to STL
 void
-export_object_tree(Object *tree, char *filename)
+export_object_tree(Group *tree, char *filename)
 {
     Object *obj;
     GLUtesselator *tess = gluNewTess();
@@ -294,7 +294,7 @@ export_object_tree(Object *tree, char *filename)
         return;
     fprintf_s(stl, "solid %s\n", curr_title);
 
-    for (obj = tree; obj != NULL; obj = obj->next)
+    for (obj = tree->obj_list; obj != NULL; obj = obj->next)
     {
         if (obj->type == OBJ_VOLUME || obj->type == OBJ_GROUP)
             export_object(tess, obj);

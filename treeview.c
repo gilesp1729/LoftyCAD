@@ -98,16 +98,30 @@ populate_treeview_object(Object *obj, Object *parent, HTREEITEM hItem)
 
 // Populate a treeview item from an object list (either the object tree or a group)
 void
-populate_treeview_tree(Object *tree, HTREEITEM hItem)
+populate_treeview_tree(Group *tree, HTREEITEM hItem)
 {
     Object *obj;
+    TVINSERTSTRUCT tvins;
+    TVITEM tvi = { 0, };
+    char descr[64];
 
-    for (obj = tree; obj != NULL; obj = obj->next)
+    for (obj = tree->obj_list; obj != NULL; obj = obj->next)
     {
         if (obj->type == OBJ_GROUP)
-            populate_treeview_tree(((Group *)obj)->obj_list, hItem);
+        {
+            sprintf_s(descr, 64, "Group %d", obj->ID);
+            tvi.cchTextMax = strlen(tvi.pszText);
+            tvi.lParam = (LPARAM)obj;
+            tvins.item = tvi;
+            tvins.hParent = hItem;
+            tvins.hInsertAfter = TVI_FIRST;
+            hItem = (HTREEITEM)SendDlgItemMessage(hWndTree, IDC_TREEVIEW, TVM_INSERTITEM, 0, (LPARAM)&tvins);
+            populate_treeview_tree((Group *)obj, hItem);
+        }
         else
+        {
             populate_treeview_object(obj, obj, hItem);
+        }
     }
 }
 
@@ -139,7 +153,7 @@ populate_treeview(void)
     hRoot = (HTREEITEM)SendDlgItemMessage(hWndTree, IDC_TREEVIEW, TVM_INSERTITEM, 0, (LPARAM)&tvins);
 
     // Populate the rest of the tree view
-    populate_treeview_tree(object_tree, hRoot);
+    populate_treeview_tree(&object_tree, hRoot);
 }
 
 // Wndproc for tree view dialog.

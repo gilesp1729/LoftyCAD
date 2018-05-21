@@ -195,7 +195,7 @@ link_tail(Object *new_obj, Object **obj_list)
     {
         Object *last;
 
-        // TODO - this could be slow! Keep a tail pointer?
+        // TODO - this could be slow! Keep a tail pointer, esp if it's from a group?
         for (last = *obj_list; last->next != NULL; last = last->next)
             ;
 
@@ -204,13 +204,35 @@ link_tail(Object *new_obj, Object **obj_list)
     }
 }
 
+// Link and delink objects into a group object list
+void link_group(Object *new_obj, Group *group)
+{
+    ASSERT(group->hdr.type == OBJ_GROUP, "Trying to link, but it's not a group");
+    link(new_obj, &group->obj_list);
+    new_obj->parent_group = group;
+}
+
+void delink_group(Object *obj, Group *group)
+{
+    ASSERT(group->hdr.type == OBJ_GROUP, "Trying to delink, but it's not a group");
+    ASSERT(obj->parent_group == group, "Delinking from wrong group");
+    delink(obj, &group->obj_list);
+}
+
+void link_tail_group(Object *new_obj, Group *group)
+{
+    ASSERT(group->hdr.type == OBJ_GROUP, "Trying to link, but it's not a group");
+    link_tail(new_obj, &group->obj_list);
+    new_obj->parent_group = group;
+}
+
 // Test if an object is in the object tree at the top level.
 BOOL
-is_top_level_object(Object *obj, Object *tree)
+is_top_level_object(Object *obj, Group *tree)
 {
     Object *o;
 
-    for (o = tree; o != NULL; o = o->next)
+    for (o = tree->obj_list; o != NULL; o = o->next)
     {
         if (obj == o)
             return TRUE;
@@ -407,7 +429,7 @@ copy_obj(Object *obj, float xoffset, float yoffset, float zoffset)
         for (o = grp->obj_list; o != NULL; o = o->next)
         {
             new_obj = copy_obj(o, xoffset, yoffset, zoffset);
-            link_tail(new_obj, &new_grp->obj_list);
+            link_tail_group(new_obj, new_grp);
         }
         new_obj = (Object *)new_grp;
         break;
@@ -657,15 +679,16 @@ find_obj(Object *parent, Object *obj)
 // Find the parent object (i.e. in the object tree or in a group) for the given object.
 // The parent object maintains the lock on all its components. Will not return a group.
 Object *
-find_parent_object(Object *tree, Object *obj)
+find_parent_object(Group *tree, Object *obj)
 {
     Object *top_level;
 
-    for (top_level = tree; top_level != NULL; top_level = top_level->next)
+    // TODO: STill doing an exhaustive search here. This could be made faster.
+    for (top_level = tree->obj_list; top_level != NULL; top_level = top_level->next)
     {
         if (top_level->type == OBJ_GROUP)
         {
-            Object *o = find_top_level_parent(((Group *)top_level)->obj_list, obj);
+            Object *o = find_parent_object((Group *)top_level, obj);
             if (o != NULL)
                 return o;
         }
@@ -678,19 +701,17 @@ find_parent_object(Object *tree, Object *obj)
 }
 
 
-// TODO fix this
 // Find the parent object (i.e. in the object tree or in a group) for the given object.
 Object *
-find_top_level_parent(Object *tree, Object *obj)
+find_top_level_parent(Group *tree, Object *obj)
 {
-    Object *top_level;
+    Object *top_level = find_parent_object(tree, obj);
 
-    for (top_level = tree; top_level != NULL; top_level = top_level->next)
-    {
-        if (top_level == obj || find_obj(top_level, obj))
-            return top_level;
-    }
-    return NULL;
+    if (top_level == NULL)
+        return NULL;
+    for (; top_level->parent_group != NULL; top_level = (Object *)top_level->parent_group)
+        ;
+    return top_level;
 }
 
 
@@ -705,9 +726,15 @@ invalidate_all_view_lists(Object *parent, Object *obj, float dx, float dy, float
 {
     Face *f;
     ArcEdge *ae;
+    Object *o;
     int i;
 
-    if (parent->type == OBJ_VOLUME)
+    if (parent->type == OBJ_GROUP)
+    {
+        for (o = ((Group *)parent)->obj_list; o != NULL; o = o->next)
+            invalidate_all_view_lists(o, obj, dx, dy, dz);
+    }
+    else if (parent->type == OBJ_VOLUME)
     {
         for (f = ((Volume *)parent)->faces; f != NULL; f = (Face *)f->hdr.next)
             invalidate_all_view_lists((Object *)f, obj, dx, dy, dz);
@@ -1291,6 +1318,8 @@ purge_tree(Object *tree)
     }
 }
 
+
+#if 0
 // Search for a closed chain of connected edges (having coincident endpoints within tol)
 // and if found, make a flat face out of them. There is no check for actual flatness.
 Face *
@@ -1468,3 +1497,4 @@ make_flat_face(Edge *edge)
 
     return NULL;
 }
+#endif
