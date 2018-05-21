@@ -196,6 +196,7 @@ locktype_of(char *tok)
     return 0;
 }
 
+#define IS_GROUP(obj) ((obj) != NULL && (obj)->type == OBJ_GROUP)
 
 // Deserialise a tree from file. 
 BOOL
@@ -255,10 +256,10 @@ deserialise_tree(Group *tree, char *filename)
         }
         else if (strcmp(tok, "BEGINGROUP") == 0)
         {
-            // Stack the object ID being constructed. Mark it negative, so we know it's a group
+            // Stack the object ID being constructed. 
             tok = strtok_s(NULL, " \t\n", &nexttok);
             id = atoi(tok);
-            stack[stkptr++] = -id;
+            stack[stkptr++] = id;
 
             // Create the group now, so we can link to it
             grp = group_new();
@@ -287,7 +288,7 @@ deserialise_tree(Group *tree, char *filename)
             object[id] = (Object *)p;
             if (stkptr == 0)
                 link_tail_group((Object *)p, tree);
-            else if (stack[stkptr - 1] < 0)
+            else if (IS_GROUP(object[stack[stkptr - 1]]))
                 link_tail_group((Object *)p, (Group *)object[stack[stkptr - 1]]);
         }
         else if (strcmp(tok, "EDGE") == 0)
@@ -382,7 +383,7 @@ deserialise_tree(Group *tree, char *filename)
             stkptr--;
             if (stkptr == 0)
                 link_tail_group((Object *)edge, tree);
-            else if (stack[stkptr - 1] < 0)
+            else if (IS_GROUP(object[stack[stkptr - 1]]))
                 link_tail_group((Object *)edge, (Group *)object[stack[stkptr - 1]]);
         }
         else if (strcmp(tok, "FACE") == 0)
@@ -477,7 +478,7 @@ deserialise_tree(Group *tree, char *filename)
             stkptr--;
             if (stkptr == 0)
                 link_tail_group((Object *)face, tree);
-            else if (stack[stkptr - 1] < 0)
+            else if (IS_GROUP(object[stack[stkptr - 1]]))
                 link_tail_group((Object *)face, (Group *)object[stack[stkptr - 1]]);
         }
         else if (strcmp(tok, "VOLUME") == 0)
@@ -513,14 +514,20 @@ deserialise_tree(Group *tree, char *filename)
             stkptr--;
             if (stkptr == 0)
                 link_tail_group((Object *)vol, tree);
-            else if (stack[stkptr - 1] < 0)
+            else if (IS_GROUP(object[stack[stkptr - 1]]))
                 link_tail_group((Object *)vol, (Group *)object[stack[stkptr - 1]]);
         }
         else if (strcmp(tok, "ENDGROUP") == 0)
         {
-            ASSERT(stkptr > 0 && id == -stack[stkptr - 1], "Badly formed group");
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            id = atoi(tok);
+            ASSERT(stkptr > 0 && id == stack[stkptr - 1], "Badly formed group");
+            ASSERT(object[id]->type == OBJ_GROUP, "ENDGROUP is not a group");
             stkptr--;
-            // no further action, as object have already been linked into the group
+            if (stkptr == 0)
+                link_tail_group(object[id], tree);
+            else if (IS_GROUP(object[stack[stkptr - 1]]))
+                link_tail_group(object[id], (Group *)object[stack[stkptr - 1]]);
         }
     }
 

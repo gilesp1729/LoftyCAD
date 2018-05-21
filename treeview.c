@@ -24,15 +24,14 @@ populate_treeview_object(Object *obj, Object *parent, HTREEITEM hItem)
     Face *face;
     Edge *edge;
 
-    tvi.mask = TVIF_TEXT | TVIF_PARAM;
-    tvi.pszText = descr;
-
     switch (obj->type)
     {
     case OBJ_POINT:
         sprintf_s(descr, 64, "Point %d", obj->ID);
+        tvi.pszText = descr;
         tvi.cchTextMax = strlen(tvi.pszText);
         tvi.lParam = (LPARAM)obj;
+        tvi.mask = TVIF_TEXT | TVIF_PARAM;
         tvins.item = tvi;
         tvins.hParent = hItem;
         tvins.hInsertAfter = TVI_FIRST;
@@ -46,8 +45,10 @@ populate_treeview_object(Object *obj, Object *parent, HTREEITEM hItem)
                   edgetypes[edge->type & ~EDGE_CONSTRUCTION],
                   (edge->type & EDGE_CONSTRUCTION) ? "(C)" : ""
                   );
+        tvi.pszText = descr;
         tvi.cchTextMax = strlen(tvi.pszText);
         tvi.lParam = (LPARAM)obj;
+        tvi.mask = TVIF_TEXT | TVIF_PARAM;
         tvins.item = tvi;
         tvins.hParent = hItem;
         tvins.hInsertAfter = TVI_FIRST;
@@ -66,8 +67,10 @@ populate_treeview_object(Object *obj, Object *parent, HTREEITEM hItem)
                   facetypes[face->type & ~FACE_CONSTRUCTION],
                   (face->type & FACE_CONSTRUCTION) ? "(C)" : ""
                   );
+        tvi.pszText = descr;
         tvi.cchTextMax = strlen(tvi.pszText);
         tvi.lParam = (LPARAM)obj;
+        tvi.mask = TVIF_TEXT | TVIF_PARAM;
         tvins.item = tvi;
         tvins.hParent = hItem;
         tvins.hInsertAfter = TVI_FIRST;
@@ -81,8 +84,10 @@ populate_treeview_object(Object *obj, Object *parent, HTREEITEM hItem)
 
     case OBJ_VOLUME:
         sprintf_s(descr, 64, "Volume %d", obj->ID);
+        tvi.pszText = descr;
         tvi.cchTextMax = strlen(tvi.pszText);
         tvi.lParam = (LPARAM)obj;
+        tvi.mask = TVIF_TEXT | TVIF_PARAM;
         tvins.item = tvi;
         tvins.hParent = hItem;
         tvins.hInsertAfter = TVI_FIRST;
@@ -104,19 +109,22 @@ populate_treeview_tree(Group *tree, HTREEITEM hItem)
     TVINSERTSTRUCT tvins;
     TVITEM tvi = { 0, };
     char descr[64];
+    HTREEITEM hGroup;
 
     for (obj = tree->obj_list; obj != NULL; obj = obj->next)
     {
         if (obj->type == OBJ_GROUP)
         {
             sprintf_s(descr, 64, "Group %d", obj->ID);
+            tvi.pszText = descr;
             tvi.cchTextMax = strlen(tvi.pszText);
             tvi.lParam = (LPARAM)obj;
+            tvi.mask = TVIF_TEXT | TVIF_PARAM;
             tvins.item = tvi;
             tvins.hParent = hItem;
             tvins.hInsertAfter = TVI_FIRST;
-            hItem = (HTREEITEM)SendDlgItemMessage(hWndTree, IDC_TREEVIEW, TVM_INSERTITEM, 0, (LPARAM)&tvins);
-            populate_treeview_tree((Group *)obj, hItem);
+            hGroup = (HTREEITEM)SendDlgItemMessage(hWndTree, IDC_TREEVIEW, TVM_INSERTITEM, 0, (LPARAM)&tvins);
+            populate_treeview_tree((Group *)obj, hGroup);
         }
         else
         {
