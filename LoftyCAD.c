@@ -394,8 +394,12 @@ Pick(GLint x_pick, GLint y_pick, OBJECT min_priority)
             }
         }
 
+        // Some special cases:
+        // If the object is in a group, then return the group.
         // If the object is a face, but it belongs to a volume that is locked at the
         // face or volume level, then return the parent volume instead.
+        // Do the face test first, as if we have its volume we can find any parent
+        // group quickly without a full search.
         obj = (Object *)min_obj;
         if (obj != NULL && obj->type == OBJ_FACE)
         {
@@ -403,6 +407,9 @@ Pick(GLint x_pick, GLint y_pick, OBJECT min_priority)
 
             if (face->vol != NULL && face->vol->hdr.lock >= LOCK_FACES)
                 obj = (Object *)face->vol;
+
+            if (face->vol != NULL && face->vol->hdr.parent_group->hdr.parent_group != NULL)
+                obj = find_top_level_parent(&object_tree, (Object *)obj->parent_group);  // this is fast
         }
 
 #ifdef DEBUG_PICK
@@ -466,7 +473,7 @@ Pick_all_in_rect(GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
             obj = (Object *)buffer[n + num_objs + 2];
             if (obj != NULL)
             {
-                parent = find_parent_object(&object_tree, obj);
+                parent = find_parent_object(&object_tree, obj, TRUE);  // Must be deep
                 if (parent == NULL)
                 {
                     n += num_objs + 3;
@@ -582,7 +589,7 @@ is_selected_parent(Object *obj)
         }
 
         // Make sure the object is not locked at the level of the thing being picked
-        parent = find_parent_object(&object_tree, sel->prev);
+        parent = find_parent_object(&object_tree, sel->prev, FALSE);
         if (find_obj(sel->prev, obj) && parent->lock < obj->type)
         {
             present = TRUE;
@@ -1001,7 +1008,7 @@ left_click(AUX_EVENTREC *event)
         return;
 
     // We cannot select objects that are locked at their own level
-    parent = find_parent_object(&object_tree, picked_obj);
+    parent = find_parent_object(&object_tree, picked_obj, FALSE);
     if (parent->lock >= picked_obj->type)
         return;
 
@@ -1108,25 +1115,14 @@ micro_move_selection(float x, float y)
 
     for (obj = selection; obj != NULL; obj = obj->next)
     {
-        Face *f;
         Object *parent;
 
         move_obj(obj->prev, dx, dy, dz);
         clear_move_copy_flags(obj->prev);
 
-        // If we have moved a face:
         // Invalidate all the view lists for the volume, as any of them may have changed
-        // Do this by finding the ultimate parent, so it works for points, edges, etc.
-        parent = find_parent_object(&object_tree, obj->prev);
-        if (parent->type == OBJ_VOLUME)
-        {
-            for (f = ((Volume *)parent)->faces; f != NULL; f = (Face *)f->hdr.next)
-                f->view_valid = FALSE;
-        }
-        else if (parent->type == OBJ_FACE)
-        {
-            ((Face *)parent)->view_valid = FALSE;
-        }
+        parent = find_parent_object(&object_tree, obj->prev, FALSE);
+        invalidate_all_view_lists(parent, obj->prev, dx, dy, dz);
     }
 }
 
@@ -1216,8 +1212,8 @@ right_click(AUX_EVENTREC *event)
     ModifyMenu(hMenu, 0, MF_BYPOSITION | MF_GRAYED | MF_STRING, 0, buf);
 
     // Find the top-level parent. Disable irrelevant menu items
-    // TODO: Do somethign different with OBJ_GROUP. This call must find the immediate parent group
-    parent = find_parent_object(&object_tree, picked_obj);
+    // TODO: Do somethign different with OBJ_GROUP. 
+    parent = find_parent_object(&object_tree, picked_obj, FALSE);
     switch (parent->type)
     {
     case OBJ_EDGE:

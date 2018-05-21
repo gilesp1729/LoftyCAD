@@ -152,6 +152,7 @@ Group *group_new(void)
 
     grp->hdr.type = OBJ_GROUP;
     grp->hdr.ID = objid++;
+    grp->hdr.lock = LOCK_FACES;
     return grp;
 }
 
@@ -678,19 +679,36 @@ find_obj(Object *parent, Object *obj)
 
 // Find the parent object (i.e. in the object tree or in a group) for the given object.
 // The parent object maintains the lock on all its components. Will not return a group.
+// There are two versions: a "deep" version which searches the object tree and all groups,
+// and a shallow version which does not go down into groups.
 Object *
-find_parent_object(Group *tree, Object *obj)
+find_parent_object(Group *tree, Object *obj, BOOL deep_search)
 {
     Object *top_level;
 
-    // TODO: STill doing an exhaustive search here. This could be made faster.
+    // Special case for groups and volumes, just return the object.
+    if (obj->type == OBJ_VOLUME || obj->type == OBJ_GROUP)
+        return obj;
+
+    // Special case for faces, as we can get to the volume quickly.
+    if (obj->type == OBJ_FACE)
+    {
+        Face *f = (Face *)obj;
+
+        if (f->vol != NULL)
+            return (Object *)f->vol;
+    }
+
     for (top_level = tree->obj_list; top_level != NULL; top_level = top_level->next)
     {
         if (top_level->type == OBJ_GROUP)
         {
-            Object *o = find_parent_object((Group *)top_level, obj);
-            if (o != NULL)
-                return o;
+            if (deep_search)
+            {
+                Object *o = find_parent_object((Group *)top_level, obj, deep_search);
+                if (o != NULL)
+                    return o;
+            }
         }
         else if (top_level == obj || find_obj(top_level, obj))
         {
@@ -701,15 +719,22 @@ find_parent_object(Group *tree, Object *obj)
 }
 
 
-// Find the parent object (i.e. in the object tree or in a group) for the given object.
+// Find the highest parent object or group (i.e. in the object tree) for the given object.
 Object *
 find_top_level_parent(Group *tree, Object *obj)
 {
-    Object *top_level = find_parent_object(tree, obj);
+    Object *top_level;
+    
+    // If we're starting with a group, just go up to the highest level quickly;
+    // otherwise we have to do the search.
+    if (obj->type == OBJ_GROUP)
+        top_level = obj;
+    else
+        top_level = find_parent_object(tree, obj, TRUE);
 
     if (top_level == NULL)
         return NULL;
-    for (; top_level->parent_group != NULL; top_level = (Object *)top_level->parent_group)
+    for (; top_level->parent_group->hdr.parent_group != NULL; top_level = (Object *)top_level->parent_group)
         ;
     return top_level;
 }

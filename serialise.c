@@ -259,6 +259,7 @@ deserialise_tree(Group *tree, char *filename)
             // Stack the object ID being constructed. 
             tok = strtok_s(NULL, " \t\n", &nexttok);
             id = atoi(tok);
+            check_and_grow(id, &object, &objsize);
             stack[stkptr++] = id;
 
             // Create the group now, so we can link to it
