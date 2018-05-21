@@ -1192,7 +1192,7 @@ PIXELFORMATDESCRIPTOR pfd;
                }
 
                // GP - kill redraw timer
-               KillTimer(hWnd, 9999);
+               // KillTimer(hWnd, 9999);  // Don't do this - we need it for off-window highlighting
             }
 
          // Window is going active.  If we are not iconized, realize palette

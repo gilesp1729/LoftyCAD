@@ -146,6 +146,15 @@ Volume *vol_new(void)
     return vol;
 }
 
+Group *group_new(void)
+{
+    Group *grp = calloc(1, sizeof(Group));
+
+    grp->hdr.type = OBJ_GROUP;
+    grp->hdr.ID = objid++;
+    return grp;
+}
+
 // Link and unlink objects in a double linked list
 void link(Object *new_obj, Object **obj_list)
 {
@@ -222,6 +231,8 @@ clear_move_copy_flags(Object *obj)
     BezierEdge *be;
     Face *face;
     Volume *vol;
+    Group *grp;
+    Object *o;
 
     switch (obj->type)
     {
@@ -270,6 +281,13 @@ clear_move_copy_flags(Object *obj)
             clear_move_copy_flags((Object *)face);
         obj->copied_to = NULL;
         break;
+
+    case OBJ_GROUP:
+        grp = (Group *)obj;
+        for (o = grp->obj_list; o != NULL; o = o->next)
+            clear_move_copy_flags(o);
+        obj->copied_to = NULL;
+        break;
     }
 }
 
@@ -285,6 +303,8 @@ copy_obj(Object *obj, float xoffset, float yoffset, float zoffset)
     ArcEdge *ae, *nae;
     Face *face, *new_face;
     Volume *vol, *new_vol;
+    Object *o;
+    Group *grp, *new_grp;
 
     switch (obj->type)
     {
@@ -379,6 +399,17 @@ copy_obj(Object *obj, float xoffset, float yoffset, float zoffset)
             new_face->vol = new_vol;
             link_tail((Object *)new_face, (Object **)&new_vol->faces);
         }
+        break;
+
+    case OBJ_GROUP:
+        grp = (Group *)obj;
+        new_grp = group_new();
+        for (o = grp->obj_list; o != NULL; o = o->next)
+        {
+            new_obj = copy_obj(o, xoffset, yoffset, zoffset);
+            link_tail(new_obj, &new_grp->obj_list);
+        }
+        new_obj = (Object *)new_grp;
         break;
     }
  
@@ -484,6 +515,7 @@ move_obj(Object *obj, float xoffset, float yoffset, float zoffset)
     BezierEdge *be;
     Face *face;
     Volume *vol;
+    Object *o;
 
     switch (obj->type)
     {
@@ -495,21 +527,6 @@ move_obj(Object *obj, float xoffset, float yoffset, float zoffset)
             p->y += yoffset;
             p->z += zoffset;
             p->moved = TRUE;
-
-#if 0 // TODO - use code like this for moving grouped objects?
-            // Move all points snapped to this point. 
-            for (snap = snap_list; snap != NULL; snap = snap->next)
-            {
-                if (snap->attached_to == obj)
-                {
-                    Object *saved_obj = snap->snapped;
-                    // temporarily NULL this, so it doesn't trigger the below code..
-                    snap->snapped = NULL;
-                    move_obj(saved_obj, xoffset, yoffset, zoffset);
-                    snap->snapped = saved_obj;
-                }
-            }
-#endif
         }
         break;
 
@@ -546,32 +563,17 @@ move_obj(Object *obj, float xoffset, float yoffset, float zoffset)
         face->normal.refpt.y += yoffset;
         face->normal.refpt.z += zoffset;
         face->view_valid = FALSE;
-#if 0 // TODO use something like this for grouping
-        // move faces (and volumes) attached to this face
-        for (snap = snap_list; snap != NULL; snap = snap->next)
-        {
-            if (snap->attached_to == obj)
-            {
-                Object *saved_obj;
-
-                ASSERT(snap->snapped->type = OBJ_FACE, "Only a face can be snapped to a face");
-                vol = ((Face *)snap->snapped)->vol;
-                saved_obj = snap->snapped;
-                snap->snapped = NULL;
-                if (vol == NULL)
-                    move_obj(saved_obj, xoffset, yoffset, zoffset);
-                else
-                    move_obj((Object *)vol, xoffset, yoffset, zoffset);
-                snap->snapped = saved_obj;
-            }
-        }
-#endif
         break;
 
     case OBJ_VOLUME:
         vol = (Volume *)obj;
         for (face = vol->faces; face != NULL; face = (Face *)face->hdr.next)
             move_obj((Object *)face, xoffset, yoffset, zoffset);
+        break;
+
+    case OBJ_GROUP:
+        for (o = ((Group *)obj)->obj_list; o != NULL; o = o->next)
+            move_obj(o, xoffset, yoffset, zoffset);
         break;
     }
 }
@@ -642,12 +644,42 @@ find_obj(Object *parent, Object *obj)
                 return TRUE;
         }
         break;
+
+    case OBJ_GROUP:
+        // TODO not sure if this is actually valid.
+        ASSERT(FALSE, "Shouldn't be find_obj on a group");
+        break;
     }
 
     return FALSE;
 }
 
-// Find the top-level parent object (i.e. in the object tree) for the given object.
+// Find the parent object (i.e. in the object tree or in a group) for the given object.
+// The parent object maintains the lock on all its components. Will not return a group.
+Object *
+find_parent_object(Object *tree, Object *obj)
+{
+    Object *top_level;
+
+    for (top_level = tree; top_level != NULL; top_level = top_level->next)
+    {
+        if (top_level->type == OBJ_GROUP)
+        {
+            Object *o = find_top_level_parent(((Group *)top_level)->obj_list, obj);
+            if (o != NULL)
+                return o;
+        }
+        else if (top_level == obj || find_obj(top_level, obj))
+        {
+            return top_level;
+        }
+    }
+    return NULL;
+}
+
+
+// TODO fix this
+// Find the parent object (i.e. in the object tree or in a group) for the given object.
 Object *
 find_top_level_parent(Object *tree, Object *obj)
 {
@@ -660,6 +692,7 @@ find_top_level_parent(Object *tree, Object *obj)
     }
     return NULL;
 }
+
 
 // Mark all view lists as invalid for parts of a parent object, when a part of it
 // has moved.
@@ -1177,6 +1210,8 @@ purge_obj(Object *obj)
     EDGE type;
     Face *face;
     Face *next_face = NULL;
+    Object *next_obj = NULL;
+    Object *o;
     Volume *vol;
 
     switch (obj->type)
@@ -1229,6 +1264,15 @@ purge_obj(Object *obj)
         }
         free(obj);
         break;
+
+    case OBJ_GROUP:
+        for (o = ((Group *)obj)->obj_list; o != NULL; o = next_obj)
+        {
+            next_obj = o->next;
+            purge_obj(o);
+        }
+        free(obj);
+        break;
     }
 }
 
@@ -1247,3 +1291,180 @@ purge_tree(Object *tree)
     }
 }
 
+// Search for a closed chain of connected edges (having coincident endpoints within tol)
+// and if found, make a flat face out of them. There is no check for actual flatness.
+Face *
+make_flat_face(Edge *edge)
+{
+    Object *obj;
+    Edge *e; 
+    Face *face;
+    Object *list = NULL;
+    Object *plist = NULL;
+    int n_edges = 0;
+    int pass;
+    typedef struct End          // an end of the growing chain
+    {
+        int which_end;          // endpoint 0 or 1
+        Edge *edge;             // which edge it is on
+    } End;
+    End end0, end1;
+    BOOL legit = FALSE;
+    int max_passes = 0;
+
+    if (((Object *)edge)->type != OBJ_EDGE)
+        return NULL;
+
+    // Put the first edge in the list, removing it from the object tree.
+    // It had better be in the object tree to start with! Check to be sure,
+    // and while here, find out how many top-level edges there are as an
+    // upper bound on passes later on.
+    for (obj = object_tree; obj != NULL; obj = obj->next)
+    {
+        if (obj->type == OBJ_EDGE)
+        {
+            max_passes++;
+            if (obj == (Object *)edge)
+                legit = TRUE;
+        }
+    }
+    if (!legit)
+        return NULL;
+
+    delink((Object *)edge, &object_tree);
+    link((Object *)edge, &list);
+    end0.edge = edge;
+    end0.which_end = 0;
+    end1.edge = edge;
+    end1.which_end = 1;
+
+    // Make passes over the tree, greedy-grouping edges as they are found to connect.
+    // If the chain is closed, we should add at least 2 edges per pass, and could add
+    // a lot more than that with favourable ordering.
+    //
+    // While here, link the points themselves into another list, 
+    // so a normal can be found early (we may need to reverse
+    // the order if the edges were drawn the wrong way round).
+    // We can do this with edge endpoints because their next/prev
+    // pointers are not used for anything else.
+    for (pass = 0; pass < max_passes; pass++)
+    {
+        BOOL advanced = FALSE;
+
+        for (obj = object_tree; obj != NULL; obj = obj->next)
+        {
+            if (obj->type != OBJ_EDGE)
+                continue;
+
+            e = (Edge *)obj;
+            if (near_pt(e->endpoints[0], end0.edge->endpoints[end0.which_end]))
+            {
+                // endpoint 0 of obj connects to end0. Put obj in the list.
+                delink(obj, &object_tree);
+                link(obj, &list);
+
+                // link shared point into point list
+                link((Object *)e->endpoints[0], &plist);
+
+                // Update end0 to point to the other end of the new edge we just added
+                end0.edge = e;
+                end0.which_end = 1;
+                n_edges++;
+                advanced = TRUE;
+            }
+
+            // Check for endpoint 1 connecting to end0 similarly
+            if (near_pt(e->endpoints[1], end0.edge->endpoints[end0.which_end]))
+            {
+                delink(obj, &object_tree);
+                link(obj, &list);
+                link((Object *)e->endpoints[1], &plist);
+                end0.edge = e;
+                end0.which_end = 0;
+                n_edges++;
+                advanced = TRUE;
+            }
+
+            // And the same for end1. New edges are linked at the tail. 
+            if (near_pt(e->endpoints[0], end1.edge->endpoints[end1.which_end]))
+            {
+                delink(obj, &object_tree);
+                link_tail(obj, &list);
+                link_tail((Object *)e->endpoints[0], &plist);
+                end1.edge = e;
+                end1.which_end = 1;
+                n_edges++;
+                advanced = TRUE;
+            }
+
+            if (near_pt(e->endpoints[1], end1.edge->endpoints[end1.which_end]))
+            {
+                delink(obj, &object_tree);
+                link_tail(obj, &list);
+                link((Object *)e->endpoints[1], &plist);
+                end1.edge = e;
+                end1.which_end = 0;
+                n_edges++;
+                advanced = TRUE;
+            }
+
+            if (near_pt(end0.edge->endpoints[end0.which_end], end1.edge->endpoints[end1.which_end]))
+            {
+                Plane norm;
+                BOOL reverse = FALSE;
+                int i;
+
+                // We have closed the chain.
+                // Determine normal of points gathered up so far. From this we decide
+                // which order to build the final edge array on the face.
+                polygon_normal((Point *)plist, &norm);
+                if (dot(norm.A, norm.B, norm.C, facing_plane->A, facing_plane->B, facing_plane->C) < 0)
+                {
+                    reverse = TRUE;
+                    norm.A = -norm.A;
+                    norm.B = -norm.B;
+                    norm.C = -norm.C;
+                }
+
+                // make the face
+                face = face_new(FACE_FLAT, norm);
+                face->n_edges = n_edges;
+                face->max_edges = 1;
+                while (face->max_edges <= n_edges)
+                    face->max_edges <<= 1;          // round up to a power of 2
+                if (face->max_edges > 16)           // does it need any more than the default 16?
+                    face->edges = realloc(face->edges, face->max_edges * sizeof(Edge *));
+
+                // Populate the edge list, sharing points along the way
+                if (reverse)
+                {
+                    face->initial_point = end1.edge->endpoints[end1.which_end];
+                    for (i = 0, e = (Edge *)list; e != NULL; e = (Edge *)e->hdr.next, i++)
+                        face->edges[face->n_edges - i - 1] = e;
+                }
+                else
+                {
+                    face->initial_point = end0.edge->endpoints[end0.which_end];
+                    for (i = 0, e = (Edge *)list; e != NULL; e = (Edge *)e->hdr.next, i++)
+                        face->edges[i] = e;
+                }
+
+                // Finally, update its view list
+                gen_view_list_face(face);
+
+                return face;
+            }
+        }
+
+        // Every pass should advance at least one of the ends. If we can't close,
+        // return the edges unchanged to the object tree and return NULL.
+        if (!advanced)
+            break;
+    }
+
+    end1.edge->hdr.next = object_tree;
+    object_tree->prev = (Object *)end1.edge; 
+    object_tree = (Object *)end0.edge;
+
+    return NULL;
+}

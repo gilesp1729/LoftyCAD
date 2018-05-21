@@ -31,10 +31,12 @@ BOOL	right_mouse = FALSE;
 HWND hWndToolbar;
 HWND hWndDebug;
 HWND hWndHelp;
+HWND hWndTree;
 HWND hWndDims;
 BOOL view_tools = TRUE;
 BOOL view_debug = FALSE;
 BOOL view_help = TRUE;
+BOOL view_tree = FALSE;
 
 // State the app is in.
 STATE app_state = STATE_NONE;
@@ -462,7 +464,7 @@ Pick_all_in_rect(GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
             obj = (Object *)buffer[n + num_objs + 2];
             if (obj != NULL)
             {
-                parent = find_top_level_parent(object_tree, obj);
+                parent = find_parent_object(object_tree, obj);
                 if (parent == NULL)
                 {
                     n += num_objs + 3;
@@ -578,7 +580,7 @@ is_selected_parent(Object *obj)
         }
 
         // Make sure the object is not locked at the level of the thing being picked
-        parent = find_top_level_parent(object_tree, sel->prev);
+        parent = find_parent_object(object_tree, sel->prev);
         if (find_obj(sel->prev, obj) && parent->lock < obj->type)
         {
             present = TRUE;
@@ -997,7 +999,7 @@ left_click(AUX_EVENTREC *event)
         return;
 
     // We cannot select objects that are locked at their own level
-    parent = find_top_level_parent(object_tree, picked_obj);
+    parent = find_parent_object(object_tree, picked_obj);
     if (parent->lock >= picked_obj->type)
         return;
 
@@ -1113,7 +1115,7 @@ micro_move_selection(float x, float y)
         // If we have moved a face:
         // Invalidate all the view lists for the volume, as any of them may have changed
         // Do this by finding the ultimate parent, so it works for points, edges, etc.
-        parent = find_top_level_parent(object_tree, obj->prev);
+        parent = find_parent_object(object_tree, obj->prev);
         if (parent->type == OBJ_VOLUME)
         {
             for (f = ((Volume *)parent)->faces; f != NULL; f = (Face *)f->hdr.next)
@@ -1179,6 +1181,7 @@ right_click(AUX_EVENTREC *event)
     POINT pt;
     Object *parent, *sel_obj;
     char buf[32];
+    LOCK old_parent_lock;
 
     if (view_rendered)
         return;
@@ -1211,7 +1214,8 @@ right_click(AUX_EVENTREC *event)
     ModifyMenu(hMenu, 0, MF_BYPOSITION | MF_GRAYED | MF_STRING, 0, buf);
 
     // Find the top-level parent. Disable irrelevant menu items
-    parent = find_top_level_parent(object_tree, picked_obj);
+    // TODO: Do somethign different with OBJ_GROUP. This call must find the immediate parent group
+    parent = find_parent_object(object_tree, picked_obj);
     switch (parent->type)
     {
     case OBJ_EDGE:
@@ -1235,6 +1239,7 @@ right_click(AUX_EVENTREC *event)
     }
 
     // Check the right lock state for the parent
+    old_parent_lock = parent->lock;
     switch (parent->lock)
     {
     case LOCK_VOLUME:
@@ -1326,6 +1331,12 @@ right_click(AUX_EVENTREC *event)
             CheckMenuItem(hMenu, ID_OBJ_ALWAYSSHOWDIMS, MF_CHECKED);
         }
         break;
+    }
+    if (parent->lock != old_parent_lock)
+    {
+        // we have changed the drawing - write an undo checkpoint
+        drawing_changed = TRUE;
+        write_checkpoint(object_tree, curr_filename);
     }
 }
 
@@ -1470,6 +1481,22 @@ Command(int message, int wParam, int lParam)
                 ShowWindow(hWndHelp, SW_SHOW);
                 view_help = TRUE;
                 CheckMenuItem(hMenu, ID_VIEW_HELP, MF_CHECKED);
+            }
+            break;
+
+        case ID_VIEW_TREE:
+            hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
+            if (view_tree)
+            {
+                ShowWindow(hWndTree, SW_HIDE);
+                view_tree = FALSE;
+                CheckMenuItem(hMenu, ID_VIEW_TREE, MF_UNCHECKED);
+            }
+            else
+            {
+                ShowWindow(hWndTree, SW_SHOW);
+                view_tree = TRUE;
+                CheckMenuItem(hMenu, ID_VIEW_TREE, MF_CHECKED);
             }
             break;
 
@@ -1634,6 +1661,7 @@ Command(int message, int wParam, int lParam)
                 hMenu = GetSubMenu(GetMenu(auxGetHWND()), 0);
                 hMenu = GetSubMenu(hMenu, 8);
                 insert_filename_to_MRU(hMenu, curr_filename);
+                populate_treeview();
             }
 
             break;
@@ -1734,6 +1762,7 @@ Command(int message, int wParam, int lParam)
                     strcat_s(window_title, 256, " - ");
                     strcat_s(window_title, 256, curr_title);
                     SetWindowText(auxGetHWND(), window_title);
+                    populate_treeview();
                 }
             }
             break;
@@ -2293,6 +2322,19 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
         if (view_help)
             ShowWindow(hWndHelp, SW_SHOW);
 
+        // Tree view of object tree
+        hWndTree = CreateDialog
+            (
+            hInst,
+            MAKEINTRESOURCE(IDD_TREEVIEW),
+            auxGetHWND(),
+            treeview_dialog
+            );
+
+        SetWindowPos(hWndTree, HWND_NOTOPMOST, wWidth, wHeight / 2, 0, 0, SWP_NOSIZE);
+        if (view_tree)
+            ShowWindow(hWndTree, SW_SHOW);
+
         // Dimensions window. It looks like a tooltip, but displays and allows input of dimensions.
         // It is used both modeless (as here) and also modal (when typing in dimensions)
         hWndDims = CreateDialogParam
@@ -2323,6 +2365,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
         CheckMenuItem(hMenu, ID_VIEW_TOOLS, view_tools ? MF_CHECKED : MF_UNCHECKED);
         CheckMenuItem(hMenu, ID_VIEW_DEBUGLOG, view_debug ? MF_CHECKED : MF_UNCHECKED);
         CheckMenuItem(hMenu, ID_VIEW_HELP, view_help ? MF_CHECKED : MF_UNCHECKED);
+        CheckMenuItem(hMenu, ID_VIEW_TREE, view_tree ? MF_CHECKED : MF_UNCHECKED);
         CheckMenuItem(hMenu, ID_VIEW_ORTHO, view_ortho ? MF_CHECKED : MF_UNCHECKED);
         CheckMenuItem(hMenu, ID_VIEW_PERSPECTIVE, !view_ortho ? MF_CHECKED : MF_UNCHECKED);
         CheckMenuItem(hMenu, ID_VIEW_CONSTRUCTIONEDGES, view_constr ? MF_CHECKED : MF_UNCHECKED);

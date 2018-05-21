@@ -255,6 +255,7 @@ void
 export_object(GLUtesselator *tess, Object *obj)
 {
     Face *face;
+    Object *o;
 
     switch (obj->type)
     {
@@ -266,6 +267,11 @@ export_object(GLUtesselator *tess, Object *obj)
     case OBJ_VOLUME:
         for (face = ((Volume *)obj)->faces; face != NULL; face = (Face *)face->hdr.next)
             export_object(tess, (Object *)face);
+        break;
+
+    case OBJ_GROUP:
+        for (o = ((Group *)obj)->obj_list; o != NULL; o = o->next)
+            export_object(tess, o);
         break;
     }
 }
@@ -290,7 +296,7 @@ export_object_tree(Object *tree, char *filename)
 
     for (obj = tree; obj != NULL; obj = obj->next)
     {
-        if (obj->type == OBJ_VOLUME)
+        if (obj->type == OBJ_VOLUME || obj->type == OBJ_GROUP)
             export_object(tess, obj);
     }
 

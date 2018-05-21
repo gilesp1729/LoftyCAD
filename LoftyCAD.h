@@ -58,9 +58,11 @@ extern BOOL	right_mouse;
 
 extern HWND hWndToolbar;
 extern HWND hWndDebug;
+extern HWND hWndTree;
 extern HWND hWndDims;
 extern BOOL view_tools;
 extern BOOL view_debug;
+extern BOOL view_tree;
 extern BOOL view_rendered;
 extern BOOL view_constr;
 
@@ -90,6 +92,8 @@ extern float clip_xoffset, clip_yoffset, clip_zoffset;
 extern int generation;
 extern int latest_generation;
 extern int max_generation;
+
+extern Object *treeview_highlight;
 
 
 // Debug stuff
@@ -128,9 +132,11 @@ void change_state(STATE new_state);
 BOOL is_selected_direct(Object *obj, Object **prev_in_list);
 BOOL is_selected_parent(Object *obj);
 void clear_selection(Object **sel_list);
+void populate_treeview(void);
 
 // Forwards for window procedures
 int WINAPI debug_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 int WINAPI toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 int WINAPI dimensions_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 int WINAPI prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+int WINAPI treeview_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);

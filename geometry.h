@@ -9,6 +9,16 @@
 // test for "near" zero.
 #define nz(val)  (fabsf(val) < 0.00001)
 
+// test for near points (within the tolerance)
+#define near_pt(p1, p2) \
+    (   \
+        fabsf(p1->x - p2->x) < tolerance  \
+        &&  \
+        fabsf(p1->y - p2->y) < tolerance  \
+        &&  \
+        fabsf(p1->z - p2->z) < tolerance  \
+    )
+
 void ray_from_eye(GLint x, GLint y, Plane *line);
 BOOL intersect_ray_plane(GLint x, GLint y, Plane *picked_plane, Point *new_point);
 BOOL snap_ray_edge(GLint x, GLint y, Edge *edge, Point *new_point);

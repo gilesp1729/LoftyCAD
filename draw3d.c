@@ -19,6 +19,7 @@ color(OBJECT obj_type, BOOL construction, BOOL selected, BOOL highlighted, BOOL 
 
     switch (obj_type)
     {
+    case OBJ_GROUP:
     case OBJ_VOLUME:
         return;  // no action here
 
@@ -80,6 +81,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
     ArcEdge *ae;
     BezierEdge *be;
     Point *p;
+    Object *o;
     BOOL push_name, locked;
     // This object is selected. Color it and all its components.
     BOOL selected = pres & DRAW_SELECTED;
@@ -252,6 +254,11 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         for (face = ((Volume *)obj)->faces; face != NULL; face = (Face *)face->hdr.next)
             draw_object((Object *)face, pres, parent_lock);
         break;
+
+    case OBJ_GROUP:
+        for (o = ((Group *)obj)->obj_list; o != NULL; o = o->next)
+            draw_object(o, pres, o->lock);
+        break;
     }
 }
 
@@ -298,6 +305,12 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
         {
             auxGetMouseLoc(&pt.x, &pt.y);
             highlight_obj = Pick(pt.x, pt.y, OBJ_FACE);
+
+            // See if we are in the treeview window and have something to highlight from there
+            if (highlight_obj != NULL)
+                treeview_highlight = NULL;
+            else
+                highlight_obj = treeview_highlight;
         }
         else if (left_mouse && app_state != STATE_DRAGGING_SELECT)
         {
@@ -367,7 +380,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
 
                     parent = find_top_level_parent(object_tree, picked_obj);
                     
-                    // moving a single object under the cursor
+                    // moving a single object (or group) under the cursor
                     // allow moving handles even if selected
                     if (!is_selected_direct(picked_obj, &dummy) && parent->lock < parent->type)
                     {
@@ -404,7 +417,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                                 );
                             clear_move_copy_flags(obj->prev);
 
-                            parent = find_top_level_parent(object_tree, obj->prev);
+                            parent = find_parent_object(object_tree, obj->prev);
                             invalidate_all_view_lists
                                 (
                                 parent,
@@ -1135,7 +1148,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
     // Pass lock state of top-level parent to determine what is shown.
     for (obj = selection; obj != NULL; obj = obj->next)
     {
-        Object *parent = find_top_level_parent(object_tree, obj->prev);
+        Object *parent = find_parent_object(object_tree, obj->prev);
 
         if (obj->prev != curr_obj && obj->prev != highlight_obj)
         {
@@ -1150,7 +1163,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
     // parent yet. Same for the picked highlighted object, if any.
     if (curr_obj != NULL)
     {
-        Object *parent = find_top_level_parent(object_tree, curr_obj);
+        Object *parent = find_parent_object(object_tree, curr_obj);
 
         pres = DRAW_HIGHLIGHT;
         if (app_state >= STATE_STARTING_EDGE)
@@ -1160,37 +1173,13 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
     }
     if (highlight_obj != NULL)
     {
-        Object *parent = find_top_level_parent(object_tree, highlight_obj);
+        Object *parent = find_parent_object(object_tree, highlight_obj);
 
         pres = DRAW_HIGHLIGHT;
         if (app_state >= STATE_STARTING_EDGE)
             pres |= DRAW_HIGHLIGHT_LOCKED;
         draw_object(highlight_obj, pres, parent != NULL ? parent->lock : LOCK_NONE);
         show_dims_on(highlight_obj, pres, parent != NULL ? parent->lock : LOCK_NONE);
-
-#if 0  // TODO: when grouping, use code like this to HL it
-        // If anything is snapped to this object, highlight it as well.
-        for (snap = snap_list; snap != NULL; snap = snap->next)
-        {
-            if (snap->attached_to == highlight_obj)
-            {
-                pres = DRAW_HIGHLIGHT;
-                if (snap->snapped->type == OBJ_FACE)
-                {
-                    Face *f = (Face *)snap->snapped;
-
-                    if (f->vol != NULL)
-                        draw_object((Object *)f->vol, pres, LOCK_FACES);
-                    else
-                        draw_object(snap->snapped, pres, LOCK_EDGES);
-                }
-                else if (snap->snapped->type == OBJ_POINT)
-                {
-                    draw_object(snap->snapped, pres, LOCK_NONE);
-                }
-            }
-        }
-#endif
     }
     
     if(!picking)
@@ -1269,6 +1258,9 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
             break;
         case OBJ_FACE:
             glCallLists(4, GL_UNSIGNED_BYTE, "Face");
+            break;
+        case OBJ_GROUP:
+            glCallLists(5, GL_UNSIGNED_BYTE, "Group");
             break;
         }
         glPopMatrix();

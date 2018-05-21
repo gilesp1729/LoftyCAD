@@ -11,6 +11,7 @@ typedef enum
     OBJ_EDGE,
     OBJ_FACE,
     OBJ_VOLUME,
+    OBJ_GROUP,
     OBJ_MAX         // must be highest
 } OBJECT;
 
@@ -178,6 +179,12 @@ typedef struct Volume
     struct Face     *faces;         // Doubly linked list of faces making up the volume
 } Volume;
 
+typedef struct Group
+{
+    struct Object   hdr;            // Header
+    struct Object   *obj_list;      // Doubly linked list of objects making up the group
+} Group;
+
 // Externs
 
 extern unsigned int objid;
@@ -202,7 +209,8 @@ Point *point_newp(Point *p);
 Edge *edge_new(EDGE edge_type);
 Face *face_new(FACE face_type, Plane norm);
 Volume *vol_new(void);
-//Snap *snap_new(Object *snapped, Object *attached_to, float attached_dist);
+Group *group_new(void);
+Face *make_flat_face(Edge *edge);
 
 // Link and delink from lists
 void link(Object *new_obj, Object **obj_list);
@@ -218,6 +226,7 @@ Face *clone_face_reverse(Face *face);
 // Find object in tree, at a location, or as child of another object
 BOOL find_obj(Object *parent, Object *obj);
 Object *find_in_neighbourhood(Object *match_obj);
+Object *find_parent_object(Object *tree, Object *obj);
 Object *find_top_level_parent(Object *tree, Object *obj);
 BOOL is_top_level_object(Object *obj, Object *obj_list);
 
@@ -228,7 +237,7 @@ void update_view_list_2D(Face *face);
 void gen_view_list_arc(ArcEdge *ae);
 void gen_view_list_bez(BezierEdge *be);
 
-// Write and read a tree to a file
+// Write and read a tree to a file (serialise.c)
 void serialise_tree(Object *tree, char *filename);
 BOOL deserialise_tree(Object **tree, char *filename);
 void write_checkpoint(Object *tree, char *filename);

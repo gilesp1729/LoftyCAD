@@ -15,7 +15,7 @@ static unsigned int maxobjid = 0;
 static unsigned int save_count = 1;
 
 // names of things that make the serialised format a little easier to read
-char *objname[] = { "(none)", "POINT", "EDGE", "FACE", "VOLUME" };
+char *objname[] = { "(none)", "POINT", "EDGE", "FACE", "VOLUME", "ENDGROUP" };
 char *locktypes[] = { "N", "P", "E", "F", "V" };
 char *edgetypes[] = { "STRAIGHT", "ARC", "BEZIER" };
 char *facetypes[] = { "RECT", "CIRCLE", "FLAT", "CYLINDRICAL", "GENERAL" };
@@ -31,6 +31,7 @@ serialise_obj(Object *obj, FILE *f)
     BezierEdge *be;
     Face *face;
     Volume *vol;
+    Object *o;
 
     // check for object already saved
     if (obj->save_count == save_count)
@@ -75,10 +76,14 @@ serialise_obj(Object *obj, FILE *f)
     case OBJ_VOLUME:
         fprintf_s(f, "BEGIN %d\n", obj->ID);
         vol = (Volume *)obj;
-       // if (vol->attached_to != NULL)   // TODO replace with SNAP record
-       //     serialise_obj((Object *)vol->attached_to, f);
         for (face = vol->faces; face != NULL; face = (Face *)face->hdr.next)
             serialise_obj((Object *)face, f);
+        break;
+
+    case OBJ_GROUP:
+        fprintf_s(f, "BEGINGROUP %d\n", obj->ID);
+        for (o = ((Group *)obj)->obj_list; o != NULL; o = o->next)
+            serialise_obj(o, f);
         break;
     }
 
@@ -132,6 +137,10 @@ serialise_obj(Object *obj, FILE *f)
         vol = (Volume *)obj;
         for (face = vol->faces; face != NULL; face = (Face *)face->hdr.next)
             fprintf_s(f, "%d ", face->hdr.ID);
+        fprintf_s(f, "\n");
+        break;
+
+    case OBJ_GROUP:
         fprintf_s(f, "\n");
         break;
     }
@@ -197,6 +206,7 @@ deserialise_tree(Object **tree, char *filename)
     int stack[10], stkptr;
     int objsize = 1000;
     Object **object;
+    Group *grp;
 
     fopen_s(&f, filename, "rt");
     if (f == NULL)
@@ -212,7 +222,7 @@ deserialise_tree(Object **tree, char *filename)
     {
         char *nexttok = NULL;
         char *tok;
-        unsigned int id;
+        int id;
         LOCK lock;
 
         if (fgets(buf, 512, f) == NULL)
@@ -243,6 +253,18 @@ deserialise_tree(Object **tree, char *filename)
             tok = strtok_s(NULL, " \t\n", &nexttok);
             stack[stkptr++] = atoi(tok);
         }
+        else if (strcmp(tok, "BEGINGROUP") == 0)
+        {
+            // Stack the object ID being constructed. Mark it negative, so we know it's a group
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            id = atoi(tok);
+            stack[stkptr++] = -id;
+
+            // Create the group now, so we can link to it
+            grp = group_new();
+            grp->hdr.ID = id;
+            object[id] = (Object *)grp;
+        }
         else if (strcmp(tok, "POINT") == 0)
         {
             Point *p;
@@ -265,6 +287,8 @@ deserialise_tree(Object **tree, char *filename)
             object[id] = (Object *)p;
             if (stkptr == 0)
                 link_tail((Object *)p, tree);
+            else if (stack[stkptr - 1] < 0)
+                link_tail((Object *)p, &((Group *)object[stack[stkptr - 1]])->obj_list);
         }
         else if (strcmp(tok, "EDGE") == 0)
         {
@@ -358,6 +382,8 @@ deserialise_tree(Object **tree, char *filename)
             stkptr--;
             if (stkptr == 0)
                 link_tail((Object *)edge, tree);
+            else if (stack[stkptr - 1] < 0)
+                link_tail((Object *)edge, &((Group *)object[stack[stkptr - 1]])->obj_list);
         }
         else if (strcmp(tok, "FACE") == 0)
         {
@@ -451,6 +477,8 @@ deserialise_tree(Object **tree, char *filename)
             stkptr--;
             if (stkptr == 0)
                 link_tail((Object *)face, tree);
+            else if (stack[stkptr - 1] < 0)
+                link_tail((Object *)face, &((Group *)object[stack[stkptr - 1]])->obj_list);
         }
         else if (strcmp(tok, "VOLUME") == 0)
         {
@@ -483,8 +511,16 @@ deserialise_tree(Object **tree, char *filename)
 
             ASSERT(stkptr > 0 && id == stack[stkptr - 1], "Badly formed volume record");
             stkptr--;
-            ASSERT(stkptr == 0, "ID stack not empty");
-            link_tail((Object *)vol, tree);
+            if (stkptr == 0)
+                link_tail((Object *)vol, tree);
+            else if (stack[stkptr - 1] < 0)
+                link_tail((Object *)vol, &((Group *)object[stack[stkptr - 1]])->obj_list);
+        }
+        else if (strcmp(tok, "ENDGROUP") == 0)
+        {
+            ASSERT(stkptr > 0 && id == -stack[stkptr - 1], "Badly formed group");
+            stkptr--;
+            // no further action, as object have already been linked into the group
         }
     }
 
@@ -512,6 +548,7 @@ write_checkpoint(Object *tree, char *filename)
     latest_generation = generation;
     if (generation > max_generation)
         max_generation = generation;
+    populate_treeview();
 }
 
 // Read back a given generation of checkpoint. Generation zero is the
@@ -521,6 +558,7 @@ read_checkpoint(Object **tree, char *filename, int generation)
 {
     char basename[256], check[256];
     int baselen;
+    BOOL rc;
 
     clear_selection(&selection);
     clear_selection(&clipboard);
@@ -534,15 +572,15 @@ read_checkpoint(Object **tree, char *filename, int generation)
         if (baselen > 4)
             basename[baselen - 4] = '\0';    // cut off ".lcd"     // TODO do this better
         sprintf_s(check, 256, "%s_%04d.lcd", basename, generation);
-        return deserialise_tree(tree, check);
+        rc = deserialise_tree(tree, check);
     }
     else if (filename[0] != '\0')
     {
         drawing_changed = FALSE;
-        return deserialise_tree(tree, filename);
+        rc = deserialise_tree(tree, filename);
     }
-
-    return TRUE;
+    populate_treeview();
+    return rc;
 }
 
 // Clean out all the checkpoint files for a filename.

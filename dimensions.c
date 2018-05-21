@@ -32,6 +32,7 @@ has_dims(Object *obj)
         break;
 
     case OBJ_VOLUME:
+    case OBJ_GROUP:
         return FALSE;
     }
 
@@ -162,7 +163,7 @@ update_dims(Object *obj, char *buf)
     }
 
     // If we have changed anything, invalidate all view lists
-    parent = find_top_level_parent(object_tree, obj);
+    parent = find_parent_object(object_tree, obj);
     invalidate_all_view_lists(parent, obj, 0, 0, 0);
 }
 
