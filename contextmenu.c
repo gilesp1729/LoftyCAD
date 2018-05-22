@@ -5,17 +5,14 @@
 #include <stdio.h>
 
 
-#if 0
 // Search for a closed chain of connected edges (having coincident endpoints within tol)
-// and if found, make a flat face out of them. There is no check for actual flatness.
-Face *
-make_flat_face(Edge *edge)
+// and if found, make a group out of them.
+Group *
+group_connected_edges(Edge *edge)
 {
-    Object *obj;
+    Object *obj, *nextobj;
     Edge *e;
-    Face *face;
-    Object *list = NULL;
-    Object *plist = NULL;
+    Group *group;
     int n_edges = 0;
     int pass;
     typedef struct End          // an end of the growing chain
@@ -34,7 +31,7 @@ make_flat_face(Edge *edge)
     // It had better be in the object tree to start with! Check to be sure,
     // and while here, find out how many top-level edges there are as an
     // upper bound on passes later on.
-    for (obj = object_tree; obj != NULL; obj = obj->next)
+    for (obj = object_tree.obj_list; obj != NULL; obj = obj->next)
     {
         if (obj->type == OBJ_EDGE)
         {
@@ -46,8 +43,10 @@ make_flat_face(Edge *edge)
     if (!legit)
         return NULL;
 
-    delink((Object *)edge, &object_tree);
-    link((Object *)edge, &list);
+    // make a group for the edges
+    group = group_new();
+    delink_group((Object *)edge, &object_tree);
+    link_group((Object *)edge, group);
     end0.edge = edge;
     end0.which_end = 0;
     end1.edge = edge;
@@ -66,8 +65,10 @@ make_flat_face(Edge *edge)
     {
         BOOL advanced = FALSE;
 
-        for (obj = object_tree; obj != NULL; obj = obj->next)
+        for (obj = object_tree.obj_list; obj != NULL; obj = nextobj)
         {
+            nextobj = obj->next;
+
             if (obj->type != OBJ_EDGE)
                 continue;
 
@@ -75,11 +76,8 @@ make_flat_face(Edge *edge)
             if (near_pt(e->endpoints[0], end0.edge->endpoints[end0.which_end]))
             {
                 // endpoint 0 of obj connects to end0. Put obj in the list.
-                delink(obj, &object_tree);
-                link(obj, &list);
-
-                // link shared point into point list
-                link((Object *)e->endpoints[0], &plist);
+                delink_group(obj, &object_tree);
+                link_group(obj, group);
 
                 // Update end0 to point to the other end of the new edge we just added
                 end0.edge = e;
@@ -89,11 +87,10 @@ make_flat_face(Edge *edge)
             }
 
             // Check for endpoint 1 connecting to end0 similarly
-            if (near_pt(e->endpoints[1], end0.edge->endpoints[end0.which_end]))
+            else if (near_pt(e->endpoints[1], end0.edge->endpoints[end0.which_end]))
             {
-                delink(obj, &object_tree);
-                link(obj, &list);
-                link((Object *)e->endpoints[1], &plist);
+                delink_group(obj, &object_tree);
+                link_group(obj, group);
                 end0.edge = e;
                 end0.which_end = 0;
                 n_edges++;
@@ -101,22 +98,20 @@ make_flat_face(Edge *edge)
             }
 
             // And the same for end1. New edges are linked at the tail. 
-            if (near_pt(e->endpoints[0], end1.edge->endpoints[end1.which_end]))
+            else if (near_pt(e->endpoints[0], end1.edge->endpoints[end1.which_end]))
             {
-                delink(obj, &object_tree);
-                link_tail(obj, &list);
-                link_tail((Object *)e->endpoints[0], &plist);
+                delink_group(obj, &object_tree);
+                link_tail_group(obj, group);
                 end1.edge = e;
                 end1.which_end = 1;
                 n_edges++;
                 advanced = TRUE;
             }
 
-            if (near_pt(e->endpoints[1], end1.edge->endpoints[end1.which_end]))
+            else if (near_pt(e->endpoints[1], end1.edge->endpoints[end1.which_end]))
             {
-                delink(obj, &object_tree);
-                link_tail(obj, &list);
-                link((Object *)e->endpoints[1], &plist);
+                delink_group(obj, &object_tree);
+                link_tail_group(obj, group);
                 end1.edge = e;
                 end1.which_end = 0;
                 n_edges++;
@@ -125,49 +120,8 @@ make_flat_face(Edge *edge)
 
             if (near_pt(end0.edge->endpoints[end0.which_end], end1.edge->endpoints[end1.which_end]))
             {
-                Plane norm;
-                BOOL reverse = FALSE;
-                int i;
-
-                // We have closed the chain.
-                // Determine normal of points gathered up so far. From this we decide
-                // which order to build the final edge array on the face.
-                polygon_normal((Point *)plist, &norm);
-                if (dot(norm.A, norm.B, norm.C, facing_plane->A, facing_plane->B, facing_plane->C) < 0)
-                {
-                    reverse = TRUE;
-                    norm.A = -norm.A;
-                    norm.B = -norm.B;
-                    norm.C = -norm.C;
-                }
-
-                // make the face
-                face = face_new(FACE_FLAT, norm);
-                face->n_edges = n_edges;
-                face->max_edges = 1;
-                while (face->max_edges <= n_edges)
-                    face->max_edges <<= 1;          // round up to a power of 2
-                if (face->max_edges > 16)           // does it need any more than the default 16?
-                    face->edges = realloc(face->edges, face->max_edges * sizeof(Edge *));
-
-                // Populate the edge list, sharing points along the way
-                if (reverse)
-                {
-                    face->initial_point = end1.edge->endpoints[end1.which_end];
-                    for (i = 0, e = (Edge *)list; e != NULL; e = (Edge *)e->hdr.next, i++)
-                        face->edges[face->n_edges - i - 1] = e;
-                }
-                else
-                {
-                    face->initial_point = end0.edge->endpoints[end0.which_end];
-                    for (i = 0, e = (Edge *)list; e != NULL; e = (Edge *)e->hdr.next, i++)
-                        face->edges[i] = e;
-                }
-
-                // Finally, update its view list
-                gen_view_list_face(face);
-
-                return face;
+                // We have closed the chain. 
+                return group;
             }
         }
 
@@ -177,13 +131,140 @@ make_flat_face(Edge *edge)
             break;
     }
 
-    end1.edge->hdr.next = object_tree;
-    object_tree->prev = (Object *)end1.edge;
-    object_tree = (Object *)end0.edge;
+    // We have not been able to close the chain. Ungroup everything we've grouped
+    // so far and return.
+    for (obj = group->obj_list; obj != NULL; obj = nextobj)
+    {
+        nextobj = obj->next;
+        delink_group(obj, group);
+        link_tail_group(obj, &object_tree);
+    }
+    purge_obj((Object *)group);
 
     return NULL;
 }
+
+// Make a face object out of a group of connected edges, sharing points as we go.
+// The original group is deleted and the face is put into the object tree.
+Face *
+make_face(Group *group)
+{
+    Face *face = NULL;
+    Edge *e, *next_edge;
+    Plane norm;
+    BOOL reverse = FALSE;
+    int initial, final, n_edges;
+    Point *plist = NULL;
+    Point pt;
+
+    // Check that the group starts with an edge and has more than 1 element
+    if (group->obj_list->type != OBJ_EDGE)
+        return NULL;
+    if (group->obj_list->next == NULL)
+        return NULL;
+
+    // Determine normal of points gathered up so far. From this we decide
+    // which order to build the final edge array on the face. Join the
+    // endpoints up into a list (the next/prev pointers aren't used for
+    // anything else)
+    e = (Edge *)group->obj_list;
+    if (group->obj_list->next->type != OBJ_EDGE)
+        return NULL;
+    next_edge = (Edge *)group->obj_list->next;
+    if (near_pt(e->endpoints[0], next_edge->endpoints[0]))
+    {
+        initial = 1;
+        pt = *e->endpoints[0];
+    }
+    else if (near_pt(e->endpoints[0], next_edge->endpoints[1]))
+    {
+        initial = 1;
+        pt = *e->endpoints[0];
+    }
+    else if (near_pt(e->endpoints[1], next_edge->endpoints[0]))
+    {
+        initial = 0;
+        pt = *e->endpoints[1];
+    }
+    else if (near_pt(e->endpoints[1], next_edge->endpoints[1]))
+    {
+        initial = 0;
+        pt = *e->endpoints[1];
+    }
+    else
+        return NULL;    // the edges aren't connected
+
+    link_tail((Object *)e->endpoints[initial], (Object **)&plist);
+    n_edges = 1;
+
+    for (; e->hdr.next != NULL; e = next_edge)
+    {
+        next_edge = (Edge *)e->hdr.next;
+
+        if (e->hdr.next->type != OBJ_EDGE)
+            return NULL;
+
+        if (near_pt(next_edge->endpoints[0], &pt))
+        {
+            link_tail((Object *)next_edge->endpoints[0], (Object **)&plist);
+            pt = *next_edge->endpoints[1];
+            final = 1;
+        }
+        else if (near_pt(next_edge->endpoints[1], &pt))
+        {
+            link_tail((Object *)next_edge->endpoints[1], (Object **)&plist);
+            pt = *next_edge->endpoints[0];
+            final = 0;
+        }
+        else
+        {
+            return FALSE;
+        }
+        n_edges++;
+    }
+
+    polygon_normal((Point *)plist, &norm);
+    if (dot(norm.A, norm.B, norm.C, facing_plane->A, facing_plane->B, facing_plane->C) < 0)
+    {
+        reverse = TRUE;
+        norm.A = -norm.A;
+        norm.B = -norm.B;
+        norm.C = -norm.C;
+    }
+#if 0
+    // make the face
+    face = face_new(FACE_FLAT, norm);
+    face->n_edges = n_edges;
+    face->max_edges = 1;
+    while (face->max_edges <= n_edges)
+        face->max_edges <<= 1;          // round up to a power of 2
+    if (face->max_edges > 16)           // does it need any more than the default 16?
+        face->edges = realloc(face->edges, face->max_edges * sizeof(Edge *));
+
+    // Populate the edge list, sharing points along the way
+    if (reverse)
+    {
+        face->initial_point = end1.edge->endpoints[end1.which_end];
+        for (i = 0, e = (Edge *)list; e != NULL; e = (Edge *)e->hdr.next, i++)
+            face->edges[face->n_edges - i - 1] = e;
+    }
+    else
+    {
+        face->initial_point = end0.edge->endpoints[end0.which_end];
+        for (i = 0, e = (Edge *)list; e != NULL; e = (Edge *)e->hdr.next, i++)
+            face->edges[i] = e;
+    }
+
+    // Finally, update its view list
+    gen_view_list_face(face);
 #endif
+    return face;
+}
+
+
+
+
+
 
 
 // handle context menu when right-clicking on a highlightable object.
@@ -198,6 +279,7 @@ right_click(AUX_EVENTREC *event)
     LOCK old_parent_lock;
     BOOL group_changed = FALSE;
     Group *group;
+    Face *face;
 
     if (view_rendered)
         return;
@@ -377,11 +459,21 @@ right_click(AUX_EVENTREC *event)
         break;
 
     case ID_OBJ_GROUPEDGES:
-
+        group = group_connected_edges((Edge *)picked_obj);
+        if (group != NULL)
+        {
+            link_group((Object *)group, &object_tree);
+            group_changed = TRUE;
+        }
         break;
 
     case ID_OBJ_MAKEFACE:
-
+        face = make_face((Group *)picked_obj);
+        if (face != NULL)
+        {
+            link_group((Object *)face, &object_tree);
+            group_changed = TRUE;
+        }
         break;
 
     case ID_OBJ_GROUPSELECTED:

@@ -707,7 +707,7 @@ find_parent_object(Group *tree, Object *obj, BOOL deep_search)
             {
                 Object *o = find_parent_object((Group *)top_level, obj, deep_search);
                 if (o != NULL)
-                    return o;
+                    return top_level;
             }
         }
         else if (top_level == obj || find_obj(top_level, obj))

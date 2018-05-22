@@ -12,11 +12,11 @@
 // test for near points (within the tolerance)
 #define near_pt(p1, p2) \
     (   \
-        fabsf(p1->x - p2->x) < tolerance  \
+        fabsf((p1)->x - (p2)->x) < tolerance  \
         &&  \
-        fabsf(p1->y - p2->y) < tolerance  \
+        fabsf((p1)->y - (p2)->y) < tolerance  \
         &&  \
-        fabsf(p1->z - p2->z) < tolerance  \
+        fabsf((p1)->z - (p2)->z) < tolerance  \
     )
 
 void ray_from_eye(GLint x, GLint y, Plane *line);

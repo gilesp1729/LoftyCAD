@@ -333,7 +333,7 @@ Pick(GLint x_pick, GLint y_pick, OBJECT min_priority)
         char buf[512];
         size_t size = 512;
         char *p = buf;
-        char *obj_prefix[] = { "N", "P", "E", "F", "V" };
+        char *obj_prefix[] = { "N", "P", "E", "F", "V", "G" };
 #endif
         GLuint min_depth = 0xFFFFFFFF;
 
@@ -401,15 +401,24 @@ Pick(GLint x_pick, GLint y_pick, OBJECT min_priority)
         // Do the face test first, as if we have its volume we can find any parent
         // group quickly without a full search.
         obj = (Object *)min_obj;
-        if (obj != NULL && obj->type == OBJ_FACE)
+        if (obj != NULL)
         {
-            Face *face = (Face *)obj;
+            if (obj->type == OBJ_FACE && ((Face *)obj)->vol != NULL)
+            {
+                Face *face = (Face *)obj;
 
-            if (face->vol != NULL && face->vol->hdr.lock >= LOCK_FACES)
-                obj = (Object *)face->vol;
+                if (face->vol->hdr.lock >= LOCK_FACES)
+                    obj = (Object *)face->vol;
 
-            if (face->vol != NULL && face->vol->hdr.parent_group->hdr.parent_group != NULL)
-                obj = find_top_level_parent(&object_tree, (Object *)obj->parent_group);  // this is fast
+                if (face->vol->hdr.parent_group->hdr.parent_group != NULL)
+                    obj = find_top_level_parent(&object_tree, (Object *)obj->parent_group);  // this is fast
+            }
+            else
+            {
+                Object *parent = find_parent_object(&object_tree, obj, TRUE);               // this is not so fast
+                if (parent != NULL)
+                    obj = parent;
+            }
         }
 
 #ifdef DEBUG_PICK
