@@ -91,8 +91,6 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 change_state(STATE_STARTING_EDGE);
                 break;
 
-                //   case IDB_CONST_ARC:         // TODO put this in the toolbar
-                //       construction = TRUE;
             case IDB_ARC_EDGE:
                 change_state(STATE_STARTING_ARC);
                 break;

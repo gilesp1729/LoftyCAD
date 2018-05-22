@@ -416,7 +416,7 @@ Pick(GLint x_pick, GLint y_pick, OBJECT min_priority)
             else
             {
                 Object *parent = find_parent_object(&object_tree, obj, TRUE);               // this is not so fast
-                if (parent != NULL)
+                if (parent != NULL && parent->type == OBJ_GROUP)
                     obj = parent;
             }
         }
@@ -737,8 +737,7 @@ left_down(AUX_EVENTREC *event)
                 break;
 
             case OBJ_POINT:
-                // Snap to the point. TODO: share with the point if it's a new edge joining
-                // to a free endpoint on an old edge. Or if we're drawing a construction edge.
+                // Snap to the point. 
                 picked_point = *(Point *)picked_obj;
                 break;
             }

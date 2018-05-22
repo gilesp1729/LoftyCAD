@@ -437,7 +437,6 @@ deserialise_tree(Group *tree, char *filename)
             }
             else
             {
-                // TODO other types
                 ASSERT(FALSE, "Deserialise Face (general) Not implemented");
             }
 
@@ -531,8 +530,11 @@ deserialise_tree(Group *tree, char *filename)
         {
             tok = strtok_s(NULL, " \t\n", &nexttok);
             id = atoi(tok);
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            lock = locktype_of(tok);
             ASSERT(stkptr > 0 && id == stack[stkptr - 1], "Badly formed group");
             ASSERT(object[id]->type == OBJ_GROUP, "ENDGROUP is not a group");
+            object[id]->lock = lock;
             stkptr--;
             if (stkptr == 0)
                 link_tail_group(object[id], tree);

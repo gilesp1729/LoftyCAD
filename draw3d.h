@@ -10,7 +10,8 @@ typedef enum
     DRAW_SELECTED = 1,
     DRAW_HIGHLIGHT = 2,
     DRAW_TOP_LEVEL_ONLY = 4,
-    DRAW_HIGHLIGHT_LOCKED = 8
+    DRAW_HIGHLIGHT_LOCKED = 8,
+    DRAW_WITH_DIMENSIONS = 16
 } PRESENTATION;
 
 void color(OBJECT obj_type, BOOL construction, BOOL selected, BOOL highlighted, BOOL locked);

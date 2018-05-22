@@ -7,8 +7,6 @@
 static Point move_points[MAX_MOVES];
 static int num_moves = 0;
 
-static float extrude_height;
-
 static Plane temp_plane;
 
 // Some standard colors sent to GL.
@@ -91,6 +89,8 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
     BOOL top_level_only = pres & DRAW_TOP_LEVEL_ONLY;
     // We're drawing, so we want to see the snap targets even if they are locked. But only under the mouse.
     BOOL snapping = pres & DRAW_HIGHLIGHT_LOCKED;
+    // Whether to show dimensions (all the time if highlighted or selected, but don't pass to components)
+    BOOL show_dims = obj->show_dims || (pres & DRAW_WITH_DIMENSIONS);
 
     BOOL draw_components = !highlighted || !snapping;
 
@@ -191,7 +191,6 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             }
             break;
 
-
         case EDGE_ARC:
             ae = (ArcEdge *)edge;
             gen_view_list_arc(ae);
@@ -243,10 +242,12 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         glPushName((GLuint)obj);
         face_shade(rtess, face, selected, highlighted, locked);
         glPopName();
+
+        // Don't pass draw with dims down to edges, to minimise clutter
         if (draw_components && !top_level_only)
         {
             for (i = 0; i < face->n_edges; i++)
-                draw_object((Object *)face->edges[i], pres, parent_lock);
+                draw_object((Object *)face->edges[i], (pres & ~DRAW_WITH_DIMENSIONS), parent_lock);
         }
         break;
 
@@ -260,6 +261,9 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             draw_object(o, pres, o->lock);
         break;
     }
+
+    if (show_dims)
+        show_dims_on(obj, pres, parent_lock);
 }
 
 // Assign a picked_plane, based on where the mouse has moved to. We still might
@@ -372,9 +376,9 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                 case STATE_MOVING:
                     // Move the selection, or an object, by a delta in XYZ within the facing plane
                     intersect_ray_plane(pt.x, pt.y, facing_plane, &new_point);
-                    if (key_status & AUX_SHIFT)
+                    if (key_status & AUX_SHIFT)  // TODO - this doesn't work, see below
                         snap_to_angle(picked_plane, &picked_point, &new_point, 45);
-                    else if (snapping_to_angle)
+                    else if (snapping_to_angle)  // TODO - this doesn't work when moving an edge on a rect. Need some special cases
                         snap_to_angle(picked_plane, &picked_point, &new_point, angle_snap);
                     snap_to_grid(facing_plane, &new_point);
 
@@ -479,8 +483,6 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                     {
                         curr_obj = (Object *)edge_new(EDGE_STRAIGHT | (construction ? EDGE_CONSTRUCTION : 0));
                         e = (Edge *)curr_obj;
-                        // TODO: share points if snapped onto an existing edge endpoint,
-                        // and the edge is not referenced by a face. For now, just create points...
                         e->endpoints[0] = point_newp(&picked_point);
                         e->endpoints[1] = point_newp(&new_point);
                     }
@@ -509,8 +511,6 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                     {
                         curr_obj = (Object *)edge_new(EDGE_ARC | (construction ? EDGE_CONSTRUCTION : 0));
                         e = (Edge *)curr_obj;
-                        // TODO: share points if snapped onto an existing edge endpoint,
-                        // and the edge is not referenced by a face. For now, just create points...
                         e->endpoints[0] = point_newp(&picked_point);
                         e->endpoints[1] = point_newp(&new_point);
                         ae = (ArcEdge *)curr_obj;
@@ -585,8 +585,6 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         curr_obj = (Object *)edge_new(EDGE_BEZIER);
                         e = (Edge *)curr_obj;
                         be = (BezierEdge *)curr_obj;
-                        // TODO: share points if snapped onto an existing edge endpoint,
-                        // and the edge is not referenced by a face. For now, just create points...
                         e->endpoints[0] = point_newp(&picked_point);
                         e->endpoints[1] = point_newp(&new_point);
 
@@ -1012,16 +1010,10 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                                 break;
                             }
 
-                            extrude_height = 0;
-
                             // Link the volume into the object tree. Set its lock to FACES
                             // (default locking is one level down)
                             link_group((Object *)vol, &object_tree);
                             ((Object *)vol)->lock = LOCK_FACES;
-                        }
-                        else
-                        {
-                            // TODO - Find the height of the existing volume
                         }
 
                         // Project new_point back to the face's normal wrt. picked_point,
@@ -1054,7 +1046,6 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                                 );
                             clear_move_copy_flags(picked_obj);
                             picked_point = new_point;
-                            extrude_height += length;
                         }
 
                         // Invalidate all the view lists for the volume, as any of them may have changed
@@ -1135,21 +1126,16 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
     trackball_CalcRotMatrix(matRot);
     glMultMatrixf(&(matRot[0][0]));
 
-    // traverse object tree. Send their own locks, as they are always at top level.
+    // Draw the object tree. 
     pres = 0;
     if (picking && app_state == STATE_DRAGGING_SELECT)
         pres = DRAW_TOP_LEVEL_ONLY;
     if (app_state >= STATE_STARTING_EDGE)
         pres |= DRAW_HIGHLIGHT_LOCKED;
     glInitNames();
-    for (obj = object_tree.obj_list; obj != NULL; obj = obj->next)
-    {
-        draw_object(obj, pres, obj->lock);
-        if (obj->show_dims)
-            show_dims_on(obj, pres, obj->lock);
-    }
+    draw_object((Object *)&object_tree, pres, LOCK_NONE);  // locks come from objects
 
-    // draw selection. Watch for highlighted objects appearing in the selection list.
+    // Draw selection. Watch for highlighted objects appearing in the selection list.
     // Pass lock state of top-level parent to determine what is shown.
     for (obj = selection; obj != NULL; obj = obj->next)
     {
@@ -1157,34 +1143,32 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
 
         if (obj->prev != curr_obj && obj->prev != highlight_obj)
         {
-            pres = DRAW_SELECTED;
+            pres = DRAW_SELECTED | DRAW_WITH_DIMENSIONS;
             draw_object(obj->prev, pres, parent->lock);
-            show_dims_on(obj->prev, pres, parent->lock);
         }
     }
 
-    // draw any current object not yet added to the object tree,
+    // Draw any current object not yet added to the object tree,
     // or any under highlighting. Handle the case where it doesn't have a
-    // parent yet. Same for the picked highlighted object, if any.
+    // parent yet. 
     if (curr_obj != NULL)
     {
         Object *parent = find_parent_object(&object_tree, curr_obj, FALSE);
 
-        pres = DRAW_HIGHLIGHT;
+        pres = DRAW_HIGHLIGHT | DRAW_WITH_DIMENSIONS;
         if (app_state >= STATE_STARTING_EDGE)
             pres |= DRAW_HIGHLIGHT_LOCKED;
         draw_object(curr_obj, pres, parent != NULL ? parent->lock : LOCK_NONE);
-        show_dims_on(curr_obj, pres, parent != NULL ? parent->lock : LOCK_NONE);
     }
+
     if (highlight_obj != NULL)
     {
         Object *parent = find_parent_object(&object_tree, highlight_obj, FALSE);
 
-        pres = DRAW_HIGHLIGHT;
+        pres = DRAW_HIGHLIGHT | DRAW_WITH_DIMENSIONS;
         if (app_state >= STATE_STARTING_EDGE)
             pres |= DRAW_HIGHLIGHT_LOCKED;
         draw_object(highlight_obj, pres, parent != NULL ? parent->lock : LOCK_NONE);
-        show_dims_on(highlight_obj, pres, parent != NULL ? parent->lock : LOCK_NONE);
     }
     
     if(!picking)
