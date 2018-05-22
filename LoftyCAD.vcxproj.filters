@@ -128,6 +128,9 @@
     <ClCompile Include="treeview.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="contextmenu.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="LoftyCAD.rc">

@@ -95,6 +95,7 @@
     <ClInclude Include="triangulate.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="contextmenu.c" />
     <ClCompile Include="dimensions.c" />
     <ClCompile Include="draw3d.c" />
     <ClCompile Include="geometry.c" />

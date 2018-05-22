@@ -163,6 +163,15 @@ serialise_tree(Group *tree, char *filename)
     for (obj = tree->obj_list; obj != NULL; obj = obj->next)
         serialise_obj(obj, f);
 
+    // Write selection out.
+    if (selection != NULL)
+    {
+        fprintf_s(f, "SELECTION ");
+        for (obj = selection; obj != NULL; obj = obj->next)
+            fprintf_s(f, "%d ", obj->prev->ID);
+        fprintf_s(f, "\n");
+    }
+
     fclose(f);
 }
 
@@ -529,6 +538,24 @@ deserialise_tree(Group *tree, char *filename)
                 link_tail_group(object[id], tree);
             else if (IS_GROUP(object[stack[stkptr - 1]]))
                 link_tail_group(object[id], (Group *)object[stack[stkptr - 1]]);
+        }
+        else if (strcmp(tok, "SELECTION") == 0)
+        {
+            clear_selection(&selection);
+            while (TRUE)
+            {
+                Object *sel_obj;
+
+                tok = strtok_s(NULL, " \t\n", &nexttok);
+                if (tok == NULL)
+                    break;
+                id = atoi(tok);
+                ASSERT(id > 0 && object[id] != NULL, "Bad selection ID");
+                sel_obj = obj_new();
+                sel_obj->next = selection;
+                selection = sel_obj;
+                sel_obj->prev = object[id];
+            }
         }
     }
 

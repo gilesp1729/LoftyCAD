@@ -573,6 +573,7 @@ is_selected_direct(Object *obj, Object **prev_in_list)
     return present;
 }
 
+#if 0 // not used any more
 // Find if an object (or any of its parents) is in the selection.
 BOOL
 is_selected_parent(Object *obj)
@@ -599,6 +600,7 @@ is_selected_parent(Object *obj)
 
     return present;
 }
+#endif
 
 // Clear the selection, or the clipboard.
 void
@@ -1170,178 +1172,23 @@ right_up(AUX_EVENTREC *event)
     right_mouse = FALSE;
 }
 
-// handle context menu when right-clicking on a highlightable object.
-void CALLBACK
-right_click(AUX_EVENTREC *event)
-{
-    HMENU hMenu = LoadMenu(hInst, MAKEINTRESOURCE(IDR_CONTEXT));
-    int rc;
-    POINT pt;
-    Object *parent, *sel_obj;
-    char buf[32];
-    LOCK old_parent_lock;
-
-    if (view_rendered)
-        return;
-
-    picked_obj = Pick(event->data[0], event->data[1], OBJ_FACE);
-    if (picked_obj == NULL)
-        return;
-
-    pt.x = event->data[AUX_MOUSEX];
-    pt.y = event->data[AUX_MOUSEY];
-    ClientToScreen(auxGetHWND(), &pt);
-
-    // Display the object ID at the top of the menu
-    hMenu = GetSubMenu(hMenu, 0);
-    switch (picked_obj->type)
-    {
-    case OBJ_POINT:
-        sprintf_s(buf, 32, "Point %d", picked_obj->ID);
-        break;
-    case OBJ_EDGE:
-        sprintf_s(buf, 32, "Edge %d", picked_obj->ID);
-        break;
-    case OBJ_FACE:
-        sprintf_s(buf, 32, "Face %d", picked_obj->ID);
-        break;
-    case OBJ_VOLUME:
-        sprintf_s(buf, 32, "Volume %d", picked_obj->ID);
-        break;
-    }
-    ModifyMenu(hMenu, 0, MF_BYPOSITION | MF_GRAYED | MF_STRING, 0, buf);
-
-    // Find the top-level parent. Disable irrelevant menu items
-    // TODO: Do somethign different with OBJ_GROUP. 
-    parent = find_parent_object(&object_tree, picked_obj, FALSE);
-    switch (parent->type)
-    {
-    case OBJ_EDGE:
-        EnableMenuItem(hMenu, ID_LOCKING_FACES, MF_GRAYED);
-        // fall through
-    case OBJ_FACE:
-        EnableMenuItem(hMenu, ID_LOCKING_VOLUME, MF_GRAYED);
-        EnableMenuItem(hMenu, ID_OBJ_SELECTPARENTVOLUME, MF_GRAYED);
-        break;
-    }
-
-    // Disable "enter dimensions" for objects that have no dimensions that can be easily changed
-    if (!has_dims(picked_obj))
-    {
-        EnableMenuItem(hMenu, ID_OBJ_ALWAYSSHOWDIMS, MF_GRAYED);
-        EnableMenuItem(hMenu, ID_OBJ_ENTERDIMENSIONS, MF_GRAYED);
-    }
-    else
-    {
-        CheckMenuItem(hMenu, ID_OBJ_ALWAYSSHOWDIMS, picked_obj->show_dims ? MF_CHECKED : MF_UNCHECKED);
-    }
-
-    // Check the right lock state for the parent
-    old_parent_lock = parent->lock;
-    switch (parent->lock)
-    {
-    case LOCK_VOLUME:
-        CheckMenuItem(hMenu, ID_LOCKING_VOLUME, MF_CHECKED);
-        break;
-    case LOCK_FACES:
-        CheckMenuItem(hMenu, ID_LOCKING_FACES, MF_CHECKED);
-        break;
-    case LOCK_EDGES:
-        CheckMenuItem(hMenu, ID_LOCKING_EDGES, MF_CHECKED);
-        break;
-    case LOCK_POINTS:
-        CheckMenuItem(hMenu, ID_LOCKING_POINTS, MF_CHECKED);
-        break;
-    case LOCK_NONE:
-        CheckMenuItem(hMenu, ID_LOCKING_UNLOCKED, MF_CHECKED);
-        break;
-    }
-
-    display_help("Context menu");
-
-    // Display and track the menu
-    rc = TrackPopupMenu
-        (
-        hMenu, 
-        TPM_RETURNCMD | TPM_NONOTIFY | TPM_RIGHTBUTTON,
-        pt.x, 
-        pt.y, 
-        0, 
-        auxGetHWND(), 
-        NULL
-        );
-
-    change_state(app_state);  // back to displaying usual state text
-    switch (rc)
-    {
-    case 0:             // no item chosen
-        break;
-
-        // Locking options. If an object is selected, and we have locked it at
-        // its own level, we must remove it from selection (it cannot be selected)
-    case ID_LOCKING_UNLOCKED:
-        parent->lock = LOCK_NONE;
-        if (parent->lock == picked_obj->type)
-            remove_from_selection(picked_obj);
-        break;
-    case ID_LOCKING_POINTS:
-        parent->lock = LOCK_POINTS;
-        if (parent->lock == picked_obj->type)
-            remove_from_selection(picked_obj);
-        break;
-    case ID_LOCKING_EDGES:
-        parent->lock = LOCK_EDGES;
-        if (parent->lock == picked_obj->type)
-            remove_from_selection(picked_obj);
-        break;
-    case ID_LOCKING_FACES:
-        parent->lock = LOCK_FACES;
-        if (parent->lock == picked_obj->type)
-            remove_from_selection(picked_obj);
-        break;
-    case ID_LOCKING_VOLUME:
-        parent->lock = LOCK_VOLUME;
-        if (parent->lock == picked_obj->type)
-            remove_from_selection(picked_obj);
-        break;
-
-    case ID_OBJ_SELECTPARENTVOLUME:
-        clear_selection(&selection);
-        sel_obj = obj_new();
-        sel_obj->next = selection;
-        selection = sel_obj;
-        sel_obj->prev = parent;
-        break;
-
-    case ID_OBJ_ENTERDIMENSIONS:
-        show_dims_at(pt, picked_obj, TRUE);
-        break;
-
-    case ID_OBJ_ALWAYSSHOWDIMS:
-        if (picked_obj->show_dims)
-        {
-            picked_obj->show_dims = FALSE;
-            CheckMenuItem(hMenu, ID_OBJ_ALWAYSSHOWDIMS, MF_UNCHECKED);
-        }
-        else
-        {
-            picked_obj->show_dims = TRUE;
-            CheckMenuItem(hMenu, ID_OBJ_ALWAYSSHOWDIMS, MF_CHECKED);
-        }
-        break;
-    }
-    if (parent->lock != old_parent_lock)
-    {
-        // we have changed the drawing - write an undo checkpoint
-        drawing_changed = TRUE;
-        write_checkpoint(&object_tree, curr_filename);
-    }
-}
 
 void CALLBACK
 mouse_wheel(AUX_EVENTREC *event)
 {
     zoom_delta = event->data[AUX_MOUSESTATUS];
+}
+
+void CALLBACK
+mouse_move(AUX_EVENTREC *event)
+{
+    // when moving the mouse, we may be highlighting objects.
+    // We do this when we are about to add something to the tree.
+    // Just having the function causes force redraws (TODO: TK/AUX may need to 
+    // handle a return value to control this, if the drawing is complex)
+
+    // while here, store away the state of the shift key
+    key_status = event->data[AUX_MOUSESTATUS];
 }
 
 void CALLBACK
@@ -1369,18 +1216,6 @@ check_file_changed(HWND hWnd)
     clear_selection(&clipboard);
     purge_tree(object_tree.obj_list);
     DestroyWindow(hWnd);
-}
-
-void CALLBACK
-mouse_move(AUX_EVENTREC *event)
-{
-    // when moving the mouse, we may be highlighting objects.
-    // We do this when we are about to add something to the tree.
-    // Just having the function causes force redraws (TODO: TK/AUX may need to 
-    // handle a return value to control this, if the drawing is complex)
-
-    // while here, store away the state of the shift key
-    key_status = event->data[AUX_MOUSESTATUS];
 }
 
 // Process WM_COMMAND, INITMENUPOPUP and the like, from TK window proc
