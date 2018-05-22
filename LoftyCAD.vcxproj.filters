@@ -131,6 +131,12 @@
     <ClCompile Include="contextmenu.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="toolbars.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="command.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="LoftyCAD.rc">

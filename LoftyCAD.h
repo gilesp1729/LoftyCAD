@@ -60,11 +60,14 @@ extern HWND hWndToolbar;
 extern HWND hWndDebug;
 extern HWND hWndTree;
 extern HWND hWndDims;
+extern HWND hWndHelp;
 extern BOOL view_tools;
 extern BOOL view_debug;
 extern BOOL view_tree;
+extern BOOL view_help;
 extern BOOL view_rendered;
 extern BOOL view_constr;
+extern BOOL view_ortho;
 
 extern STATE app_state;
 extern BOOL construction;
@@ -95,6 +98,20 @@ extern int latest_generation;
 extern int max_generation;
 
 extern Object *treeview_highlight;
+
+extern Plane plane_XY;
+extern Plane plane_XZ;
+extern Plane plane_YZ;
+extern Plane plane_mXY;
+extern Plane plane_mXZ;
+extern Plane plane_mYZ;
+
+extern float quat_XY[4];
+extern float quat_YZ[4];
+extern float quat_XZ[4];
+extern float quat_mXY[4];
+extern float quat_mYZ[4];
+extern float quat_mXZ[4];
 
 
 // Debug stuff
@@ -138,8 +155,12 @@ void clear_selection(Object **sel_list);
 
 void populate_treeview(void);
 void CALLBACK right_click(AUX_EVENTREC *event);
+void CALLBACK check_file_changed(HWND hWnd);
 
-// Forwards for window procedures
+
+// Forwards for window procedures and similar
+int CALLBACK Command(int message, int wParam, int lParam);
+int WINAPI help_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 int WINAPI debug_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 int WINAPI toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 int WINAPI dimensions_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);

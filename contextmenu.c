@@ -156,6 +156,7 @@ make_face(Group *group)
     int initial, final, n_edges;
     Point *plist = NULL;
     Point pt;
+    int i;
 
     // Check that the group starts with an edge and has more than 1 element
     if (group->obj_list->type != OBJ_EDGE)
@@ -207,19 +208,18 @@ make_face(Group *group)
         if (near_pt(next_edge->endpoints[0], &pt))
         {
             link_tail((Object *)next_edge->endpoints[0], (Object **)&plist);
-            pt = *next_edge->endpoints[1];
             final = 1;
         }
         else if (near_pt(next_edge->endpoints[1], &pt))
         {
             link_tail((Object *)next_edge->endpoints[1], (Object **)&plist);
-            pt = *next_edge->endpoints[0];
             final = 0;
         }
         else
         {
             return FALSE;
         }
+        pt = *next_edge->endpoints[final];
         n_edges++;
     }
 
@@ -231,7 +231,7 @@ make_face(Group *group)
         norm.B = -norm.B;
         norm.C = -norm.C;
     }
-#if 0
+
     // make the face
     face = face_new(FACE_FLAT, norm);
     face->n_edges = n_edges;
@@ -244,28 +244,22 @@ make_face(Group *group)
     // Populate the edge list, sharing points along the way
     if (reverse)
     {
-        face->initial_point = end1.edge->endpoints[end1.which_end];
-        for (i = 0, e = (Edge *)list; e != NULL; e = (Edge *)e->hdr.next, i++)
-            face->edges[face->n_edges - i - 1] = e;
+        face->initial_point = next_edge->endpoints[final];
+        for (i = 0, e = next_edge; e != NULL; e = (Edge *)e->hdr.prev, i++)
+            face->edges[i] = e;
     }
     else
     {
-        face->initial_point = end0.edge->endpoints[end0.which_end];
-        for (i = 0, e = (Edge *)list; e != NULL; e = (Edge *)e->hdr.next, i++)
+        face->initial_point = ((Edge *)group->obj_list)->endpoints[initial];
+        for (i = 0, e = (Edge *)group->obj_list; e != NULL; e = (Edge *)e->hdr.next, i++)
             face->edges[i] = e;
     }
 
     // Finally, update its view list
     gen_view_list_face(face);
-#endif
+
     return face;
 }
-
-
-
-
-
-
 
 // handle context menu when right-clicking on a highlightable object.
 void CALLBACK
