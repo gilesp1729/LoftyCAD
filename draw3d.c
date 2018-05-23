@@ -922,13 +922,19 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
 
                                 for (i = 0; i < face->n_edges; i++)
                                 {
+                                    FACE side_type;
+
                                     e = face->edges[i];
                                     if (i == 0)
                                         o = opposite->edges[0];
                                     else
                                         o = opposite->edges[face->n_edges - i];
-                                   
-                                    side = face_new(FACE_RECT, norm);   // Any old norm will do, its (ABC) will come with the view list
+
+                                    side_type = FACE_RECT;
+                                    if (e->type == EDGE_ARC || e->type == EDGE_BEZIER)
+                                        side_type = FACE_CYLINDRICAL;
+                                    ASSERT(e->type == o->type, "Opposite edge types don't match");
+                                    side = face_new(side_type, norm);   // Any old norm will do, its (ABC) will come with the view list
                                     side->normal.refpt = *eip;          // but we need to set a valid ref point
                                     side->initial_point = eip;
                                     side->vol = vol;

@@ -160,10 +160,10 @@ Group *group_new(void)
 void link(Object *new_obj, Object **obj_list)
 {
     new_obj->next = *obj_list;
+    new_obj->prev = NULL;
     if (*obj_list == NULL)
     {
         *obj_list = new_obj;
-        new_obj->prev = NULL;
     }
     else
     {
@@ -938,7 +938,7 @@ gen_view_list_face(Face *face)
             gen_view_list_arc((ArcEdge *)e);
 
             // Circles have arcs with shared coincident endpoints. In this case, the clockwiseness
-            // of the are will determine whether the view_list is copied forwards or backwards
+            // of the arc will determine whether the view_list is copied forwards or backwards
             // (since in the below, the last_point will always match endpoint 0)
             if (e->endpoints[0] == e->endpoints[1])
                 arc_cw = ((ArcEdge *)e)->clockwise;
