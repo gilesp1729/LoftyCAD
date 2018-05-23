@@ -937,12 +937,14 @@ gen_view_list_face(Face *face)
         case EDGE_ARC:
             gen_view_list_arc((ArcEdge *)e);
 
+#if 0
             // Circles have arcs with shared coincident endpoints. In this case, the clockwiseness
             // of the arc will determine whether the view_list is copied forwards or backwards
             // (since in the below, the last_point will always match endpoint 0)
             if (e->endpoints[0] == e->endpoints[1])
                 arc_cw = ((ArcEdge *)e)->clockwise;
             else
+#endif
                 arc_cw = FALSE;
 
             goto copy_view_list;
@@ -1065,8 +1067,8 @@ gen_view_list_arc(ArcEdge *ae)
     look_at_centre(*ae->centre, *edge->endpoints[0], n, matrix);
 
     // angle between two vectors c-p0 and c-p1. If the points are the same, we are
-    // drawing a full circle.
-    if (edge->endpoints[0] == edge->endpoints[1])
+    // drawing a full circle. (where "same" means coincident - they are always distinct structures)
+    if (near_pt(edge->endpoints[0], edge->endpoints[1]))
         theta = ae->clockwise ? -2 * PI : 2 * PI;
     else
         theta = angle3(edge->endpoints[0], ae->centre, edge->endpoints[1], &n);

@@ -119,13 +119,13 @@ face_shade(GLUtesselator *tess, Face *face, BOOL selected, BOOL highlighted, BOO
             Point *lprev = (Point *)last->hdr.prev;
             Plane norm;
 
-            normal3(vnext, lprev, last, &norm);
+            normal3(last, lprev, vnext, &norm);
             gluTessBeginPolygon(tess, &norm);
             gluTessBeginContour(tess);
-            tess_vertex(tess, last);
-            tess_vertex(tess, lprev);
-            tess_vertex(tess, vnext);
             tess_vertex(tess, v);
+            tess_vertex(tess, vnext);
+            tess_vertex(tess, lprev);
+            tess_vertex(tess, last);
             gluTessEndContour(tess);
             gluTessEndPolygon(tess);
 

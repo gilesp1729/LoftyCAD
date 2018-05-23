@@ -848,20 +848,26 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         ae->centre = point_newp(&picked_point);
                         
                         // Endpoints are coincident
+                        p00 = point_newp(&new_point);
+                        ((Edge *)ae)->endpoints[0] = p00;
                         p01 = point_newp(&new_point);
-                        ((Edge *)ae)->endpoints[0] = ((Edge *)ae)->endpoints[1] = p01;
+                        ((Edge *)ae)->endpoints[1] = p01;
 
                         rf = face_new(FACE_CIRCLE | (construction ? FACE_CONSTRUCTION : 0), *picked_plane);
                         rf->edges[0] = (Edge *)ae;
                         rf->n_edges = 1;
-                        rf->initial_point = p01;
+                        rf->initial_point = p00;
                         curr_obj = (Object *)rf;
                     }
                     else
                     {
                         rf = (Face *)curr_obj;
                         ae = (ArcEdge *)rf->edges[0];
-                        p01 = ((Edge *)ae)->endpoints[0];
+                        p00 = ((Edge *)ae)->endpoints[0];
+                        p00->x = new_point.x;
+                        p00->y = new_point.y;
+                        p00->z = new_point.z;
+                        p01 = ((Edge *)ae)->endpoints[1];
                         p01->x = new_point.x;
                         p01->y = new_point.y;
                         p01->z = new_point.z;
@@ -989,7 +995,11 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                                 e = face->edges[0];
                                 eip = face->initial_point;
                                 oip = opposite->initial_point;
-                                o = opposite->edges[0];        // The endpoints are coincident
+                                o = opposite->edges[0];
+                                if (oip == o->endpoints[0])
+                                    oip = o->endpoints[1];
+                                else
+                                    oip = o->endpoints[0];
 
                                 side = face_new(FACE_CYLINDRICAL, norm);  // Normal not used
                                 side->initial_point = eip;
@@ -1000,6 +1010,17 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                                 ne->endpoints[1] = oip;
                                 side->edges[0] = ne;
                                 side->edges[1] = o;
+
+                                // Move to the next pair of points
+                                if (eip == e->endpoints[0])
+                                    eip = e->endpoints[1];
+                                else
+                                    eip = e->endpoints[0];
+
+                                if (oip == o->endpoints[0])
+                                    oip = o->endpoints[1];
+                                else
+                                    oip = o->endpoints[0];
 
                                 ne = edge_new(EDGE_STRAIGHT);
                                 ne->endpoints[0] = oip; 
