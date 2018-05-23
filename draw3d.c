@@ -243,7 +243,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         face_shade(rtess, face, selected, highlighted, locked);
         glPopName();
 
-        // Don't pass draw with dims down to edges, to minimise clutter
+        // Don't pass draw with dims down to sub-components, to minimise clutter
         if (draw_components && !top_level_only)
         {
             for (i = 0; i < face->n_edges; i++)
@@ -253,12 +253,12 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
 
     case OBJ_VOLUME:
         for (face = ((Volume *)obj)->faces; face != NULL; face = (Face *)face->hdr.next)
-            draw_object((Object *)face, pres, parent_lock);
+            draw_object((Object *)face, (pres & ~DRAW_WITH_DIMENSIONS), parent_lock);
         break;
 
     case OBJ_GROUP:
         for (o = ((Group *)obj)->obj_list; o != NULL; o = o->next)
-            draw_object(o, pres, o->lock);
+            draw_object(o, (pres & ~DRAW_WITH_DIMENSIONS), o->lock);
         break;
     }
 
@@ -902,6 +902,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                             switch (face->type)
                             {
                             case FACE_RECT:
+                            case FACE_FLAT:
                                 // Clone the face with coincident edges/points, but in the
                                 // opposite sense (and with an opposite normal)
                                 opposite = clone_face_reverse(face);
@@ -1003,10 +1004,6 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                                 side->n_edges = 4;
                                 link((Object *)side, (Object **)&vol->faces);
 
-                                break;
-
-                            case FACE_FLAT:
-                                ASSERT(FALSE, "Extrude Face (Flat) Not implemented yet");
                                 break;
                             }
 

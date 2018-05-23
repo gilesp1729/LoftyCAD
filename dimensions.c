@@ -63,7 +63,7 @@ hide_hint()
     ShowWindow(hWndDims, SW_HIDE);
 }
 
-// Update the dimension of an object, delending on what has been returned by the dialog box.
+// Update the dimension of an object, depending on what has been returned by the dialog box.
 void
 update_dims(Object *obj, char *buf)
 {
@@ -165,6 +165,8 @@ update_dims(Object *obj, char *buf)
     // If we have changed anything, invalidate all view lists
     parent = find_parent_object(&object_tree, obj, FALSE);
     invalidate_all_view_lists(parent, obj, 0, 0, 0);
+    drawing_changed = TRUE;
+    write_checkpoint(&object_tree, curr_filename);
 }
 
 // Get the dims into a string, if they are available for an object.

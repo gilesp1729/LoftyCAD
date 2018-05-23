@@ -294,6 +294,8 @@ right_click(AUX_EVENTREC *event)
     char buf[32];
     LOCK old_parent_lock;
     BOOL group_changed = FALSE;
+    BOOL dims_changed = FALSE;
+    BOOL sel_changed = FALSE;
     Group *group;
     Face *face;
 
@@ -450,6 +452,7 @@ right_click(AUX_EVENTREC *event)
         break;
 
     case ID_OBJ_SELECTPARENTVOLUME:
+        sel_changed = TRUE;
         clear_selection(&selection);
         sel_obj = obj_new();
         sel_obj->next = selection;
@@ -462,6 +465,7 @@ right_click(AUX_EVENTREC *event)
         break;
 
     case ID_OBJ_ALWAYSSHOWDIMS:
+        dims_changed = TRUE;
         if (picked_obj->show_dims)
         {
             picked_obj->show_dims = FALSE;
@@ -519,7 +523,7 @@ right_click(AUX_EVENTREC *event)
         break;
     }
 
-    if (parent->lock != old_parent_lock || group_changed)
+    if (parent->lock != old_parent_lock || group_changed || dims_changed || sel_changed)
     {
         // we have changed the drawing - write an undo checkpoint
         drawing_changed = TRUE;
