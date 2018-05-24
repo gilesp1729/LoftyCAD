@@ -329,7 +329,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
             else
                 match_obj = curr_obj;
 
-            highlight_obj = find_in_neighbourhood(match_obj);
+            highlight_obj = find_in_neighbourhood(match_obj, &object_tree);
         }
 
         // Handle left mouse dragging actions. We must be moving or drawing,

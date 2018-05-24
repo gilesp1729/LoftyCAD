@@ -58,6 +58,11 @@ find_in_neighbourhood_point(Point *point, Object *obj)
 {
     Point *p;
     Edge *e;
+    Face *f;
+    Volume *vol;
+    Group *group;
+    Object *o;
+    int i;
 
     switch (obj->type)
     {
@@ -76,6 +81,39 @@ find_in_neighbourhood_point(Point *point, Object *obj)
         if (dist_point_to_edge(point, e) < snap_tol)
             return obj;
         break;
+
+    case OBJ_FACE:
+        f = (Face *)obj;
+        for (i = 0; i < f->n_edges; i++)
+        {
+            Object *test = find_in_neighbourhood_point(point, (Object *)f->edges[i]);
+
+            if (test != NULL)
+                return test;
+        }
+        break;
+
+    case OBJ_VOLUME:
+        vol = (Volume *)obj;
+        for (f = vol->faces; f != NULL; f = (Face *)f->hdr.next)
+        {
+            Object *test = find_in_neighbourhood_point(point, (Object *)f);
+
+            if (test != NULL)
+                return test;
+        }
+        break;
+
+    case OBJ_GROUP:
+        group = (Group *)obj;
+        for (o = group->obj_list; o != NULL; o = o->next)
+        {
+            Object *test = find_in_neighbourhood_point(point, o);
+
+            if (test != NULL)
+                return test;
+        }
+        break;
     }
 
     return NULL;
@@ -89,6 +127,7 @@ find_in_neighbourhood_face(Face *face, Object *obj)
 {
     Face *f, *face1;
     Volume *vol;
+    Object *o;
     float dx, dy, dz;
     int i;
 
@@ -137,6 +176,16 @@ find_in_neighbourhood_face(Face *face, Object *obj)
                 return test;
         }
         break;
+
+    case OBJ_GROUP:
+        for (o = ((Group *)obj)->obj_list; o != NULL; o = o->next)
+        {
+            Object *test = find_in_neighbourhood_face(face, o);
+
+            if (test != NULL)
+                return test;
+        }
+        break;
     }
 
     return NULL;
@@ -147,14 +196,16 @@ find_in_neighbourhood_face(Face *face, Object *obj)
 // For faces, returns faces parallel and close to the face.
 // For volumes, returns faces parallel and close to any face.
 Object *
-find_in_neighbourhood(Object *match_obj)
+find_in_neighbourhood(Object *match_obj, Group *tree)
 {
     Object *obj, *ret_obj = NULL;
+    Face *f;
+    Volume *vol;
 
     if (match_obj == NULL)
         return NULL;
 
-    for (obj = object_tree.obj_list; obj != NULL; obj = obj->next)
+    for (obj = tree->obj_list; obj != NULL; obj = obj->next)
     {
         Object *test = NULL;
 
@@ -172,7 +223,16 @@ find_in_neighbourhood(Object *match_obj)
             test = find_in_neighbourhood_face((Face *)match_obj, obj);
             break;
 
-            // TODO1 case OBJ_VOLUME - when moving volumes, need to HL faces. OBJ_GROUP too
+        case OBJ_VOLUME:
+            // When moving volumes, need to HL faces. Combinatorial explosion of tests..
+            vol = (Volume *)match_obj;
+            for (f = vol->faces; f != NULL; f = (Face *)f->hdr.next)
+            {
+                test = find_in_neighbourhood_face(f, obj);
+                if (test != NULL)
+                    break;
+            }
+            break;
         }
 
         if (test != NULL)

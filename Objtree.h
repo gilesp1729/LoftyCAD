@@ -236,7 +236,7 @@ Face *clone_face_reverse(Face *face);
 
 // Find object in tree, at a location, or as child of another object
 BOOL find_obj(Object *parent, Object *obj);
-Object *find_in_neighbourhood(Object *match_obj);
+Object *find_in_neighbourhood(Object *match_obj, Group *tree);
 Object *find_parent_object(Group *tree, Object *obj, BOOL deep_search);
 Object *find_top_level_parent(Group *tree, Object *obj);
 BOOL is_top_level_object(Object *obj, Group *tree);
