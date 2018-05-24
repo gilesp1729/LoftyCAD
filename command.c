@@ -59,6 +59,7 @@ Command(int message, int wParam, int lParam)
     char window_title[256];
     char new_filename[256];
     Object *obj, *sel_obj;
+    char *pdot;
 
     switch (message)
     {
@@ -289,8 +290,14 @@ Command(int message, int wParam, int lParam)
 
                 if (rc == IDCANCEL)
                     break;
-                else if (rc == IDYES)
-                    serialise_tree(&object_tree, curr_filename);     // TODO curr_filename NULL --> save file box
+                
+                if (rc == IDYES)
+                {
+                    if (curr_filename[0] == '\0')
+                        SendMessage(auxGetHWND(), WM_COMMAND, ID_FILE_SAVEAS, 0);
+                    else
+                        serialise_tree(&object_tree, curr_filename);
+                }
             }
 
             clear_selection(&selection);
@@ -298,7 +305,6 @@ Command(int message, int wParam, int lParam)
             object_tree.obj_list = NULL;
             drawing_changed = FALSE;
             clean_checkpoints(curr_filename);
-            generation = 0;
             curr_filename[0] = '\0';
             curr_title[0] = '\0';
             SetWindowText(auxGetHWND(), "LoftyCAD");
@@ -372,14 +378,14 @@ Command(int message, int wParam, int lParam)
             ofn.nFilterIndex = 1;
             ofn.lpstrDefExt = "stl";
             strcpy_s(new_filename, 256, curr_filename);
-            new_filename[strlen(new_filename) - 4] = '\0';   // TODO do this better
+            pdot = strrchr(new_filename, '.');
+            if (pdot != NULL)
+                *pdot = '\0';           // cut off ".lcd"
             ofn.lpstrFile = new_filename;
             ofn.nMaxFile = 256;
             ofn.Flags = OFN_EXPLORER | OFN_OVERWRITEPROMPT;
             if (GetSaveFileName(&ofn))
-            {
                 export_object_tree(&object_tree, new_filename);
-            }
 
             break;
 
@@ -412,6 +418,7 @@ Command(int message, int wParam, int lParam)
                 purge_tree(object_tree.obj_list);
                 object_tree.obj_list = NULL;
                 drawing_changed = FALSE;
+                clean_checkpoints(curr_filename);
                 curr_filename[0] = '\0';
                 curr_title[0] = '\0';
                 SetWindowText(auxGetHWND(), "LoftyCAD");
@@ -482,7 +489,7 @@ Command(int message, int wParam, int lParam)
                 sel_obj->prev = new_obj;
             }
 
-            clip_xoffset += 10;  // very temporary (it needs to be scaled rasonably, and in the facing plane)
+            clip_xoffset += 10;  // TODO - very temporary (it needs to be scaled reasonably, and in the facing plane)
             clip_yoffset += 10;
             drawing_changed = TRUE;
             write_checkpoint(&object_tree, curr_filename);

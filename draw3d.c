@@ -847,7 +847,8 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         ae->normal = *picked_plane;
                         ae->centre = point_newp(&picked_point);
                         
-                        // Endpoints are coincident
+                        // Endpoints are coincident, but they have to be separate Point structs,
+                        // to allow edge to be threaded into a view list in either direction
                         p00 = point_newp(&new_point);
                         ((Edge *)ae)->endpoints[0] = p00;
                         p01 = point_newp(&new_point);
@@ -855,7 +856,15 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
 
                         rf = face_new(FACE_CIRCLE | (construction ? FACE_CONSTRUCTION : 0), *picked_plane);
                         rf->edges[0] = (Edge *)ae;
-                        rf->n_edges = 1;
+
+                        // Add a straight edge linking p01 - p00, in case these points ever
+                        // get pulled apart by a mischievous user. 
+                        e = edge_new(EDGE_STRAIGHT);
+                        e->endpoints[0] = p01;
+                        e->endpoints[1] = p00;
+                        rf->edges[1] = e;
+
+                        rf->n_edges = 2;
                         rf->initial_point = p00;
                         curr_obj = (Object *)rf;
                     }
@@ -908,6 +917,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                             switch (face->type)
                             {
                             case FACE_RECT:
+                            case FACE_CIRCLE:
                             case FACE_FLAT:
                                 // Clone the face with coincident edges/points, but in the
                                 // opposite sense (and with an opposite normal)
@@ -981,56 +991,6 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
 
                                     link((Object *)side, (Object **)&vol->faces);
                                 }
-                                break;
-
-                            case FACE_CIRCLE:
-                                // Clone the face with coincident edges/points, but in the
-                                // opposite sense (and with an opposite normal)
-                                opposite = clone_face_reverse(face);
-                                clear_move_copy_flags(picked_obj);
-                                link((Object *)opposite, (Object **)&vol->faces);
-                                opposite->vol = vol;
-
-                                // Create a cylinder face that links the picked face to its clone
-                                e = face->edges[0];
-                                eip = face->initial_point;
-                                oip = opposite->initial_point;
-                                o = opposite->edges[0];
-                                if (oip == o->endpoints[0])
-                                    oip = o->endpoints[1];
-                                else
-                                    oip = o->endpoints[0];
-
-                                side = face_new(FACE_CYLINDRICAL, norm);  // Normal not used
-                                side->initial_point = eip;
-                                side->vol = vol;
-
-                                ne = edge_new(EDGE_STRAIGHT);
-                                ne->endpoints[0] = eip;
-                                ne->endpoints[1] = oip;
-                                side->edges[0] = ne;
-                                side->edges[1] = o;
-
-                                // Move to the next pair of points
-                                if (eip == e->endpoints[0])
-                                    eip = e->endpoints[1];
-                                else
-                                    eip = e->endpoints[0];
-
-                                if (oip == o->endpoints[0])
-                                    oip = o->endpoints[1];
-                                else
-                                    oip = o->endpoints[0];
-
-                                ne = edge_new(EDGE_STRAIGHT);
-                                ne->endpoints[0] = oip; 
-                                ne->endpoints[1] = eip;
-                                side->edges[2] = ne;
-                                side->edges[3] = e;
-
-                                side->n_edges = 4;
-                                link((Object *)side, (Object **)&vol->faces);
-
                                 break;
                             }
 

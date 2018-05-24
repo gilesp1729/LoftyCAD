@@ -142,7 +142,7 @@ update_dims(Object *obj, char *buf)
                 break;
 
             // Change the edges' lengths. be careful to do it in the right order.
-            // TODO - this will be wrong for side faces after extrusion. Need to follow the rect around and
+            // TODO CHECK THIS  - this will be wrong for side faces after extrusion. Need to follow the rect around and
             // change the right sides at the right time!
             new_length(e0->endpoints[0], e0->endpoints[1], len);
             new_length(e2->endpoints[1], e2->endpoints[0], len);
@@ -156,7 +156,8 @@ update_dims(Object *obj, char *buf)
             len = (float)atof(buf);
             if (len == 0)
                 break;
-            new_length(ae->centre, e->endpoints[0], len);  // endpt 1 is the same point
+            new_length(ae->centre, e->endpoints[0], len);
+            new_length(ae->centre, e->endpoints[1], len);
             break;
         }
         break;

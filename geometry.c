@@ -66,7 +66,7 @@ snap_ray_edge(GLint x, GLint y, Edge *edge, Point *new_point)
     float a, b, c, d, e, sc, denom;
 
     if (edge->type != EDGE_STRAIGHT)
-        return FALSE;   // TODO - until we get some idea what to do with beziers and arcs
+        return FALSE; 
 
     // Express the lines in point/direction form (as Plane structs, for easy dotting later)
     u.refpt = *edge->endpoints[0];

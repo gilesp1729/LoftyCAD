@@ -120,9 +120,10 @@ typedef struct Edge
                                     // between the two endpoints, to be flat within the
                                     // specified tolerance. Only used for arcs and beziers.
     BOOL            view_valid;     // is TRUE if the view list is up to date.
-    float           stepsize;       // If zero, the curve is stepped out dynamically based on 
-                                    // a flatness tolerance. If not, this is the angular step
+    BOOL            stepping;       // If FALSE, the curve is stepped out dynamically based on 
+                                    // a flatness tolerance. If TRUE, stepsize is the angular step
                                     // (for arcs), or the parameter step (for beziers).
+    float           stepsize;       // The stepsize for curves as above.
     int             nsteps;         // The number of steps actually generated (arcs and beziers)
 } Edge;
 

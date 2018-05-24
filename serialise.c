@@ -184,9 +184,13 @@ check_and_grow(unsigned int id, Object ***object, unsigned int *objsize)
 
     if (id >= *objsize)
     {
+        int halfsize;
+
+        // make sure the new bit of the object array is zeroed out after the realloc
+        *object = (Object **)realloc(*object, sizeof(Object *) * (*objsize * 2));
+        halfsize = sizeof(Object *) * (*objsize);
+        memset((char *)(*object) + halfsize, 0, halfsize);
         *objsize *= 2;
-        // TODO - make sure the new bit of the object array is zeroed out
-        *object = (Object **)realloc(*object, sizeof(Object *)* (*objsize));
     }
 }
 
@@ -488,8 +492,8 @@ deserialise_tree(Group *tree, char *filename)
 
                 if (face->n_edges >= face->max_edges)
                 {
-                    // TODO grow array
-
+                    face->max_edges *= 2;
+                    face->edges = realloc(face->edges, face->max_edges * sizeof(Edge *));
                 }
 
                 face->edges[face->n_edges++] = (Edge *)object[eid];
@@ -591,11 +595,12 @@ write_checkpoint(Group *tree, char *filename)
 {
     char basename[256], check[256];
     int baselen;
+    char *pdot;
 
     strcpy_s(basename, 256, filename);
     baselen = strlen(basename);
-    if (baselen > 4)
-        basename[baselen - 4] = '\0';    // cut off ".lcd"     // TODO do this better
+    if (baselen > 4 && (pdot = strrchr(basename, '.')) != NULL)
+        *pdot = '\0';                                            // cut off ".lcd" 
     sprintf_s(check, 256, "%s_%04d.lcd", basename, ++generation);
     serialise_tree(tree, check);
     latest_generation = generation;
@@ -612,6 +617,7 @@ read_checkpoint(Group *tree, char *filename, int generation)
     char basename[256], check[256];
     int baselen;
     BOOL rc;
+    char *pdot;
 
     clear_selection(&selection);
     clear_selection(&clipboard);
@@ -622,8 +628,8 @@ read_checkpoint(Group *tree, char *filename, int generation)
     {
         strcpy_s(basename, 256, filename);
         baselen = strlen(basename);
-        if (baselen > 4)
-            basename[baselen - 4] = '\0';    // cut off ".lcd"     // TODO do this better
+        if (baselen > 4 && (pdot = strrchr(basename, '.')) != NULL)
+            *pdot = '\0';                                            // cut off ".lcd" 
         sprintf_s(check, 256, "%s_%04d.lcd", basename, generation);
         rc = deserialise_tree(tree, check);
     }
@@ -642,15 +648,20 @@ clean_checkpoints(char *filename)
 {
     char basename[256], check[256];
     int baselen, gen;
+    char *pdot;
 
     strcpy_s(basename, 256, filename);
     baselen = strlen(basename);
-    if (baselen > 4)
-        basename[baselen - 4] = '\0';    // cut off ".lcd"     // TODO do this better
+    if (baselen > 4 && (pdot = strrchr(basename, '.')) != NULL)
+        *pdot = '\0';                                            // cut off ".lcd" 
 
     for (gen = 1; gen <= max_generation; gen++)
     {
         sprintf_s(check, 256, "%s_%04d.lcd", basename, gen);
         DeleteFile(check);
     }
+    
+    generation = 0;
+    latest_generation = 0;
+    max_generation = 0;
 }

@@ -23,7 +23,6 @@ typedef enum STATE
 
     // Starting states are entered when a toolbar button is pressed.
     // In starting states, snapping targets are displayed at the mouse position.
-    // (TODO - snapping things while moving, this is not at the mouse pos. so very different)
     STATE_STARTING_EDGE,        // Starting to draw (toolbar button pressed, but mouse not yet down)
     STATE_STARTING_RECT,
     STATE_STARTING_CIRCLE,

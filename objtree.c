@@ -324,6 +324,7 @@ copy_obj(Object *obj, float xoffset, float yoffset, float zoffset)
     EDGE type;
     Edge *edge, *new_edge;
     ArcEdge *ae, *nae;
+    BezierEdge *be, *nbe;
     Face *face, *new_face;
     Volume *vol, *new_vol;
     Object *o;
@@ -373,12 +374,14 @@ copy_obj(Object *obj, float xoffset, float yoffset, float zoffset)
                 nae->normal = ae->normal;
                 break;
 
-            case EDGE_BEZIER:   // TODO others
-                ASSERT(FALSE, "Copy Bez Not implemented");
+            case EDGE_BEZIER:
+                be = (BezierEdge *)edge;
+                nbe = (BezierEdge *)new_edge;
+                nbe->ctrlpoints[0] = (Point *)copy_obj((Object *)be->ctrlpoints[0], xoffset, yoffset, zoffset);
+                nbe->ctrlpoints[1] = (Point *)copy_obj((Object *)be->ctrlpoints[1], xoffset, yoffset, zoffset);
                 break;
             }
         }
-
         break;
 
     case OBJ_FACE:
@@ -458,7 +461,9 @@ Face
     clone->normal.B = -clone->normal.B;
     clone->normal.C = -clone->normal.C;
     clone->n_edges = face->n_edges;
-    clone->max_edges = face->max_edges;         // TODO - handle case where face->edges has been grown
+    if (face->max_edges > clone->max_edges)   // in case it has been grown before being cloned
+        clone->edges = realloc(clone->edges, face->max_edges * sizeof(Edge *));
+    clone->max_edges = face->max_edges;
     
     // pair the face with its clone
     clone->pair = face;
@@ -498,14 +503,19 @@ Face
         case EDGE_ARC: 
             ae = (ArcEdge *)e;
             nae = (ArcEdge *)ne;
+
+            // Reverse the arc
             nae->clockwise = !ae->clockwise;
             nae->normal.A = -ae->normal.A;
             nae->normal.B = -ae->normal.B;
             nae->normal.C = -ae->normal.C;
-            break;
 
-        case EDGE_BEZIER:    // TODO others
-            ASSERT(FALSE, "CloneReverse Bez Not implemented");
+            // Since the arc and its clone now belong to paired faces,
+            // fix their stepsize
+            ((Edge *)ne)->stepsize = ((Edge *)e)->stepsize;
+            ((Edge *)ne)->nsteps = ((Edge *)e)->nsteps;
+            ((Edge *)e)->stepping = TRUE;
+            ((Edge *)ne)->stepping = TRUE;
             break;
         }
     }
@@ -669,7 +679,6 @@ find_obj(Object *parent, Object *obj)
         break;
 
     case OBJ_GROUP:
-        // TODO not sure if this is actually valid.
         ASSERT(FALSE, "Shouldn't be calling find_obj on a group");
         break;
     }
@@ -739,6 +748,53 @@ find_top_level_parent(Group *tree, Object *obj)
     return top_level;
 }
 
+// Enforce constraints on an arc edge e, when one of its points p has been moved.
+void
+enforce_arc_constraints(Edge *e, Point *p, float dx, float dy, float dz)
+{
+    ArcEdge *ae = (ArcEdge *)e;
+
+    if (p == e->endpoints[0])
+    {
+        // Endpoint 0 has moved, this will force a recalculation of the radius.
+        // Move endpoint 1 to suit the new radius
+        float rad = length(ae->centre, e->endpoints[0]);
+        Plane e1;
+
+        e1.A = e->endpoints[1]->x - ae->centre->x;
+        e1.B = e->endpoints[1]->y - ae->centre->y;
+        e1.C = e->endpoints[1]->z - ae->centre->z;
+        normalise_plane(&e1);
+        e->endpoints[1]->x = ae->centre->x + e1.A * rad;
+        e->endpoints[1]->y = ae->centre->y + e1.B * rad;
+        e->endpoints[1]->z = ae->centre->z + e1.C * rad;
+    }
+    else if (p == e->endpoints[1])
+    {
+        // The other endpoint has moved. Update the first one similarly
+        float rad = length(ae->centre, e->endpoints[1]);
+        Plane e0;
+
+        e0.A = e->endpoints[0]->x - ae->centre->x;
+        e0.B = e->endpoints[0]->y - ae->centre->y;
+        e0.C = e->endpoints[0]->z - ae->centre->z;
+        normalise_plane(&e0);
+        e->endpoints[0]->x = ae->centre->x + e0.A * rad;
+        e->endpoints[0]->y = ae->centre->y + e0.B * rad;
+        e->endpoints[0]->z = ae->centre->z + e0.C * rad;
+    }
+    else if (p == ae->centre)
+    {
+        // The centre has moved. We are moving the whole edge.
+        e->endpoints[0]->x += dx;
+        e->endpoints[0]->y += dy;
+        e->endpoints[0]->z += dz;
+        e->endpoints[1]->x += dx;
+        e->endpoints[1]->y += dy;
+        e->endpoints[1]->z += dz;
+    }
+}
+
 
 // Mark all view lists as invalid for parts of a parent object, when a part of it
 // has moved.
@@ -750,7 +806,6 @@ void
 invalidate_all_view_lists(Object *parent, Object *obj, float dx, float dy, float dz)
 {
     Face *f;
-    ArcEdge *ae;
     Object *o;
     int i;
 
@@ -776,56 +831,20 @@ invalidate_all_view_lists(Object *parent, Object *obj, float dx, float dy, float
         switch (((Edge *)parent)->type & ~EDGE_CONSTRUCTION)
         {
         case EDGE_ARC:
-            ae = (ArcEdge *)parent;
             ((Edge *)parent)->view_valid = FALSE;
 
             // Check that the obj in question is an endpoint or the centre,
-            // and update the other point(s) to suit.
+            // and update the other point(s) in the arc to suit.
             if (obj->type == OBJ_POINT)
             {
-                Point *p = (Point *)obj;
-                Edge *e = (Edge *)parent;
-
-                if (p == e->endpoints[0])
-                {
-                    // Endpoint 0 has moved, this will force a recalculation of the radius.
-                    // Move endpoint 1 to suit the new radius
-                    float rad = length(ae->centre, e->endpoints[0]);
-                    Plane e1;
-
-                    e1.A = e->endpoints[1]->x - ae->centre->x;
-                    e1.B = e->endpoints[1]->y - ae->centre->y;
-                    e1.C = e->endpoints[1]->z - ae->centre->z;
-                    normalise_plane(&e1);
-                    e->endpoints[1]->x = ae->centre->x + e1.A * rad;
-                    e->endpoints[1]->y = ae->centre->y + e1.B * rad;
-                    e->endpoints[1]->z = ae->centre->z + e1.C * rad;
-                }
-                else if (p == e->endpoints[1])
-                {
-                    // The other endpoint has moved. Update the first one similarly
-                    float rad = length(ae->centre, e->endpoints[1]);
-                    Plane e0;
-
-                    e0.A = e->endpoints[0]->x - ae->centre->x;
-                    e0.B = e->endpoints[0]->y - ae->centre->y;
-                    e0.C = e->endpoints[0]->z - ae->centre->z;
-                    normalise_plane(&e0);
-                    e->endpoints[0]->x = ae->centre->x + e0.A * rad;
-                    e->endpoints[0]->y = ae->centre->y + e0.B * rad;
-                    e->endpoints[0]->z = ae->centre->z + e0.C * rad;
-                }
-                else if (p == ae->centre)
-                {
-                    // The centre has moved. We are moving the whole edge.
-                    e->endpoints[0]->x += dx;
-                    e->endpoints[0]->y += dy;
-                    e->endpoints[0]->z += dz;
-                    e->endpoints[1]->x += dx;
-                    e->endpoints[1]->y += dy;
-                    e->endpoints[1]->z += dz;
-                }
+                enforce_arc_constraints((Edge *)parent, (Point *)obj, dx, dy, dz);
             }
+            else if (obj->type == OBJ_EDGE)
+            {
+                enforce_arc_constraints((Edge *)parent, ((Edge *)obj)->endpoints[0], dx, dy, dz);
+                enforce_arc_constraints((Edge *)parent, ((Edge *)obj)->endpoints[1], dx, dy, dz);
+            }
+            
             break;
 
         case EDGE_BEZIER:
@@ -880,7 +899,6 @@ gen_view_list_face(Face *face)
     Edge *e;
     Point *last_point;
     Point *p, *v;
-    BOOL arc_cw;
     //char buf[256];
 
     if (face->view_valid)
@@ -936,23 +954,12 @@ gen_view_list_face(Face *face)
 
         case EDGE_ARC:
             gen_view_list_arc((ArcEdge *)e);
-
-#if 0
-            // Circles have arcs with shared coincident endpoints. In this case, the clockwiseness
-            // of the arc will determine whether the view_list is copied forwards or backwards
-            // (since in the below, the last_point will always match endpoint 0)
-            if (e->endpoints[0] == e->endpoints[1])
-                arc_cw = ((ArcEdge *)e)->clockwise;
-            else
-#endif
-                arc_cw = FALSE;
-
             goto copy_view_list;
 
         case EDGE_BEZIER:
             gen_view_list_bez((BezierEdge *)e);
         copy_view_list:
-            if (last_point == e->endpoints[0] && !arc_cw)
+            if (last_point == e->endpoints[0])
             {
                 last_point = e->endpoints[1];
 
@@ -1074,10 +1081,15 @@ gen_view_list_arc(ArcEdge *ae)
         theta = angle3(edge->endpoints[0], ae->centre, edge->endpoints[1], &n);
     
     // step for angle. This may be fixed in advance.
-    if (edge->stepsize != 0)
+    if (edge->stepping && edge->nsteps > 0)
+    {
         step = edge->stepsize;
+    }
     else
+    {
         step = 2.0f * acosf(1.0f - tolerance / rad);
+        edge->stepsize = step;
+    }
     i = 0;
 
     if (ae->clockwise)  // Clockwise angles go negative
@@ -1296,7 +1308,7 @@ purge_obj(Object *obj)
             purge_obj((Object *)be->ctrlpoints[1]);
             break;
         }
-        //free(obj);     // TODO: Don't do this!! The edge may be shared. (use a free list?)
+        //free(obj);     // Don't do this!! The edge may be shared. TODO - Use a ref count, if we could be bothered.
         break;
 
     case OBJ_FACE:
