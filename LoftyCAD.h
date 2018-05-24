@@ -85,6 +85,7 @@ extern PLANE facing_index;
 extern char curr_filename[];
 extern float grid_snap;
 extern float tolerance;
+extern float snap_tol;
 extern int tol_log;
 extern int angle_snap;
 extern BOOL snapping_to_grid;

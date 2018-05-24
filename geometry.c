@@ -101,6 +101,44 @@ snap_ray_edge(GLint x, GLint y, Edge *edge, Point *new_point)
     return TRUE;
 }
 
+// Find the shortest distance from a point to an edge.
+// Algorithm and notation from D.Sunday, "Lines and Distance of a Point to a Line", http://geomalgorithms.com/a02-_lines.html
+float
+dist_point_to_edge(Point *P, Edge *S)
+{
+    Point v, w, Pb;
+    float c1, c2, b;
+
+    //  Vector v = S.P1 - S.P0;
+    //  Vector w = P - S.P0;
+    v.x = S->endpoints[1]->x - S->endpoints[0]->x;
+    v.y = S->endpoints[1]->y - S->endpoints[0]->y;
+    v.z = S->endpoints[1]->z - S->endpoints[0]->z;
+    w.x = P->x - S->endpoints[0]->x;
+    w.y = P->y - S->endpoints[0]->y;
+    w.z = P->z - S->endpoints[0]->z;
+
+    c1 = pdot(&w, &v);
+    if (c1 <= 0)
+        return length(P, S->endpoints[0]);
+
+    c2 = pdot(&v, &v);
+    if (c2 <= c1)
+        return length(P, S->endpoints[1]);
+
+    b = c1 / c2;
+
+    //Point Pb = S.P0 + b * v;
+    Pb.x = S->endpoints[0]->x + b * v.x;
+    Pb.y = S->endpoints[0]->y + b * v.y;
+    Pb.z = S->endpoints[0]->z + b * v.z;
+
+    return length(P, &Pb);
+}
+
+
+
+
 // Dot and cross products given separate components.
 float
 dot(float x0, float y0, float z0, float x1, float y1, float z1)
@@ -115,30 +153,6 @@ cross(float x0, float y0, float z0, float x1, float y1, float z1, float *xc, flo
     *yc = z0*x1 - x0*z1;
     *zc = x0*y1 - y0*x1;
 }
-
-#if 0
-// Unit normal, assuming at least 3 points in list and they are not collinear
-void
-normal_list(Point *list, Plane *norm)
-{
-    Point *a = list;
-    Point *b = (Point *)a->hdr.next;
-    Point *c = (Point *)b->hdr.next;
-    Point cp;
-    float length;
-
-    cross(b->x - a->x, b->y - a->y, b->z - a->z, c->x - a->x, c->y - a->y, c->z - a->z, &cp.x, &cp.y, &cp.z);
-    length = (float)sqrt(cp.x * cp.x + cp.y * cp.y + cp.z * cp.z);
-    // Don't check, as this happens normally during extrusion of zero-height rects
-    //ASSERT(length > 0.0001, "Normal of collinear points");
-    norm->A = cp.x / length;
-    norm->B = cp.y / length;
-    norm->C = cp.z / length;
-    norm->refpt.x = a->x;
-    norm->refpt.y = a->y;
-    norm->refpt.z = a->z;
-}
-#endif
 
 // normal from 3 separate points. Returns FALSE if not defined.
 BOOL

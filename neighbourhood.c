@@ -56,6 +56,28 @@ point_in_polygon2D(Point2D P, Point2D* V, int n)
 Object *
 find_in_neighbourhood_point(Point *point, Object *obj)
 {
+    Point *p;
+    Edge *e;
+
+    switch (obj->type)
+    {
+    case OBJ_POINT:
+        p = (Point *)obj;
+        if (near_pt(point, p))
+            return obj;
+        break;
+
+    case OBJ_EDGE:
+        e = (Edge *)obj;
+        if (find_in_neighbourhood_point(point, (Object *)e->endpoints[0]))
+            return (Object *)e->endpoints[0];
+        if (find_in_neighbourhood_point(point, (Object *)e->endpoints[1]))
+            return (Object *)e->endpoints[1];
+        if (dist_point_to_edge(point, e) < snap_tol)
+            return obj;
+        break;
+    }
+
     return NULL;
 }
 
@@ -93,14 +115,14 @@ find_in_neighbourhood_face(Face *face, Object *obj)
         dx = face->normal.refpt.x - face1->normal.refpt.x;
         dy = face->normal.refpt.y - face1->normal.refpt.y;
         dz = face->normal.refpt.z - face1->normal.refpt.z;
-        if (fabsf(face1->normal.A * dx + face1->normal.B * dy + face1->normal.C * dz) > tolerance)
+        if (fabsf(face1->normal.A * dx + face1->normal.B * dy + face1->normal.C * dz) > snap_tol)
             return NULL;
 
         // If we got through that, now test if face and face1 overlap
         for (i = 0; i < face->n_view; i++)
         {
             if (point_in_polygon2D(face->view_list2D[i], face1->view_list2D, face1->n_view))
-                return obj;  // this point is in
+                return obj;  // this point is in. TODO: we need to test not just points - rect intersects are easily missed
         }
 
         return NULL;    // no points found, polygons do not overlap
@@ -140,6 +162,10 @@ find_in_neighbourhood(Object *match_obj)
         {
         case OBJ_POINT:
             test = find_in_neighbourhood_point((Point *)match_obj, obj);
+            break;
+
+        case OBJ_EDGE:
+            test = find_in_neighbourhood_point(((Edge *)match_obj)->endpoints[1], obj);
             break;
 
         case OBJ_FACE:

@@ -107,6 +107,9 @@ char curr_filename[256] = { 0, };
 float grid_snap = 1.0f;
 float tolerance = 0.1f;
 
+// Snapping tolerance, a bit more relaxed than the flatness tolerance
+float snap_tol = 0.3f;
+
 // log10(1.0 / tolerance)
 int tol_log = 1;
 
@@ -273,6 +276,7 @@ Position(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
     {
         // In perspective mode, zooming is done more by narrowing the frustum
         // and less by moving back (zTrans)
+        // TODO: make the near clipping plane less obvious in use
         zoom_factor = ((-0.5f * zTrans / half_size) - 1) * 0.5f + 0.4f;
 #ifdef DEBUG_POSITION_ZOOM
         sprintf_s(buf, 64, "Persp Ztrans %f zoomf %f\r\n", zTrans, zoom_factor);

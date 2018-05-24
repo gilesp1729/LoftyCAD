@@ -9,19 +9,20 @@
 // test for "near" zero.
 #define nz(val)  (fabsf(val) < 0.00001)
 
-// test for near points (within the tolerance)
+// test for near points (within the snapping tolerance)
 #define near_pt(p1, p2) \
     (   \
-        fabsf((p1)->x - (p2)->x) < tolerance  \
+        fabsf((p1)->x - (p2)->x) < snap_tol  \
         &&  \
-        fabsf((p1)->y - (p2)->y) < tolerance  \
+        fabsf((p1)->y - (p2)->y) < snap_tol  \
         &&  \
-        fabsf((p1)->z - (p2)->z) < tolerance  \
+        fabsf((p1)->z - (p2)->z) < snap_tol  \
     )
 
 void ray_from_eye(GLint x, GLint y, Plane *line);
 BOOL intersect_ray_plane(GLint x, GLint y, Plane *picked_plane, Point *new_point);
 BOOL snap_ray_edge(GLint x, GLint y, Edge *edge, Point *new_point);
+float dist_point_to_edge(Point *P, Edge *S);
 void normal_list(Point *list, Plane *norm);
 void polygon_normal(Point *list, Plane *norm);
 BOOL normal3(Point *b, Point *a, Point *c, Plane *norm);

@@ -80,6 +80,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
     BezierEdge *be;
     Point *p;
     Object *o;
+    float dx, dy, dz;
     BOOL push_name, locked;
     // This object is selected. Color it and all its components.
     BOOL selected = pres & DRAW_SELECTED;
@@ -109,8 +110,6 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         p = (Point *)obj;
         if (selected || highlighted)
         {
-            float dx, dy, dz;
-
             // Draw a square blob in the facing plane, so it's more easily seen
             glDisable(GL_CULL_FACE);
             glBegin(GL_POLYGON);
@@ -323,7 +322,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
             // If we're performing a left mouse action, we are dragging an object
             // and so picking is unreliable (there are always self-picks). Also, we
             // need a full XYZ coordinate to perform snapping properly, and we're
-            // not necessarily snappibng things at the mouse position. So we can't use
+            // not necessarily snapping things at the mouse position. So we can't use
             // picking here.
             if (app_state == STATE_MOVING)
                 match_obj = picked_obj;
@@ -459,24 +458,6 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                     else if (snapping_to_angle)
                         snap_to_angle(picked_plane, &picked_point, &new_point, angle_snap);
                     snap_to_grid(picked_plane, &new_point);
-
-                    // test for snapping
-                    if (highlight_obj != NULL)
-                    {
-                        switch (highlight_obj->type)
-                        {
-                        case OBJ_POINT:
-                            p00 = (Point *)highlight_obj;
-                            new_point.x = p00->x;
-                            new_point.y = p00->y;
-                            new_point.z = p00->z;
-                            break;
-
-                        case OBJ_EDGE:
-                            snap_ray_edge(pt.x, pt.y, (Edge *)highlight_obj, &new_point);
-                            break;
-                        }
-                    }
 
                     // If first move, create the edge here.
                     if (curr_obj == NULL)
