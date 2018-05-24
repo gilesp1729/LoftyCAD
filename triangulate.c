@@ -292,7 +292,7 @@ export_object_tree(Group *tree, char *filename)
     fopen_s(&stl, filename, "wt");
     if (stl == NULL)
         return;
-    fprintf_s(stl, "solid %s\n", curr_title);
+    fprintf_s(stl, "solid %s\n", tree->title);
 
     for (obj = tree->obj_list; obj != NULL; obj = obj->next)
     {
@@ -300,7 +300,7 @@ export_object_tree(Group *tree, char *filename)
             export_object(tess, obj);
     }
 
-    fprintf_s(stl, "endsolid %s\n", curr_title);
+    fprintf_s(stl, "endsolid %s\n", tree->title);
     fclose(stl);
 
     gluDeleteTess(tess);

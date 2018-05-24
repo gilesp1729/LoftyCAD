@@ -261,6 +261,7 @@ show_dims_on(Object *obj, PRESENTATION pres, LOCK parent_lock)
     HDC hdc = auxGetHDC();
     Face *f;
     Edge *e;
+    ArcEdge *ae;
     Point *p0, *p1, *p2;
     BOOL locked;
     BOOL selected = pres & DRAW_SELECTED;
@@ -299,31 +300,43 @@ show_dims_on(Object *obj, PRESENTATION pres, LOCK parent_lock)
 
         // color face dims in the edge color, so they can be easily read
         color(OBJ_EDGE, f->type & FACE_CONSTRUCTION, selected, highlighted, locked);
-        // use view list here if there are no edges yet, then it works for rects being drawn in.
-        if (f->n_edges == 0)
+
+        switch (f->type)
         {
-            p0 = f->view_list;
-            p1 = (Point *)p0->hdr.next;
-            p2 = (Point *)p1->hdr.next;
-        }
-        else
-        {
-            p0 = f->initial_point;
-            if (f->edges[0]->endpoints[0] == p0)
-                p1 = f->edges[0]->endpoints[1];
+        case FACE_CIRCLE:
+            ae = (ArcEdge *)f->edges[0];
+            glRasterPos3f(ae->centre->x, ae->centre->y, ae->centre->z);
+            break;
+
+        default:
+            // use view list here if there are no edges yet, then it works for rects being drawn in.
+            if (f->n_edges == 0)
+            {
+                p0 = f->view_list;
+                p1 = (Point *)p0->hdr.next;
+                p2 = (Point *)p1->hdr.next;
+            }
             else
-                p1 = f->edges[0]->endpoints[0];
-            if (f->edges[1]->endpoints[0] == p1)
-                p2 = f->edges[1]->endpoints[1];
-            else
-                p2 = f->edges[1]->endpoints[0];
+            {
+                p0 = f->initial_point;
+                if (f->edges[0]->endpoints[0] == p0)
+                    p1 = f->edges[0]->endpoints[1];
+                else
+                    p1 = f->edges[0]->endpoints[0];
+                if (f->edges[1]->endpoints[0] == p1)
+                    p2 = f->edges[1]->endpoints[1];
+                else
+                    p2 = f->edges[1]->endpoints[0];
+            }
+            glRasterPos3f
+                (
+                (p0->x + p2->x) / 2,
+                (p0->y + p2->y) / 2,
+                (p0->z + p2->z) / 2
+                );
+            break;
         }
-        glRasterPos3f
-        (
-            (p0->x + p2->x) / 2,
-            (p0->y + p2->y) / 2,
-            (p0->z + p2->z) / 2
-        );
+
         glListBase(1000);
         glCallLists(strlen(buf), GL_UNSIGNED_BYTE, buf);
         break;

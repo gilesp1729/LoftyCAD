@@ -97,9 +97,8 @@ BOOL view_rendered = FALSE;
 // TRUE to display construction edges
 BOOL view_constr = TRUE;
 
-// Current filename and title
+// Current filename
 char curr_filename[256] = { 0, };
-char curr_title[256] = { 0, };
 
 // Grid (for snapping points) and unit tolerance (for display of dims)
 // When grid snapping is turned off, points are still snapped to the tolerance.
@@ -411,7 +410,7 @@ Pick(GLint x_pick, GLint y_pick, OBJECT min_priority)
                     obj = (Object *)face->vol;
 
                 if (face->vol->hdr.parent_group->hdr.parent_group != NULL)
-                    obj = find_top_level_parent(&object_tree, (Object *)obj->parent_group);  // this is fast
+                    obj = find_top_level_parent(&object_tree, (Object *)face->vol->hdr.parent_group);  // this is fast
             }
             else
             {
@@ -1252,7 +1251,7 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     switch (msg)
     {
     case WM_INITDIALOG:
-        SendDlgItemMessage(hWnd, IDC_PREFS_TITLE, WM_SETTEXT, 0, (LPARAM)curr_title);
+        SendDlgItemMessage(hWnd, IDC_PREFS_TITLE, WM_SETTEXT, 0, (LPARAM)object_tree.title);
         sprintf_s(buf, 16, "%.0f", half_size);
         SendDlgItemMessage(hWnd, IDC_PREFS_HALFSIZE, WM_SETTEXT, 0, (LPARAM)buf);
         sprintf_s(buf, 16, "%.1f", grid_snap);
@@ -1268,7 +1267,7 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         switch (LOWORD(wParam))
         {
         case IDOK:
-            SendDlgItemMessage(hWnd, IDC_PREFS_TITLE, WM_GETTEXT, 256, (LPARAM)curr_title);
+            SendDlgItemMessage(hWnd, IDC_PREFS_TITLE, WM_GETTEXT, 256, (LPARAM)object_tree.title);
             SendDlgItemMessage(hWnd, IDC_PREFS_HALFSIZE, WM_GETTEXT, 16, (LPARAM)buf);
             half_size = (float)atof(buf);
             SendDlgItemMessage(hWnd, IDC_PREFS_GRID, WM_GETTEXT, 16, (LPARAM)buf);
@@ -1426,7 +1425,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
         CheckMenuItem(hMenu, ID_PREFERENCES_SNAPTOANGLE, snapping_to_angle ? MF_CHECKED : MF_UNCHECKED);
 
         // recent files list
-        hMenu = GetSubMenu(hMenu, 8);  // zero-based item position, separators count
+        hMenu = GetSubMenu(hMenu, 9);  // zero-based item position, separators count
         //AppendMenu(hMenu, MF_STRING, 0, "New file here"); 
         load_MRU_to_menu(hMenu);
 

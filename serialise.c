@@ -81,7 +81,7 @@ serialise_obj(Object *obj, FILE *f)
         break;
 
     case OBJ_GROUP:
-        fprintf_s(f, "BEGINGROUP %d\n", obj->ID);
+        fprintf_s(f, "BEGINGROUP %d %s\n", obj->ID, ((Group *)obj)->title);
         for (o = ((Group *)obj)->obj_list; o != NULL; o = o->next)
             serialise_obj(o, f);
         break;
@@ -107,15 +107,18 @@ serialise_obj(Object *obj, FILE *f)
 
         case EDGE_ARC:
             ae = (ArcEdge *)obj;
-            fprintf_s(f, "%s %d %f %f %f\n",
+            fprintf_s(f, "%s %d %f %f %f %d %f %d\n",
                       ae->clockwise ? "C" : "AC",
                       ae->centre->hdr.ID,
-                      ae->normal.A, ae->normal.B, ae->normal.C);
+                      ae->normal.A, ae->normal.B, ae->normal.C,
+                      e->stepping, e->stepsize, e->nsteps);
             break;
 
         case EDGE_BEZIER:
             be = (BezierEdge *)obj;
-            fprintf_s(f, "%d %d\n", be->ctrlpoints[0]->hdr.ID, be->ctrlpoints[1]->hdr.ID);
+            fprintf_s(f, "%d %d %d %f %d\n", 
+                      be->ctrlpoints[0]->hdr.ID, be->ctrlpoints[1]->hdr.ID,
+                      e->stepping, e->stepsize, e->nsteps);
             break;
         }
         break;
@@ -156,7 +159,7 @@ serialise_tree(Group *tree, char *filename)
     Object *obj;
 
     fopen_s(&f, filename, "wt");
-    fprintf_s(f, "TITLE %s\n", curr_title);
+    fprintf_s(f, "TITLE %s\n", tree->title);
     fprintf_s(f, "SCALE %f %f %f %d\n", half_size, grid_snap, tolerance, angle_snap);
 
     save_count++;
@@ -247,7 +250,7 @@ deserialise_tree(Group *tree, char *filename)
         {
             tok = strtok_s(NULL, "\n", &nexttok);  // rest of line till \n
             if (tok != NULL)
-                strcpy_s(curr_title, 256, tok);
+                strcpy_s(tree->title, 256, tok);
         }
         else if (strcmp(tok, "SCALE") == 0)
         {
@@ -279,6 +282,10 @@ deserialise_tree(Group *tree, char *filename)
             grp = group_new();
             grp->hdr.ID = id;
             object[id] = (Object *)grp;
+
+            tok = strtok_s(NULL, "\n", &nexttok);  // rest of line till \n
+            if (tok != NULL)
+                strcpy_s(grp->title, 256, tok);
         }
         else if (strcmp(tok, "POINT") == 0)
         {
@@ -366,6 +373,13 @@ deserialise_tree(Group *tree, char *filename)
                 ae->normal.B = (float)atof(tok);
                 tok = strtok_s(NULL, " \t\n", &nexttok);
                 ae->normal.C = (float)atof(tok);
+
+                tok = strtok_s(NULL, " \t\n", &nexttok);
+                edge->stepping = atoi(tok);
+                tok = strtok_s(NULL, " \t\n", &nexttok);
+                edge->stepsize = (float)atof(tok);
+                tok = strtok_s(NULL, " \t\n", &nexttok);
+                edge->nsteps = atoi(tok);
             }
             else if (strcmp(tok, "BEZIER") == 0)
             {
@@ -388,6 +402,13 @@ deserialise_tree(Group *tree, char *filename)
                 be = (BezierEdge *)edge;
                 be->ctrlpoints[0] = (Point *)object[ctrl0];
                 be->ctrlpoints[1] = (Point *)object[ctrl1];
+
+                tok = strtok_s(NULL, " \t\n", &nexttok);
+                edge->stepping = atoi(tok);
+                tok = strtok_s(NULL, " \t\n", &nexttok);
+                edge->stepsize = (float)atof(tok);
+                tok = strtok_s(NULL, " \t\n", &nexttok);
+                edge->nsteps = atoi(tok);
             }
             else
             {

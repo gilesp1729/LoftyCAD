@@ -83,7 +83,6 @@ extern Plane *facing_plane;
 extern PLANE facing_index;
 
 extern char curr_filename[];
-extern char curr_title[];
 extern float grid_snap;
 extern float tolerance;
 extern int tol_log;

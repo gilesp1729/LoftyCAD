@@ -159,10 +159,12 @@ typedef struct Face
     Plane           normal;         // What plane is the face lying in (if flat) 
                                     // or a parallel to the cylinder (if bounded by arcs, circles or beziers)
     struct Volume   *vol;           // What volume references this face
+#if 0
     struct Face     *pair;          // Points to a paired face (end of prism) It is initially a coincident face 
                                     // with the opposite normal; they move apart when extruding. 
                                     // If a face has a pair, some changes (like scaling) have to be
                                     // performed with reference to the paired face.
+#endif
     struct Point    *initial_point; // Point in the first edge that the face starts from. Used to allow
                                     // view lists to be built up independent of the order of points
                                     // in any edge.
@@ -187,6 +189,7 @@ typedef struct Volume
 typedef struct Group
 {
     struct Object   hdr;            // Header
+    char            title[256];     // A name for the group
     struct Object   *obj_list;      // Doubly linked list of objects making up the group
 } Group;
 

@@ -115,7 +115,11 @@ populate_treeview_tree(Group *tree, HTREEITEM hItem)
     {
         if (obj->type == OBJ_GROUP)
         {
-            sprintf_s(descr, 64, "Group %d", obj->ID);
+            Group *grp = (Group *)obj;
+            if (grp->title[0] == '\0')
+                sprintf_s(descr, 64, "Group %d", obj->ID);
+            else
+                sprintf_s(descr, 64, "Group %d: %s", obj->ID, grp->title);
             tvi.pszText = descr;
             tvi.cchTextMax = strlen(tvi.pszText);
             tvi.lParam = (LPARAM)obj;
@@ -147,10 +151,10 @@ populate_treeview(void)
 
     // Put in the root item
     tvi.mask = TVIF_TEXT | TVIF_STATE | TVIF_PARAM;
-    if (curr_title[0] == '\0')
+    if (object_tree.title[0] == '\0')
         tvi.pszText = "Tree";
     else
-        tvi.pszText = curr_title;
+        tvi.pszText = object_tree.title;
     tvi.cchTextMax = strlen(tvi.pszText);
     tvi.state = TVIS_EXPANDED;
     tvi.stateMask = TVIS_EXPANDED;

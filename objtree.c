@@ -465,9 +465,11 @@ Face
         clone->edges = realloc(clone->edges, face->max_edges * sizeof(Edge *));
     clone->max_edges = face->max_edges;
     
+#if 0
     // pair the face with its clone
     clone->pair = face;
     face->pair = clone;
+#endif
 
     // Set the initial point. 
     last_point = face->initial_point;
@@ -509,8 +511,9 @@ Face
             nae->normal.A = -ae->normal.A;
             nae->normal.B = -ae->normal.B;
             nae->normal.C = -ae->normal.C;
-
-            // Since the arc and its clone now belong to paired faces,
+            // fall through
+        case EDGE_BEZIER:
+            // Since the arc/bezier and its clone now belong to paired faces,
             // fix their stepsize
             ((Edge *)ne)->stepsize = ((Edge *)e)->stepsize;
             ((Edge *)ne)->nsteps = ((Edge *)e)->nsteps;
@@ -1161,6 +1164,41 @@ gen_view_list_arc(ArcEdge *ae)
     edge->view_valid = TRUE;
 }
 
+// Iterative bezier edge drawing.
+void
+iterate_bez
+(
+    BezierEdge *be,
+    float x1, float y1, float z1,
+    float x2, float y2, float z2,
+    float x3, float y3, float z3,
+    float x4, float y4, float z4
+)
+{
+    Point *p;
+    Edge *e = (Edge *)be;
+    float t;
+
+    // the first point has already been output, so start at stepsize
+    for (t = e->stepsize; t < 1.0001f; t += e->stepsize)
+    {
+        float mt = 1.0f - t;
+        float c0 = mt * mt * mt;
+        float c1 = 3 * mt * mt * t;
+        float c2 = 3 * mt * t * t;
+        float c3 = t * t * t;
+        float x = c0 * x1 + c1 * x2 + c2 * x3 + c3 * x4;
+        float y = c0 * y1 + c1 * y2 + c2 * y3 + c3 * y4;
+        float z = c0 * z1 + c1 * z2 + c2 * z3 + c3 * z4;
+
+        p = point_new(x, y, z);
+        p->hdr.ID = 0;
+        objid--;
+        link_tail((Object *)p, (Object **)&e->view_list);
+        e->nsteps++;
+    }
+}
+
 // Length squared shortcut
 #define LENSQ(x1, y1, z1, x2, y2, z2) ((x2-x1)*(x2-x1) + (y2-y1)*(y2-y1) + (z2-z1)*(z2-z1))
 
@@ -1248,19 +1286,34 @@ gen_view_list_bez(BezierEdge *be)
     p->hdr.ID = 0;
     objid--;
     link_tail((Object *)p, (Object **)&e->view_list);
-    e->nsteps = 0;
 
-    // TODO1: fixed step division if stepsize > 0
-
-    // Subdivide the bezier
-    recurse_bez
-    (
-        be,
-        e->endpoints[0]->x, e->endpoints[0]->y, e->endpoints[0]->z,
-        be->ctrlpoints[0]->x, be->ctrlpoints[0]->y, be->ctrlpoints[0]->z,
-        be->ctrlpoints[1]->x, be->ctrlpoints[1]->y, be->ctrlpoints[1]->z,
-        e->endpoints[1]->x, e->endpoints[1]->y, e->endpoints[1]->z
-    );
+    // Perform fixed step division if stepsize > 0
+    if (e->stepping && e->nsteps > 0)
+    {
+        e->nsteps = 0;
+        iterate_bez
+        (
+            be,
+            e->endpoints[0]->x, e->endpoints[0]->y, e->endpoints[0]->z,
+            be->ctrlpoints[0]->x, be->ctrlpoints[0]->y, be->ctrlpoints[0]->z,
+            be->ctrlpoints[1]->x, be->ctrlpoints[1]->y, be->ctrlpoints[1]->z,
+            e->endpoints[1]->x, e->endpoints[1]->y, e->endpoints[1]->z
+        );
+    }
+    else
+    {
+        // Subdivide the bezier
+        e->nsteps = 0;
+        recurse_bez
+        (
+            be,
+            e->endpoints[0]->x, e->endpoints[0]->y, e->endpoints[0]->z,
+            be->ctrlpoints[0]->x, be->ctrlpoints[0]->y, be->ctrlpoints[0]->z,
+            be->ctrlpoints[1]->x, be->ctrlpoints[1]->y, be->ctrlpoints[1]->z,
+            e->endpoints[1]->x, e->endpoints[1]->y, e->endpoints[1]->z
+        );
+        e->stepsize = 1.0f / e->nsteps;
+    }
 
     e->view_valid = TRUE;
 }

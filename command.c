@@ -306,7 +306,7 @@ Command(int message, int wParam, int lParam)
             drawing_changed = FALSE;
             clean_checkpoints(curr_filename);
             curr_filename[0] = '\0';
-            curr_title[0] = '\0';
+            object_tree.title[0] = '\0';
             SetWindowText(auxGetHWND(), "LoftyCAD");
 
             if (LOWORD(wParam) == ID_FILE_NEW)
@@ -327,10 +327,10 @@ Command(int message, int wParam, int lParam)
                 drawing_changed = FALSE;
                 strcpy_s(window_title, 256, curr_filename);
                 strcat_s(window_title, 256, " - ");
-                strcat_s(window_title, 256, curr_title);
+                strcat_s(window_title, 256, object_tree.title);
                 SetWindowText(auxGetHWND(), window_title);
                 hMenu = GetSubMenu(GetMenu(auxGetHWND()), 0);
-                hMenu = GetSubMenu(hMenu, 8);
+                hMenu = GetSubMenu(hMenu, 9);
                 insert_filename_to_MRU(hMenu, curr_filename);
                 populate_treeview();
             }
@@ -361,10 +361,10 @@ Command(int message, int wParam, int lParam)
                 drawing_changed = FALSE;
                 strcpy_s(window_title, 256, curr_filename);
                 strcat_s(window_title, 256, " - ");
-                strcat_s(window_title, 256, curr_title);
+                strcat_s(window_title, 256, object_tree.title);
                 SetWindowText(auxGetHWND(), window_title);
                 hMenu = GetSubMenu(GetMenu(auxGetHWND()), 0);
-                hMenu = GetSubMenu(hMenu, 8);
+                hMenu = GetSubMenu(hMenu, 9);
                 insert_filename_to_MRU(hMenu, curr_filename);
             }
 
@@ -389,12 +389,35 @@ Command(int message, int wParam, int lParam)
 
             break;
 
+        case ID_FILE_IMPORTTOGROUP:
+            memset(&ofn, 0, sizeof(OPENFILENAME));
+            ofn.lStructSize = sizeof(OPENFILENAME);
+            ofn.hwndOwner = auxGetHWND();
+            ofn.lpstrFilter = "LoftyCAD Files\0*.LCD\0All Files\0*.*\0\0";
+            ofn.nFilterIndex = 1;
+            ofn.lpstrDefExt = "lcd";
+            new_filename[0] = '\0';
+            ofn.lpstrFile = new_filename;
+            ofn.nMaxFile = 256;
+            ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST;
+            if (GetOpenFileName(&ofn))
+            {
+                Group *group = group_new();
+
+                deserialise_tree(group, new_filename);
+                link_group((Object *)group, &object_tree);
+                drawing_changed = TRUE;
+                populate_treeview();
+            }
+
+            break;
+
         case ID_PREFERENCES_SETTINGS:
             display_help("Preferences");
             DialogBox(hInst, MAKEINTRESOURCE(IDD_PREFS), auxGetHWND(), prefs_dialog);
             strcpy_s(window_title, 256, curr_filename);
             strcat_s(window_title, 256, " - ");
-            strcat_s(window_title, 256, curr_title);
+            strcat_s(window_title, 256, object_tree.title);
             SetWindowText(auxGetHWND(), window_title);
             break;
 
@@ -420,7 +443,7 @@ Command(int message, int wParam, int lParam)
                 drawing_changed = FALSE;
                 clean_checkpoints(curr_filename);
                 curr_filename[0] = '\0';
-                curr_title[0] = '\0';
+                object_tree.title[0] = '\0';
                 SetWindowText(auxGetHWND(), "LoftyCAD");
 
                 if (!deserialise_tree(&object_tree, new_filename))
@@ -432,7 +455,7 @@ Command(int message, int wParam, int lParam)
                     strcpy_s(curr_filename, 256, new_filename);
                     strcpy_s(window_title, 256, curr_filename);
                     strcat_s(window_title, 256, " - ");
-                    strcat_s(window_title, 256, curr_title);
+                    strcat_s(window_title, 256, object_tree.title);
                     SetWindowText(auxGetHWND(), window_title);
                     populate_treeview();
                 }
