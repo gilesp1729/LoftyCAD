@@ -652,7 +652,9 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
 
                     // generate the other corners. The rect goes in the 
                     // order picked-p1-new-p3. 
-                    if (picked_obj == NULL || picked_obj->type != OBJ_FACE)  //TODO: when starting on a volune, wierd things happen
+                    if (picked_obj == NULL || picked_obj->type != OBJ_FACE)  
+                        //TODO1: when starting on a volume locked at face level, wierd things happen (we can't get the face)
+                        // Means that the volume must be unlocked to draw on it, which is counter-intuitive.
                     {
                         // Drawing on a facing plane derived from standard axes
                         switch (facing_index)

@@ -142,8 +142,8 @@ update_dims(Object *obj, char *buf)
                 break;
 
             // Change the edges' lengths. be careful to do it in the right order.
-            // TODO CHECK THIS  - this will be wrong for side faces after extrusion. Need to follow the rect around and
-            // change the right sides at the right time!
+            // TODO1  - this will be wrong for side faces after extrusion. Need to follow the rect around and
+            // change the right sides at the right time! Use initial point and chase round in the right order.
             new_length(e0->endpoints[0], e0->endpoints[1], len);
             new_length(e2->endpoints[1], e2->endpoints[0], len);
             new_length(e3->endpoints[1], e3->endpoints[0], len2);
@@ -299,10 +299,25 @@ show_dims_on(Object *obj, PRESENTATION pres, LOCK parent_lock)
 
         // color face dims in the edge color, so they can be easily read
         color(OBJ_EDGE, f->type & FACE_CONSTRUCTION, selected, highlighted, locked);
-        // use view list here, then it works for drawing rects. TODO: use edges once they exist
-        p0 = f->view_list;
-        p1 = (Point *)p0->hdr.next;
-        p2 = (Point *)p1->hdr.next;
+        // use view list here if there are no edges yet, then it works for rects being drawn in.
+        if (f->n_edges == 0)
+        {
+            p0 = f->view_list;
+            p1 = (Point *)p0->hdr.next;
+            p2 = (Point *)p1->hdr.next;
+        }
+        else
+        {
+            p0 = f->initial_point;
+            if (f->edges[0]->endpoints[0] == p0)
+                p1 = f->edges[0]->endpoints[1];
+            else
+                p1 = f->edges[0]->endpoints[0];
+            if (f->edges[1]->endpoints[0] == p1)
+                p2 = f->edges[1]->endpoints[1];
+            else
+                p2 = f->edges[1]->endpoints[0];
+        }
         glRasterPos3f
         (
             (p0->x + p2->x) / 2,

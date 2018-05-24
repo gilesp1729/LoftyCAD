@@ -146,7 +146,7 @@ find_in_neighbourhood(Object *match_obj)
             test = find_in_neighbourhood_face((Face *)match_obj, obj);
             break;
 
-            // TODO case OBJ_VOLUME - when moving volumes, need to HL faces. OBJ_GROUP too
+            // TODO1 case OBJ_VOLUME - when moving volumes, need to HL faces. OBJ_GROUP too
         }
 
         if (test != NULL)

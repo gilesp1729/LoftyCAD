@@ -1273,11 +1273,11 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             half_size = (float)atof(buf);
             SendDlgItemMessage(hWnd, IDC_PREFS_GRID, WM_GETTEXT, 16, (LPARAM)buf);
             grid_snap = (float)atof(buf);
-            // TODO check grid scale and tolerance are powers of 10
+            // TODO1 check grid scale and tolerance are powers of 10
             SendDlgItemMessage(hWnd, IDC_PREFS_TOL, WM_GETTEXT, 16, (LPARAM)buf);
             tolerance = (float)atof(buf);
             tol_log = (int)log10f(1.0f / tolerance);
-            // TODO check angle snap divides 360
+            // TODO1 check angle snap divides 360
             SendDlgItemMessage(hWnd, IDC_PREFS_ANGLE, WM_GETTEXT, 16, (LPARAM)buf);
             angle_snap = atoi(buf);
 

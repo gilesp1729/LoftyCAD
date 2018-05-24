@@ -440,35 +440,47 @@ Command(int message, int wParam, int lParam)
             break;
 
         case ID_EDIT_CUT:
+            // You can't cut a component, only a top-level object (in the object tree).
+            // Check that they are (all) in fact top-level before unlinking them.
+            for (obj = selection; obj != NULL; obj = obj->next)
+            {
+                if (!is_top_level_object(obj->prev, &object_tree))
+                    goto skip_cut;
+            }
+
+            for (obj = selection; obj != NULL; obj = obj->next)
+                delink_group(obj->prev, &object_tree);
+
             clear_selection(&clipboard);
             clipboard = selection;
             selection = NULL;
-
-            // You can't cut a component, only a top-level object (in the object tree).
-            // Check that they are in fact top-level before unlinking them.
-            for (obj = clipboard; obj != NULL; obj = obj->next)
-            {
-                if (is_top_level_object(obj->prev, &object_tree))
-                    delink_group(obj->prev, &object_tree);
-                // TODO else: remove the object in the clipboard here, because re-pasting will put it in the same place...
-            }
             clip_xoffset = 0;
             clip_yoffset = 0;
             clip_zoffset = 0;
             drawing_changed = TRUE;
             write_checkpoint(&object_tree, curr_filename);
+        skip_cut:
             break;
 
         case ID_EDIT_COPY:
             // As above, but don't unlink the objects. The clipboard is a reference to 
-            // existing objects, not a copy of them. TODO: Make sure this is still OK.
+            // existing objects, not a copy of them. 
             // Excel does it like this, and it drives me nuts sometimes.
             clear_selection(&clipboard);
             clipboard = selection;
             selection = NULL;
-            clip_xoffset = 10;
-            clip_yoffset = 10;
-            clip_zoffset = 0;
+            if (nz(facing_plane->A))
+                clip_xoffset = 10;          // TODO - scale this so it is not too large when zoomed
+            else
+                clip_xoffset = 0;
+            if (nz(facing_plane->B))
+                clip_yoffset = 10;
+            else
+                clip_yoffset = 0;
+            if (nz(facing_plane->C))
+                clip_zoffset = 10;
+            else
+                clip_zoffset = 0;
             break;
 
         case ID_EDIT_PASTE:
@@ -489,8 +501,13 @@ Command(int message, int wParam, int lParam)
                 sel_obj->prev = new_obj;
             }
 
-            clip_xoffset += 10;  // TODO - very temporary (it needs to be scaled reasonably, and in the facing plane)
-            clip_yoffset += 10;
+            if (nz(facing_plane->A))
+                clip_xoffset += 10;
+            if (nz(facing_plane->B))
+                clip_yoffset += 10;
+            if (nz(facing_plane->C))
+                clip_zoffset += 10;
+
             drawing_changed = TRUE;
             write_checkpoint(&object_tree, curr_filename);
             break;

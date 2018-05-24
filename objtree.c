@@ -1250,7 +1250,7 @@ gen_view_list_bez(BezierEdge *be)
     link_tail((Object *)p, (Object **)&e->view_list);
     e->nsteps = 0;
 
-    // TODO: fixed step division if stepsize > 0
+    // TODO1: fixed step division if stepsize > 0
 
     // Subdivide the bezier
     recurse_bez
