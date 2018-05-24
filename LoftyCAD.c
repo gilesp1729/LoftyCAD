@@ -1203,46 +1203,12 @@ mouse_move(AUX_EVENTREC *event)
 }
 
 
-// Display text in the help window relevant to the current action.
-void 
-display_help(char *key)
-{
-    // Look up whatever.. in some sort of INI file?
-    // For now just display the key
-
-
-
-    SendDlgItemMessage(hWndHelp, IDC_CONTEXT_HELP, EM_SETSEL, 0, -1);
-    SendDlgItemMessage(hWndHelp, IDC_CONTEXT_HELP, EM_REPLACESEL, 0, (LPARAM)key);
-}
-
-char *state_key[] =
-{
-    "Exploring",
-    "Moving",
-    "Dragging Selection",
-    "Starting Edge",
-    "Starting Rect",
-    "Starting Circle",
-    "Starting Bezier",
-    "Starting Arc",
-    "Starting Measure",
-    "Starting Extrude",
-    "Drawing Edge",
-    "Drawing Rect",
-    "Drawing Circle",
-    "Drawing Bezier",
-    "Drawing Arc",
-    "Drawing Measure",
-    "Drawing Extrude"
-};
-
 // Change app state, displaying any help for the new state
 void
 change_state(STATE new_state)
 {
     app_state = new_state;
-    display_help(state_key[app_state]);
+    display_help_state(app_state);
 }
 
 
@@ -1381,18 +1347,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
             ShowWindow(hWndDebug, SW_SHOW);
 
         // help window
-        LoadLibrary("riched20.dll");
-        hWndHelp = CreateDialog
-            (
-            hInst,
-            MAKEINTRESOURCE(IDD_HELP),
-            auxGetHWND(),
-            help_dialog
-            );
-
-        SetWindowPos(hWndHelp, HWND_NOTOPMOST, wWidth, wHeight / 2, 0, 0, SWP_NOSIZE);
-        if (view_help)
-            ShowWindow(hWndHelp, SW_SHOW);
+        hWndHelp = init_help_window();
 
         // Tree view of object tree
         hWndTree = CreateDialog

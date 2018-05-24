@@ -223,22 +223,3 @@ debug_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     return 0;
 }
 
-// Wndproc for help dialog. Contains one large rich edit box.
-int WINAPI
-help_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
-{
-    HMENU hMenu;
-
-    switch (msg)
-    {
-    case WM_CLOSE:
-        view_help = FALSE;
-        ShowWindow(hWnd, SW_HIDE);
-        hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
-        CheckMenuItem(hMenu, ID_VIEW_HELP, view_help ? MF_CHECKED : MF_UNCHECKED);
-        break;
-    }
-
-    return 0;
-}
-

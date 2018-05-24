@@ -144,7 +144,9 @@ Object * Pick(GLint x_pick, GLint y_pick, OBJECT obj_type);
 Object * Pick_all_in_rect(GLint x_pick, GLint y_pick, GLint width, GLint height);
 void CALLBACK Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick);
 void CALLBACK Position(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick);
+HWND init_help_window(void);
 void display_help(char *key);
+void display_help_state(STATE state);
 void change_state(STATE new_state);
 
 BOOL is_selected_direct(Object *obj, Object **prev_in_list);

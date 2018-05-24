@@ -85,6 +85,7 @@
     <ClInclude Include="glaux\glaux.h" />
     <ClInclude Include="glaux\GLOS.H" />
     <ClInclude Include="glaux\TK.H" />
+    <ClInclude Include="htmlbrowser.h" />
     <ClInclude Include="LoftyCAD.h" />
     <ClInclude Include="Objtree.h" />
     <ClInclude Include="registry.h" />
@@ -109,6 +110,8 @@
     <ClCompile Include="glaux\TKIMAGE.C" />
     <ClCompile Include="glaux\VECT3D.C" />
     <ClCompile Include="glaux\XFORM.C" />
+    <ClCompile Include="help.c" />
+    <ClCompile Include="htmlbrowser.c" />
     <ClCompile Include="neighbourhood.c" />
     <ClCompile Include="objtree.c" />
     <ClCompile Include="LoftyCAD.c" />

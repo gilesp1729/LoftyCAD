@@ -63,6 +63,9 @@
     <ClInclude Include="triangulate.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="htmlbrowser.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -135,6 +138,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="command.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="help.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="htmlbrowser.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
