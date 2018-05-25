@@ -315,7 +315,7 @@ deserialise_tree(Group *tree, char *filename)
         else if (strcmp(tok, "EDGE") == 0)
         {
             int end0, end1, ctrl0, ctrl1, ctr;
-            Edge *edge;
+            Edge *edge = NULL;
             ArcEdge *ae;
             BezierEdge *be;
 

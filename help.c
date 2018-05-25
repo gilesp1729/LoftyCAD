@@ -51,7 +51,7 @@ HWND init_help_window(void)
 void
 display_help(char *key)
 {
-    char fname[256] = "html\\";
+    char fname[256] = "html\\";   // TODO this really needs to be someplace standard
     char fullpath[256];
 
     strcat_s(fname, 256, key);
@@ -97,6 +97,7 @@ help_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         break;
 
     case WM_CLOSE:
+        // Closing just hides the window, it can be brought back (like the other toolbars)
         view_help = FALSE;
         ShowWindow(hWnd, SW_HIDE);
         hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
