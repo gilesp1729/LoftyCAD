@@ -127,7 +127,7 @@ extern float quat_mXZ[4];
 #define ASSERT(exp, msg)    { if (!(exp)) LogShow(msg) }
 
 // Debugging defines
-#undef DEBUG_SHADE_CYL_FACE
+#undef DEBUG_FACE_SHADE
 #undef DEBUG_DRAW_RECT_NORMAL
 #undef DEBUG_POSITION_ZOOM
 #undef DEBUG_PICK

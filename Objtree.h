@@ -50,7 +50,9 @@ typedef enum
 typedef enum
 {
     FLAG_NONE = 0,                  // Nothing special
-    FLAG_NEW_FACET,                 // The point begins a new facet (e.g. of a cylinder face)
+    FLAG_NEW_FACET,                 // The point begins a new facet (e.g. of a cylinder face).
+                                    // In this case only, the XYZ of the point is not a point,
+                                    // but a new facet normal. The real points follow.
     FLAG_NEW_CONTOUR                // the point begins a new contour (e.g. in clipped output)
 } PFLAG;
 

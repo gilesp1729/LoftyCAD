@@ -7,6 +7,149 @@
 // Tessellator for rendering to GL.
 GLUtesselator *rtess;
 
+// A large impossible coordinate value
+#define LARGE_COORD 999999
+
+// Clear a volume bounding box to empty
+void
+clear_bbox(Volume *vol)
+{
+    vol->bbox.xmin = LARGE_COORD;
+    vol->bbox.xmax = -LARGE_COORD;
+    vol->bbox.ymin = LARGE_COORD;
+    vol->bbox.ymax = -LARGE_COORD;
+    vol->bbox.zmin = LARGE_COORD;
+    vol->bbox.zmax = -LARGE_COORD;
+}
+
+// Expand a volume bounding box to include a point
+void
+expand_bbox(Volume *vol, Point *p)
+{
+    if (vol == NULL)
+        return;
+
+    if (p->x < vol->bbox.xmin)
+        vol->bbox.xmin = p->x;
+    else if (p->x > vol->bbox.xmax)
+        vol->bbox.xmax = p->x;
+
+    if (p->y < vol->bbox.ymin)
+        vol->bbox.ymin = p->y;
+    else if (p->y > vol->bbox.ymax)
+        vol->bbox.ymax = p->y;
+
+    if (p->z < vol->bbox.zmin)
+        vol->bbox.zmin = p->z;
+    else if (p->z > vol->bbox.zmax)
+        vol->bbox.zmax = p->z;
+}
+
+// Enforce constraints on an arc edge e, when one of its points p has been moved.
+void
+enforce_arc_constraints(Edge *e, Point *p, float dx, float dy, float dz)
+{
+    ArcEdge *ae = (ArcEdge *)e;
+
+    if (p == e->endpoints[0])
+    {
+        // Endpoint 0 has moved, this will force a recalculation of the radius.
+        // Move endpoint 1 to suit the new radius
+        float rad = length(ae->centre, e->endpoints[0]);
+        Plane e1;
+
+        e1.A = e->endpoints[1]->x - ae->centre->x;
+        e1.B = e->endpoints[1]->y - ae->centre->y;
+        e1.C = e->endpoints[1]->z - ae->centre->z;
+        normalise_plane(&e1);
+        e->endpoints[1]->x = ae->centre->x + e1.A * rad;
+        e->endpoints[1]->y = ae->centre->y + e1.B * rad;
+        e->endpoints[1]->z = ae->centre->z + e1.C * rad;
+    }
+    else if (p == e->endpoints[1])
+    {
+        // The other endpoint has moved. Update the first one similarly
+        float rad = length(ae->centre, e->endpoints[1]);
+        Plane e0;
+
+        e0.A = e->endpoints[0]->x - ae->centre->x;
+        e0.B = e->endpoints[0]->y - ae->centre->y;
+        e0.C = e->endpoints[0]->z - ae->centre->z;
+        normalise_plane(&e0);
+        e->endpoints[0]->x = ae->centre->x + e0.A * rad;
+        e->endpoints[0]->y = ae->centre->y + e0.B * rad;
+        e->endpoints[0]->z = ae->centre->z + e0.C * rad;
+    }
+    else if (p == ae->centre)
+    {
+        // The centre has moved. We are moving the whole edge.
+        e->endpoints[0]->x += dx;
+        e->endpoints[0]->y += dy;
+        e->endpoints[0]->z += dz;
+        e->endpoints[1]->x += dx;
+        e->endpoints[1]->y += dy;
+        e->endpoints[1]->z += dz;
+    }
+}
+
+// Mark all view lists as invalid for parts of a parent object, when a part of it
+// has moved.
+//
+// Do this all the way down (even though gen_view_list will recompute all the children anyway)
+// since we may encounter arc edges that need constraints updated when, say, an 
+// endpoint has moved. We also pass in how much it has moved.
+void
+invalidate_all_view_lists(Object *parent, Object *obj, float dx, float dy, float dz)
+{
+    Face *f;
+    Object *o;
+    int i;
+
+    if (parent->type == OBJ_GROUP)
+    {
+        for (o = ((Group *)parent)->obj_list; o != NULL; o = o->next)
+            invalidate_all_view_lists(o, obj, dx, dy, dz);
+    }
+    else if (parent->type == OBJ_VOLUME)
+    {
+        clear_bbox((Volume *)parent);
+        for (f = ((Volume *)parent)->faces; f != NULL; f = (Face *)f->hdr.next)
+            invalidate_all_view_lists((Object *)f, obj, dx, dy, dz);
+    }
+    else if (parent->type == OBJ_FACE)
+    {
+        f = (Face *)parent;
+        f->view_valid = FALSE;
+        for (i = 0; i < f->n_edges; i++)
+            invalidate_all_view_lists((Object *)f->edges[i], obj, dx, dy, dz);
+    }
+    else if (parent->type == OBJ_EDGE)
+    {
+        switch (((Edge *)parent)->type & ~EDGE_CONSTRUCTION)
+        {
+        case EDGE_ARC:
+            ((Edge *)parent)->view_valid = FALSE;
+
+            // Check that the obj in question is an endpoint or the centre,
+            // and update the other point(s) in the arc to suit.
+            if (obj->type == OBJ_POINT)
+            {
+                enforce_arc_constraints((Edge *)parent, (Point *)obj, dx, dy, dz);
+            }
+            else if (obj->type == OBJ_EDGE)
+            {
+                enforce_arc_constraints((Edge *)parent, ((Edge *)obj)->endpoints[0], dx, dy, dz);
+                enforce_arc_constraints((Edge *)parent, ((Edge *)obj)->endpoints[1], dx, dy, dz);
+            }
+
+            break;
+
+        case EDGE_BEZIER:
+            ((Edge *)parent)->view_valid = FALSE;
+            break;
+        }
+    }
+}
 
 // Regenerate the unclipped view list for a face. While here, also calculate the outward
 // normal for the face.
@@ -17,6 +160,7 @@ gen_view_list_face(Face *face)
     Edge *e;
     Point *last_point;
     Point *p, *v;
+    Object **list;
     //char buf[256];
 
     if (face->view_valid)
@@ -24,12 +168,21 @@ gen_view_list_face(Face *face)
 
     free_view_list_face(face);
 
+    // For flat faces, construct the view list directly, as there is only one facet. 
+    // But for cylinders, we construct it in the spare list, and then rearrange it into 
+    // the real view list to make facets.
+    if (IS_FLAT(face))
+        list = (Object **)&face->view_list;
+    else
+        list = (Object **)&face->spare_list;
+    
     // Add points at tail of list, to preserve order
     // First the start point
     p = point_newp(face->initial_point);
     p->hdr.ID = 0;
     objid--;        // prevent explosion of objid's
-    link_tail((Object *)p, (Object **)&face->view_list);
+    link_tail((Object *)p, list);
+    expand_bbox(face->vol, p);
 
 #if DEBUG_VIEW_LIST_RECT_FACE
     sprintf_s(buf, 256, "Face %d IP %d\r\n", face->hdr.ID, face->initial_point->hdr.ID);
@@ -67,7 +220,8 @@ gen_view_list_face(Face *face)
             p = point_newp(last_point);
             p->hdr.ID = 0;
             objid--;
-            link_tail((Object *)p, (Object **)&face->view_list);
+            link_tail((Object *)p, list);
+            expand_bbox(face->vol, p);
             break;
 
         case EDGE_ARC:
@@ -87,7 +241,8 @@ gen_view_list_face(Face *face)
                     p = point_newp(v);
                     p->hdr.ID = 0;
                     objid--;
-                    link_tail((Object *)p, (Object **)&face->view_list);
+                    link_tail((Object *)p, list);
+                    expand_bbox(face->vol, p);
                 }
             }
             else
@@ -104,26 +259,80 @@ gen_view_list_face(Face *face)
                     p = point_newp(v);
                     p->hdr.ID = 0;
                     objid--;
-                    link_tail((Object *)p, (Object **)&face->view_list);
+                    link_tail((Object *)p, list);
+                    expand_bbox(face->vol, p);
                 }
             }
 
             p = point_newp(last_point);
             p->hdr.ID = 0;
             objid--;
-            link_tail((Object *)p, (Object **)&face->view_list);
+            link_tail((Object *)p, list);
+            expand_bbox(face->vol, p);
             break;
         }
     }
 
+    if (IS_FLAT(face))
+    {
+        // calculate the normal vector.  Store a new refpt here too, in case something has moved.
+        polygon_normal(face->view_list, &face->normal);
+        face->normal.refpt = *face->edges[0]->endpoints[0];
+
+        // Update the 2D view list
+        update_view_list_2D(face);
+    }
+    else 
+    {
+        Point *last = p;
+
+        ASSERT((face->type & ~FACE_CONSTRUCTION) == FACE_CYLINDRICAL, "Only cylinder faces should be here");
+
+        // Rearrange the cylinder view list into a set of facets, each with its own normal.
+        for (i = 0, v = face->spare_list; v->hdr.next != NULL; v = (Point *)v->hdr.next, i++)
+        {
+            Point *vnext = (Point *)v->hdr.next;
+            Point *lprev = (Point *)last->hdr.prev;
+            Plane norm;
+
+            // A new facet point containing the normal
+            normal3(last, lprev, vnext, &norm);
+            p = point_new(norm.A, norm.B, norm.C);
+            p->hdr.ID = 0;
+            objid--;
+            p->flags = FLAG_NEW_FACET;
+            link_tail((Object *)p, (Object **)&face->view_list);
+
+            // Four points for the quad
+            p = point_newp(v);
+            p->hdr.ID = 0;
+            objid--;
+            link_tail((Object *)p, (Object **)&face->view_list);
+            p = point_newp(vnext);
+            p->hdr.ID = 0;
+            objid--;
+            link_tail((Object *)p, (Object **)&face->view_list);
+            p = point_newp(lprev);
+            p->hdr.ID = 0;
+            objid--;
+            link_tail((Object *)p, (Object **)&face->view_list);
+            p = point_newp(last);
+            p->hdr.ID = 0;
+            objid--;
+            link_tail((Object *)p, (Object **)&face->view_list);
+
+            // Walk last backwards until we meet in the middle
+            last = lprev;
+            if (i >= face->edges[1]->nsteps)
+                break;
+        }
+
+        // We are finished with the spare list for now, so free it
+        free_view_list(face->spare_list);
+        face->spare_list = NULL;
+    }
+
     face->view_valid = TRUE;
-
-    // calculate the normal vector.  Store a new refpt here too, in case something has moved.
-    polygon_normal(face->view_list, &face->normal);
-    face->normal.refpt = *face->edges[0]->endpoints[0];
-
-    // Update the 2D view list
-    update_view_list_2D(face);
 }
 
 void
@@ -192,7 +401,9 @@ void
 free_view_list_face(Face *face)
 {
     free_view_list(face->view_list);
+    free_view_list(face->spare_list);
     face->view_list = NULL;
+    face->spare_list = NULL;
     face->view_valid = FALSE;
     face->n_view2D = 0;
 }
@@ -537,11 +748,49 @@ init_triangulator(void)
 void
 face_shade(GLUtesselator *tess, Face *face, BOOL selected, BOOL highlighted, BOOL locked)
 {
-    Point   *v, *last;
-    int i;
+    Point   *v;
+    Plane norm;
 
     gen_view_list_face(face);
 
+#ifdef DEBUG_FACE_SHADE
+    Log("Face view list:\r\n");
+    for (v = face->view_list; v->hdr.next != NULL; v = (Point *)v->hdr.next)
+    {
+        char buf[64];
+        sprintf_s(buf, 64, "%d %f %f %f\r\n", v->flags, v->x, v->y, v->z);
+        Log(buf);
+    }
+#endif       
+    color(OBJ_FACE, face->type & FACE_CONSTRUCTION, selected, highlighted, locked);
+
+    // If there are no facets, just use the face normal
+    norm = face->normal;
+    v = face->view_list;
+    while (v != NULL)
+    {
+        if (v->flags == FLAG_NEW_FACET)
+        {
+            norm.A = v->x;
+            norm.B = v->y;
+            norm.C = v->z;
+            v = (Point *)v->hdr.next;
+        }
+        gluTessBeginPolygon(tess, &norm);
+        gluTessBeginContour(tess);
+        while (v != NULL && v->flags != FLAG_NEW_FACET)
+        {
+            if (v->flags == FLAG_NEW_CONTOUR)
+                gluNextContour(tess, GLU_UNKNOWN);  // TODO work out how best to get this type in here
+            tess_vertex(tess, v);
+            v = (Point *)v->hdr.next;
+        }
+        gluTessEndContour(tess);
+        gluTessEndPolygon(tess);
+    }
+}
+
+#if 0 // old code
     switch (face->type)
     {
     case FACE_RECT | FACE_CONSTRUCTION:
@@ -601,5 +850,6 @@ face_shade(GLUtesselator *tess, Face *face, BOOL selected, BOOL highlighted, BOO
         ASSERT(FALSE, "Draw face general not implemented");
         break;
     }
-}
+#endif // old code
+
 

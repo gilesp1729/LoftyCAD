@@ -9,6 +9,7 @@ void gen_view_list_face(Face *face);
 void update_view_list_2D(Face *face);
 void gen_view_list_arc(ArcEdge *ae);
 void gen_view_list_bez(BezierEdge *be);
+void free_view_list(Point *view_list);
 void free_view_list_face(Face *face);
 
 // Triangulate and render
