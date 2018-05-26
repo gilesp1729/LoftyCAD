@@ -158,9 +158,9 @@ find_in_neighbourhood_face(Face *face, Object *obj)
             return NULL;
 
         // If we got through that, now test if face and face1 overlap
-        for (i = 0; i < face->n_view; i++)
+        for (i = 0; i < face->n_view2D; i++)
         {
-            if (point_in_polygon2D(face->view_list2D[i], face1->view_list2D, face1->n_view))
+            if (point_in_polygon2D(face->view_list2D[i], face1->view_list2D, face1->n_view2D))
                 return obj;  // this point is in. TODO: we need to test not just points - rect intersects are easily missed
         }
 

@@ -100,6 +100,7 @@
     <ClCompile Include="contextmenu.c" />
     <ClCompile Include="dimensions.c" />
     <ClCompile Include="draw3d.c" />
+    <ClCompile Include="export.c" />
     <ClCompile Include="geometry.c" />
     <ClCompile Include="glaux\FONT.C" />
     <ClCompile Include="glaux\GLAUX.C" />

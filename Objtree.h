@@ -46,6 +46,14 @@ typedef enum
     LOCK_VOLUME = OBJ_VOLUME        // The whole volume is locked; nothing can be selected or changed
 } LOCK;
 
+// Point flags
+typedef enum
+{
+    FLAG_NONE = 0,                  // Nothing special
+    FLAG_NEW_FACET,                 // The point begins a new facet (e.g. of a cylinder face)
+    FLAG_NEW_CONTOUR                // the point begins a new contour (e.g. in clipped output)
+} PFLAG;
+
 // Header for any type of object.
 typedef struct Object
 {
@@ -79,6 +87,7 @@ typedef struct Point
     float           z;
     BOOL            moved;          // When a point is moved, this is set TRUE. This stops shared
                                     // points from being moved twice.
+    PFLAG           flags;          // Flag to indicate start of facet or contour in view lists.
 } Point;
 
 // 2D point struct.
@@ -157,8 +166,7 @@ typedef struct Face
     int             n_edges;        // the number of edges in the above array
     int             max_edges;      // the allocated size of the above array
     Plane           normal;         // What plane is the face lying in (if flat) 
-                                    // or a parallel to the cylinder (if bounded by arcs, circles or beziers)
-    struct Volume   *vol;           // What volume references this face
+    struct Volume   *vol;           // What volume references (owns) this face
 #if 0
     struct Face     *pair;          // Points to a paired face (end of prism) It is initially a coincident face 
                                     // with the opposite normal; they move apart when extruding. 
@@ -168,20 +176,38 @@ typedef struct Face
     struct Point    *initial_point; // Point in the first edge that the face starts from. Used to allow
                                     // view lists to be built up independent of the order of points
                                     // in any edge.
-    struct Point    *view_list;     // List of XYZ coordinates of GL points to be rendered as a line loop
-                                    // (for the edges) and a polygon (for the face). Regenerated whenever
+    struct Point    *view_list;     // List(s) of XYZ coordinates of GL points to be rendered as line loop(s)
+                                    // (for the edges) and polygon(s) (for the face). Point flags indicate
+                                    // the presence of multiple facets. Regenerated whenever
                                     // something has changed. Doubly linked list.
+    struct Point    *view_list_clipped; // Like view_list, but clipped to other volumes. Used in the
+                                    // rendered view and in triangle mesh generation.
+    struct Point    *spare_list;    // List of spare points allocated by the tessellator's combine
+                                    // callback. They are recorded here so they can be freed.
     BOOL            view_valid;     // is TRUE if the view list is up to date.
     struct Point2D  *view_list2D;   // Array of 2D points for the view list, for quick point-in-polygon
                                     // testing. Indexed [0] to [N-1], with [N] = [0].
-    int             n_view;         // Number of points in the 2D view list.
-    int             n_alloc;        // Alloced size of 2D view list (in units of sizeof(Point2D))
+    int             n_view2D;         // Number of points in the 2D view list.
+    int             n_alloc2D;        // Alloced size of 2D view list (in units of sizeof(Point2D))
 } Face;
+
+// Bounding box for a volume
+typedef struct Bbox
+{
+    float xmin;                     // Min and max coordinates for the volume
+    float xmax;
+    float ymin;
+    float ymax;
+    float zmin;
+    float zmax;
+} Bbox;
 
 // Volume struct. This is the usual top-level 3D object.
 typedef struct Volume
 {
     struct Object   hdr;            // Header
+    struct Bbox     bbox;           // Bounding box in 3D
+    BOOL            vol_neg;        // If TRUE, this volume is negative, or a hole (face normals face inwards)
     struct Face     *faces;         // Doubly linked list of faces making up the volume
 } Volume;
 
@@ -240,13 +266,6 @@ Object *find_in_neighbourhood(Object *match_obj, Group *tree);
 Object *find_parent_object(Group *tree, Object *obj, BOOL deep_search);
 Object *find_top_level_parent(Group *tree, Object *obj);
 BOOL is_top_level_object(Object *obj, Group *tree);
-
-// Regenerate a view list
-void invalidate_all_view_lists(Object *parent, Object *obj, float dx, float dy, float dz);
-void gen_view_list_face(Face *face);
-void update_view_list_2D(Face *face);
-void gen_view_list_arc(ArcEdge *ae);
-void gen_view_list_bez(BezierEdge *be);
 
 // Write and read a tree to a file (serialise.c)
 void serialise_tree(Group *tree, char *filename);
