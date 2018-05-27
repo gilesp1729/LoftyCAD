@@ -183,6 +183,20 @@ Command(int message, int wParam, int lParam)
             EnableWindow(GetDlgItem(hWndToolbar, IDB_CONST_CIRCLE), view_constr);
             break;
 
+        case ID_VIEW_CLIPPEDFACE:
+            hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
+            if (view_clipped_faces)
+            {
+                view_clipped_faces = FALSE;
+                CheckMenuItem(hMenu, ID_VIEW_CLIPPEDFACE, MF_UNCHECKED);
+            }
+            else
+            {
+                view_clipped_faces = TRUE;
+                CheckMenuItem(hMenu, ID_VIEW_CLIPPEDFACE, MF_CHECKED);
+            }
+            break;
+
         case ID_VIEW_RENDEREDVIEW:
             hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
             if (view_rendered)

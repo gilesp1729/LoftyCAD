@@ -65,6 +65,7 @@ extern BOOL view_debug;
 extern BOOL view_tree;
 extern BOOL view_help;
 extern BOOL view_rendered;
+extern BOOL view_clipped_faces;
 extern BOOL view_constr;
 extern BOOL view_ortho;
 

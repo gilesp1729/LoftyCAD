@@ -152,9 +152,9 @@ invalidate_all_view_lists(Object *parent, Object *obj, float dx, float dy, float
 }
 
 // Regenerate the unclipped view list for a face. While here, also calculate the outward
-// normal for the face.
+// normal for the face. We can optionally clip the face to other volumes.
 void
-gen_view_list_face(Face *face)
+gen_view_list_face(Face *face, BOOL gen_clipped_face)
 {
     int i;
     Edge *e;
@@ -332,7 +332,13 @@ gen_view_list_face(Face *face)
         face->spare_list = NULL;
     }
 
+    // The view list is valid, as is the 2D view list, the face normal, and the face's
+    // contribution to the volume bounding bbox.
     face->view_valid = TRUE;
+
+    // If called for, we clip the face to all other volumes.
+    if (gen_clipped_face && face->vol != NULL)
+        gen_view_list_clipped_tree(face, &object_tree);
 }
 
 void
@@ -401,8 +407,10 @@ void
 free_view_list_face(Face *face)
 {
     free_view_list(face->view_list);
+    free_view_list(face->view_list_clipped);
     free_view_list(face->spare_list);
     face->view_list = NULL;
+    face->view_list_clipped = NULL;
     face->spare_list = NULL;
     face->view_valid = FALSE;
     face->n_view2D = 0;
@@ -744,14 +752,12 @@ init_triangulator(void)
     //gluTessProperty(rtess, ...);
 }
 
-// Shade in a face by triangulating its view list.
+// Shade in a face by triangulating its view list. The view list is assumed up to date.
 void
 face_shade(GLUtesselator *tess, Face *face, BOOL selected, BOOL highlighted, BOOL locked)
 {
     Point   *v;
     Plane norm;
-
-    gen_view_list_face(face);
 
 #ifdef DEBUG_FACE_SHADE
     Log("Face view list:\r\n");
@@ -789,67 +795,4 @@ face_shade(GLUtesselator *tess, Face *face, BOOL selected, BOOL highlighted, BOO
         gluTessEndPolygon(tess);
     }
 }
-
-#if 0 // old code
-    switch (face->type)
-    {
-    case FACE_RECT | FACE_CONSTRUCTION:
-    case FACE_CIRCLE | FACE_CONSTRUCTION:
-    case FACE_RECT:
-    case FACE_CIRCLE:
-    case FACE_FLAT:
-        color(OBJ_FACE, face->type & FACE_CONSTRUCTION, selected, highlighted, locked);
-     // This doesn't seem to work - put it in the begin callback
-     //   gluTessNormal(rtess, face->normal.A, face->normal.B, face->normal.C);
-        gluTessBeginPolygon(tess, &face->normal);
-        gluTessBeginContour(tess);
-        for (v = face->view_list; v != NULL; v = (Point *)v->hdr.next)
-            tess_vertex(tess, v);
-        gluTessEndContour(tess);
-        gluTessEndPolygon(tess);
-        break;
-
-    case FACE_CYLINDRICAL:
-        // These view lists need to be read from the bottom edge (forward)
-        // and the top edge (backward) together, and formed into quads.
-        for (last = face->view_list; last->hdr.next != NULL; last = (Point *)last->hdr.next)
-            ;
-#ifdef DEBUG_SHADE_CYL_FACE
-        Log("Cyl view list:\r\n");
-        for (v = face->view_list; v->hdr.next != NULL; v = (Point *)v->hdr.next)
-        {
-            char buf[64];
-            sprintf_s(buf, 64, "%f %f %f\r\n", v->x, v->y, v->z);
-            Log(buf);
-        }
-#endif       
-        color(OBJ_FACE, FALSE, selected, highlighted, locked);
-        for (i = 0, v = face->view_list; v->hdr.next != NULL; v = (Point *)v->hdr.next, i++)
-        {
-            Point *vnext = (Point *)v->hdr.next;
-            Point *lprev = (Point *)last->hdr.prev;
-            Plane norm;
-
-            normal3(last, lprev, vnext, &norm);
-            gluTessBeginPolygon(tess, &norm);
-            gluTessBeginContour(tess);
-            tess_vertex(tess, v);
-            tess_vertex(tess, vnext);
-            tess_vertex(tess, lprev);
-            tess_vertex(tess, last);
-            gluTessEndContour(tess);
-            gluTessEndPolygon(tess);
-
-            last = lprev;
-            if (i >= face->edges[1]->nsteps)
-                break;
-        }
-        break;
-
-    case FACE_GENERAL:
-        ASSERT(FALSE, "Draw face general not implemented");
-        break;
-    }
-#endif // old code
-
 

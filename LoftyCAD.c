@@ -97,6 +97,9 @@ BOOL view_rendered = FALSE;
 // TRUE to display construction edges
 BOOL view_constr = TRUE;
 
+// TRUE to display clipping of faces to volumes
+BOOL view_clipped_faces = FALSE;
+
 // Current filename
 char curr_filename[256] = { 0, };
 
@@ -138,6 +141,7 @@ float clip_xoffset, clip_yoffset, clip_zoffset;
 int generation = 0;
 int latest_generation = 0;
 int max_generation = 0;
+
 
 // Set material and lighting up
 void
@@ -911,7 +915,7 @@ left_up(AUX_EVENTREC *event)
             // the face now has its edges. Generate its view list and the normal
             rf->n_edges = 4;
             rf->view_valid = FALSE;
-            gen_view_list_face(rf);
+            gen_view_list_face(rf, FALSE);
         }
         // fallthrough
     case STATE_DRAWING_EDGE:

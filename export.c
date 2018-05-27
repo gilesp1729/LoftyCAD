@@ -122,6 +122,7 @@ export_object(GLUtesselator *tess, Object *obj)
     {
     case OBJ_FACE:
         face = (Face *)obj;
+        gen_view_list_face(face, TRUE);   // always export clipped faces
         face_shade(tess, face, FALSE, FALSE, LOCK_NONE);
         break;
 

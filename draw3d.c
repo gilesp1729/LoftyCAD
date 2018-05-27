@@ -239,6 +239,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             return;
 
         glPushName((GLuint)obj);
+        gen_view_list_face(face, view_clipped_faces);
         face_shade(rtess, face, selected, highlighted, locked);
         glPopName();
 
@@ -1214,6 +1215,9 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
             break;
         case OBJ_FACE:
             glCallLists(4, GL_UNSIGNED_BYTE, "Face");
+            break;
+        case OBJ_VOLUME:
+            glCallLists(6, GL_UNSIGNED_BYTE, "Volume");
             break;
         case OBJ_GROUP:
             glCallLists(5, GL_UNSIGNED_BYTE, "Group");

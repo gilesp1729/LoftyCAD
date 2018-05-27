@@ -5,12 +5,16 @@
 
 // Regenerate a view list
 void invalidate_all_view_lists(Object *parent, Object *obj, float dx, float dy, float dz);
-void gen_view_list_face(Face *face);
+void gen_view_list_face(Face *face, BOOL gen_clipped_face);
 void update_view_list_2D(Face *face);
 void gen_view_list_arc(ArcEdge *ae);
 void gen_view_list_bez(BezierEdge *be);
 void free_view_list(Point *view_list);
 void free_view_list_face(Face *face);
+
+// Clip a view list
+void gen_view_list_clipped_tree(Face *face, Group *tree);
+void gen_view_list_clipped(Face *face, Volume *vol);
 
 // Triangulate and render
 void init_triangulator(void);

@@ -96,6 +96,7 @@
     <ClInclude Include="triangulate.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="clipviewlist.c" />
     <ClCompile Include="command.c" />
     <ClCompile Include="contextmenu.c" />
     <ClCompile Include="dimensions.c" />
