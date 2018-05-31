@@ -18,8 +18,12 @@ color(OBJECT obj_type, BOOL construction, BOOL selected, BOOL highlighted, BOOL 
     switch (obj_type)
     {
     case OBJ_GROUP:
-    case OBJ_VOLUME:
         return;  // no action here
+
+    case OBJ_VOLUME:
+        r = g = b = 0.6f;
+        a = 0.6f;
+        break;
 
     case OBJ_POINT:
     case OBJ_EDGE:
@@ -67,6 +71,30 @@ color(OBJECT obj_type, BOOL construction, BOOL selected, BOOL highlighted, BOOL 
     glColor4f(r, g, b, a);
 }
 
+// Draw a single GTS triangle
+int
+draw_triangle(GtsTriangle *t)
+{
+    int i;
+    GtsVertex *v[3];
+    double A, B, C;
+    Plane norm;
+
+    gts_triangle_vertices(t, &v[0], &v[1], &v[2]);
+    gts_triangle_normal(t, &A, &B, &C);
+    norm.A = (float)A;
+    norm.B = (float)B;
+    norm.C = (float)C;
+    normalise_plane(&norm);
+    
+    glBegin(GL_POLYGON);
+    glNormal3d(norm.A, norm.B, norm.C);
+    for (i = 0; i < 3; i++)
+        glVertex3d(v[i]->p.x, v[i]->p.y, v[i]->p.z);
+    glEnd();
+
+    return 1;
+}
 
 // Draw any object. Control select/highlight colors per object type, how the parent is locked,
 // and whether to draw components or just the top-level object, among other things.
@@ -239,7 +267,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             return;
 
         glPushName((GLuint)obj);
-        gen_view_list_face(face, view_clipped_faces);
+        gen_view_list_face(face);
         face_shade(rtess, face, selected, highlighted, locked);
         glPopName();
 
@@ -252,13 +280,12 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         break;
 
     case OBJ_VOLUME:
+        gen_view_list_vol((Volume *)obj);
         if (view_rendered || view_clipped_faces)
         {
             // Draw from the triangulated and clipped view list
-            // call gen_view_list_face(face, view_clipped_faces); on each face first!
-
-
-
+            color(OBJ_VOLUME, FALSE, selected, highlighted, FALSE);
+            gts_surface_foreach_face(((Volume *)obj)->vis_surface, (GtsFunc)draw_triangle, NULL);
         }
         
         if (!view_rendered)

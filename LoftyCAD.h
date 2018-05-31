@@ -140,7 +140,8 @@ extern float quat_mXZ[4];
 #undef DEBUG_TOOLBAR_FACING
 #undef DEBUG_REVERSE_RECT_FACE
 #undef DEBUG_VIEW_LIST_ARC
-#define DEBUG_CLIP_INTERSECT_POLY
+#define DEBUG_VIEW_SURFACE_STATS
+
 
 // Some forwards
 Object * Pick(GLint x_pick, GLint y_pick, OBJECT obj_type);

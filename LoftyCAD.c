@@ -915,7 +915,7 @@ left_up(AUX_EVENTREC *event)
             // the face now has its edges. Generate its view list and the normal
             rf->n_edges = 4;
             rf->view_valid = FALSE;
-            gen_view_list_face(rf, FALSE);
+            gen_view_list_face(rf);
         }
         // fallthrough
     case STATE_DRAWING_EDGE:

@@ -278,7 +278,7 @@ make_face(Group *group)
     purge_obj((Object *)group);
 
     // Finally, update the view list for the face
-    gen_view_list_face(face, FALSE);
+    gen_view_list_face(face);
 
     return face;
 }

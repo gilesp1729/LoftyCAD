@@ -91,6 +91,7 @@ typedef struct Point
     BOOL            moved;          // When a point is moved, this is set TRUE. This stops shared
                                     // points from being moved twice.
     PFLAG           flags;          // Flag to indicate start of facet or contour in view lists.
+    GtsVertex       *gts_vertex;    // GTS vertex used when building triangle meshes
 } Point;
 
 // 2D point struct.

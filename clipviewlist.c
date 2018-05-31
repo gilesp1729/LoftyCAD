@@ -4,7 +4,22 @@
 
 // generation of clipped view lists, including clipping to volumes
 
+// Tessellator for rendering to GTS surface.
+GLUtesselator *gtess = NULL;
 
+// count of vertices received so far in the polygon
+int gts_tess_count;
+
+// count of triangles output so far in the polygon
+int gts_tess_tri_count;
+
+// Points stored for the next triangle
+Point gts_tess_points[3];
+
+// What kind of triangle sequence is being output (GL_TRIANGLES, TRIANGLE_STRIP or TRIANGLE_FAN)
+GLenum gts_tess_sequence;
+
+#if 0
 // Returns TRUE if the bboxes do NOT intersect.
 BOOL
 bbox_out(Volume *vol1, Volume *vol2)
@@ -26,56 +41,158 @@ bbox_out(Volume *vol1, Volume *vol2)
 
     return FALSE;
 }
+#endif
 
-// Determine intersection of a face(t) to a collection of volumes in a group (Phase 1)
+// add one triangle to the volume surface
 void
-gen_view_list_clipped_tree1(Face *face, Point *facet, Group *tree)
+gts_tess_write(void * polygon_data)
 {
-    Object *o;
-    Volume *vol;
-    Face *f;
+    Face *face = (Face *)polygon_data;
+    GtsSurface *surface = face->vol->vis_surface;
+    GtsFace *gf;
+    GtsEdge *e[3];
+    GtsVertex *v[3];
+    int i;
 
-    for (o = tree->obj_list; o != NULL; o = o->next)
+    // If the points have not been seen before, make new GTS vertices for them.
+    for (i = 0; i < 3; i++)
     {
-        switch (o->type)
+        if (gts_tess_points[i].gts_vertex == NULL)
         {
-        case OBJ_VOLUME:
-            vol = (Volume *)o;
+            v[i] = GTS_VERTEX(gts_object_new(GTS_OBJECT_CLASS(surface->vertex_class)));
+            v[i]->p.x = gts_tess_points[i].x;
+            v[i]->p.y = gts_tess_points[i].y;
+            v[i]->p.z = gts_tess_points[i].z;
+            gts_tess_points[i].gts_vertex = v[i];
+        }
+        else
+        {
+            v[i] = gts_tess_points[i].gts_vertex;
+        }
+    }
 
-            // Don't self-intersect
-            if (face->vol == vol)
-                break;
+    // TODO Search the edge bucket for existing edge entries and use them when they are found.
+    for (i = 0; i < 3; i++)
+    {
+        int inext = i + 1;
 
-            // Make sure the raw view lists for the vol are up to date
-            // (this will usualy return quickly, but we have to do it)
-            for (f = vol->faces; f != NULL; f = (Face *)f->hdr.next)
-                gen_view_list_face(f, FALSE);
+        if (inext == 3)
+            inext = 0;
 
-            gen_view_list_clipped1(face, facet, (Volume *)o);
+        e[i] = gts_edge_new(surface->edge_class, v[i], v[inext]);
+    }
+
+    gf = gts_face_new(surface->face_class, e[0], e[1], e[2]);
+    gts_surface_add_face(surface, gf);
+}
+
+// callbacks for exporting tessellated stuff to a GTS surface
+void
+gts_tess_beginData(GLenum type, void * polygon_data)
+{
+    gts_tess_sequence = type;
+    gts_tess_count = 0;
+    gts_tess_tri_count = 0;
+}
+
+void
+gts_tess_vertexData(void * vertex_data, void * polygon_data)
+{
+    Point *v = (Point *)vertex_data;
+
+    if (gts_tess_count < 3)
+    {
+        gts_tess_points[gts_tess_count++] = *v;
+    }
+    else
+    {
+        switch (gts_tess_sequence)
+        {
+        case GL_TRIANGLES:
+            gts_tess_write(polygon_data);
+            gts_tess_count = 0;
+            gts_tess_points[gts_tess_count++] = *v;
             break;
 
-        case OBJ_GROUP:
-            gen_view_list_clipped_tree1(face, facet, (Group *)o);
+        case GL_TRIANGLE_FAN:
+            gts_tess_write(polygon_data);
+            gts_tess_points[1] = gts_tess_points[2];
+            gts_tess_points[2] = *v;
+            break;
+
+        case GL_TRIANGLE_STRIP:
+            gts_tess_write(polygon_data);
+            if (gts_tess_tri_count & 1)
+                gts_tess_points[0] = gts_tess_points[2];
+            else
+                gts_tess_points[1] = gts_tess_points[2];
+            gts_tess_points[2] = *v;
             break;
         }
     }
 }
 
-// Determine intersection of a face(t) to a volume. Phase 1: Generate the polygon, if any,
-// and append it to the face's spare list. Once all such polygons are generated,
-// we can clip the face(t) to their union as appropriate.
-void 
-gen_view_list_clipped1(Face *face, Point *facet, Volume *vol)
-{
-
-    // No bbox intersection - nothing to do
-    if (bbox_out(face->vol, vol))
-        return;
-}
-
-// Phase 2: Clip a facet to its collected intersections stored in the face's spare list,
-// and put the results in the clipped view list.
 void
-gen_view_list_clipped2(Face *face)
+gts_tess_endData(void * polygon_data)
 {
+    // write out the last triangle
+    if (gts_tess_count == 3)
+        gts_tess_write(polygon_data);
 }
+
+void
+gts_tess_combineData(GLdouble coords[3], void *vertex_data[4], GLfloat weight[4], void **outData, void * polygon_data)
+{
+    // Allocate a new Point for the new vertex, and (TODO:) hang it off the face's spare vertices list.
+    // It will be freed when the view list is regenerated.
+    Point *p = point_new((float)coords[0], (float)coords[1], (float)coords[2]);
+    p->hdr.ID = 0;
+    objid--;
+
+    *outData = p;
+}
+
+void gts_tess_errorData(GLenum errno, void * polygon_data)
+{
+    ASSERT(FALSE, "tesselator error");
+}
+
+// Initialise the tessellator
+void
+init_clip_tess(void)
+{
+    gtess = gluNewTess();
+    gluTessCallback(gtess, GLU_TESS_BEGIN_DATA, (void(__stdcall *)(void))gts_tess_beginData);
+    gluTessCallback(gtess, GLU_TESS_VERTEX_DATA, (void(__stdcall *)(void))gts_tess_vertexData);
+    gluTessCallback(gtess, GLU_TESS_END_DATA, (void(__stdcall *)(void))gts_tess_endData);
+    gluTessCallback(gtess, GLU_TESS_COMBINE_DATA, (void(__stdcall *)(void))gts_tess_combineData);
+    gluTessCallback(gtess, GLU_TESS_ERROR_DATA, (void(__stdcall *)(void))gts_tess_errorData);
+}
+
+// Generate triangulated surface for the face and add it to its parent volume.
+void
+gen_view_list_surface(Face *face, Point *facet)
+{
+    Point *v, *vfirst;
+
+    v = face->view_list;
+    while (v != NULL)
+    {
+        if (v->flags == FLAG_NEW_FACET)
+            v = (Point *)v->hdr.next;
+        vfirst = v;
+        gluTessBeginPolygon(gtess, face);
+        gluTessBeginContour(gtess);
+        while (VALID_VP(v))
+        {
+            tess_vertex(gtess, v);
+            v = (Point *)v->hdr.next;
+            // If face(t) is closed, skip the closing point.
+            if (v != NULL && near_pt(v, vfirst))
+                v = (Point *)v->hdr.next;
+        }
+        gluTessEndContour(gtess);
+        gluTessEndPolygon(gtess);
+    }
+}
+

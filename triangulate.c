@@ -7,6 +7,7 @@
 // Tessellator for rendering to GL.
 GLUtesselator *rtess = NULL;
 
+
 // Clear a volume bounding box to empty
 void
 clear_bbox(Volume *vol)
@@ -148,10 +149,87 @@ invalidate_all_view_lists(Object *parent, Object *obj, float dx, float dy, float
     }
 }
 
-// Regenerate the unclipped view list for a face. While here, also calculate the outward
-// normal for the face. We can optionally clip the face to other volumes.
 void
-gen_view_list_face(Face *face, BOOL gen_clipped_face)
+debug_surface_print_stats(Volume *vol)
+{
+    GtsSurfaceStats stats;
+    GtsSurfaceQualityStats qstats;
+    GtsSurface *s = vol->vis_surface;
+    char buf[512];
+
+#ifdef DEBUG_VIEW_SURFACE_STATS
+    if (view_debug)
+    {
+        gts_surface_stats(s, &stats);
+        gts_surface_quality_stats(s, &qstats);
+
+        sprintf_s(buf, 512,
+                  "Volume %d:\r\n"
+                  "# vertices: %u edges: %u faces: %u\r\n"
+                  "# Connectivity statistics\r\n"
+                  "#   incompatible faces: %u\r\n"
+                  "#   duplicate faces: %u\r\n"
+                  "#   boundary edges: %u\r\n"
+                  "#   duplicate edges: %u\r\n"
+                  "#   non-manifold edges: %u\r\n",
+                  vol->hdr.ID,
+                  stats.edges_per_vertex.n,
+                  stats.faces_per_edge.n,
+                  stats.n_faces,
+                  stats.n_incompatible_faces,
+                  stats.n_duplicate_faces,
+                  stats.n_boundary_edges,
+                  stats.n_duplicate_edges,
+                  stats.n_non_manifold_edges);
+        Log(buf);
+    }
+#endif
+}
+
+// Regenerate the view lists for all faces of a volume, and also do some special stuff that
+// only volumes need: regenerate the vol surface mesh, and clip to all other touching or
+// overalpping vols.
+void
+gen_view_list_vol(Volume *vol)
+{
+    Face *f;
+
+    for (f = vol->faces; f != NULL; f = (Face *)f->hdr.next)
+    {
+        if (!f->view_valid)
+            break;
+    }
+    if (f == NULL)
+        return;     // all faces are valid, nothing to do
+
+    for (f = vol->faces; f != NULL; f = (Face *)f->hdr.next)
+        f->view_valid = FALSE;  // invalidate them all
+
+    // create a new visible surface
+    if (vol->vis_surface != NULL)
+        gts_object_destroy(GTS_OBJECT(vol->vis_surface));
+    vol->vis_surface = 
+        gts_surface_new(gts_surface_class(), gts_face_class(), gts_edge_class(), gts_vertex_class());
+
+    // generate view lists for all the faces
+    for (f = vol->faces; f != NULL; f = (Face *)f->hdr.next)
+        gen_view_list_face(f);
+
+    // TODO
+    // free any scratch stuff
+    // clip vol to other vols
+
+
+
+    debug_surface_print_stats(vol);
+
+}
+
+// Regenerate the unclipped view list for a face. While here, also calculate the outward
+// normal for the face. We assume that if the face has a volume, then this will be called for
+// all faces of the volume (from gen_view_list_vol) and they will all be initially invalid.
+void
+gen_view_list_face(Face *face)
 {
     int i;
     Edge *e;
@@ -333,18 +411,13 @@ gen_view_list_face(Face *face, BOOL gen_clipped_face)
     // contribution to the volume bounding bbox.
     face->view_valid = TRUE;
 
-#if 0
-    // If called for, we clip the face to all other volumes. 
-    // The face may have multiple facets; each is clipped separately
-    // and the results added into the clipped view list.
-    if (gen_clipped_face && face->vol != NULL)
+    // Generate the visible triangulated surface for the face (the volume's vis_surface is assumed to 
+    // have been initialised before this is called)
+    if (face->vol != NULL)
     {
         if (IS_FLAT(face))
         {
-            // These are broken out separately, since the first phase involves
-            // a recursive depth-first search into groups.
-            gen_view_list_clipped_tree1(face, face->view_list, &object_tree);
-            gen_view_list_clipped2(face);
+            gen_view_list_surface(face, face->view_list);
         }
         else
         {
@@ -353,15 +426,13 @@ gen_view_list_face(Face *face, BOOL gen_clipped_face)
             ASSERT(p->flags == FLAG_NEW_FACET, "No facet at the start of the facet view list");
             while (p != NULL)
             {
-                gen_view_list_clipped_tree1(face, p, &object_tree);
-                gen_view_list_clipped2(face);
+                gen_view_list_surface(face, p);
                 p = (Point *)p->hdr.next;
                 while (p != NULL && p->flags != FLAG_NEW_FACET)
                     p = (Point *)p->hdr.next;
             }
         }
     }
-#endif
 }
 
 void
@@ -760,7 +831,7 @@ tess_vertex(GLUtesselator *tess, Point *p)
     gluTessVertex(tess, coords, p);
 }
 
-// initialise tessellator for rendering
+// initialise tessellators for rendering
 void
 init_triangulator(void)
 {
@@ -770,14 +841,15 @@ init_triangulator(void)
     gluTessCallback(rtess, GLU_TESS_END_DATA, (void(__stdcall *)(void))render_endData);
     gluTessCallback(rtess, GLU_TESS_COMBINE_DATA, (void(__stdcall *)(void))render_combineData);
     gluTessCallback(rtess, GLU_TESS_ERROR_DATA, (void(__stdcall *)(void))render_errorData);
-    //gluTessProperty(rtess, ...);
+
+    init_clip_tess();
 }
 
 // Shade in a face by triangulating its view list. The view list is assumed up to date.
 void
 face_shade(GLUtesselator *tess, Face *face, BOOL selected, BOOL highlighted, BOOL locked)
 {
-    Point   *v;
+    Point   *v, *vfirst;
     Plane norm;
 
 #ifdef DEBUG_FACE_SHADE
@@ -803,17 +875,16 @@ face_shade(GLUtesselator *tess, Face *face, BOOL selected, BOOL highlighted, BOO
             norm.C = v->z;
             v = (Point *)v->hdr.next;
         }
+        vfirst = v;
         gluTessBeginPolygon(tess, &norm);
         gluTessBeginContour(tess);
         while (VALID_VP(v))
         {
-            if (v->flags == FLAG_NEW_EXT_CONTOUR)
-                gluNextContour(tess, GLU_EXTERIOR);
-            else if (v->flags == FLAG_NEW_INT_CONTOUR)
-                gluNextContour(tess, GLU_INTERIOR);
-
             tess_vertex(tess, v);
             v = (Point *)v->hdr.next;
+            // If face(t) is closed, skip the closing point.
+            if (v != NULL && near_pt(v, vfirst))
+                v = (Point *)v->hdr.next;
         }
         gluTessEndContour(tess);
         gluTessEndPolygon(tess);
