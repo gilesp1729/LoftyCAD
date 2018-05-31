@@ -2,6 +2,9 @@
 #include "LoftyCAD.h"
 #include <stdio.h>
 
+// Version of output file
+double file_version = 0.2;
+
 // A constantly incrementing ID. 
 // Should not need to worry about it overflowing 32-bits (4G objects!)
 // Start at 1 as an ID of zero is used to check for an unreferenced object.
@@ -159,6 +162,7 @@ serialise_tree(Group *tree, char *filename)
     Object *obj;
 
     fopen_s(&f, filename, "wt");
+    fprintf_s(f, "LOFTYCAD %.1f\n", file_version);
     fprintf_s(f, "TITLE %s\n", tree->title);
     fprintf_s(f, "SCALE %f %f %f %d\n", half_size, grid_snap, tolerance, angle_snap);
 
@@ -222,6 +226,7 @@ deserialise_tree(Group *tree, char *filename)
     char buf[512];
     int stack[10], stkptr;
     int objsize = 1000;
+    double version = 0.1;
     Object **object;
     Group *grp;
 
@@ -246,7 +251,12 @@ deserialise_tree(Group *tree, char *filename)
             break;
 
         tok = strtok_s(buf, " \t\n", &nexttok);
-        if (strcmp(tok, "TITLE") == 0)
+        if (strcmp(tok, "LOFTYCAD") == 0)
+        {
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            version = (float)atof(tok);
+        }
+        else if (strcmp(tok, "TITLE") == 0)
         {
             tok = strtok_s(NULL, "\n", &nexttok);  // rest of line till \n
             if (tok != NULL)
@@ -374,12 +384,15 @@ deserialise_tree(Group *tree, char *filename)
                 tok = strtok_s(NULL, " \t\n", &nexttok);
                 ae->normal.C = (float)atof(tok);
 
-                tok = strtok_s(NULL, " \t\n", &nexttok);
-                edge->stepping = atoi(tok);
-                tok = strtok_s(NULL, " \t\n", &nexttok);
-                edge->stepsize = (float)atof(tok);
-                tok = strtok_s(NULL, " \t\n", &nexttok);
-                edge->nsteps = atoi(tok);
+                if (version >= 0.2)
+                {
+                    tok = strtok_s(NULL, " \t\n", &nexttok);
+                    edge->stepping = atoi(tok);
+                    tok = strtok_s(NULL, " \t\n", &nexttok);
+                    edge->stepsize = (float)atof(tok);
+                    tok = strtok_s(NULL, " \t\n", &nexttok);
+                    edge->nsteps = atoi(tok);
+                }
             }
             else if (strcmp(tok, "BEZIER") == 0)
             {
@@ -403,12 +416,15 @@ deserialise_tree(Group *tree, char *filename)
                 be->ctrlpoints[0] = (Point *)object[ctrl0];
                 be->ctrlpoints[1] = (Point *)object[ctrl1];
 
-                tok = strtok_s(NULL, " \t\n", &nexttok);
-                edge->stepping = atoi(tok);
-                tok = strtok_s(NULL, " \t\n", &nexttok);
-                edge->stepsize = (float)atof(tok);
-                tok = strtok_s(NULL, " \t\n", &nexttok);
-                edge->nsteps = atoi(tok);
+                if (version >= 0.2)
+                {
+                    tok = strtok_s(NULL, " \t\n", &nexttok);
+                    edge->stepping = atoi(tok);
+                    tok = strtok_s(NULL, " \t\n", &nexttok);
+                    edge->stepsize = (float)atof(tok);
+                    tok = strtok_s(NULL, " \t\n", &nexttok);
+                    edge->nsteps = atoi(tok);
+                }
             }
             else
             {
@@ -428,7 +444,7 @@ deserialise_tree(Group *tree, char *filename)
         else if (strcmp(tok, "FACE") == 0)
         {
             int pid;
-            Face *face;
+            Face *face, *pair;
             Plane norm;
             FACE type;
             Point *init_pt;
@@ -485,6 +501,16 @@ deserialise_tree(Group *tree, char *filename)
             ASSERT(pid != 0 && object[pid] != NULL && object[pid]->type == OBJ_POINT, "Bad initial point ID");
             init_pt = (Point *)object[pid];
 
+            pair = NULL;
+#if 0
+            if (version >= 0.2)         // read ???? for face (can't do 2-way pairing!)
+            {
+                tok = strtok_s(NULL, " \t\n", &nexttok);
+                pid = atoi(tok);
+                ASSERT(pid != 0 && object[pid] != NULL && object[pid]->type == OBJ_FACE, "Bad pair face ID");
+                pair = (Face *)object[pid];
+            }
+#endif
             tok = strtok_s(NULL, " \t\n", &nexttok);
             norm.refpt.x = (float)atof(tok);
             tok = strtok_s(NULL, " \t\n", &nexttok);
@@ -500,6 +526,7 @@ deserialise_tree(Group *tree, char *filename)
 
             face = face_new(type, norm);
             face->initial_point = init_pt;
+            face->pair = pair;
 
             while (TRUE)
             {

@@ -25,34 +25,15 @@ ray_from_eye(GLint x, GLint y, Plane *line)
 }
 
 // Intersect a ray through a mouse (window) coordinate with a plane.
-// (ref: Wikipedia, Line-plane intersection, vector form)
 // Return FALSE if there was no reasonable intersection.
 BOOL
 intersect_ray_plane(GLint x, GLint y, Plane *picked_plane, Point *new_point)
 {
     Plane line;
-    float Ldotn, dpdotn, d;
-    Point dp;
 
     ray_from_eye(x, y, &line);
 
-    // Determine parallel
-    Ldotn = picked_plane->A * line.A + picked_plane->B * line.B + picked_plane->C * line.C;
-    if (fabsf(Ldotn) < 1.0e-6)
-        return FALSE;   // they do not intersect, or line lies in plane
-
-    dp.x = picked_plane->refpt.x - line.refpt.x;
-    dp.y = picked_plane->refpt.y - line.refpt.y;
-    dp.z = picked_plane->refpt.z - line.refpt.z;
-
-    dpdotn = dp.x * picked_plane->A + dp.y * picked_plane->B + dp.z * picked_plane->C;
-    d = dpdotn / Ldotn;
-
-    new_point->x = d * line.A + line.refpt.x;
-    new_point->y = d * line.B + line.refpt.y;
-    new_point->z = d * line.C + line.refpt.z;
-
-    return TRUE;
+    return intersect_line_plane(&line, picked_plane, new_point) > 0;
 }
 
 // Intersect a ray through a mouse (window) coordinate with a line (edge).
@@ -136,8 +117,49 @@ dist_point_to_edge(Point *P, Edge *S)
     return length(P, &Pb);
 }
 
+// Intersect a line with a plane (the line is represented as a Plane struct)
+// (ref: Wikipedia, Line-plane intersection, vector form, and/or Sunday)
+// No test is made for endpoints of the line.
+// Returns: 1 - intersects, 0 - no intersection, -1 - line lies in the plane
+int
+intersect_line_plane(Plane *line, Plane *plane, Point *new_point)
+{
+    float Ldotn, dpdotn, d;
+    Point dp;
 
+    Ldotn = plane->A * line->A + plane->B * line->B + plane->C * line->C;
+    dp.x = plane->refpt.x - line->refpt.x;
+    dp.y = plane->refpt.y - line->refpt.y;
+    dp.z = plane->refpt.z - line->refpt.z;
 
+    dpdotn = dp.x * plane->A + dp.y * plane->B + dp.z * plane->C;
+    if (fabsf(Ldotn) < SMALL_COORD)
+    {
+        if (fabsf(dpdotn) < SMALL_COORD)    // the line lines in the plane
+            return -1;
+        else
+            return 0;                       // they do not intersect
+    }
+
+    d = dpdotn / Ldotn;
+    new_point->x = d * line->A + line->refpt.x;
+    new_point->y = d * line->B + line->refpt.y;
+    new_point->z = d * line->C + line->refpt.z;
+
+    return 1;
+}
+
+// Return the (signed) distance between a point and a plane
+float
+distance_point_plane(Plane *plane, Point *p)
+{
+    return
+        plane->A * (p->x - plane->refpt.x)
+        +
+        plane->B * (p->y - plane->refpt.y)
+        +
+        plane->C * (p->z - plane->refpt.z);
+}
 
 // Dot and cross products given separate components.
 float

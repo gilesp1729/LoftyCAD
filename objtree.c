@@ -465,11 +465,9 @@ Face
         clone->edges = realloc(clone->edges, face->max_edges * sizeof(Edge *));
     clone->max_edges = face->max_edges;
     
-#if 0
     // pair the face with its clone
     clone->pair = face;
     face->pair = clone;
-#endif
 
     // Set the initial point. 
     last_point = face->initial_point;

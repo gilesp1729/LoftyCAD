@@ -4,45 +4,78 @@
 
 // generation of clipped view lists, including clipping to volumes
 
-// Returns TRUE if the volume's bbox crosses the face's plane. There are
-// 8 points to test, but some components can be skipped if a component of
-// the normal is zero, and some points can be skipped if the normal is
-// axis-aligned.
-BOOL
-bbox_in_plane(Plane *norm, Volume *vol)
-{
-    if (!nz(norm->A))
-    {
-    }
-    // TODO sim. B, C
 
-    return TRUE;
+// Returns TRUE if the bboxes do NOT intersect.
+BOOL
+bbox_out(Volume *vol1, Volume *vol2)
+{
+    if (vol1->bbox.xmin > vol2->bbox.xmax)
+        return TRUE;
+    if (vol1->bbox.xmax < vol2->bbox.xmin)
+        return TRUE;
+
+    if (vol1->bbox.ymin > vol2->bbox.ymax)
+        return TRUE;
+    if (vol1->bbox.ymax < vol2->bbox.ymin)
+        return TRUE;
+
+    if (vol1->bbox.zmin > vol2->bbox.zmax)
+        return TRUE;
+    if (vol1->bbox.zmax < vol2->bbox.zmin)
+        return TRUE;
+
+    return FALSE;
 }
 
-// Clip a face to a group
+// Determine intersection of a face(t) to a collection of volumes in a group (Phase 1)
 void
-gen_view_list_clipped_tree(Face *face, Group *tree)
+gen_view_list_clipped_tree1(Face *face, Point *facet, Group *tree)
 {
     Object *o;
+    Volume *vol;
+    Face *f;
 
     for (o = tree->obj_list; o != NULL; o = o->next)
     {
         switch (o->type)
         {
         case OBJ_VOLUME:
-            gen_view_list_clipped(face, (Volume *)o);
+            vol = (Volume *)o;
+
+            // Don't self-intersect
+            if (face->vol == vol)
+                break;
+
+            // Make sure the raw view lists for the vol are up to date
+            // (this will usualy return quickly, but we have to do it)
+            for (f = vol->faces; f != NULL; f = (Face *)f->hdr.next)
+                gen_view_list_face(f, FALSE);
+
+            gen_view_list_clipped1(face, facet, (Volume *)o);
             break;
 
         case OBJ_GROUP:
-            gen_view_list_clipped_tree(face, (Group *)o);
+            gen_view_list_clipped_tree1(face, facet, (Group *)o);
             break;
         }
     }
 }
 
-// Clip a face to a volume. The face may have multiple facets; each is clipped separately
-// and the results added into the clipped view list.
+// Determine intersection of a face(t) to a volume. Phase 1: Generate the polygon, if any,
+// and append it to the face's spare list. Once all such polygons are generated,
+// we can clip the face(t) to their union as appropriate.
 void 
-gen_view_list_clipped(Face *face, Volume *vol)
+gen_view_list_clipped1(Face *face, Point *facet, Volume *vol)
+{
+
+    // No bbox intersection - nothing to do
+    if (bbox_out(face->vol, vol))
+        return;
+}
+
+// Phase 2: Clip a facet to its collected intersections stored in the face's spare list,
+// and put the results in the clipped view list.
+void
+gen_view_list_clipped2(Face *face)
 {
 }

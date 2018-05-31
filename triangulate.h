@@ -3,6 +3,9 @@
 #ifndef __TRI_H__
 #define __TRI_H__
 
+// View list point is valid coordinate
+#define VALID_VP(v) ((v) != NULL && (v)->flags != FLAG_NEW_FACET)
+
 // Regenerate a view list
 void invalidate_all_view_lists(Object *parent, Object *obj, float dx, float dy, float dz);
 void gen_view_list_face(Face *face, BOOL gen_clipped_face);
@@ -13,8 +16,9 @@ void free_view_list(Point *view_list);
 void free_view_list_face(Face *face);
 
 // Clip a view list
-void gen_view_list_clipped_tree(Face *face, Group *tree);
-void gen_view_list_clipped(Face *face, Volume *vol);
+void gen_view_list_clipped_tree1(Face *face, Point *facet, Group *tree);
+void gen_view_list_clipped1(Face *face, Point *facet, Volume *vol);
+void gen_view_list_clipped2(Face *face);
 
 // Triangulate and render
 void init_triangulator(void);
@@ -23,6 +27,11 @@ void face_shade(GLUtesselator *tess, Face *face, BOOL selected, BOOL highlighted
 // Export to STL (export.c)
 void export_object(GLUtesselator *tess, Object *obj);
 void export_object_tree(Group *tree, char *filename);
+
+// Import from STL and various formats (import.c)
+BOOL read_stl_to_group(Group *group, char *filename);
+BOOL read_gts_to_group(Group *group, char *filename);
+BOOL read_off_to_group(Group *group, char *filename);
 
 extern GLUtesselator *rtess;
 

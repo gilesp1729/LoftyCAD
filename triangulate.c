@@ -5,10 +5,7 @@
 // Triangulation of view lists, including clipping to volumes
 
 // Tessellator for rendering to GL.
-GLUtesselator *rtess;
-
-// A large impossible coordinate value
-#define LARGE_COORD 999999
+GLUtesselator *rtess = NULL;
 
 // Clear a volume bounding box to empty
 void
@@ -336,9 +333,35 @@ gen_view_list_face(Face *face, BOOL gen_clipped_face)
     // contribution to the volume bounding bbox.
     face->view_valid = TRUE;
 
-    // If called for, we clip the face to all other volumes.
+#if 0
+    // If called for, we clip the face to all other volumes. 
+    // The face may have multiple facets; each is clipped separately
+    // and the results added into the clipped view list.
     if (gen_clipped_face && face->vol != NULL)
-        gen_view_list_clipped_tree(face, &object_tree);
+    {
+        if (IS_FLAT(face))
+        {
+            // These are broken out separately, since the first phase involves
+            // a recursive depth-first search into groups.
+            gen_view_list_clipped_tree1(face, face->view_list, &object_tree);
+            gen_view_list_clipped2(face);
+        }
+        else
+        {
+            Point *p = face->view_list;
+
+            ASSERT(p->flags == FLAG_NEW_FACET, "No facet at the start of the facet view list");
+            while (p != NULL)
+            {
+                gen_view_list_clipped_tree1(face, p, &object_tree);
+                gen_view_list_clipped2(face);
+                p = (Point *)p->hdr.next;
+                while (p != NULL && p->flags != FLAG_NEW_FACET)
+                    p = (Point *)p->hdr.next;
+            }
+        }
+    }
+#endif
 }
 
 void
@@ -407,10 +430,8 @@ void
 free_view_list_face(Face *face)
 {
     free_view_list(face->view_list);
-    free_view_list(face->view_list_clipped);
     free_view_list(face->spare_list);
     face->view_list = NULL;
-    face->view_list_clipped = NULL;
     face->spare_list = NULL;
     face->view_valid = FALSE;
     face->n_view2D = 0;
@@ -784,10 +805,13 @@ face_shade(GLUtesselator *tess, Face *face, BOOL selected, BOOL highlighted, BOO
         }
         gluTessBeginPolygon(tess, &norm);
         gluTessBeginContour(tess);
-        while (v != NULL && v->flags != FLAG_NEW_FACET)
+        while (VALID_VP(v))
         {
-            if (v->flags == FLAG_NEW_CONTOUR)
-                gluNextContour(tess, GLU_UNKNOWN);  // TODO work out how best to get this type in here
+            if (v->flags == FLAG_NEW_EXT_CONTOUR)
+                gluNextContour(tess, GLU_EXTERIOR);
+            else if (v->flags == FLAG_NEW_INT_CONTOUR)
+                gluNextContour(tess, GLU_INTERIOR);
+
             tess_vertex(tess, v);
             v = (Point *)v->hdr.next;
         }

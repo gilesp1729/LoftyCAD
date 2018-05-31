@@ -39,11 +39,11 @@ typedef enum
 // Locking level. They must agree with the object types, and be ascending.
 typedef enum
 {
-    LOCK_NONE = OBJ_NONE,           // Fully unlocked
+    LOCK_NONE = OBJ_NONE,          // Fully unlocked
     LOCK_POINTS = OBJ_POINT,       // The points are locked; the edges and faces may be selected
     LOCK_EDGES = OBJ_EDGE,         // The edges are locked; the faces may be selected
     LOCK_FACES = OBJ_FACE,         // The faces are locked; only the whole volume can be selected
-    LOCK_VOLUME = OBJ_VOLUME        // The whole volume is locked; nothing can be selected or changed
+    LOCK_VOLUME = OBJ_VOLUME       // The whole volume is locked; nothing can be selected or changed
 } LOCK;
 
 // Point flags
@@ -53,7 +53,8 @@ typedef enum
     FLAG_NEW_FACET,                 // The point begins a new facet (e.g. of a cylinder face).
                                     // In this case only, the XYZ of the point is not a point,
                                     // but a new facet normal. The real points follow.
-    FLAG_NEW_CONTOUR                // the point begins a new contour (e.g. in clipped output)
+    FLAG_NEW_EXT_CONTOUR,           // The point begins a new exterior boundary contour
+    FLAG_NEW_INT_CONTOUR            // The point begins a new interior contour (a hole)
 } PFLAG;
 
 // Header for any type of object.
@@ -169,12 +170,8 @@ typedef struct Face
     int             max_edges;      // the allocated size of the above array
     Plane           normal;         // What plane is the face lying in (if flat) 
     struct Volume   *vol;           // What volume references (owns) this face
-#if 0
     struct Face     *pair;          // Points to a paired face (end of prism) It is initially a coincident face 
                                     // with the opposite normal; they move apart when extruding. 
-                                    // If a face has a pair, some changes (like scaling) have to be
-                                    // performed with reference to the paired face.
-#endif
     struct Point    *initial_point; // Point in the first edge that the face starts from. Used to allow
                                     // view lists to be built up independent of the order of points
                                     // in any edge.
@@ -182,15 +179,14 @@ typedef struct Face
                                     // (for the edges) and polygon(s) (for the face). Point flags indicate
                                     // the presence of multiple facets. Regenerated whenever
                                     // something has changed. Doubly linked list.
-    struct Point    *view_list_clipped; // Like view_list, but clipped to other volumes. Used in the
-                                    // rendered view and in triangle mesh generation.
     struct Point    *spare_list;    // List of spare points allocated by the tessellator's combine
-                                    // callback. They are recorded here so they can be freed.
+                                    // callback. They are recorded here so they can be freed. Also used
+                                    // for intermediate results while clipping.
     BOOL            view_valid;     // is TRUE if the view list is up to date.
     struct Point2D  *view_list2D;   // Array of 2D points for the view list, for quick point-in-polygon
                                     // testing. Indexed [0] to [N-1], with [N] = [0].
-    int             n_view2D;         // Number of points in the 2D view list.
-    int             n_alloc2D;        // Alloced size of 2D view list (in units of sizeof(Point2D))
+    int             n_view2D;       // Number of points in the 2D view list.
+    int             n_alloc2D;      // Alloced size of 2D view list (in units of sizeof(Point2D))
 } Face;
 
 // Bounding box for a volume
@@ -210,6 +206,7 @@ typedef struct Volume
     struct Object   hdr;            // Header
     struct Bbox     bbox;           // Bounding box in 3D
     BOOL            vol_neg;        // If TRUE, this volume is negative, or a hole (face normals face inwards)
+   // GtsSurface      *vis_surface;   // GTS surface for the volume; it will be clipped to others
     struct Face     *faces;         // Doubly linked list of faces making up the volume
 } Volume;
 

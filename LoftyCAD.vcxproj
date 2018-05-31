@@ -114,6 +114,7 @@
     <ClCompile Include="glaux\XFORM.C" />
     <ClCompile Include="help.c" />
     <ClCompile Include="htmlbrowser.c" />
+    <ClCompile Include="import.c" />
     <ClCompile Include="neighbourhood.c" />
     <ClCompile Include="objtree.c" />
     <ClCompile Include="LoftyCAD.c" />

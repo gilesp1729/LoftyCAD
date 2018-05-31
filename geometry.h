@@ -6,8 +6,14 @@
 #define PI 3.1415926f
 #define RAD 57.29577f
 
+// A large impossible coordinate value
+#define LARGE_COORD 999999
+
+// A small coordinate value for testing
+#define SMALL_COORD 0.00001
+
 // test for "near" zero.
-#define nz(val)  (fabsf(val) < 0.00001)
+#define nz(val)  (fabsf(val) < SMALL_COORD)
 
 // test for near points (within the snapping tolerance)
 #define near_pt(p1, p2) \
@@ -21,6 +27,8 @@
 
 void ray_from_eye(GLint x, GLint y, Plane *line);
 BOOL intersect_ray_plane(GLint x, GLint y, Plane *picked_plane, Point *new_point);
+int intersect_line_plane(Plane *line, Plane *plane, Point *new_point);
+float distance_point_plane(Plane *plane, Point *p);
 BOOL snap_ray_edge(GLint x, GLint y, Edge *edge, Point *new_point);
 float dist_point_to_edge(Point *P, Edge *S);
 void normal_list(Point *list, Plane *norm);

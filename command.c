@@ -329,7 +329,7 @@ Command(int message, int wParam, int lParam)
             memset(&ofn, 0, sizeof(OPENFILENAME));
             ofn.lStructSize = sizeof(OPENFILENAME);
             ofn.hwndOwner = auxGetHWND();
-            ofn.lpstrFilter = "LoftyCAD Files\0*.LCD\0All Files\0*.*\0\0";
+            ofn.lpstrFilter = "LoftyCAD Files (*.LCD)\0*.LCD\0All Files\0*.*\0\0";
             ofn.nFilterIndex = 1;
             ofn.lpstrDefExt = "lcd";
             ofn.lpstrFile = curr_filename;
@@ -363,7 +363,7 @@ Command(int message, int wParam, int lParam)
             memset(&ofn, 0, sizeof(OPENFILENAME));
             ofn.lStructSize = sizeof(OPENFILENAME);
             ofn.hwndOwner = auxGetHWND();
-            ofn.lpstrFilter = "LoftyCAD Files\0*.LCD\0All Files\0*.*\0\0";
+            ofn.lpstrFilter = "LoftyCAD Files (*.LCD)\0*.LCD\0All Files\0*.*\0\0";
             ofn.nFilterIndex = 1;
             ofn.lpstrDefExt = "lcd";
             ofn.lpstrFile = curr_filename;
@@ -388,7 +388,7 @@ Command(int message, int wParam, int lParam)
             memset(&ofn, 0, sizeof(OPENFILENAME));
             ofn.lStructSize = sizeof(OPENFILENAME);
             ofn.hwndOwner = auxGetHWND();
-            ofn.lpstrFilter = "STL Files\0*.STL\0All Files\0*.*\0\0";
+            ofn.lpstrFilter = "STL Files (*.STL)\0*.STL\0All Files\0*.*\0\0";
             ofn.nFilterIndex = 1;
             ofn.lpstrDefExt = "stl";
             strcpy_s(new_filename, 256, curr_filename);
@@ -407,7 +407,12 @@ Command(int message, int wParam, int lParam)
             memset(&ofn, 0, sizeof(OPENFILENAME));
             ofn.lStructSize = sizeof(OPENFILENAME);
             ofn.hwndOwner = auxGetHWND();
-            ofn.lpstrFilter = "LoftyCAD Files\0*.LCD\0All Files\0*.*\0\0";
+            ofn.lpstrFilter = 
+                "LoftyCAD Files (*.LCD)\0*.LCD\0"
+                "STL Meshes (*.STL)\0*.STL\0"
+                "GNU Triangulated Surface Files (*.GTS)\0*.GTS\0"
+                "Geomview Object File Format Files (*.OFF)\0*.OFF\0"
+                "All Files\0*.*\0\0";
             ofn.nFilterIndex = 1;
             ofn.lpstrDefExt = "lcd";
             new_filename[0] = '\0';
@@ -417,11 +422,33 @@ Command(int message, int wParam, int lParam)
             if (GetOpenFileName(&ofn))
             {
                 Group *group = group_new();
+                BOOL rc = FALSE;
 
-                deserialise_tree(group, new_filename);
-                link_group((Object *)group, &object_tree);
-                drawing_changed = TRUE;
-                populate_treeview();
+                switch (ofn.nFilterIndex)
+                {
+                case 1:
+                    rc = deserialise_tree(group, new_filename);
+                    break;
+                case 2:
+                    rc = read_stl_to_group(group, new_filename);
+                    break;
+                case 3:
+                    rc = read_gts_to_group(group, new_filename);
+                    break;
+                case 4:
+                    rc = read_off_to_group(group, new_filename);
+                    break;
+                }
+                if (rc)
+                {
+                    link_group((Object *)group, &object_tree);
+                    drawing_changed = TRUE;
+                    populate_treeview();
+                }
+                else
+                {
+                    purge_obj((Object *)group);
+                }
             }
 
             break;

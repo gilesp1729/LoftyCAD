@@ -252,8 +252,21 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         break;
 
     case OBJ_VOLUME:
-        for (face = ((Volume *)obj)->faces; face != NULL; face = (Face *)face->hdr.next)
-            draw_object((Object *)face, (pres & ~DRAW_WITH_DIMENSIONS), parent_lock);
+        if (view_rendered || view_clipped_faces)
+        {
+            // Draw from the triangulated and clipped view list
+            // call gen_view_list_face(face, view_clipped_faces); on each face first!
+
+
+
+        }
+        
+        if (!view_rendered)
+        {
+            // Draw individual faces
+            for (face = ((Volume *)obj)->faces; face != NULL; face = (Face *)face->hdr.next)
+                draw_object((Object *)face, (pres & ~DRAW_WITH_DIMENSIONS), parent_lock);
+        }
         break;
 
     case OBJ_GROUP:
