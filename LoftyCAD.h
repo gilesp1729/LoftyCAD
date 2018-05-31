@@ -6,6 +6,7 @@
 #include <math.h>
 #include <stdio.h>
 #include "resource.h"
+#include "gts.h"
 #include "trackbal.h"
 #include "objtree.h"
 #include "geometry.h"

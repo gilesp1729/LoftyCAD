@@ -206,7 +206,7 @@ typedef struct Volume
     struct Object   hdr;            // Header
     struct Bbox     bbox;           // Bounding box in 3D
     BOOL            vol_neg;        // If TRUE, this volume is negative, or a hole (face normals face inwards)
-   // GtsSurface      *vis_surface;   // GTS surface for the volume; it will be clipped to others
+    GtsSurface      *vis_surface;   // GTS surface for the volume; it will be clipped to others
     struct Face     *faces;         // Doubly linked list of faces making up the volume
 } Volume;
 
