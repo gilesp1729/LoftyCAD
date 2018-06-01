@@ -206,6 +206,7 @@ gen_view_list_vol(Volume *vol)
         f->view_valid = FALSE;  // invalidate them all
 
     // create a new visible surface
+    Log("Clearing surface\r\n");
     if (vol->vis_surface != NULL)
         gts_object_destroy(GTS_OBJECT(vol->vis_surface));
     vol->vis_surface = 
@@ -420,25 +421,7 @@ gen_view_list_face(Face *face)
     // Generate the visible triangulated surface for the face (the volume's vis_surface is assumed to 
     // have been initialised before this is called)
     if (face->vol != NULL)
-    {
-        if (IS_FLAT(face))
-        {
-            gen_view_list_surface(face, face->view_list);
-        }
-        else
-        {
-            Point *p = face->view_list;
-
-            ASSERT(p->flags == FLAG_NEW_FACET, "No facet at the start of the facet view list");
-            while (p != NULL)
-            {
-                gen_view_list_surface(face, p);
-                p = (Point *)p->hdr.next;
-                while (p != NULL && p->flags != FLAG_NEW_FACET)
-                    p = (Point *)p->hdr.next;
-            }
-        }
-    }
+        gen_view_list_surface(face, face->view_list);
 }
 
 void
