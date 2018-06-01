@@ -350,8 +350,8 @@ Pick(GLint x_pick, GLint y_pick, OBJECT min_priority)
 
             if (num_objs == 0)
             {
-                n += 3;  // skip count, min and max
-                break;
+                n += 3;         // skip count, min and max
+                continue;       // see if the next hit has anything for us
             }
 
             // buffer = {{num objs, min depth, max depth, obj name, ...}, ...}

@@ -18,12 +18,8 @@ color(OBJECT obj_type, BOOL construction, BOOL selected, BOOL highlighted, BOOL 
     switch (obj_type)
     {
     case OBJ_GROUP:
-        return;  // no action here
-
     case OBJ_VOLUME:
-        r = g = b = 0.6f;
-        a = 0.6f;
-        break;
+        return;  // no action here
 
     case OBJ_POINT:
     case OBJ_EDGE:
@@ -56,7 +52,7 @@ color(OBJECT obj_type, BOOL construction, BOOL selected, BOOL highlighted, BOOL 
         }
         else
         {
-            r = g = b = 0.8f;
+            r = g = b = 0.75f;
         }
         a = 0.6f;
 
@@ -284,7 +280,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         if (view_rendered || view_clipped_faces)
         {
             // Draw from the triangulated and clipped view list
-            color(OBJ_VOLUME, FALSE, selected, highlighted, FALSE);
+            color(OBJ_FACE, FALSE, selected, highlighted, FALSE);
             gts_surface_foreach_face(((Volume *)obj)->vis_surface, (GtsFunc)draw_triangle, NULL);
         }
         

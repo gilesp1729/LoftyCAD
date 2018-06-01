@@ -52,34 +52,96 @@ gts_tess_write(void * polygon_data)
     GtsFace *gf;
     GtsEdge *e[3];
     GtsVertex *v[3];
+    Point *np;
     int i;
 
-    // If the points have not been seen before, make new GTS vertices for them.
+    // If the points have not been seen before, search the point bucket for uses
+    // from prevous faces in the volume. If all else fails, make new GTS vertices for them.
     for (i = 0; i < 3; i++)
     {
-        if (gts_tess_points[i].gts_vertex == NULL)
+        if (gts_tess_points[i].gts_object == NULL)
         {
-            v[i] = GTS_VERTEX(gts_object_new(GTS_OBJECT_CLASS(surface->vertex_class)));
-            v[i]->p.x = gts_tess_points[i].x;
-            v[i]->p.y = gts_tess_points[i].y;
-            v[i]->p.z = gts_tess_points[i].z;
-            gts_tess_points[i].gts_vertex = v[i];
+            BOOL found = FALSE;
+
+            for (np = face->vol->point_list; np != NULL; np = (Point *)np->hdr.next)
+            {
+                if (near_pt(np, &gts_tess_points[i]))
+                {
+                    found = TRUE;
+                    break;
+                }
+            }
+
+            if (found)
+            {
+                v[i] = GTS_VERTEX(np->gts_object);
+            }
+            else
+            {
+                v[i] = GTS_VERTEX(gts_object_new(GTS_OBJECT_CLASS(surface->vertex_class)));
+                v[i]->p.x = gts_tess_points[i].x;
+                v[i]->p.y = gts_tess_points[i].y;
+                v[i]->p.z = gts_tess_points[i].z;
+                gts_tess_points[i].gts_object = GTS_OBJECT(v[i]);
+
+                // Copy the point with its coordinates, and stash it in the point bucket.
+                np = point_newp(&gts_tess_points[i]);
+                np->hdr.ID = 0;
+                objid--;
+                np->gts_object = GTS_OBJECT(v[i]);
+                link((Object *)np, (Object **)&face->vol->point_list);
+            }
         }
         else
         {
-            v[i] = gts_tess_points[i].gts_vertex;
+            v[i] = GTS_VERTEX(gts_tess_points[i].gts_object);
         }
     }
 
-    // TODO Search the edge bucket for existing edge entries and use them when they are found.
+    // Search the edge bucket for existing edge entries and use them when they are found.
     for (i = 0; i < 3; i++)
     {
+        GtsEdge *ge;
+        BOOL found = FALSE;
         int inext = i + 1;
 
         if (inext == 3)
             inext = 0;
 
-        e[i] = gts_edge_new(surface->edge_class, v[i], v[inext]);
+        for (np = face->vol->edge_list; np != NULL; np = (Point *)np->hdr.next)
+        {
+            ge = GTS_EDGE(np->gts_object);
+            if (ge->segment.v1 == v[i] && ge->segment.v2 == v[inext])
+            {
+                found = TRUE;
+                break;
+            }
+            if (ge->segment.v1 == v[inext] && ge->segment.v2 == v[i])
+            {
+                found = TRUE;
+                break;
+            }
+        }
+
+        if (found)
+        {
+            e[i] = ge;
+        }
+        else
+        {
+            e[i] = gts_edge_new(surface->edge_class, v[i], v[inext]);
+
+            // Create a Point to contain the GTS edge (the coords are not used) and store in 
+            // the edge bucket. We use Points here since they are quickly recycled through a
+            // free list.
+
+            // TODO make this robust against bad triangles (edges with 2 coincident vertices)
+            np = point_new(0, 0, 0);
+            np->hdr.ID = 0;
+            objid--;
+            np->gts_object = GTS_OBJECT(e[i]);
+            link((Object *)np, (Object **)&face->vol->edge_list);
+        }
     }
 
     gf = gts_face_new(surface->face_class, e[0], e[1], e[2]);
@@ -186,9 +248,15 @@ gen_view_list_surface(Face *face, Point *facet)
         while (VALID_VP(v))
         {
             tess_vertex(gtess, v);
+
+            // Skip coincident points for robustness (don't create zero-area triangles)
+            while (v->hdr.next != NULL && near_pt(v, (Point *)v->hdr.next))
+                v = (Point *)v->hdr.next;
+
             v = (Point *)v->hdr.next;
-            // If face(t) is closed, skip the closing point.
-            if (v != NULL && near_pt(v, vfirst))
+
+            // If face(t) is closed, skip the closing point. Watch for dups at the end.
+            while (v != NULL && near_pt(v, vfirst))
                 v = (Point *)v->hdr.next;
         }
         gluTessEndContour(gtess);

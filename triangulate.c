@@ -211,6 +211,12 @@ gen_view_list_vol(Volume *vol)
     vol->vis_surface = 
         gts_surface_new(gts_surface_class(), gts_face_class(), gts_edge_class(), gts_vertex_class());
 
+    // clear out the point and edge buckets
+    free_view_list(vol->point_list);
+    free_view_list(vol->edge_list);
+    vol->point_list = NULL;
+    vol->edge_list = NULL;
+
     // generate view lists for all the faces
     for (f = vol->faces; f != NULL; f = (Face *)f->hdr.next)
         gen_view_list_face(f);
@@ -881,9 +887,15 @@ face_shade(GLUtesselator *tess, Face *face, BOOL selected, BOOL highlighted, BOO
         while (VALID_VP(v))
         {
             tess_vertex(tess, v);
+
+            // Skip coincident points for robustness (don't create zero-area triangles)
+            while (v->hdr.next != NULL && near_pt(v, (Point *)v->hdr.next))
+                v = (Point *)v->hdr.next;
+
             v = (Point *)v->hdr.next;
-            // If face(t) is closed, skip the closing point.
-            if (v != NULL && near_pt(v, vfirst))
+                
+            // If face(t) is closed, skip the closing point. Watch for dups at the end.
+            while (v != NULL && near_pt(v, vfirst))
                 v = (Point *)v->hdr.next;
         }
         gluTessEndContour(tess);
