@@ -206,11 +206,16 @@ typedef struct Volume
 {
     struct Object   hdr;            // Header
     struct Bbox     bbox;           // Bounding box in 3D
+    struct Bbox     old_bbox;       // Bbox prior to any move (required to update damaged surfaces)
+    BOOL            repair_surface; // If TRUE, this volume needs its surface updated.
     BOOL            vol_neg;        // If TRUE, this volume is negative, or a hole (face normals face inwards)
-    struct Point    *point_list;    // List points whose coordinates are copied from child faces' view lists.
+    struct Object   *adj_list;      // Singly linked list of other volumes whose bboxes intersect this one
+    struct Point    *point_list;    // Doubly linked list of Points whose coordinates are copied from 
+                                    // child faces' view lists. (use a Point list as can easily be freed)
                                     // Allows sharing of GTS vertices when building triangle meshes.
     struct Point    *edge_list;     // List edges for sharing similarly (use a Point list as can easily be freed)
-    GtsSurface      *vis_surface;   // GTS surface for the volume; it will be clipped to others
+    GtsSurface      *full_surface;  // GTS surface for volume; it will be clipped to others to make vis_surface
+    GtsSurface      *vis_surface;   // GTS surface for volume; visible surface that results from clipping
     struct Face     *faces;         // Doubly linked list of faces making up the volume
 } Volume;
 
@@ -225,7 +230,8 @@ typedef struct Group
 // Externs
 
 extern unsigned int objid;
-extern Point *free_list;
+extern Point *free_list_pt;
+extern Object *free_list_obj;
 
 // Flatness test
 #define IS_FLAT(face)       \
@@ -249,13 +255,19 @@ Volume *vol_new(void);
 Group *group_new(void);
 Face *make_flat_face(Edge *edge);
 
-// Link and delink from lists
+// Link and delink from doubly linked lists
 void link(Object *new_obj, Object **obj_list);
 void delink(Object *obj, Object **obj_list);
 void link_tail(Object *new_obj, Object **obj_list);
 void link_group(Object *new_obj, Group *group);
 void delink_group(Object *obj, Group *group);
 void link_tail_group(Object *new_obj, Group *group);
+void free_point_list(Point *pt_list);
+
+// ...and for singly linked lists (using prev pointer to point to arbitrary object)
+void link_single(Object *new_obj, Object **obj_list);
+void link_single_checked(Object *new_obj, Object **obj_list);
+void free_obj_list(Object *obj_list);
 
 // Copy and move object
 Object *copy_obj(Object *obj, float xoffset, float yoffset, float zoffset);

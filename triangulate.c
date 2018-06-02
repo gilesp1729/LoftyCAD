@@ -10,37 +10,68 @@ GLUtesselator *rtess = NULL;
 
 // Clear a volume bounding box to empty
 void
-clear_bbox(Volume *vol)
+clear_bbox(Bbox *box)
 {
-    vol->bbox.xmin = LARGE_COORD;
-    vol->bbox.xmax = -LARGE_COORD;
-    vol->bbox.ymin = LARGE_COORD;
-    vol->bbox.ymax = -LARGE_COORD;
-    vol->bbox.zmin = LARGE_COORD;
-    vol->bbox.zmax = -LARGE_COORD;
+    box->xmin = LARGE_COORD; 
+    box->xmax = -LARGE_COORD;
+    box->ymin = LARGE_COORD;
+    box->ymax = -LARGE_COORD;
+    box->zmin = LARGE_COORD;
+    box->zmax = -LARGE_COORD;
 }
 
 // Expand a volume bounding box to include a point
 void
-expand_bbox(Volume *vol, Point *p)
+expand_bbox(Bbox *box, Point *p)
 {
-    if (vol == NULL)
-        return;
+    if (p->x < box->xmin)
+        box->xmin = p->x;
+    else if (p->x > box->xmax)
+        box->xmax = p->x;
 
-    if (p->x < vol->bbox.xmin)
-        vol->bbox.xmin = p->x;
-    else if (p->x > vol->bbox.xmax)
-        vol->bbox.xmax = p->x;
+    if (p->y < box->ymin)
+        box->ymin = p->y;
+    else if (p->y > box->ymax)
+        box->ymax = p->y;
 
-    if (p->y < vol->bbox.ymin)
-        vol->bbox.ymin = p->y;
-    else if (p->y > vol->bbox.ymax)
-        vol->bbox.ymax = p->y;
+    if (p->z < box->zmin)
+        box->zmin = p->z;
+    else if (p->z > box->zmax)
+        box->zmax = p->z;
+}
 
-    if (p->z < vol->bbox.zmin)
-        vol->bbox.zmin = p->z;
-    else if (p->z > vol->bbox.zmax)
-        vol->bbox.zmax = p->z;
+// Form the union of two bboxes
+void 
+union_bbox(Bbox *box1, Bbox *box2, Bbox *u)
+{
+    u->xmin = min(box1->xmin, box2->xmin);
+    u->xmax = max(box1->xmax, box2->xmax);
+    u->ymin = min(box1->ymin, box2->ymin);
+    u->ymax = max(box1->ymax, box2->ymax);
+    u->zmin = min(box1->zmin, box2->zmin);
+    u->zmax = max(box1->zmax, box2->zmax);
+}
+
+// Return TRUE if two bboxes intersect
+BOOL 
+intersects_bbox(Bbox *box1, Bbox *box2)
+{
+    if (box1->xmax < box2->xmin)
+        return FALSE;
+    if (box1->xmin > box2->xmax)
+        return FALSE;
+
+    if (box1->ymax < box2->ymin)
+        return FALSE;
+    if (box1->ymin > box2->ymax)
+        return FALSE;
+
+    if (box1->zmax < box2->zmin)
+        return FALSE;
+    if (box1->zmin > box2->zmax)
+        return FALSE;
+
+    return TRUE;
 }
 
 // Enforce constraints on an arc edge e, when one of its points p has been moved.
@@ -103,6 +134,7 @@ invalidate_all_view_lists(Object *parent, Object *obj, float dx, float dy, float
     Object *o;
     int i;
 
+    // TODO1 replace with switch statement
     if (parent->type == OBJ_GROUP)
     {
         for (o = ((Group *)parent)->obj_list; o != NULL; o = o->next)
@@ -110,8 +142,16 @@ invalidate_all_view_lists(Object *parent, Object *obj, float dx, float dy, float
     }
     else if (parent->type == OBJ_VOLUME)
     {
-        clear_bbox((Volume *)parent);
-        for (f = ((Volume *)parent)->faces; f != NULL; f = (Face *)f->hdr.next)
+        Volume *vol = (Volume *)parent;
+
+        // Remember the pre-move bbox, as it affects which other vols get their surfaces updated.
+        // Clear the current bbox so it gets updated with the view list.
+        // Mark this volume as needing a new surface update.
+        vol->old_bbox = vol->bbox;
+        clear_bbox(&vol->bbox);
+        vol->repair_surface = TRUE;
+
+        for (f = vol->faces; f != NULL; f = (Face *)f->hdr.next)
             invalidate_all_view_lists((Object *)f, obj, dx, dy, dz);
     }
     else if (parent->type == OBJ_FACE)
@@ -150,21 +190,20 @@ invalidate_all_view_lists(Object *parent, Object *obj, float dx, float dy, float
 }
 
 void
-debug_surface_print_stats(Volume *vol)
+debug_surface_print_stats(char *heading, GtsSurface *s)
 {
+#ifdef DEBUG_VIEW_SURFACE_STATS
     GtsSurfaceStats stats;
     GtsSurfaceQualityStats qstats;
-    GtsSurface *s = vol->vis_surface;
     char buf[512];
 
-#ifdef DEBUG_VIEW_SURFACE_STATS
     if (view_debug)
     {
         gts_surface_stats(s, &stats);
         gts_surface_quality_stats(s, &qstats);
 
         sprintf_s(buf, 512,
-                  "Volume %d:\r\n"
+                  "Volume %d %s\r\n"
                   "# vertices: %u edges: %u faces: %u\r\n"
                   "# Connectivity statistics\r\n"
                   "#   incompatible faces: %u\r\n"
@@ -173,6 +212,7 @@ debug_surface_print_stats(Volume *vol)
                   "#   duplicate edges: %u\r\n"
                   "#   non-manifold edges: %u\r\n",
                   vol->hdr.ID,
+                  heading,
                   stats.edges_per_vertex.n,
                   stats.faces_per_edge.n,
                   stats.n_faces,
@@ -186,9 +226,145 @@ debug_surface_print_stats(Volume *vol)
 #endif
 }
 
+// Generate volume view lists for all volumes in tree
+void
+gen_view_list_tree_volumes(Group *tree)
+{
+    Object *obj;
+    Volume *vol;
+
+    // generate all view lists for all volumes, to make sure they are all up to date
+    for (obj = tree->obj_list; obj != NULL; obj = obj->next)
+    {
+        switch (obj->type)
+        {
+        case OBJ_VOLUME:
+            vol = (Volume * )obj;
+            gen_view_list_vol(vol);
+
+            // while here, clean out the volume's adjacency list
+            free_obj_list(vol->adj_list);
+            vol->adj_list = NULL;
+            break;
+
+        case OBJ_GROUP:
+            gen_view_list_tree_volumes((Group *)obj);
+            break;
+        }
+    }
+}
+
+// Build the adjacency list for a volume. (note: this may be slow, as it 
+// is part of an N**2 search...)
+// If the vol needs repairing, use union of old and new bboxes.
+void
+gen_adj_list_volume(Group *tree, Volume *vol)
+{
+    Object *obj;
+    Volume *v;
+    Bbox box;
+
+    for (obj = tree->obj_list; obj != NULL; obj = obj->next)
+    {
+        switch (obj->type)
+        {
+        case OBJ_VOLUME:
+            v = (Volume *)obj;
+            if (v == vol)
+                break;
+
+            // Vols to be repaired have often moved; the old and new bboxes both must
+            // be used to determine adjacency
+            if (vol->repair_surface)
+                union_bbox(&vol->bbox, &vol->old_bbox, &box);
+            else
+                box = vol->bbox;
+            if (intersects_bbox(&box, &v->bbox))
+            {
+                // Add v to the adjacency list of vol. TODO - link_single(v, &vol->adj_list). Write this, and use for sel lists
+                Object *adj_obj = obj_new();
+
+                adj_obj->next = vol->adj_list;
+                vol->adj_list = adj_obj;
+                adj_obj->prev = (Object *)v;
+            }
+            break;
+
+        case OBJ_GROUP:
+            gen_adj_list_volume((Group *)obj, vol);
+            break;
+        }
+    }
+}
+
+// Build adjacency lists for all volumes (all those whose bboxes intersect).
+// If a vol needs repairing, place it and all of its adjacents in a repair 
+// list (weeding out dups)
+void
+gen_adj_list_tree_volumes(Group *tree, Object **rep_list)
+{
+    Object *obj, *o;
+    Volume *vol;
+
+    for (obj = tree->obj_list; obj != NULL; obj = obj->next)
+    {
+        switch (obj->type)
+        {
+        case OBJ_VOLUME:
+            vol = (Volume *)obj;
+            gen_adj_list_volume(&object_tree, vol);
+            link_single((Object *)vol, rep_list);
+            if (vol->repair_surface)
+            {
+                // Place this volume, and its adjacents, into the repair list. Weed out duplicates
+                link_single_checked((Object *)vol, rep_list);
+                for (o = vol->adj_list; o != NULL; o = o->next)
+                    link_single_checked(o->prev, rep_list);
+            }
+            break;
+
+        case OBJ_GROUP:
+            gen_adj_list_tree_volumes((Group *)obj, rep_list);
+            break;
+        }
+    }
+}
+
+// Generate volume view lists, and find and update all clipped surfaces that need repair
+void
+gen_view_list_tree_surfaces(Group *tree)
+{
+    Object *rep_list = NULL;
+    Object *o;
+
+    // generate all view lists for all volumes, to make sure they are all up to date
+    gen_view_list_tree_volumes(tree);
+
+    // generate all adjacency lists and the repair list.
+    rep_list = NULL;
+    gen_adj_list_tree_volumes(tree, &rep_list);
+
+
+    // TODO1
+
+    //
+    // for vols in repair list
+    //    update clipped surface against all its adjacents
+    // end for
+    for (o = rep_list; o != NULL; o = o->next)
+    {
+        Volume *vol = (Volume *)o->prev;
+
+        // TEMP copy full to vis surfaces and call it repaired
+        vol->vis_surface = vol->full_surface;
+        vol->repair_surface = FALSE;
+        // debug_surface_print_stats("After clipping:", vol->vis_surface);
+    }
+}
+
 // Regenerate the view lists for all faces of a volume, and also do some special stuff that
 // only volumes need: regenerate the vol surface mesh, and clip to all other touching or
-// overalpping vols.
+// overlapping vols.
 void
 gen_view_list_vol(Volume *vol)
 {
@@ -205,31 +381,23 @@ gen_view_list_vol(Volume *vol)
     for (f = vol->faces; f != NULL; f = (Face *)f->hdr.next)
         f->view_valid = FALSE;  // invalidate them all
 
-    // create a new visible surface
-    Log("Clearing surface\r\n");
-    if (vol->vis_surface != NULL)
-        gts_object_destroy(GTS_OBJECT(vol->vis_surface));
-    vol->vis_surface = 
+    // create a new full surface
+    if (vol->full_surface != NULL)
+        gts_object_destroy(GTS_OBJECT(vol->full_surface));
+    vol->full_surface = 
         gts_surface_new(gts_surface_class(), gts_face_class(), gts_edge_class(), gts_vertex_class());
 
-    // clear out the point and edge buckets
-    free_view_list(vol->point_list);
-    free_view_list(vol->edge_list);
+    // clear out the point and edge buckets and TODO1 - adjacency list
+    free_point_list(vol->point_list);
+    free_point_list(vol->edge_list);
     vol->point_list = NULL;
     vol->edge_list = NULL;
 
-    // generate view lists for all the faces
+    // generate view lists for all the faces, and update the full surface
     for (f = vol->faces; f != NULL; f = (Face *)f->hdr.next)
         gen_view_list_face(f);
 
-    // TODO
-    // free any scratch stuff
-    // clip vol to other vols
-
-
-
-    debug_surface_print_stats(vol);
-
+    debug_surface_print_stats("Before clipping:", vol->full_surface);
 }
 
 // Regenerate the unclipped view list for a face. While here, also calculate the outward
@@ -264,7 +432,8 @@ gen_view_list_face(Face *face)
     p->hdr.ID = 0;
     objid--;        // prevent explosion of objid's
     link_tail((Object *)p, list);
-    expand_bbox(face->vol, p);
+    if (face->vol != NULL)
+        expand_bbox(&face->vol->bbox, p);
 
 #if DEBUG_VIEW_LIST_RECT_FACE
     sprintf_s(buf, 256, "Face %d IP %d\r\n", face->hdr.ID, face->initial_point->hdr.ID);
@@ -303,7 +472,8 @@ gen_view_list_face(Face *face)
             p->hdr.ID = 0;
             objid--;
             link_tail((Object *)p, list);
-            expand_bbox(face->vol, p);
+            if (face->vol != NULL)
+                expand_bbox(&face->vol->bbox, p);
             break;
 
         case EDGE_ARC:
@@ -324,7 +494,8 @@ gen_view_list_face(Face *face)
                     p->hdr.ID = 0;
                     objid--;
                     link_tail((Object *)p, list);
-                    expand_bbox(face->vol, p);
+                    if (face->vol != NULL)
+                        expand_bbox(&face->vol->bbox, p);
                 }
             }
             else
@@ -342,7 +513,8 @@ gen_view_list_face(Face *face)
                     p->hdr.ID = 0;
                     objid--;
                     link_tail((Object *)p, list);
-                    expand_bbox(face->vol, p);
+                    if (face->vol != NULL)
+                        expand_bbox(&face->vol->bbox, p);
                 }
             }
 
@@ -350,7 +522,8 @@ gen_view_list_face(Face *face)
             p->hdr.ID = 0;
             objid--;
             link_tail((Object *)p, list);
-            expand_bbox(face->vol, p);
+            if (face->vol != NULL)
+                expand_bbox(&face->vol->bbox, p);
             break;
         }
     }
@@ -410,7 +583,7 @@ gen_view_list_face(Face *face)
         }
 
         // We are finished with the spare list for now, so free it
-        free_view_list(face->spare_list);
+        free_point_list(face->spare_list);
         face->spare_list = NULL;
     }
 
@@ -467,30 +640,11 @@ update_view_list_2D(Face *face)
     face->n_view2D = i;
 }
 
-// Clean out a view list, by putting all the points on the free list.
-// The points already have ID's of 0. 
-void
-free_view_list(Point *view_list)
-{
-    Point *p;
-
-    if (free_list == NULL)
-    {
-        free_list = view_list;
-    }
-    else
-    {
-        for (p = free_list; p->hdr.next != NULL; p = (Point *)p->hdr.next)
-            ;   // run down to the last free element
-        p->hdr.next = (Object *)view_list;
-    }
-}
-
 void
 free_view_list_face(Face *face)
 {
-    free_view_list(face->view_list);
-    free_view_list(face->spare_list);
+    free_point_list(face->view_list);
+    free_point_list(face->spare_list);
     face->view_list = NULL;
     face->spare_list = NULL;
     face->view_valid = FALSE;
@@ -500,7 +654,7 @@ free_view_list_face(Face *face)
 void
 free_view_list_edge(Edge *edge)
 {
-    free_view_list(edge->view_list);
+    free_point_list(edge->view_list);
     edge->view_list = NULL;
     edge->view_valid = FALSE;
 }

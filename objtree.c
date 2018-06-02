@@ -3,13 +3,26 @@
 #include <stdio.h>
 
 
-// A free list for Points. Only singly linked.
-Point *free_list = NULL;
+// Free lists for Points and Objects. Only singly linked.
+Point *free_list_pt = NULL;
+Object *free_list_obj = NULL;
 
 // Creation functions for objects
 Object *obj_new(void)
 {
-    Object *obj = calloc(1, sizeof(Object));
+    Object *obj;
+
+    // Try and obtain an object from the free list first
+    if (free_list_obj != NULL)
+    {
+        obj = free_list_obj;
+        free_list_obj = free_list_obj->next;
+        memset(obj, 0, sizeof(Object));
+    }
+    else
+    {
+        obj = calloc(1, sizeof(Object));
+    }
 
     obj->type = OBJ_NONE;
     obj->ID = 0;
@@ -21,10 +34,10 @@ Point *point_new(float x, float y, float z)
     Point   *pt;
     
     // Try and obtain a point from the free list first
-    if (free_list != NULL)
+    if (free_list_pt != NULL)
     {
-        pt = free_list;
-        free_list = (Point *)free_list->hdr.next;
+        pt = free_list_pt;
+        free_list_pt = (Point *)free_list_pt->hdr.next;
         memset(pt, 0, sizeof(Point));
     }
     else
@@ -45,10 +58,10 @@ Point *point_newp(Point *p)
 {
     Point   *pt;
 
-    if (free_list != NULL)
+    if (free_list_pt != NULL)
     {
-        pt = free_list;
-        free_list = (Point *)free_list->hdr.next;
+        pt = free_list_pt;
+        free_list_pt = (Point *)free_list_pt->hdr.next;
         memset(pt, 0, sizeof(Point));
     }
     else
@@ -143,6 +156,8 @@ Volume *vol_new(void)
 
     vol->hdr.type = OBJ_VOLUME;
     vol->hdr.ID = objid++;
+    clear_bbox(&vol->bbox);
+    clear_bbox(&vol->old_bbox);
     return vol;
 }
 
@@ -156,7 +171,7 @@ Group *group_new(void)
     return grp;
 }
 
-// Link and unlink objects in a double linked list
+// Link and unlink objects in a doubly linked list
 void link(Object *new_obj, Object **obj_list)
 {
     new_obj->next = *obj_list;
@@ -225,6 +240,66 @@ void link_tail_group(Object *new_obj, Group *group)
     ASSERT(group->hdr.type == OBJ_GROUP, "Trying to link, but it's not a group");
     link_tail(new_obj, &group->obj_list);
     new_obj->parent_group = group;
+}
+
+// Link objects into a singly linked list, chained through the next pointer.
+// the prev pointer is used to point to the object, so it doesn't interfere
+// with whatever list the object is actually participating in.
+void link_single(Object *new_obj, Object **obj_list)
+{
+    Object *list_obj = obj_new();
+
+    list_obj->next = *obj_list;
+    *obj_list = list_obj;
+    list_obj->prev = new_obj;
+}
+
+// Like link_single, but first checks if the object is already in the list.
+void link_single_checked(Object *new_obj, Object **obj_list)
+{
+    Object *o;
+    for (o = *obj_list; o != NULL; o = o->next)
+    {
+        if (o->prev == new_obj)
+            return;
+    }
+    link_single(new_obj, obj_list);
+}
+
+// Clean out a view list (a singly linked list of Points, by joining it to the free list.
+// The points already have ID's of 0. 
+void
+free_point_list(Point *pt_list)
+{
+    Point *p;
+
+    if (free_list_pt == NULL)
+    {
+        free_list_pt = pt_list;
+    }
+    else
+    {
+        for (p = free_list_pt; p->hdr.next != NULL; p = (Point *)p->hdr.next)
+            ;   // run down to the last free element
+        p->hdr.next = (Object *)pt_list;
+    }
+}
+
+// Free all elements in a singly linked list of Objects, similarly to the above.
+void free_obj_list(Object *obj_list)
+{
+    Object *o;
+
+    if (free_list_obj == NULL)
+    {
+        free_list_obj = obj_list;
+    }
+    else
+    {
+        for (o = free_list_obj; o->next != NULL; o = o->next)
+            ;   // run down to the last free element
+        o->next = obj_list;
+    }
 }
 
 // Test if an object is in the object tree at the top level.
@@ -770,8 +845,8 @@ purge_obj(Object *obj)
     case OBJ_POINT:
         if (obj->ID == 0)
             break;              // it's already been freed
-        obj->next = (Object *)free_list;
-        free_list = (Point *)obj;
+        obj->next = (Object *)free_list_pt;
+        free_list_pt = (Point *)obj;
         obj->ID = 0;
         break;
 

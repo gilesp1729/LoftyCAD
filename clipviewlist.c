@@ -48,7 +48,7 @@ void
 gts_tess_write(void * polygon_data)
 {
     Face *face = (Face *)polygon_data;
-    GtsSurface *surface = face->vol->vis_surface;
+    GtsSurface *surface = face->vol->full_surface;
     GtsFace *gf;
     GtsEdge *e[3];
     GtsVertex *v[3];
@@ -144,12 +144,6 @@ gts_tess_write(void * polygon_data)
         }
     }
 
-    {
-        static int n = 0;
-        char buf[128];
-        sprintf_s(buf, 128, "Adding face %d with edges %x %x %x\r\n", n++, e[0], e[1], e[2]);
-        Log(buf);
-    }
     gf = gts_face_new(surface->face_class, e[0], e[1], e[2]);
     gts_surface_add_face(surface, gf);
 }

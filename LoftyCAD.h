@@ -140,7 +140,7 @@ extern float quat_mXZ[4];
 #undef DEBUG_TOOLBAR_FACING
 #undef DEBUG_REVERSE_RECT_FACE
 #undef DEBUG_VIEW_LIST_ARC
-#define DEBUG_VIEW_SURFACE_STATS
+#undef DEBUG_VIEW_SURFACE_STATS
 
 
 // Some forwards

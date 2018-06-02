@@ -43,7 +43,7 @@ export_object(Object *obj)
     {
     case OBJ_VOLUME:
         vol = (Volume *)obj;
-        gen_view_list_vol(vol);
+        // gen_view_list_vol(vol); // not necessary, as has already been done.
         gts_surface_foreach_face(vol->vis_surface, (GtsFunc)export_triangle, NULL);
         break;
 

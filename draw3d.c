@@ -276,10 +276,10 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         break;
 
     case OBJ_VOLUME:
-        gen_view_list_vol((Volume *)obj);
         if (view_rendered || view_clipped_faces)
         {
             // Draw from the triangulated and clipped view list
+            ASSERT(!((Volume *)obj)->repair_surface, "Surface is not up to date");
             color(OBJ_FACE, FALSE, selected, highlighted, FALSE);
             gts_surface_foreach_face(((Volume *)obj)->vis_surface, (GtsFunc)draw_triangle, NULL);
         }
@@ -1129,6 +1129,9 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
     glLoadIdentity();
     trackball_CalcRotMatrix(matRot);
     glMultMatrixf(&(matRot[0][0]));
+
+    // Generate volume view lists, and find and update all clipped surfaces that need repair
+    gen_view_list_tree_surfaces(&object_tree);
 
     // Draw the object tree. 
     pres = 0;
