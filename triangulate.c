@@ -52,23 +52,23 @@ union_bbox(Bbox *box1, Bbox *box2, Bbox *u)
     u->zmax = max(box1->zmax, box2->zmax);
 }
 
-// Return TRUE if two bboxes intersect
+// Return TRUE if two bboxes intersect. Make sure to allow touching bboxes.
 BOOL 
 intersects_bbox(Bbox *box1, Bbox *box2)
 {
-    if (box1->xmax < box2->xmin)
+    if (box1->xmax < box2->xmin - SMALL_COORD)
         return FALSE;
-    if (box1->xmin > box2->xmax)
-        return FALSE;
-
-    if (box1->ymax < box2->ymin)
-        return FALSE;
-    if (box1->ymin > box2->ymax)
+    if (box1->xmin > box2->xmax + SMALL_COORD)
         return FALSE;
 
-    if (box1->zmax < box2->zmin)
+    if (box1->ymax < box2->ymin - SMALL_COORD)
         return FALSE;
-    if (box1->zmin > box2->zmax)
+    if (box1->ymin > box2->ymax + SMALL_COORD)
+        return FALSE;
+
+    if (box1->zmax < box2->zmin - SMALL_COORD)
+        return FALSE;
+    if (box1->zmin > box2->zmax + SMALL_COORD)
         return FALSE;
 
     return TRUE;
@@ -134,35 +134,37 @@ invalidate_all_view_lists(Object *parent, Object *obj, float dx, float dy, float
     Object *o;
     int i;
 
-    // TODO1 replace with switch statement
-    if (parent->type == OBJ_GROUP)
+    switch (parent->type)
     {
+    case OBJ_GROUP:
         for (o = ((Group *)parent)->obj_list; o != NULL; o = o->next)
             invalidate_all_view_lists(o, obj, dx, dy, dz);
-    }
-    else if (parent->type == OBJ_VOLUME)
-    {
-        Volume *vol = (Volume *)parent;
+        break;
 
-        // Remember the pre-move bbox, as it affects which other vols get their surfaces updated.
-        // Clear the current bbox so it gets updated with the view list.
-        // Mark this volume as needing a new surface update.
-        vol->old_bbox = vol->bbox;
-        clear_bbox(&vol->bbox);
-        vol->repair_surface = TRUE;
+    case OBJ_VOLUME:
+        {
+            Volume *vol = (Volume *)parent;
 
-        for (f = vol->faces; f != NULL; f = (Face *)f->hdr.next)
-            invalidate_all_view_lists((Object *)f, obj, dx, dy, dz);
-    }
-    else if (parent->type == OBJ_FACE)
-    {
+            // Remember the pre-move bbox, as it affects which other vols get their surfaces updated.
+            // Clear the current bbox so it gets updated with the view list.
+            // Mark this volume as needing a new surface update.
+            vol->old_bbox = vol->bbox;
+            clear_bbox(&vol->bbox);
+            vol->repair_surface = TRUE;
+
+            for (f = vol->faces; f != NULL; f = (Face *)f->hdr.next)
+                invalidate_all_view_lists((Object *)f, obj, dx, dy, dz);
+        }
+        break;
+
+    case OBJ_FACE:
         f = (Face *)parent;
         f->view_valid = FALSE;
         for (i = 0; i < f->n_edges; i++)
             invalidate_all_view_lists((Object *)f->edges[i], obj, dx, dy, dz);
-    }
-    else if (parent->type == OBJ_EDGE)
-    {
+        break;
+
+    case OBJ_EDGE:
         switch (((Edge *)parent)->type & ~EDGE_CONSTRUCTION)
         {
         case EDGE_ARC:
@@ -186,6 +188,7 @@ invalidate_all_view_lists(Object *parent, Object *obj, float dx, float dy, float
             ((Edge *)parent)->view_valid = FALSE;
             break;
         }
+        break;
     }
 }
 
@@ -280,14 +283,7 @@ gen_adj_list_volume(Group *tree, Volume *vol)
             else
                 box = vol->bbox;
             if (intersects_bbox(&box, &v->bbox))
-            {
-                // Add v to the adjacency list of vol. TODO - link_single(v, &vol->adj_list). Write this, and use for sel lists
-                Object *adj_obj = obj_new();
-
-                adj_obj->next = vol->adj_list;
-                vol->adj_list = adj_obj;
-                adj_obj->prev = (Object *)v;
-            }
+                link_single((Object *)v, &vol->adj_list);
             break;
 
         case OBJ_GROUP:
@@ -387,11 +383,13 @@ gen_view_list_vol(Volume *vol)
     vol->full_surface = 
         gts_surface_new(gts_surface_class(), gts_face_class(), gts_edge_class(), gts_vertex_class());
 
-    // clear out the point and edge buckets and TODO1 - adjacency list
+    // clear out the point and edge buckets and adjacency list
     free_point_list(vol->point_list);
     free_point_list(vol->edge_list);
     vol->point_list = NULL;
     vol->edge_list = NULL;
+    free_obj_list(vol->adj_list);
+    vol->adj_list = NULL;
 
     // generate view lists for all the faces, and update the full surface
     for (f = vol->faces; f != NULL; f = (Face *)f->hdr.next)

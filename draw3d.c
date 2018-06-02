@@ -671,7 +671,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                     // generate the other corners. The rect goes in the 
                     // order picked-p1-new-p3. 
                     if (picked_obj == NULL || picked_obj->type != OBJ_FACE)  
-                        //TODO1: when starting on a volume locked at face level, wierd things happen (we can't get the face)
+                        //TODO: when starting on a volume locked at face level, wierd things happen (we can't get the face)
                         // Means that the volume must be unlocked to draw on it, which is counter-intuitive.
                     {
                         // Drawing on a facing plane derived from standard axes
@@ -1176,6 +1176,56 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
         if (app_state >= STATE_STARTING_EDGE)
             pres |= DRAW_HIGHLIGHT_LOCKED;
         draw_object(highlight_obj, pres, parent != NULL ? parent->lock : LOCK_NONE);
+        if (app_state == STATE_NONE && parent->type == OBJ_VOLUME)
+        {
+            Volume *vol = (Volume *)parent;
+
+#ifdef DEBUG_HIGHLIGHTING_ENABLED
+            if (debug_view_bbox)
+            {
+                Bbox box = vol->bbox;
+
+                glPushName(0);
+                glColor3d(1.0, 0.4, 0.4);
+                glBegin(GL_LINE_LOOP);
+                glVertex3f(box.xmin, box.ymin, box.zmin);
+                glVertex3f(box.xmax, box.ymin, box.zmin);
+                glVertex3f(box.xmax, box.ymax, box.zmin);
+                glVertex3f(box.xmin, box.ymax, box.zmin);
+                glEnd();
+                glBegin(GL_LINE_LOOP);
+                glVertex3f(box.xmin, box.ymin, box.zmax);
+                glVertex3f(box.xmax, box.ymin, box.zmax);
+                glVertex3f(box.xmax, box.ymax, box.zmax);
+                glVertex3f(box.xmin, box.ymax, box.zmax);
+                glEnd();
+                glBegin(GL_LINES);
+                glVertex3f(box.xmin, box.ymin, box.zmin);
+                glVertex3f(box.xmin, box.ymin, box.zmax);
+                glEnd();
+                glBegin(GL_LINES);
+                glVertex3f(box.xmax, box.ymin, box.zmin);
+                glVertex3f(box.xmax, box.ymin, box.zmax);
+                glEnd();
+                glBegin(GL_LINES);
+                glVertex3f(box.xmin, box.ymax, box.zmin);
+                glVertex3f(box.xmin, box.ymax, box.zmax);
+                glEnd();
+                glBegin(GL_LINES);
+                glVertex3f(box.xmax, box.ymax, box.zmin);
+                glVertex3f(box.xmax, box.ymax, box.zmax);
+                glEnd();
+            }
+
+            if (debug_view_adj)
+            {
+                Object *adj;
+
+                for (adj = vol->adj_list; adj != NULL; adj = adj->next)
+                    draw_object(adj->prev, DRAW_HIGHLIGHT, LOCK_FACES);
+            }
+#endif
+        }
     }
     
     if(!picking)
@@ -1197,6 +1247,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
         glVertex3d(0.0, 0.0, 0.0);
         glVertex3d(0.0, 0.0, 100.0);
         glEnd();
+        glPopName();
     }
 
     // handle shift-drag for selection by drawing 2D rect. 
@@ -1247,7 +1298,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
         switch (highlight_obj->type)
         {
         case OBJ_POINT:
-            glCallLists(5, GL_UNSIGNED_BYTE, "Point");
+            glCallLists(5, GL_UNSIGNED_BYTE, "Point");  // TODO debug - print object ID's in here
             break;
         case OBJ_EDGE:
             glCallLists(4, GL_UNSIGNED_BYTE, "Edge");
@@ -1259,7 +1310,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
             glCallLists(6, GL_UNSIGNED_BYTE, "Volume");
             break;
         case OBJ_GROUP:
-            glCallLists(5, GL_UNSIGNED_BYTE, "Group");
+            glCallLists(5, GL_UNSIGNED_BYTE, "Group");  // TODO get the name of the group in here
             break;
         }
         glPopMatrix();

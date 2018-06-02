@@ -142,6 +142,10 @@ int generation = 0;
 int latest_generation = 0;
 int max_generation = 0;
 
+// Debugging options
+BOOL debug_view_adj = FALSE;
+BOOL debug_view_bbox = FALSE;
+
 
 // Set material and lighting up
 void
@@ -453,7 +457,7 @@ Pick_all_in_rect(GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
     GLint num_hits;
     Object *obj = NULL;
     Object *list = NULL;
-    Object *parent, *sel_obj;
+    Object *parent;
 
     // Find the objects within the rect
     glSelectBuffer(4096, buffer);           // TODO: This may be too small. There are a lot of null hits.
@@ -497,19 +501,8 @@ Pick_all_in_rect(GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                 }
 
                 // If parent is not already in the list, add it
-                for (obj = list; obj != NULL; obj = obj->next)
-                {
-                    if (obj->prev == parent)
-                        break;
-                }
-
-                if (obj == NULL)
-                {
-                    sel_obj = obj_new();
-                    sel_obj->next = list;
-                    list = sel_obj;
-                    sel_obj->prev = parent;
-                }
+                if (obj != NULL)
+                    link_single_checked(parent, &list);
 
 #ifdef DEBUG_PICK_ALL
                 if (view_debug)
@@ -622,19 +615,7 @@ is_selected_parent(Object *obj)
 void
 clear_selection(Object **sel_list)
 {
-    Object *sel_obj, *next_obj;
-
-    sel_obj = *sel_list;
-    if (sel_obj == NULL)
-        return;
-
-    do
-    {
-        next_obj = sel_obj->next;
-        free(sel_obj);              // TODO use a free list - these are tiny
-        sel_obj = next_obj;
-    } while (next_obj != NULL);
-
+    free_obj_list(*sel_list);
     *sel_list = NULL;
 }
 
@@ -994,7 +975,8 @@ remove_from_selection(Object *obj)
         }
 
         ASSERT(sel_obj->prev == picked_obj, "Selection list broken");
-        free(sel_obj);
+        sel_obj->next = free_list_obj;  // put it in the free list
+        free_list_obj = sel_obj;
         hide_hint();    // in case the dims was displayed
         return TRUE;
     }
@@ -1007,7 +989,6 @@ remove_from_selection(Object *obj)
 void CALLBACK
 left_click(AUX_EVENTREC *event)
 {
-    Object *sel_obj;
     Object *parent;
 
     hide_hint();
@@ -1048,10 +1029,7 @@ left_click(AUX_EVENTREC *event)
             if (parent != NULL)
             {
                 picked_obj = parent;
-                sel_obj = obj_new();
-                sel_obj->next = selection;
-                selection = sel_obj;
-                sel_obj->prev = picked_obj;
+                link_single(picked_obj, &selection);
             }
         }
         else if (remove_from_selection(picked_obj))
@@ -1065,10 +1043,7 @@ left_click(AUX_EVENTREC *event)
                 clear_selection(&selection);
 
             // select it
-            sel_obj = obj_new();
-            sel_obj->next = selection;
-            selection = sel_obj;
-            sel_obj->prev = picked_obj;
+            link_single(picked_obj, &selection);
         }
     }
 }
@@ -1394,12 +1369,18 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 
         hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
         CheckMenuItem(hMenu, ID_VIEW_TOOLS, view_tools ? MF_CHECKED : MF_UNCHECKED);
-        CheckMenuItem(hMenu, ID_VIEW_DEBUGLOG, view_debug ? MF_CHECKED : MF_UNCHECKED);
         CheckMenuItem(hMenu, ID_VIEW_HELP, view_help ? MF_CHECKED : MF_UNCHECKED);
         CheckMenuItem(hMenu, ID_VIEW_TREE, view_tree ? MF_CHECKED : MF_UNCHECKED);
         CheckMenuItem(hMenu, ID_VIEW_ORTHO, view_ortho ? MF_CHECKED : MF_UNCHECKED);
         CheckMenuItem(hMenu, ID_VIEW_PERSPECTIVE, !view_ortho ? MF_CHECKED : MF_UNCHECKED);
         CheckMenuItem(hMenu, ID_VIEW_CONSTRUCTIONEDGES, view_constr ? MF_CHECKED : MF_UNCHECKED);
+        CheckMenuItem(hMenu, ID_VIEW_DEBUGLOG, view_debug ? MF_CHECKED : MF_UNCHECKED);
+        CheckMenuItem(hMenu, ID_DEBUG_BBOXES, debug_view_bbox ? MF_CHECKED : MF_UNCHECKED);
+        CheckMenuItem(hMenu, ID_DEBUG_ADJACENT, debug_view_adj ? MF_CHECKED : MF_UNCHECKED);
+#ifndef DEBUG_HIGHLIGHTING_ENABLED
+        EnableMenuItem(hMenu, ID_DEBUG_BBOXES, MF_GRAYED);
+        EnableMenuItem(hMenu, ID_DEBUG_ADJACENT, MF_GRAYED);
+#endif
 
         // Display help for the resting state
         change_state(STATE_NONE);

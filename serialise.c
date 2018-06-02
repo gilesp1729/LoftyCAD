@@ -237,7 +237,7 @@ deserialise_tree(Group *tree, char *filename)
     // initialise the object array
     object = (Object **)calloc(objsize, sizeof(Object *));
     stkptr = 0;
-    maxobjid = 0;
+    maxobjid = 0;    // TODO - if importing a group, DON'T clear this, and add maxobjid to every ID read in.
 
     // read the file line by line
     while (TRUE)
@@ -614,17 +614,12 @@ deserialise_tree(Group *tree, char *filename)
             clear_selection(&selection);
             while (TRUE)
             {
-                Object *sel_obj;
-
                 tok = strtok_s(NULL, " \t\n", &nexttok);
                 if (tok == NULL)
                     break;
                 id = atoi(tok);
                 ASSERT(id > 0 && object[id] != NULL, "Bad selection ID");
-                sel_obj = obj_new();
-                sel_obj->next = selection;
-                selection = sel_obj;
-                sel_obj->prev = object[id];
+                link_single(object[id], &selection);
             }
         }
     }

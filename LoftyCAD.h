@@ -141,7 +141,11 @@ extern float quat_mXZ[4];
 #undef DEBUG_REVERSE_RECT_FACE
 #undef DEBUG_VIEW_LIST_ARC
 #undef DEBUG_VIEW_SURFACE_STATS
+#define DEBUG_HIGHLIGHTING_ENABLED
 
+// Debug 
+extern BOOL debug_view_adj;
+extern BOOL debug_view_bbox;
 
 // Some forwards
 Object * Pick(GLint x_pick, GLint y_pick, OBJECT obj_type);
@@ -161,7 +165,6 @@ void clear_selection(Object **sel_list);
 void populate_treeview(void);
 void CALLBACK right_click(AUX_EVENTREC *event);
 void CALLBACK check_file_changed(HWND hWnd);
-
 
 // Forwards for window procedures and similar
 int CALLBACK Command(int message, int wParam, int lParam);

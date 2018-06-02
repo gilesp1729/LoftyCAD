@@ -200,13 +200,7 @@ treeview_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             obj = (Object *)nmtv->itemNew.lParam;
 
             if (obj != NULL)
-            {
-                // select it
-                sel_obj = obj_new();
-                sel_obj->next = selection;
-                selection = sel_obj;
-                sel_obj->prev = obj;
-            }
+                link_single(obj, &selection);
             break;
 #endif
         }

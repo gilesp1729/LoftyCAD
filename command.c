@@ -58,7 +58,7 @@ Command(int message, int wParam, int lParam)
     OPENFILENAME ofn;
     char window_title[256];
     char new_filename[256];
-    Object *obj, *sel_obj;
+    Object *obj;
     char *pdot;
 
     switch (message)
@@ -221,6 +221,36 @@ Command(int message, int wParam, int lParam)
             EnableWindow(GetDlgItem(hWndToolbar, IDB_CONST_RECT), !view_rendered);
             EnableWindow(GetDlgItem(hWndToolbar, IDB_CONST_CIRCLE), !view_rendered);
             break;
+
+#ifdef DEBUG_HIGHLIGHTING_ENABLED
+        case ID_DEBUG_ADJACENT:
+            hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
+            if (debug_view_adj)
+            {
+                debug_view_adj = FALSE;
+                CheckMenuItem(hMenu, ID_DEBUG_ADJACENT, MF_UNCHECKED);
+            }
+            else
+            {
+                debug_view_adj = TRUE;
+                CheckMenuItem(hMenu, ID_DEBUG_ADJACENT, MF_CHECKED);
+            }
+            break;
+
+        case ID_DEBUG_BBOXES:
+            hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
+            if (debug_view_bbox)
+            {
+                debug_view_bbox = FALSE;
+                CheckMenuItem(hMenu, ID_DEBUG_BBOXES, MF_UNCHECKED);
+            }
+            else
+            {
+                debug_view_bbox = TRUE;
+                CheckMenuItem(hMenu, ID_DEBUG_BBOXES, MF_CHECKED);
+            }
+            break;
+#endif
 
         case ID_VIEW_TOP:
             facing_plane = &plane_XY;
@@ -559,10 +589,7 @@ Command(int message, int wParam, int lParam)
 
                 clear_move_copy_flags(obj->prev);
                 link_tail_group(new_obj, &object_tree);
-                sel_obj = obj_new();
-                sel_obj->next = selection;
-                selection = sel_obj;
-                sel_obj->prev = new_obj;
+                link_single(new_obj, &selection);
             }
 
             if (nz(facing_plane->A))
@@ -596,12 +623,7 @@ Command(int message, int wParam, int lParam)
             // Put all top-level objects on the selection list.
             clear_selection(&selection);
             for (obj = object_tree.obj_list; obj != NULL; obj = obj->next)
-            {
-                sel_obj = obj_new();
-                sel_obj->next = selection;
-                selection = sel_obj;
-                sel_obj->prev = obj;
-            }
+                link_single(obj, &selection);
             break;
 
         case ID_EDIT_SELECTNONE:

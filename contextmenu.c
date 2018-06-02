@@ -454,10 +454,7 @@ right_click(AUX_EVENTREC *event)
     case ID_OBJ_SELECTPARENTVOLUME:
         sel_changed = TRUE;
         clear_selection(&selection);
-        sel_obj = obj_new();
-        sel_obj->next = selection;
-        selection = sel_obj;
-        sel_obj->prev = parent;
+        link_single(parent, &selection);
         break;
 
     case ID_OBJ_ENTERDIMENSIONS:
@@ -501,6 +498,8 @@ right_click(AUX_EVENTREC *event)
         link_group((Object *)group, &object_tree);
         for (sel_obj = selection; sel_obj != NULL; sel_obj = sel_obj->next)
         {
+            // TODO - bug here if a component is selected. You should onnly ever be able to 
+            // put the parent in the group.
             delink_group(sel_obj->prev, &object_tree);
             link_tail_group(sel_obj->prev, group);
         }
