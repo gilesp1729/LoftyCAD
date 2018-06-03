@@ -193,7 +193,7 @@ invalidate_all_view_lists(Object *parent, Object *obj, float dx, float dy, float
 }
 
 void
-debug_surface_print_stats(char *heading, GtsSurface *s)
+debug_surface_print_stats(char *heading, int id, GtsSurface *s)
 {
 #ifdef DEBUG_VIEW_SURFACE_STATS
     GtsSurfaceStats stats;
@@ -214,7 +214,7 @@ debug_surface_print_stats(char *heading, GtsSurface *s)
                   "#   boundary edges: %u\r\n"
                   "#   duplicate edges: %u\r\n"
                   "#   non-manifold edges: %u\r\n",
-                  vol->hdr.ID,
+                  id,
                   heading,
                   stats.edges_per_vertex.n,
                   stats.faces_per_edge.n,
@@ -309,7 +309,6 @@ gen_adj_list_tree_volumes(Group *tree, Object **rep_list)
         case OBJ_VOLUME:
             vol = (Volume *)obj;
             gen_adj_list_volume(&object_tree, vol);
-            link_single((Object *)vol, rep_list);
             if (vol->repair_surface)
             {
                 // Place this volume, and its adjacents, into the repair list. Weed out duplicates
@@ -341,20 +340,46 @@ gen_view_list_tree_surfaces(Group *tree)
     gen_adj_list_tree_volumes(tree, &rep_list);
 
 
-    // TODO1
-
-    //
-    // for vols in repair list
-    //    update clipped surface against all its adjacents
-    // end for
+    // Update clipped surface for volumes in the repair list, against all its adjacents
     for (o = rep_list; o != NULL; o = o->next)
     {
         Volume *vol = (Volume *)o->prev;
 
-        // TEMP copy full to vis surfaces and call it repaired
-        vol->vis_surface = vol->full_surface;
-        vol->repair_surface = FALSE;
-        // debug_surface_print_stats("After clipping:", vol->vis_surface);
+        // If the volume has a visible surface, and it's not just a pointer to the full
+        // surface, it needs to be destroyed.
+        if (vol->vis_surface != NULL && vol->vis_surface != vol->full_surface)
+            gts_object_destroy(GTS_OBJECT(vol->vis_surface));
+
+        // If there are no adjacencies, just point it to the full surface and we are done
+        if (vol->adj_list == NULL)
+        {
+            vol->vis_surface = vol->full_surface;
+            vol->repair_surface = FALSE;
+        }
+        else
+        {
+            GtsSurface *surf, *surf2;
+            Object *adj;
+            BOOL delete_surf = FALSE;
+
+            // If there is more than one adjacent volume, form the union of them
+            surf = ((Volume *)vol->adj_list->prev)->full_surface;
+            for (adj = vol->adj_list->next; adj != NULL; adj = adj->next)
+            {
+                surf2 = boolean_surfaces(surf, ((Volume *)adj->prev)->full_surface, BOOL_UNION);
+                if (delete_surf)
+                    gts_object_destroy(GTS_OBJECT(surf));
+                surf = surf2;
+                delete_surf = TRUE;
+            }
+
+            // Set visible surface to vol OUT union
+            vol->vis_surface = boolean_surfaces(vol->full_surface, surf, BOOL_1OUT2);
+            vol->repair_surface = FALSE;
+            debug_surface_print_stats("After clipping:", vol->hdr.ID, vol->vis_surface);
+            if (delete_surf)
+                gts_object_destroy(GTS_OBJECT(surf));
+        }
     }
 }
 
@@ -377,7 +402,14 @@ gen_view_list_vol(Volume *vol)
     for (f = vol->faces; f != NULL; f = (Face *)f->hdr.next)
         f->view_valid = FALSE;  // invalidate them all
 
-    // create a new full surface
+    // If I have a vis_surface, and it's different from the full_surface, I have to delete it.
+    if (vol->vis_surface != NULL && vol->vis_surface != vol->full_surface)
+    {
+        gts_object_destroy(GTS_OBJECT(vol->vis_surface));
+        vol->vis_surface = NULL;
+    }
+
+    // Create a new full surface
     if (vol->full_surface != NULL)
         gts_object_destroy(GTS_OBJECT(vol->full_surface));
     vol->full_surface = 
@@ -395,7 +427,7 @@ gen_view_list_vol(Volume *vol)
     for (f = vol->faces; f != NULL; f = (Face *)f->hdr.next)
         gen_view_list_face(f);
 
-    debug_surface_print_stats("Before clipping:", vol->full_surface);
+    debug_surface_print_stats("Before clipping:", vol->hdr.ID, vol->full_surface);
 }
 
 // Regenerate the unclipped view list for a face. While here, also calculate the outward

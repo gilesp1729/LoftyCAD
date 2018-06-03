@@ -19,30 +19,6 @@ Point gts_tess_points[3];
 // What kind of triangle sequence is being output (GL_TRIANGLES, TRIANGLE_STRIP or TRIANGLE_FAN)
 GLenum gts_tess_sequence;
 
-#if 0
-// Returns TRUE if the bboxes do NOT intersect.
-BOOL
-bbox_out(Volume *vol1, Volume *vol2)
-{
-    if (vol1->bbox.xmin > vol2->bbox.xmax)
-        return TRUE;
-    if (vol1->bbox.xmax < vol2->bbox.xmin)
-        return TRUE;
-
-    if (vol1->bbox.ymin > vol2->bbox.ymax)
-        return TRUE;
-    if (vol1->bbox.ymax < vol2->bbox.ymin)
-        return TRUE;
-
-    if (vol1->bbox.zmin > vol2->bbox.zmax)
-        return TRUE;
-    if (vol1->bbox.zmax < vol2->bbox.zmin)
-        return TRUE;
-
-    return FALSE;
-}
-#endif
-
 // add one triangle to the volume surface
 void
 gts_tess_write(void * polygon_data)
@@ -264,3 +240,54 @@ gen_view_list_surface(Face *face, Point *facet)
     }
 }
 
+// Do the boolean operation on the GTS surfaces. Don't delete any surfaces (caller responsibility)
+GtsSurface *
+boolean_surfaces(GtsSurface *s1, GtsSurface *s2, BOOL_OPERATION operation)
+{
+    GtsSurfaceInter *si;
+    GNode *tree1, *tree2;
+    BOOL closed, is_open1, is_open2;
+    GtsSurface *s3;
+
+    tree1 = gts_bb_tree_surface(s1);
+    is_open1 = gts_surface_volume(s1) < 0. ? TRUE : FALSE;
+    tree2 = gts_bb_tree_surface(s2);
+    is_open2 = gts_surface_volume(s2) < 0. ? TRUE : FALSE;
+
+    si = gts_surface_inter_new(gts_surface_inter_class(),
+                               s1, s2, tree1, tree2, is_open1, is_open2);
+    ASSERT(gts_surface_inter_check(si, &closed), "Surface intersection curve is not orientable");
+    ASSERT(closed, "Surface intersection curve is not closed");
+
+    s3 = gts_surface_new(gts_surface_class(), gts_face_class(), gts_edge_class(), gts_vertex_class());
+
+    switch (operation)
+    {
+    case BOOL_UNION:                    // s1 union s2
+        gts_surface_inter_boolean(si, s3, GTS_1_OUT_2);
+        gts_surface_inter_boolean(si, s3, GTS_2_OUT_1);
+        break;
+
+    case BOOL_INTERSECTION:             // s1 intersection s2
+        gts_surface_inter_boolean(si, s3, GTS_1_IN_2);
+        gts_surface_inter_boolean(si, s3, GTS_2_IN_1);
+        break;
+
+    case BOOL_DIFFERENCE:               // s1 - s2
+        gts_surface_inter_boolean(si, s3, GTS_1_OUT_2);
+        gts_surface_inter_boolean(si, s3, GTS_2_IN_1);
+        // TODO - this may not be needed, as s2 may have inward normals anyway
+        //gts_surface_foreach_face(si->s2, (GtsFunc)gts_triangle_revert, NULL);
+        //gts_surface_foreach_face(s2, (GtsFunc)gts_triangle_revert, NULL);
+        break;
+
+    default:                            // Pass the others through to GTS
+        gts_surface_inter_boolean(si, s3, operation);
+        break;
+    }
+
+    gts_bb_tree_destroy(tree1, TRUE);
+    gts_bb_tree_destroy(tree2, TRUE);
+
+    return s3;
+}
