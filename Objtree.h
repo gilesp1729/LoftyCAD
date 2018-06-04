@@ -217,6 +217,11 @@ typedef struct Volume
     GtsSurface      *full_surface;  // GTS surface for volume; it will be clipped to others to make vis_surface
     GtsSurface      *vis_surface;   // GTS surface for volume; visible surface that results from clipping
     struct Face     *faces;         // Doubly linked list of faces making up the volume
+
+    // Debugging only
+    struct Edge     *inter_edge_list; // Doubly linked list of edges representing the intersection curve
+                                    // of surface with other surfaces
+    BOOL            inter_closed;   // TRUE if GTS thinks the said curve is closed
 } Volume;
 
 // The group struct is used for groups, and also for the main object tree.

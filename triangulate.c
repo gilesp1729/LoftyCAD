@@ -366,7 +366,7 @@ gen_view_list_tree_surfaces(Group *tree)
             surf = ((Volume *)vol->adj_list->prev)->full_surface;
             for (adj = vol->adj_list->next; adj != NULL; adj = adj->next)
             {
-                surf2 = boolean_surfaces(surf, ((Volume *)adj->prev)->full_surface, BOOL_UNION);
+                surf2 = boolean_surfaces(surf, ((Volume *)adj->prev)->full_surface, BOOL_UNION, NULL);
                 if (delete_surf)
                     gts_object_destroy(GTS_OBJECT(surf));
                 surf = surf2;
@@ -374,7 +374,7 @@ gen_view_list_tree_surfaces(Group *tree)
             }
 
             // Set visible surface to vol OUT union
-            vol->vis_surface = boolean_surfaces(vol->full_surface, surf, BOOL_1OUT2);
+            vol->vis_surface = boolean_surfaces(vol->full_surface, surf, BOOL_1OUT2, vol);
             vol->repair_surface = FALSE;
             debug_surface_print_stats("After clipping:", vol->hdr.ID, vol->vis_surface);
             if (delete_surf)

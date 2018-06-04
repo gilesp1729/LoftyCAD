@@ -126,7 +126,7 @@ extern float quat_mXZ[4];
         SendDlgItemMessage(hWndDebug, IDC_DEBUG, EM_REPLACESEL, 0, (LPARAM)(msg));          \
     }
 
-#define ASSERT(exp, msg)    { if (!(exp)) LogShow(msg) }
+#define ASSERT(exp, msg)    do { if (!(exp)) LogShow(msg) } while(0)
 
 // Debugging defines
 #undef DEBUG_FACE_SHADE
@@ -141,11 +141,12 @@ extern float quat_mXZ[4];
 #undef DEBUG_REVERSE_RECT_FACE
 #undef DEBUG_VIEW_LIST_ARC
 #define DEBUG_VIEW_SURFACE_STATS
-#undef DEBUG_HIGHLIGHTING_ENABLED
+#define DEBUG_HIGHLIGHTING_ENABLED
 
 // Debug 
 extern BOOL debug_view_adj;
 extern BOOL debug_view_bbox;
+extern BOOL debug_view_inter;
 
 // Some forwards
 Object * Pick(GLint x_pick, GLint y_pick, OBJECT obj_type);

@@ -145,6 +145,7 @@ int max_generation = 0;
 // Debugging options
 BOOL debug_view_adj = FALSE;
 BOOL debug_view_bbox = FALSE;
+BOOL debug_view_inter = FALSE;
 
 
 // Set material and lighting up
@@ -1377,9 +1378,11 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
         CheckMenuItem(hMenu, ID_VIEW_DEBUGLOG, view_debug ? MF_CHECKED : MF_UNCHECKED);
         CheckMenuItem(hMenu, ID_DEBUG_BBOXES, debug_view_bbox ? MF_CHECKED : MF_UNCHECKED);
         CheckMenuItem(hMenu, ID_DEBUG_ADJACENT, debug_view_adj ? MF_CHECKED : MF_UNCHECKED);
+        CheckMenuItem(hMenu, ID_DEBUG_INTER, debug_view_inter ? MF_CHECKED : MF_UNCHECKED);
 #ifndef DEBUG_HIGHLIGHTING_ENABLED
         EnableMenuItem(hMenu, ID_DEBUG_BBOXES, MF_GRAYED);
         EnableMenuItem(hMenu, ID_DEBUG_ADJACENT, MF_GRAYED);
+        EnableMenuItem(hMenu, ID_DEBUG_INTER, MF_GRAYED);
 #endif
 
         // Display help for the resting state

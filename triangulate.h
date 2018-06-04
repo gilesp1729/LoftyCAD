@@ -46,7 +46,7 @@ void gen_adj_list_volume(Group *tree, Volume *vol);
 // Clip a view list (clipviewlist.c)
 void init_clip_tess(void);
 void gen_view_list_surface(Face *face, Point *facet);
-GtsSurface *boolean_surfaces(GtsSurface *s1, GtsSurface *s2, BOOL_OPERATION operation);
+GtsSurface *boolean_surfaces(GtsSurface *s1, GtsSurface *s2, BOOL_OPERATION operation, Volume *vol);
 
 // Triangulate and render
 void init_triangulator(void);

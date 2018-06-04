@@ -214,35 +214,68 @@ gen_view_list_surface(Face *face, Point *facet)
     Point *v, *vfirst;
 
     v = face->view_list;
-    while (v != NULL)
+#if 0
+    // This should work for GTS files, but it trips up on zero-width triangles...
+    if (face->n_edges == 3)
     {
-        if (v->flags == FLAG_NEW_FACET)
-            v = (Point *)v->hdr.next;
-        vfirst = v;
-        gluTessBeginPolygon(gtess, face);
-        gluTessBeginContour(gtess);
-        while (VALID_VP(v))
+        // Special case for triangular faces: pass them through directly to GTS.
+        gts_tess_points[0] = *v;
+        gts_tess_points[1] = *(Point *)v->hdr.next;
+        gts_tess_points[2] = *(Point *)v->hdr.next->next;
+        gts_tess_write(face);
+    }
+    else
+#endif
+    {
+        // use the tessellator
+        while (v != NULL)
         {
-            tess_vertex(gtess, v);
+            if (v->flags == FLAG_NEW_FACET)
+                v = (Point *)v->hdr.next;
+            vfirst = v;
+            gluTessBeginPolygon(gtess, face);
+            gluTessBeginContour(gtess);
+            while (VALID_VP(v))
+            {
+                tess_vertex(gtess, v);
 
-            // Skip coincident points for robustness (don't create zero-area triangles)
-            while (v->hdr.next != NULL && near_pt(v, (Point *)v->hdr.next))
+                // Skip coincident points for robustness (don't create zero-area triangles)
+                while (v->hdr.next != NULL && near_pt(v, (Point *)v->hdr.next))
+                    v = (Point *)v->hdr.next;
+
                 v = (Point *)v->hdr.next;
 
-            v = (Point *)v->hdr.next;
-
-            // If face(t) is closed, skip the closing point. Watch for dups at the end.
-            while (v != NULL && near_pt(v, vfirst))
-                v = (Point *)v->hdr.next;
+                // If face(t) is closed, skip the closing point. Watch for dups at the end.
+                while (v != NULL && near_pt(v, vfirst))
+                    v = (Point *)v->hdr.next;
+            }
+            gluTessEndContour(gtess);
+            gluTessEndPolygon(gtess);
         }
-        gluTessEndContour(gtess);
-        gluTessEndPolygon(gtess);
     }
 }
 
+#ifdef DEBUG_HIGHLIGHTING_ENABLED
+// Debugging routine to build a list of edges for the intersection curve.
+void build_edge(gpointer data, gpointer user_data)
+{
+    GtsEdge *ge = GTS_EDGE(data);
+    Volume *vol = (Volume *)user_data;
+    Edge *e = edge_new(EDGE_STRAIGHT);
+
+    e->endpoints[0] = point_new((float)ge->segment.v1->p.x, (float)ge->segment.v1->p.y, (float)ge->segment.v1->p.z);
+    e->endpoints[0]->hdr.ID = 0;
+    objid--;
+    e->endpoints[1] = point_new((float)ge->segment.v2->p.x, (float)ge->segment.v2->p.y, (float)ge->segment.v2->p.z);
+    e->endpoints[1]->hdr.ID = 0;
+    objid--;
+    link((Object *)e, (Object **)&vol->inter_edge_list);
+}
+#endif
+
 // Do the boolean operation on the GTS surfaces. Don't delete any surfaces (caller responsibility)
 GtsSurface *
-boolean_surfaces(GtsSurface *s1, GtsSurface *s2, BOOL_OPERATION operation)
+boolean_surfaces(GtsSurface *s1, GtsSurface *s2, BOOL_OPERATION operation, Volume *vol)
 {
     GtsSurfaceInter *si;
     GNode *tree1, *tree2;
@@ -257,7 +290,19 @@ boolean_surfaces(GtsSurface *s1, GtsSurface *s2, BOOL_OPERATION operation)
     si = gts_surface_inter_new(gts_surface_inter_class(),
                                s1, s2, tree1, tree2, is_open1, is_open2);
     ASSERT(gts_surface_inter_check(si, &closed), "Surface intersection curve is not orientable");
-    ASSERT(closed, "Surface intersection curve is not closed");
+    if (!closed && si->edges)
+        ASSERT(FALSE, "Surface intersection curve has edges, but is not closed");
+
+#ifdef DEBUG_HIGHLIGHTING_ENABLED
+    if (debug_view_inter && vol != NULL)
+    {
+        // DEBUG create a bunch of edges from si->edges
+        free_obj_list((Object *)vol->inter_edge_list);
+        vol->inter_edge_list = NULL;
+        g_slist_foreach(si->edges, (GFunc)build_edge, vol);
+        vol->inter_closed = closed;
+    }
+#endif
 
     s3 = gts_surface_new(gts_surface_class(), gts_face_class(), gts_edge_class(), gts_vertex_class());
 
