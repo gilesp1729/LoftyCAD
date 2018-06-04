@@ -207,7 +207,6 @@ typedef struct Volume
     struct Object   hdr;            // Header
     struct Bbox     bbox;           // Bounding box in 3D
     struct Bbox     old_bbox;       // Bbox prior to any move (required to update damaged surfaces)
-    BOOL            repair_surface; // If TRUE, this volume needs its surface updated.
     BOOL            vol_neg;        // If TRUE, this volume is negative, or a hole (face normals face inwards)
     struct Object   *adj_list;      // Singly linked list of other volumes whose bboxes intersect this one
     struct Point    *point_list;    // Doubly linked list of Points whose coordinates are copied from 
@@ -216,6 +215,7 @@ typedef struct Volume
     struct Point    *edge_list;     // List edges for sharing similarly (use a Point list as can easily be freed)
     GtsSurface      *full_surface;  // GTS surface for volume; it will be clipped to others to make vis_surface
     GtsSurface      *vis_surface;   // GTS surface for volume; visible surface that results from clipping
+    BOOL            surf_valid;     // If TRUE, the visible surface is up to date.
     struct Face     *faces;         // Doubly linked list of faces making up the volume
 
     // Debugging only

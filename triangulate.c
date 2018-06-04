@@ -150,7 +150,7 @@ invalidate_all_view_lists(Object *parent, Object *obj, float dx, float dy, float
             // Mark this volume as needing a new surface update.
             vol->old_bbox = vol->bbox;
             clear_bbox(&vol->bbox);
-            vol->repair_surface = TRUE;
+            vol->surf_valid = FALSE;
 
             for (f = vol->faces; f != NULL; f = (Face *)f->hdr.next)
                 invalidate_all_view_lists((Object *)f, obj, dx, dy, dz);
@@ -278,7 +278,7 @@ gen_adj_list_volume(Group *tree, Volume *vol)
 
             // Vols to be repaired have often moved; the old and new bboxes both must
             // be used to determine adjacency
-            if (vol->repair_surface)
+            if (!vol->surf_valid)
                 union_bbox(&vol->bbox, &vol->old_bbox, &box);
             else
                 box = vol->bbox;
@@ -309,7 +309,7 @@ gen_adj_list_tree_volumes(Group *tree, Object **rep_list)
         case OBJ_VOLUME:
             vol = (Volume *)obj;
             gen_adj_list_volume(&object_tree, vol);
-            if (vol->repair_surface)
+            if (!vol->surf_valid)
             {
                 // Place this volume, and its adjacents, into the repair list. Weed out duplicates
                 link_single_checked((Object *)vol, rep_list);
@@ -354,7 +354,7 @@ gen_view_list_tree_surfaces(Group *tree)
         if (vol->adj_list == NULL)
         {
             vol->vis_surface = vol->full_surface;
-            vol->repair_surface = FALSE;
+            vol->surf_valid = TRUE;
         }
         else
         {
@@ -375,7 +375,7 @@ gen_view_list_tree_surfaces(Group *tree)
 
             // Set visible surface to vol OUT union
             vol->vis_surface = boolean_surfaces(vol->full_surface, surf, BOOL_1OUT2, vol);
-            vol->repair_surface = FALSE;
+            vol->surf_valid = TRUE;
             debug_surface_print_stats("After clipping:", vol->hdr.ID, vol->vis_surface);
             if (delete_surf)
                 gts_object_destroy(GTS_OBJECT(surf));

@@ -279,7 +279,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         if (view_rendered || view_clipped_faces)
         {
             // Draw from the triangulated and clipped view list
-            ASSERT(!((Volume *)obj)->repair_surface, "Surface is not up to date");
+            ASSERT(((Volume *)obj)->surf_valid, "Surface is not up to date");
             color(OBJ_FACE, FALSE, selected, highlighted, FALSE);
             gts_surface_foreach_face(((Volume *)obj)->vis_surface, (GtsFunc)draw_triangle, NULL);
         }
