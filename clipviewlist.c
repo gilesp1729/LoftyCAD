@@ -333,6 +333,7 @@ boolean_surfaces(GtsSurface *s1, GtsSurface *s2, BOOL_OPERATION operation, Volum
 
     gts_bb_tree_destroy(tree1, TRUE);
     gts_bb_tree_destroy(tree2, TRUE);
+    gts_object_destroy(GTS_OBJECT(si));
 
     return s3;
 }
