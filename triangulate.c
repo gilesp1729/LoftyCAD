@@ -308,7 +308,9 @@ gen_adj_list_tree_volumes(Group *tree, Object **rep_list)
         {
         case OBJ_VOLUME:
             vol = (Volume *)obj;
+#ifdef CLIP_SURFACES  // Temp disable clipping surfaces for now
             gen_adj_list_volume(&object_tree, vol);
+#endif
             if (!vol->surf_valid)
             {
                 // Place this volume, and its adjacents, into the repair list. Weed out duplicates
@@ -338,7 +340,6 @@ gen_view_list_tree_surfaces(Group *tree)
     // generate all adjacency lists and the repair list.
     rep_list = NULL;
     gen_adj_list_tree_volumes(tree, &rep_list);
-
 
     // Update clipped surface for volumes in the repair list, against all its adjacents
     for (o = rep_list; o != NULL; o = o->next)
@@ -404,10 +405,8 @@ gen_view_list_vol(Volume *vol)
 
     // If I have a vis_surface, and it's different from the full_surface, I have to delete it.
     if (vol->vis_surface != NULL && vol->vis_surface != vol->full_surface)
-    {
         gts_object_destroy(GTS_OBJECT(vol->vis_surface));
-        vol->vis_surface = NULL;
-    }
+    vol->vis_surface = NULL;
 
     // Create a new full surface
     if (vol->full_surface != NULL)

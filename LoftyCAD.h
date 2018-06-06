@@ -143,6 +143,10 @@ extern float quat_mXZ[4];
 #define DEBUG_VIEW_SURFACE_STATS
 #define DEBUG_HIGHLIGHTING_ENABLED
 
+// Temporary disabling of some features
+// #define CLIP_SURFACES
+
+
 // Debug 
 extern BOOL debug_view_adj;
 extern BOOL debug_view_bbox;

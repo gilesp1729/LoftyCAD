@@ -491,6 +491,7 @@ Command(int message, int wParam, int lParam)
                 {
                     link_group((Object *)group, &object_tree);
                     drawing_changed = TRUE;
+                    write_checkpoint(&object_tree, curr_filename);
                     populate_treeview();
                 }
                 else

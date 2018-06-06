@@ -1374,6 +1374,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
         CheckMenuItem(hMenu, ID_VIEW_TREE, view_tree ? MF_CHECKED : MF_UNCHECKED);
         CheckMenuItem(hMenu, ID_VIEW_ORTHO, view_ortho ? MF_CHECKED : MF_UNCHECKED);
         CheckMenuItem(hMenu, ID_VIEW_PERSPECTIVE, !view_ortho ? MF_CHECKED : MF_UNCHECKED);
+        CheckMenuItem(hMenu, ID_VIEW_CLIPPEDFACE, !view_clipped_faces ? MF_CHECKED : MF_UNCHECKED);
         CheckMenuItem(hMenu, ID_VIEW_CONSTRUCTIONEDGES, view_constr ? MF_CHECKED : MF_UNCHECKED);
         CheckMenuItem(hMenu, ID_VIEW_DEBUGLOG, view_debug ? MF_CHECKED : MF_UNCHECKED);
         CheckMenuItem(hMenu, ID_DEBUG_BBOXES, debug_view_bbox ? MF_CHECKED : MF_UNCHECKED);
@@ -1383,6 +1384,9 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
         EnableMenuItem(hMenu, ID_DEBUG_BBOXES, MF_GRAYED);
         EnableMenuItem(hMenu, ID_DEBUG_ADJACENT, MF_GRAYED);
         EnableMenuItem(hMenu, ID_DEBUG_INTER, MF_GRAYED);
+#endif
+#ifndef CLIP_SURFACES
+        EnableMenuItem(hMenu, ID_VIEW_CLIPPEDFACE, MF_GRAYED);
 #endif
 
         // Display help for the resting state

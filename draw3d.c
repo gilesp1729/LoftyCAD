@@ -1301,6 +1301,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
     {
         HDC hdc = auxGetHDC();
         GLint vp[4];
+        char *title;
 
         glMatrixMode(GL_MODELVIEW);
         glPushMatrix();
@@ -1330,7 +1331,11 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
             glCallLists(6, GL_UNSIGNED_BYTE, "Volume");
             break;
         case OBJ_GROUP:
-            glCallLists(5, GL_UNSIGNED_BYTE, "Group");  // TODO get the name of the group in here
+            title = ((Group *)highlight_obj)->title;
+            if (title[0] == '\0')
+                glCallLists(5, GL_UNSIGNED_BYTE, "Group"); 
+            else
+                glCallLists(strlen(title), GL_UNSIGNED_BYTE, title);
             break;
         }
         glPopMatrix();
