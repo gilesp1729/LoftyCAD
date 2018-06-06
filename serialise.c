@@ -218,14 +218,18 @@ locktype_of(char *tok)
 
 #define IS_GROUP(obj) ((obj) != NULL && (obj)->type == OBJ_GROUP)
 
+// TODO - this might be exceeded for vols consisting of large numbers of faces. make it dynamic somehow?
+#define MAXLINE 1024
+
 // Deserialise a tree from file. 
 BOOL
-deserialise_tree(Group *tree, char *filename)
+deserialise_tree(Group *tree, char *filename, BOOL importing)
 {
     FILE *f;
-    char buf[512];
+    char buf[MAXLINE];
     int stack[10], stkptr;
     int objsize = 1000;
+    int id_offset;
     double version = 0.1;
     Object **object;
     Group *grp;
@@ -237,7 +241,17 @@ deserialise_tree(Group *tree, char *filename)
     // initialise the object array
     object = (Object **)calloc(objsize, sizeof(Object *));
     stkptr = 0;
-    maxobjid = 0;    // TODO - if importing a group, DON'T clear this, and add maxobjid to every ID read in.
+
+    // If we're importing to a group, we need to avoid ID conflicts
+    if (importing)
+    {
+        id_offset = maxobjid + 1;
+    }
+    else
+    {
+        maxobjid = 0;
+        id_offset = 0;
+    }
 
     // read the file line by line
     while (TRUE)
@@ -247,7 +261,7 @@ deserialise_tree(Group *tree, char *filename)
         int id;
         LOCK lock;
 
-        if (fgets(buf, 512, f) == NULL)
+        if (fgets(buf, MAXLINE, f) == NULL)
             break;
 
         tok = strtok_s(buf, " \t\n", &nexttok);
@@ -284,7 +298,7 @@ deserialise_tree(Group *tree, char *filename)
         {
             // Stack the object ID being constructed. 
             tok = strtok_s(NULL, " \t\n", &nexttok);
-            id = atoi(tok);
+            id = atoi(tok) + id_offset;
             check_and_grow(id, &object, &objsize);
             stack[stkptr++] = id;
 
@@ -303,7 +317,7 @@ deserialise_tree(Group *tree, char *filename)
             float x, y, z;
 
             tok = strtok_s(NULL, " \t\n", &nexttok);
-            id = atoi(tok);
+            id = atoi(tok) + id_offset;
             check_and_grow(id, &object, &objsize);
             tok = strtok_s(NULL, " \t\n", &nexttok);  // swallow up the lock type (it's ignored for points)
 
@@ -330,7 +344,7 @@ deserialise_tree(Group *tree, char *filename)
             BezierEdge *be;
 
             tok = strtok_s(NULL, " \t\n", &nexttok);
-            id = atoi(tok);
+            id = atoi(tok) + id_offset;
             check_and_grow(id, &object, &objsize);
             tok = strtok_s(NULL, " \t\n", &nexttok);
             lock = locktype_of(tok);
@@ -344,10 +358,10 @@ deserialise_tree(Group *tree, char *filename)
                 if (strcmp(tok, "STRAIGHT(D)") == 0)
                     ((Object *)edge)->show_dims = TRUE;
                 tok = strtok_s(NULL, " \t\n", &nexttok);
-                end0 = atoi(tok);
+                end0 = atoi(tok) + id_offset;
                 ASSERT(end0 > 0 && object[end0] != NULL, "Bad endpoint ID");
                 tok = strtok_s(NULL, " \t\n", &nexttok);
-                end1 = atoi(tok);
+                end1 = atoi(tok) + id_offset;
                 ASSERT(end1 > 0 && object[end1] != NULL, "Bad endpoint ID");
                 edge->endpoints[0] = (Point *)object[end0];
                 edge->endpoints[1] = (Point *)object[end1];
@@ -360,10 +374,10 @@ deserialise_tree(Group *tree, char *filename)
                 if (strcmp(tok, "ARC(D)") == 0)
                     ((Object *)edge)->show_dims = TRUE;
                 tok = strtok_s(NULL, " \t\n", &nexttok);
-                end0 = atoi(tok);
+                end0 = atoi(tok) + id_offset;
                 ASSERT(end0 > 0 && object[end0] != NULL, "Bad endpoint ID");
                 tok = strtok_s(NULL, " \t\n", &nexttok);
-                end1 = atoi(tok);
+                end1 = atoi(tok) + id_offset;
                 ASSERT(end1 > 0 && object[end1] != NULL, "Bad endpoint ID");
                 edge->endpoints[0] = (Point *)object[end0];
                 edge->endpoints[1] = (Point *)object[end1];
@@ -373,7 +387,7 @@ deserialise_tree(Group *tree, char *filename)
                 ae->clockwise = strcmp(tok, "C") == 0;
 
                 tok = strtok_s(NULL, " \t\n", &nexttok);
-                ctr = atoi(tok);
+                ctr = atoi(tok) + id_offset;
                 ASSERT(ctr > 0 && object[ctr] != NULL, "Bad centre point ID");
                 ae->centre = (Point *)object[ctr];
 
@@ -398,19 +412,19 @@ deserialise_tree(Group *tree, char *filename)
             {
                 edge = edge_new(EDGE_BEZIER);
                 tok = strtok_s(NULL, " \t\n", &nexttok);
-                end0 = atoi(tok);
+                end0 = atoi(tok) + id_offset;
                 ASSERT(end0 > 0 && object[end0] != NULL, "Bad endpoint ID");
                 tok = strtok_s(NULL, " \t\n", &nexttok);
-                end1 = atoi(tok);
+                end1 = atoi(tok) + id_offset;
                 ASSERT(end1 > 0 && object[end1] != NULL, "Bad endpoint ID");
                 edge->endpoints[0] = (Point *)object[end0];
                 edge->endpoints[1] = (Point *)object[end1];
 
                 tok = strtok_s(NULL, " \t\n", &nexttok);
-                ctrl0 = atoi(tok);
+                ctrl0 = atoi(tok) + id_offset;
                 ASSERT(ctrl0 > 0 && object[ctrl0] != NULL, "Bad control point ID");
                 tok = strtok_s(NULL, " \t\n", &nexttok);
-                ctrl1 = atoi(tok);
+                ctrl1 = atoi(tok) + id_offset;
                 ASSERT(ctrl1 > 0 && object[ctrl1] != NULL, "Bad control point ID");
                 be = (BezierEdge *)edge;
                 be->ctrlpoints[0] = (Point *)object[ctrl0];
@@ -451,7 +465,7 @@ deserialise_tree(Group *tree, char *filename)
             BOOL dims = FALSE;
 
             tok = strtok_s(NULL, " \t\n", &nexttok);
-            id = atoi(tok);
+            id = atoi(tok) + id_offset;
             check_and_grow(id, &object, &objsize);
             tok = strtok_s(NULL, " \t\n", &nexttok);
             lock = locktype_of(tok);
@@ -497,7 +511,7 @@ deserialise_tree(Group *tree, char *filename)
             }
 
             tok = strtok_s(NULL, " \t\n", &nexttok);
-            pid = atoi(tok);
+            pid = atoi(tok) + id_offset;
             ASSERT(pid != 0 && object[pid] != NULL && object[pid]->type == OBJ_POINT, "Bad initial point ID");
             init_pt = (Point *)object[pid];
 
@@ -535,7 +549,7 @@ deserialise_tree(Group *tree, char *filename)
                 tok = strtok_s(NULL, " \t\n", &nexttok);
                 if (tok == NULL)
                     break;
-                eid = atoi(tok);
+                eid = atoi(tok) + id_offset;
                 ASSERT(eid > 0 && object[eid] != NULL, "Bad edge ID");
 
                 if (face->n_edges >= face->max_edges)
@@ -563,7 +577,7 @@ deserialise_tree(Group *tree, char *filename)
             Volume *vol;
 
             tok = strtok_s(NULL, " \t\n", &nexttok);
-            id = atoi(tok);
+            id = atoi(tok) + id_offset;
             check_and_grow(id, &object, &objsize);
             tok = strtok_s(NULL, " \t\n", &nexttok);
             lock = locktype_of(tok);
@@ -580,7 +594,7 @@ deserialise_tree(Group *tree, char *filename)
                 tok = strtok_s(NULL, " \t\n", &nexttok);
                 if (tok == NULL)
                     break;
-                fid = atoi(tok);
+                fid = atoi(tok) + id_offset;
                 ASSERT(fid > 0 && object[fid] != NULL, "Bad face ID");
 
                 ((Face *)object[fid])->vol = vol;
@@ -597,7 +611,7 @@ deserialise_tree(Group *tree, char *filename)
         else if (strcmp(tok, "ENDGROUP") == 0)
         {
             tok = strtok_s(NULL, " \t\n", &nexttok);
-            id = atoi(tok);
+            id = atoi(tok) + id_offset;
             tok = strtok_s(NULL, " \t\n", &nexttok);
             lock = locktype_of(tok);
             ASSERT(stkptr > 0 && id == stack[stkptr - 1], "Badly formed group");
@@ -617,7 +631,7 @@ deserialise_tree(Group *tree, char *filename)
                 tok = strtok_s(NULL, " \t\n", &nexttok);
                 if (tok == NULL)
                     break;
-                id = atoi(tok);
+                id = atoi(tok) + id_offset;
                 ASSERT(id > 0 && object[id] != NULL, "Bad selection ID");
                 link_single(object[id], &selection);
             }
@@ -625,7 +639,8 @@ deserialise_tree(Group *tree, char *filename)
     }
 
     objid = maxobjid + 1;
-    save_count = 1;
+    if (!importing)
+        save_count = 1;
     free(object);
     fclose(f);
 
@@ -674,12 +689,12 @@ read_checkpoint(Group *tree, char *filename, int generation)
         if (baselen > 4 && (pdot = strrchr(basename, '.')) != NULL)
             *pdot = '\0';                                            // cut off ".lcd" 
         sprintf_s(check, 256, "%s_%04d.lcd", basename, generation);
-        rc = deserialise_tree(tree, check);
+        rc = deserialise_tree(tree, check, FALSE);
     }
     else if (filename[0] != '\0')
     {
         drawing_changed = FALSE;
-        rc = deserialise_tree(tree, filename);
+        rc = deserialise_tree(tree, filename, FALSE);
     }
     populate_treeview();
     return rc;

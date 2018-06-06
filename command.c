@@ -381,7 +381,7 @@ Command(int message, int wParam, int lParam)
             ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST;
             if (GetOpenFileName(&ofn))
             {
-                deserialise_tree(&object_tree, curr_filename);
+                deserialise_tree(&object_tree, curr_filename, FALSE);
                 drawing_changed = FALSE;
                 strcpy_s(window_title, 256, curr_filename);
                 strcat_s(window_title, 256, " - ");
@@ -455,7 +455,9 @@ Command(int message, int wParam, int lParam)
                 "LoftyCAD Files (*.LCD)\0*.LCD\0"
                 "STL Meshes (*.STL)\0*.STL\0"
                 "GNU Triangulated Surface Files (*.GTS)\0*.GTS\0"
+#if 0
                 "Geomview Object File Format Files (*.OFF)\0*.OFF\0"
+#endif
                 "All Files\0*.*\0\0";
             ofn.nFilterIndex = 1;
             ofn.lpstrDefExt = "lcd";
@@ -471,7 +473,7 @@ Command(int message, int wParam, int lParam)
                 switch (ofn.nFilterIndex)
                 {
                 case 1:
-                    rc = deserialise_tree(group, new_filename);
+                    rc = deserialise_tree(group, new_filename, TRUE);
                     break;
                 case 2:
                     rc = read_stl_to_group(group, new_filename);
@@ -479,9 +481,11 @@ Command(int message, int wParam, int lParam)
                 case 3:
                     rc = read_gts_to_group(group, new_filename);
                     break;
+#if 0
                 case 4:
                     rc = read_off_to_group(group, new_filename);
                     break;
+#endif
                 }
                 if (rc)
                 {
@@ -531,7 +535,7 @@ Command(int message, int wParam, int lParam)
                 object_tree.title[0] = '\0';
                 SetWindowText(auxGetHWND(), "LoftyCAD");
 
-                if (!deserialise_tree(&object_tree, new_filename))
+                if (!deserialise_tree(&object_tree, new_filename, FALSE))
                 {
                     MessageBox(auxGetHWND(), "File not found", new_filename, MB_OK | MB_ICONWARNING);
                 }

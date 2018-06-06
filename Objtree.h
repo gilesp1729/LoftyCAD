@@ -289,7 +289,7 @@ BOOL is_top_level_object(Object *obj, Group *tree);
 
 // Write and read a tree to a file (serialise.c)
 void serialise_tree(Group *tree, char *filename);
-BOOL deserialise_tree(Group *tree, char *filename);
+BOOL deserialise_tree(Group *tree, char *filename, BOOL importing);
 void write_checkpoint(Group *tree, char *filename);
 BOOL read_checkpoint(Group *tree, char *filename, int generation);
 void clean_checkpoints(char *filename);

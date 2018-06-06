@@ -8,10 +8,146 @@
 // They are assumed to contain one contiguous body, which will become a volume
 // with lots of triangular faces.
 
+// Helpers for STL reading; find existing points and edges
+Point *
+find_point(Point *pt, Point **points)
+{
+    Point *p;
+
+    for (p = *points; p != NULL; p = (Point *)p->hdr.next)
+    {
+        if (near_pt(pt, p))
+            break;
+    }
+    if (p == NULL)
+    {
+        p = point_newp(pt);
+        link((Object *)p, (Object **)points);
+    }
+
+    return p;
+}
+
+Edge *
+find_edge(Point *p0, Point *p1, Edge **edges)
+{
+    Edge *e;
+
+    for (e = *edges; e != NULL; e = (Edge *)e->hdr.next)
+    {
+        if (near_pt(e->endpoints[0], p0) && near_pt(e->endpoints[1], p1))
+            break;
+        if (near_pt(e->endpoints[0], p1) && near_pt(e->endpoints[1], p0))
+            break;
+    }
+    if (e == NULL)
+    {
+        e = edge_new(EDGE_STRAIGHT);
+        e->endpoints[0] = p0;
+        e->endpoints[1] = p1;
+        link((Object *)e, (Object **)edges);
+    }
+
+    return e;
+}
+
 // Read an STL mesh
 BOOL
 read_stl_to_group(Group *group, char *filename)
 {
+    FILE *f;
+    char buf[512];
+    char *tok;
+    char *nexttok = NULL;
+    int i;
+    Point *points = NULL;
+    Edge *edges = NULL;
+    Face *tf;
+    Volume *vol = NULL;
+    Plane norm;
+    Point pt[3];
+    Point *p0, *p1, *p2;
+
+    fopen_s(&f, filename, "rt");
+    if (f == NULL)
+        return FALSE;
+
+    while (TRUE)
+    {
+        if (fgets(buf, 512, f) == NULL)
+            break;
+
+        tok = strtok_s(buf, " \t\n", &nexttok);
+        if (strcmp(tok, "solid") == 0)
+        {
+            tok = strtok_s(NULL, "\n", &nexttok);  // rest of line till \n
+            if (tok != NULL)
+                strcpy_s(group->title, 256, tok);
+            vol = vol_new();
+        }
+        else if (strcmp(tok, "facet") == 0)
+        {
+            tok = strtok_s(NULL, " \t\n", &nexttok);  // absorb "normal"
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            norm.A = (float)atof(tok);
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            norm.B = (float)atof(tok);
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            norm.C = (float)atof(tok);
+            i = 0;
+        }
+        else if (strcmp(tok, "vertex") == 0)
+        {
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            pt[i].x = (float)atof(tok);
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            pt[i].y = (float)atof(tok);
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            pt[i].z = (float)atof(tok);
+            i++;
+        }
+        else if (strcmp(tok, "endfacet") == 0)
+        {
+            if (i != 3)
+                goto error_return;
+
+            p0 = find_point(&pt[0], &points);
+            p1 = find_point(&pt[1], &points);
+            p2 = find_point(&pt[2], &points);
+
+            tf = face_new(FACE_FLAT, norm);
+            tf->edges[0] = find_edge(p0, p1, &edges);
+            tf->edges[1] = find_edge(p1, p2, &edges);
+            tf->edges[2] = find_edge(p2, p0, &edges);
+            tf->n_edges = 3;
+            if
+                (
+                tf->edges[0]->endpoints[1] == tf->edges[1]->endpoints[0]
+                ||
+                tf->edges[0]->endpoints[1] == tf->edges[1]->endpoints[1]
+                )
+                tf->initial_point = tf->edges[0]->endpoints[0];
+            else
+                tf->initial_point = tf->edges[0]->endpoints[1];
+
+            if (vol == NULL)
+                goto error_return;      // have not seen "solid" at the beginning
+
+            tf->vol = vol;
+            link((Object *)tf, (Object **)&vol->faces);
+        }
+        else if (strcmp(tok, "endsolid") == 0)
+        {
+            break;
+        }
+    }
+
+    link_group((Object *)vol, group);
+    fclose(f);
+    return TRUE;
+
+error_return:
+    fclose(f);
     return FALSE;
 }
 
@@ -125,6 +261,7 @@ error:
     return FALSE;
 }
 
+#if 0
 // Read a Geomview OFF file
 BOOL
 read_off_to_group(Group *group, char *filename)
@@ -217,6 +354,7 @@ error:
     free(points);
     return FALSE;
 }
+#endif
 
 
 
