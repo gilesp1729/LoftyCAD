@@ -116,17 +116,6 @@ extern float quat_mXZ[4];
 
 
 // Debug stuff
-#define Log(msg)            SendDlgItemMessage(hWndDebug, IDC_DEBUG, EM_REPLACESEL, 0, (LPARAM)(msg));
-
-#define LogShow(msg)        \
-    {                       \
-        ShowWindow(hWndDebug, SW_SHOW);                                                     \
-        CheckMenuItem(GetSubMenu(GetMenu(auxGetHWND()), 2), ID_VIEW_DEBUGLOG, MF_CHECKED);  \
-        view_debug = TRUE;                                                                  \
-        SendDlgItemMessage(hWndDebug, IDC_DEBUG, EM_REPLACESEL, 0, (LPARAM)(msg));          \
-    }
-
-#define ASSERT(exp, msg)    do { if (!(exp)) LogShow(msg) } while(0)
 
 // Debugging defines
 #undef DEBUG_FACE_SHADE
@@ -143,11 +132,29 @@ extern float quat_mXZ[4];
 #define DEBUG_VIEW_SURFACE_STATS
 #define DEBUG_HIGHLIGHTING_ENABLED
 
-// Temporary disabling of some features
-// #define CLIP_SURFACES
+// Temporary dis/enabling of some features
+#define CLIP_SURFACES
+#define DEBUG_CAPTURE_FAILED_SI
+#define USE_DEBUGSTR_LOG
+
+#ifdef USE_DEBUGSTR_LOG
+#define Log(msg)            OutputDebugString(msg);
+#define LogShow(msg)        OutputDebugString(msg);
+#else
+#define Log(msg)            SendDlgItemMessage(hWndDebug, IDC_DEBUG, EM_REPLACESEL, 0, (LPARAM)(msg));
+#define LogShow(msg)        \
+{                       \
+    ShowWindow(hWndDebug, SW_SHOW);                                                     \
+    CheckMenuItem(GetSubMenu(GetMenu(auxGetHWND()), 2), ID_VIEW_DEBUGLOG, MF_CHECKED);  \
+    view_debug = TRUE;                                                                  \
+    SendDlgItemMessage(hWndDebug, IDC_DEBUG, EM_REPLACESEL, 0, (LPARAM)(msg));          \
+}
+#endif
+
+#define ASSERT(exp, msg)    do { if (!(exp)) LogShow(msg) } while(0)
 
 
-// Debug 
+// Debug externs
 extern BOOL debug_view_adj;
 extern BOOL debug_view_bbox;
 extern BOOL debug_view_inter;

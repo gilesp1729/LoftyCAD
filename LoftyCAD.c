@@ -1374,7 +1374,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
         CheckMenuItem(hMenu, ID_VIEW_TREE, view_tree ? MF_CHECKED : MF_UNCHECKED);
         CheckMenuItem(hMenu, ID_VIEW_ORTHO, view_ortho ? MF_CHECKED : MF_UNCHECKED);
         CheckMenuItem(hMenu, ID_VIEW_PERSPECTIVE, !view_ortho ? MF_CHECKED : MF_UNCHECKED);
-        CheckMenuItem(hMenu, ID_VIEW_CLIPPEDFACE, !view_clipped_faces ? MF_CHECKED : MF_UNCHECKED);
+        CheckMenuItem(hMenu, ID_VIEW_CLIPPEDFACE, view_clipped_faces ? MF_CHECKED : MF_UNCHECKED);
         CheckMenuItem(hMenu, ID_VIEW_CONSTRUCTIONEDGES, view_constr ? MF_CHECKED : MF_UNCHECKED);
         CheckMenuItem(hMenu, ID_VIEW_DEBUGLOG, view_debug ? MF_CHECKED : MF_UNCHECKED);
         CheckMenuItem(hMenu, ID_DEBUG_BBOXES, debug_view_bbox ? MF_CHECKED : MF_UNCHECKED);

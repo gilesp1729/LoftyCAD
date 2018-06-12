@@ -273,6 +273,17 @@ void build_edge(gpointer data, gpointer user_data)
 }
 #endif
 
+// Stop on cost function for gts_coarsen. Designed to weed out near-coincident points
+// without really altering the surface much.
+BOOL
+stop_on_cost(double cost, unsigned int nedge, double *max_cost)
+{
+    if (cost > *max_cost)
+        return TRUE;
+    OutputDebugString("Cleaning up degenerate edge\n");
+    return FALSE;
+}
+
 // Do the boolean operation on the GTS surfaces. Don't delete any surfaces (caller responsibility)
 GtsSurface *
 boolean_surfaces(GtsSurface *s1, GtsSurface *s2, BOOL_OPERATION operation, Volume *vol)
@@ -280,18 +291,34 @@ boolean_surfaces(GtsSurface *s1, GtsSurface *s2, BOOL_OPERATION operation, Volum
     GtsSurfaceInter *si;
     GNode *tree1, *tree2;
     BOOL closed, is_open1, is_open2;
-    GtsSurface *s3;
+    GtsSurface *s3 = NULL;
+    double stop_cost = 4 * tolerance * tolerance;
+    BOOL check;
+    BOOL failed = FALSE;
 
+    OutputDebugString("BBTrees\n");
     tree1 = gts_bb_tree_surface(s1);
     is_open1 = gts_surface_volume(s1) < 0. ? TRUE : FALSE;
     tree2 = gts_bb_tree_surface(s2);
     is_open2 = gts_surface_volume(s2) < 0. ? TRUE : FALSE;
 
+    OutputDebugString("surface_inter_new\n");
     si = gts_surface_inter_new(gts_surface_inter_class(),
                                s1, s2, tree1, tree2, is_open1, is_open2);
-    ASSERT(gts_surface_inter_check(si, &closed), "Surface intersection curve is not orientable");
+    OutputDebugString("surface_inter_check\n");
+    check = gts_surface_inter_check(si, &closed);
+    if (!check)
+    {
+        ASSERT(FALSE, "Surface intersection curve is not orientable");
+        failed = TRUE;
+        goto cleanup;
+    }
     if (!closed && si->edges)
+    {
         ASSERT(FALSE, "Surface intersection curve has edges, but is not closed");
+        failed = TRUE;
+        goto cleanup;
+    }
 
 #ifdef DEBUG_HIGHLIGHTING_ENABLED
     if (debug_view_inter && vol != NULL)
@@ -303,12 +330,13 @@ boolean_surfaces(GtsSurface *s1, GtsSurface *s2, BOOL_OPERATION operation, Volum
         vol->inter_closed = closed;
     }
 #endif
-
+    OutputDebugString("surface_new\n");
     s3 = gts_surface_new(gts_surface_class(), gts_face_class(), gts_edge_class(), gts_vertex_class());
 
     switch (operation)
     {
     case BOOL_UNION:                    // s1 union s2
+        OutputDebugString("surface union\n");
         gts_surface_inter_boolean(si, s3, GTS_1_OUT_2);
         gts_surface_inter_boolean(si, s3, GTS_2_OUT_1);
         break;
@@ -327,12 +355,35 @@ boolean_surfaces(GtsSurface *s1, GtsSurface *s2, BOOL_OPERATION operation, Volum
         break;
 
     default:                            // Pass the others through to GTS
+        OutputDebugString("surface 1out2\n");
         gts_surface_inter_boolean(si, s3, operation);
         break;
     }
 
+    OutputDebugString("Clean up degenerate triangles\n");
+    gts_surface_coarsen(s3, NULL, NULL, NULL, NULL, stop_on_cost, &stop_cost, 0);
+
+cleanup:
+#ifdef DEBUG_CAPTURE_FAILED_SI
+    if (failed)
+    {
+        FILE *fptr;
+        // capture failed surfaces
+        debug_surface_print_stats("s1", 0, s1);
+        fopen_s(&fptr, "s1.gts", "wt");
+        gts_surface_write(s1, fptr);
+        fclose(fptr);
+        debug_surface_print_stats("s2", 0, s2);
+        fopen_s(&fptr, "s2.gts", "wt");
+        gts_surface_write(s2, fptr);
+        fclose(fptr);
+        DebugBreak();
+    }
+#endif
+    OutputDebugString("destroy bbtrees\n");
     gts_bb_tree_destroy(tree1, TRUE);
     gts_bb_tree_destroy(tree2, TRUE);
+    OutputDebugString("destroy surface inter\n");
     gts_object_destroy(GTS_OBJECT(si));
 
     return s3;

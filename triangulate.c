@@ -200,7 +200,9 @@ debug_surface_print_stats(char *heading, int id, GtsSurface *s)
     GtsSurfaceQualityStats qstats;
     char buf[512];
 
+#ifndef USE_DEBUGSTR_LOG
     if (view_debug)
+#endif
     {
         gts_surface_stats(s, &stats);
         gts_surface_quality_stats(s, &qstats);
@@ -342,6 +344,7 @@ gen_view_list_tree_surfaces(Group *tree)
     gen_adj_list_tree_volumes(tree, &rep_list);
 
     // Update clipped surface for volumes in the repair list, against all its adjacents
+    OutputDebugString("------------- Start rep list ---------------\n");
     for (o = rep_list; o != NULL; o = o->next)
     {
         Volume *vol = (Volume *)o->prev;
@@ -349,7 +352,10 @@ gen_view_list_tree_surfaces(Group *tree)
         // If the volume has a visible surface, and it's not just a pointer to the full
         // surface, it needs to be destroyed.
         if (vol->vis_surface != NULL && vol->vis_surface != vol->full_surface)
+        {
             gts_object_destroy(GTS_OBJECT(vol->vis_surface));
+            vol->vis_surface = NULL;
+        }
 
         // If there are no adjacencies, just point it to the full surface and we are done
         if (vol->adj_list == NULL)
@@ -367,21 +373,52 @@ gen_view_list_tree_surfaces(Group *tree)
             surf = ((Volume *)vol->adj_list->prev)->full_surface;
             for (adj = vol->adj_list->next; adj != NULL; adj = adj->next)
             {
+                OutputDebugString("BOOL_UNION\n");
                 surf2 = boolean_surfaces(surf, ((Volume *)adj->prev)->full_surface, BOOL_UNION, NULL);
                 if (delete_surf)
+                {
+                    OutputDebugString("Destroy Surf\n");
                     gts_object_destroy(GTS_OBJECT(surf));
+                }
+                if (surf2 == NULL)
+                    goto revert_list;
                 surf = surf2;
                 delete_surf = TRUE;
             }
 
             // Set visible surface to vol OUT union
+            OutputDebugString("BOOL_1OUT2\n");
             vol->vis_surface = boolean_surfaces(vol->full_surface, surf, BOOL_1OUT2, vol);
+            if (delete_surf)
+            {
+                OutputDebugString("Destroy Surf\n");
+                gts_object_destroy(GTS_OBJECT(surf));
+            }
+            if (vol->vis_surface == NULL)
+                goto revert_list;
             vol->surf_valid = TRUE;
             debug_surface_print_stats("After clipping:", vol->hdr.ID, vol->vis_surface);
-            if (delete_surf)
-                gts_object_destroy(GTS_OBJECT(surf));
         }
     }
+    OutputDebugString("Finish rep list\n");
+    return;
+
+revert_list:
+    // Back the whole rep_list out - none of it is safe to use
+    for (o = rep_list; o != NULL; o = o->next)
+    {
+        Volume *vol = (Volume *)o->prev;
+
+        if (vol->vis_surface != NULL && vol->vis_surface != vol->full_surface)
+        {
+            gts_object_destroy(GTS_OBJECT(vol->vis_surface));
+            vol->vis_surface = NULL;
+        }
+
+        vol->vis_surface = vol->full_surface;
+        vol->surf_valid = TRUE;
+    }
+    OutputDebugString("Reverted rep list\n");
 }
 
 // Regenerate the view lists for all faces of a volume, and also do some special stuff that
