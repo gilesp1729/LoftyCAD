@@ -261,8 +261,7 @@ error:
     return FALSE;
 }
 
-#if 0
-// Read a Geomview OFF file
+// Read a Geomview (OOGL) OFF file
 BOOL
 read_off_to_group(Group *group, char *filename)
 {
@@ -354,7 +353,6 @@ error:
     free(points);
     return FALSE;
 }
-#endif
 
 
 

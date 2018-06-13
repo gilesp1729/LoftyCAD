@@ -91,7 +91,6 @@ typedef struct Point
     BOOL            moved;          // When a point is moved, this is set TRUE. This stops shared
                                     // points from being moved twice.
     PFLAG           flags;          // Flag to indicate start of facet or contour in view lists.
-    GtsObject       *gts_object;    // GTS vertex or edge, used when building triangle meshes
 } Point;
 
 // 2D point struct.
@@ -213,15 +212,8 @@ typedef struct Volume
                                     // child faces' view lists. (use a Point list as can easily be freed)
                                     // Allows sharing of GTS vertices when building triangle meshes.
     struct Point    *edge_list;     // List edges for sharing similarly (use a Point list as can easily be freed)
-    GtsSurface      *full_surface;  // GTS surface for volume; it will be clipped to others to make vis_surface
-    GtsSurface      *vis_surface;   // GTS surface for volume; visible surface that results from clipping
     BOOL            surf_valid;     // If TRUE, the visible surface is up to date.
     struct Face     *faces;         // Doubly linked list of faces making up the volume
-
-    // Debugging only
-    struct Edge     *inter_edge_list; // Doubly linked list of edges representing the intersection curve
-                                    // of surface with other surfaces
-    BOOL            inter_closed;   // TRUE if GTS thinks the said curve is closed
 } Volume;
 
 // The group struct is used for groups, and also for the main object tree.

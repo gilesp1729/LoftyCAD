@@ -6,7 +6,6 @@
 #include <math.h>
 #include <stdio.h>
 #include "resource.h"
-#include "gts.h"
 #include "trackbal.h"
 #include "objtree.h"
 #include "geometry.h"
@@ -129,12 +128,9 @@ extern float quat_mXZ[4];
 #undef DEBUG_TOOLBAR_FACING
 #undef DEBUG_REVERSE_RECT_FACE
 #undef DEBUG_VIEW_LIST_ARC
-#define DEBUG_VIEW_SURFACE_STATS
 #define DEBUG_HIGHLIGHTING_ENABLED
 
-// Temporary dis/enabling of some features
-#define CLIP_SURFACES
-#define DEBUG_CAPTURE_FAILED_SI
+// Where do assert and log messages go
 #define USE_DEBUGSTR_LOG
 
 #ifdef USE_DEBUGSTR_LOG

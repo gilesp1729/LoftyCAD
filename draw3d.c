@@ -67,6 +67,7 @@ color(OBJECT obj_type, BOOL construction, BOOL selected, BOOL highlighted, BOOL 
     glColor4f(r, g, b, a);
 }
 
+#if 0
 // Draw a single GTS triangle
 int
 draw_triangle(GtsTriangle *t)
@@ -91,6 +92,7 @@ draw_triangle(GtsTriangle *t)
 
     return 1;
 }
+#endif
 
 // Draw any object. Control select/highlight colors per object type, how the parent is locked,
 // and whether to draw components or just the top-level object, among other things.
@@ -276,15 +278,20 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         break;
 
     case OBJ_VOLUME:
+#ifdef RENDER_CLIPPED_MESH
         if (view_rendered || view_clipped_faces)
         {
             // Draw from the triangulated and clipped view list
             ASSERT(((Volume *)obj)->surf_valid, "Surface is not up to date");
             color(OBJ_FACE, FALSE, selected, highlighted, FALSE);
-            gts_surface_foreach_face(((Volume *)obj)->vis_surface, (GtsFunc)draw_triangle, NULL);
+
+            //TODO
+
+
         }
         
         if (!view_rendered)
+#endif
         {
             // Draw individual faces
             for (face = ((Volume *)obj)->faces; face != NULL; face = (Face *)face->hdr.next)
@@ -1130,7 +1137,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
     trackball_CalcRotMatrix(matRot);
     glMultMatrixf(&(matRot[0][0]));
 
-    // Generate volume view lists, and find and update all clipped surfaces that need repair
+    // Generate volume view lists, and find and update all clipped surfaces
     gen_view_list_tree_surfaces(&object_tree);
 
     // Draw the object tree. 
@@ -1225,6 +1232,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                     draw_object(adj->prev, DRAW_HIGHLIGHT, LOCK_FACES);
             }
 
+#if 0
             // TODO highlight edges in intersection curve. Closed in green, non-closed in red.
             if (debug_view_inter)
             {
@@ -1244,6 +1252,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                 glEnd();
                 glEnable(GL_BLEND);
             }
+#endif
 #endif
         }
     }

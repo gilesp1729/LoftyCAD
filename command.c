@@ -455,9 +455,7 @@ Command(int message, int wParam, int lParam)
                 "LoftyCAD Files (*.LCD)\0*.LCD\0"
                 "STL Meshes (*.STL)\0*.STL\0"
                 "GNU Triangulated Surface Files (*.GTS)\0*.GTS\0"
-#if 0
                 "Geomview Object File Format Files (*.OFF)\0*.OFF\0"
-#endif
                 "All Files\0*.*\0\0";
             ofn.nFilterIndex = 1;
             ofn.lpstrDefExt = "lcd";
@@ -481,11 +479,9 @@ Command(int message, int wParam, int lParam)
                 case 3:
                     rc = read_gts_to_group(group, new_filename);
                     break;
-#if 0
                 case 4:
                     rc = read_off_to_group(group, new_filename);
                     break;
-#endif
                 }
                 if (rc)
                 {

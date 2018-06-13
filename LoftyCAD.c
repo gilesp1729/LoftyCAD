@@ -1385,7 +1385,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
         EnableMenuItem(hMenu, ID_DEBUG_ADJACENT, MF_GRAYED);
         EnableMenuItem(hMenu, ID_DEBUG_INTER, MF_GRAYED);
 #endif
-#ifndef CLIP_SURFACES
+#ifndef RENDER_CLIPPED_MESH
         EnableMenuItem(hMenu, ID_VIEW_CLIPPEDFACE, MF_GRAYED);
 #endif
 
