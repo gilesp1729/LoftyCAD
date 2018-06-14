@@ -8,9 +8,9 @@
 // They are assumed to contain one contiguous body, which will become a volume
 // with lots of triangular faces.
 
-// Helpers for STL reading; find existing points and edges
+// Helpers for STL reading; find existing points and edges by coordinate
 Point *
-find_point(Point *pt, Point **points)
+find_point_coord(Point *pt, Point **points)
 {
     Point *p;
 
@@ -29,7 +29,7 @@ find_point(Point *pt, Point **points)
 }
 
 Edge *
-find_edge(Point *p0, Point *p1, Edge **edges)
+find_edge_coords(Point *p0, Point *p1, Edge **edges)
 {
     Edge *e;
 
@@ -38,6 +38,30 @@ find_edge(Point *p0, Point *p1, Edge **edges)
         if (near_pt(e->endpoints[0], p0) && near_pt(e->endpoints[1], p1))
             break;
         if (near_pt(e->endpoints[0], p1) && near_pt(e->endpoints[1], p0))
+            break;
+    }
+    if (e == NULL)
+    {
+        e = edge_new(EDGE_STRAIGHT);
+        e->endpoints[0] = p0;
+        e->endpoints[1] = p1;
+        link((Object *)e, (Object **)edges);
+    }
+
+    return e;
+}
+
+// Find an edge by matching its endpoints by pointer 
+Edge *
+find_edge(Point *p0, Point *p1, Edge **edges)
+{
+    Edge *e;
+
+    for (e = *edges; e != NULL; e = (Edge *)e->hdr.next)
+    {
+        if (e->endpoints[0] == p0 && e->endpoints[1] == p1)
+            break;
+        if (e->endpoints[0] == p1 && e->endpoints[1] == p0)
             break;
     }
     if (e == NULL)
@@ -111,14 +135,14 @@ read_stl_to_group(Group *group, char *filename)
             if (i != 3)
                 goto error_return;
 
-            p0 = find_point(&pt[0], &points);
-            p1 = find_point(&pt[1], &points);
-            p2 = find_point(&pt[2], &points);
+            p0 = find_point_coord(&pt[0], &points);
+            p1 = find_point_coord(&pt[1], &points);
+            p2 = find_point_coord(&pt[2], &points);
 
             tf = face_new(FACE_FLAT, norm);
-            tf->edges[0] = find_edge(p0, p1, &edges);
-            tf->edges[1] = find_edge(p1, p2, &edges);
-            tf->edges[2] = find_edge(p2, p0, &edges);
+            tf->edges[0] = find_edge_coords(p0, p1, &edges);
+            tf->edges[1] = find_edge_coords(p1, p2, &edges);
+            tf->edges[2] = find_edge_coords(p2, p0, &edges);
             tf->n_edges = 3;
             if
                 (
@@ -244,6 +268,7 @@ read_gts_to_group(Group *group, char *filename)
             tf->initial_point = tf->edges[0]->endpoints[0];
         else
             tf->initial_point = tf->edges[0]->endpoints[1];
+
         tf->vol = vol;
         link((Object *)tf, (Object **)&vol->faces);
     }
@@ -271,6 +296,7 @@ read_off_to_group(Group *group, char *filename)
     char *nexttok = NULL;
     int i, npoints, nedges, nfaces;
     Point **points;
+    Edge *edges = NULL;
     Volume *vol;
 
     fopen_s(&f, filename, "rt");
@@ -328,17 +354,20 @@ read_off_to_group(Group *group, char *filename)
         tok = strtok_s(NULL, " \t\n", &nexttok);
         p3 = atoi(tok);
 
-        tf->edges[0] = edge_new(EDGE_STRAIGHT);         // TODO - this is a HUGE waste of edges. Share 'em.
-        tf->edges[0]->endpoints[0] = points[p1];
-        tf->edges[0]->endpoints[1] = points[p2];
-        tf->edges[1] = edge_new(EDGE_STRAIGHT);
-        tf->edges[1]->endpoints[0] = points[p2];
-        tf->edges[1]->endpoints[1] = points[p3];
-        tf->edges[2] = edge_new(EDGE_STRAIGHT);
-        tf->edges[2]->endpoints[0] = points[p3];
-        tf->edges[2]->endpoints[1] = points[p1];
+        tf->edges[0] = find_edge(points[p1], points[p2], &edges);
+        tf->edges[1] = find_edge(points[p2], points[p3], &edges);
+        tf->edges[2] = find_edge(points[p3], points[p1], &edges);
         tf->n_edges = 3;
-        tf->initial_point = tf->edges[0]->endpoints[0];
+        if
+        (
+            tf->edges[0]->endpoints[1] == tf->edges[1]->endpoints[0]
+            ||
+            tf->edges[0]->endpoints[1] == tf->edges[1]->endpoints[1]
+        )
+            tf->initial_point = tf->edges[0]->endpoints[0];
+        else
+            tf->initial_point = tf->edges[0]->endpoints[1];
+
         tf->vol = vol;
         link((Object *)tf, (Object **)&vol->faces);
     }
