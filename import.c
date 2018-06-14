@@ -151,7 +151,7 @@ error_return:
     return FALSE;
 }
 
-// Read an GTS file
+// Read a GTS file
 BOOL
 read_gts_to_group(Group *group, char *filename)
 {

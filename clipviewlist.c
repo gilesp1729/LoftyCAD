@@ -73,7 +73,7 @@ clip_tess_write(void * polygon_data)
     mesh_add_face(mesh, &v[0], &v[1], &v[2], &fi);
 }
 
-// callbacks for exporting tessellated stuff to a GTS surface
+// callbacks for exporting tessellated stuff to a mesh 
 void
 clip_tess_beginData(GLenum type, void * polygon_data)
 {
@@ -163,20 +163,7 @@ gen_view_list_surface(Face *face, Point *facet)
     Point *v, *vfirst;
 
     v = face->view_list;
-#if 0
-    // This should work for GTS files, but it trips up on zero-width triangles...
-    if (face->n_edges == 3)
     {
-        // Special case for triangular faces: pass them through directly to GTS.
-        clip_tess_points[0] = *v;
-        clip_tess_points[1] = *(Point *)v->hdr.next;
-        clip_tess_points[2] = *(Point *)v->hdr.next->next;
-        clip_tess_write(face);
-    }
-    else
-#endif
-    {
-        // use the tessellator
         while (v != NULL)
         {
             if (v->flags == FLAG_NEW_FACET)

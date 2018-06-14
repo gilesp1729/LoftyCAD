@@ -67,24 +67,23 @@ color(OBJECT obj_type, BOOL construction, BOOL selected, BOOL highlighted, BOOL 
     glColor4f(r, g, b, a);
 }
 
-// Draw a single mesh triangle
+// Draw a single mesh triangle with normal.
 void
 draw_triangle(void *arg, float x[3], float y[3], float z[3])
 {
     int i;
-#if 0  // geta normal in here somehow?
-    double A, B, C;
-    Plane norm;
+    float A, B, C, length;
 
-    gts_triangle_vertices(t, &v[0], &v[1], &v[2]);
-    gts_triangle_normal(t, &A, &B, &C);
-    norm.A = (float)A;
-    norm.B = (float)B;
-    norm.C = (float)C;
-    normalise_plane(&norm);
-#endif    
     glBegin(GL_POLYGON);
-//    glNormal3d(norm.A, norm.B, norm.C);
+    cross(x[1] - x[0], y[1] - y[0], z[1] - z[0], x[2] - x[0], y[2] - y[0], z[2] - z[0], &A, &B, &C);
+    length = (float)sqrt(A * A + B * B + C * C);
+    if (!nz(length))
+    {
+        A /= length;
+        B /= length;
+        C /= length;
+        glNormal3d(A, B, C);
+    }
     for (i = 0; i < 3; i++)
         glVertex3d(x[i], y[i], z[i]);
     glEnd();
@@ -102,6 +101,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
     BezierEdge *be;
     Point *p;
     Object *o;
+    Group *group;
     float dx, dy, dz;
     BOOL push_name, locked;
     // This object is selected. Color it and all its components.
@@ -276,7 +276,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
     case OBJ_VOLUME:
         if (view_rendered || view_clipped_faces)
         {
-            // Draw from the triangulated mesh (note: not clipped yet)
+            // Draw from the triangulated mesh for the volume.
             ASSERT(((Volume *)obj)->mesh_valid, "Mesh is not up to date");
             color(OBJ_FACE, FALSE, selected, highlighted, FALSE);
             mesh_foreach_face(((Volume *)obj)->mesh, draw_triangle, NULL);
@@ -291,8 +291,37 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         break;
 
     case OBJ_GROUP:
-        for (o = ((Group *)obj)->obj_list; o != NULL; o = o->next)
-            draw_object(o, (pres & ~DRAW_WITH_DIMENSIONS), o->lock);
+        // Draw from the triangulated mesh, and then draw any remaining
+        // volume meshes that were not completely merged.
+        group = (Group *)obj;
+        if (view_rendered || view_clipped_faces)
+        {
+            if (group->mesh != NULL && group->mesh_valid)
+                mesh_foreach_face(group->mesh, draw_triangle, NULL);
+
+            if (!group->mesh_complete)
+            {
+                for (o = group->obj_list; o != NULL; o = o->next)
+                {
+                    BOOL merged = FALSE;
+
+                    if (o->type == OBJ_GROUP)
+                        merged = ((Group *)o)->mesh_merged;
+                    else if (o->type == OBJ_VOLUME)
+                        merged = ((Volume *)o)->mesh_merged;
+
+                    if (!merged)
+                        draw_object(o, (pres & ~DRAW_WITH_DIMENSIONS), o->lock);
+                }
+            }
+        }
+
+        // Not a rendered view - just draw the thing no matter what
+        if (!view_rendered)
+        {
+            for (o = group->obj_list; o != NULL; o = o->next)
+                draw_object(o, (pres & ~DRAW_WITH_DIMENSIONS), o->lock);
+        }
         break;
     }
 

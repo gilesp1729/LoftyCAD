@@ -294,7 +294,7 @@ gen_adj_list_tree_volumes(Group *tree, Object **rep_list)
 void
 gen_view_list_tree_surfaces(Group *tree)
 {
-    Object *o;
+    //Object *o;
 
     // generate all view lists for all volumes, to make sure they are all up to date
     gen_view_list_tree_volumes(tree);

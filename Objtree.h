@@ -220,7 +220,7 @@ typedef struct Volume
     struct Point    *edge_list;     // List edges for sharing similarly (use a Point list as can easily be freed)
     Mesh            *mesh;          // Surface mesh for this volume.
     BOOL            mesh_valid;     // If TRUE, the mesh is up to date.
-    BOOL            mesh_merged;    // If TRUE, the mesh has been merged to its group mesh.
+    BOOL            mesh_merged;    // If TRUE, the mesh has been merged to its parent group mesh.
     struct Face     *faces;         // Doubly linked list of faces making up the volume
 } Volume;
 
@@ -231,6 +231,7 @@ typedef struct Group
     char            title[256];     // A name for the group
     Mesh            *mesh;          // Mesh for the complete group
     BOOL            mesh_valid;     // If TRUE, the mesh is up to date.
+    BOOL            mesh_merged;    // If TRUE, the mesh has been merged to its parent group mesh.
     BOOL            mesh_complete;  // If TRUE, all volumes have been completely merged to the mesh.
                                     // (otherwise, some will need to be added separately to the output)
     struct Object   *obj_list;      // Doubly linked list of objects making up the group
