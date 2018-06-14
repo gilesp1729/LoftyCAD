@@ -67,13 +67,12 @@ color(OBJECT obj_type, BOOL construction, BOOL selected, BOOL highlighted, BOOL 
     glColor4f(r, g, b, a);
 }
 
-#if 0
-// Draw a single GTS triangle
-int
-draw_triangle(GtsTriangle *t)
+// Draw a single mesh triangle
+void
+draw_triangle(void *arg, float x[3], float y[3], float z[3])
 {
     int i;
-    GtsVertex *v[3];
+#if 0  // geta normal in here somehow?
     double A, B, C;
     Plane norm;
 
@@ -83,16 +82,13 @@ draw_triangle(GtsTriangle *t)
     norm.B = (float)B;
     norm.C = (float)C;
     normalise_plane(&norm);
-    
+#endif    
     glBegin(GL_POLYGON);
-    glNormal3d(norm.A, norm.B, norm.C);
+//    glNormal3d(norm.A, norm.B, norm.C);
     for (i = 0; i < 3; i++)
-        glVertex3d(v[i]->p.x, v[i]->p.y, v[i]->p.z);
+        glVertex3d(x[i], y[i], z[i]);
     glEnd();
-
-    return 1;
 }
-#endif
 
 // Draw any object. Control select/highlight colors per object type, how the parent is locked,
 // and whether to draw components or just the top-level object, among other things.
@@ -278,20 +274,15 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         break;
 
     case OBJ_VOLUME:
-#ifdef RENDER_CLIPPED_MESH
         if (view_rendered || view_clipped_faces)
         {
-            // Draw from the triangulated and clipped view list
-            ASSERT(((Volume *)obj)->surf_valid, "Surface is not up to date");
+            // Draw from the triangulated mesh (note: not clipped yet)
+            ASSERT(((Volume *)obj)->mesh_valid, "Mesh is not up to date");
             color(OBJ_FACE, FALSE, selected, highlighted, FALSE);
-
-            //TODO
-
-
+            mesh_foreach_face(((Volume *)obj)->mesh, draw_triangle, NULL);
         }
         
         if (!view_rendered)
-#endif
         {
             // Draw individual faces
             for (face = ((Volume *)obj)->faces; face != NULL; face = (Face *)face->hdr.next)

@@ -3,6 +3,11 @@
 #ifndef __OBJTREE_H__
 #define __OBJTREE_H__
 
+// Opaque pointers to C++ objects used by CGAL
+typedef void Mesh;
+typedef void Vertex_index;
+typedef void Face_index;
+
 // Distinguishes objects on the main tree.
 typedef enum
 {
@@ -91,6 +96,7 @@ typedef struct Point
     BOOL            moved;          // When a point is moved, this is set TRUE. This stops shared
                                     // points from being moved twice.
     PFLAG           flags;          // Flag to indicate start of facet or contour in view lists.
+    Vertex_index    *vi;            // Index to CGAL mesh vertex (used when building meshes)
 } Point;
 
 // 2D point struct.
@@ -210,9 +216,11 @@ typedef struct Volume
     struct Object   *adj_list;      // Singly linked list of other volumes whose bboxes intersect this one
     struct Point    *point_list;    // Doubly linked list of Points whose coordinates are copied from 
                                     // child faces' view lists. (use a Point list as can easily be freed)
-                                    // Allows sharing of GTS vertices when building triangle meshes.
+                                    // Allows sharing of mesh vertices when building triangle meshes.
     struct Point    *edge_list;     // List edges for sharing similarly (use a Point list as can easily be freed)
-    BOOL            surf_valid;     // If TRUE, the visible surface is up to date.
+    Mesh            *mesh;          // Surface mesh for this volume.
+    BOOL            mesh_valid;     // If TRUE, the mesh is up to date.
+    BOOL            mesh_merged;    // If TRUE, the mesh has been merged to its group mesh.
     struct Face     *faces;         // Doubly linked list of faces making up the volume
 } Volume;
 
@@ -221,6 +229,10 @@ typedef struct Group
 {
     struct Object   hdr;            // Header
     char            title[256];     // A name for the group
+    Mesh            *mesh;          // Mesh for the complete group
+    BOOL            mesh_valid;     // If TRUE, the mesh is up to date.
+    BOOL            mesh_complete;  // If TRUE, all volumes have been completely merged to the mesh.
+                                    // (otherwise, some will need to be added separately to the output)
     struct Object   *obj_list;      // Doubly linked list of objects making up the group
 } Group;
 

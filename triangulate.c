@@ -147,10 +147,10 @@ invalidate_all_view_lists(Object *parent, Object *obj, float dx, float dy, float
 
             // Remember the pre-move bbox, as it affects which other vols get their surfaces updated.
             // Clear the current bbox so it gets updated with the view list.
-            // Mark this volume as needing a new surface update.
+            // Mark this volume as needing a new mesh update.
             vol->old_bbox = vol->bbox;
             clear_bbox(&vol->bbox);
-            vol->surf_valid = FALSE;
+            vol->mesh_valid = FALSE;
 
             for (f = vol->faces; f != NULL; f = (Face *)f->hdr.next)
                 invalidate_all_view_lists((Object *)f, obj, dx, dy, dz);
@@ -333,13 +333,14 @@ gen_view_list_vol(Volume *vol)
     free_obj_list(vol->adj_list);
     vol->adj_list = NULL;
 
-    // generate view lists for all the faces, and update the full surface
+    // create a new mesh
+    if (vol->mesh != NULL)
+        mesh_destroy(vol->mesh);
+    vol->mesh = mesh_new();
+
+    // generate view lists for all the faces, and update the mesh
     for (f = vol->faces; f != NULL; f = (Face *)f->hdr.next)
         gen_view_list_face(f);
-
-    // TODO
-
-
 }
 
 // Regenerate the unclipped view list for a face. While here, also calculate the outward
@@ -533,7 +534,7 @@ gen_view_list_face(Face *face)
     // contribution to the volume bounding bbox.
     face->view_valid = TRUE;
 
-    // Generate the visible triangulated surface for the face (the volume's vis_surface is assumed to 
+    // Generate the triangulated mesh for the face (the volume's mesh is assumed to 
     // have been initialised before this is called)
     if (face->vol != NULL)
         gen_view_list_surface(face, face->view_list);

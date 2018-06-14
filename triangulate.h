@@ -34,6 +34,16 @@ void gen_adj_list_volume(Group *tree, Volume *vol);
 void init_clip_tess(void);
 void gen_view_list_surface(Face *face, Point *facet);
 
+// Mesh functions, and interface to CGAL (mesh.cpp)
+Mesh *mesh_new(void);
+void mesh_destroy(Mesh *mesh);
+void mesh_add_vertex(Mesh *mesh, float x, float y, float z, Vertex_index *vi);
+void mesh_add_face(Mesh *mesh, Vertex_index *v1, Vertex_index *v2, Vertex_index *v3, Face_index *fi);
+typedef void(*FaceCB)(void *arg, float x[3], float y[3], float z[3]);
+void mesh_foreach_face(Mesh *mesh, FaceCB callback, void *callback_arg);
+
+//BOOL mesh_union(Mesh *mesh1, Mesh *mesh2, Mesh *mesh_out);
+
 // Triangulate and render
 void init_triangulator(void);
 void tess_vertex(GLUtesselator *tess, Point *p);
