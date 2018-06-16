@@ -130,6 +130,8 @@ enforce_arc_constraints(Edge *e, Point *p, float dx, float dy, float dz)
 void
 invalidate_all_view_lists(Object *parent, Object *obj, float dx, float dy, float dz)
 {
+    Group *group;
+    Volume *vol;
     Face *f;
     Object *o;
     int i;
@@ -137,24 +139,24 @@ invalidate_all_view_lists(Object *parent, Object *obj, float dx, float dy, float
     switch (parent->type)
     {
     case OBJ_GROUP:
-        for (o = ((Group *)parent)->obj_list; o != NULL; o = o->next)
+        group = (Group *)parent;
+        for (o = group->obj_list; o != NULL; o = o->next)
             invalidate_all_view_lists(o, obj, dx, dy, dz);
+        group->mesh_valid = FALSE;
         break;
 
     case OBJ_VOLUME:
-        {
-            Volume *vol = (Volume *)parent;
+        vol = (Volume *)parent;
 
-            // Remember the pre-move bbox, as it affects which other vols get their surfaces updated.
-            // Clear the current bbox so it gets updated with the view list.
-            // Mark this volume as needing a new mesh update.
-            vol->old_bbox = vol->bbox;
-            clear_bbox(&vol->bbox);
-            vol->mesh_valid = FALSE;
+        // Remember the pre-move bbox, as it affects which other vols get their surfaces updated.
+        // Clear the current bbox so it gets updated with the view list.
+        // Mark this volume as needing a new mesh update.
+        vol->old_bbox = vol->bbox;
+        clear_bbox(&vol->bbox);
+        vol->mesh_valid = FALSE;
 
-            for (f = vol->faces; f != NULL; f = (Face *)f->hdr.next)
-                invalidate_all_view_lists((Object *)f, obj, dx, dy, dz);
-        }
+        for (f = vol->faces; f != NULL; f = (Face *)f->hdr.next)
+            invalidate_all_view_lists((Object *)f, obj, dx, dy, dz);
         break;
 
     case OBJ_FACE:
@@ -192,12 +194,14 @@ invalidate_all_view_lists(Object *parent, Object *obj, float dx, float dy, float
     }
 }
 
-// Generate volume view lists for all volumes in tree
-void
+// Generate volume view lists for all volumes in tree. Return TRUE if something new
+// was generated, FALSE if everything was up to date.
+BOOL
 gen_view_list_tree_volumes(Group *tree)
 {
     Object *obj;
     Volume *vol;
+    BOOL rc = FALSE;
 
     // generate all view lists for all volumes, to make sure they are all up to date
     for (obj = tree->obj_list; obj != NULL; obj = obj->next)
@@ -206,7 +210,8 @@ gen_view_list_tree_volumes(Group *tree)
         {
         case OBJ_VOLUME:
             vol = (Volume * )obj;
-            gen_view_list_vol(vol);
+            if (gen_view_list_vol(vol))
+                rc = TRUE;
 
             // while here, clean out the volume's adjacency list
             free_obj_list(vol->adj_list);
@@ -214,10 +219,21 @@ gen_view_list_tree_volumes(Group *tree)
             break;
 
         case OBJ_GROUP:
-            gen_view_list_tree_volumes((Group *)obj);
+            if (gen_view_list_tree_volumes((Group *)obj))
+                rc = TRUE;
             break;
         }
     }
+
+    // clear and reinit the group mesh if any volumes needed regenerating
+    if (rc)
+    {
+        if (tree->mesh != NULL)
+            mesh_destroy(tree->mesh);
+        tree->mesh = NULL;
+        tree->mesh_valid = FALSE;
+    }
+    return rc;
 }
 
 #if 0
@@ -290,26 +306,82 @@ gen_adj_list_tree_volumes(Group *tree, Object **rep_list)
 }
 #endif
 
-// Generate volume view lists, and find and update all clipped surfaces that need repair
+// Generate mesh for entire tree (a group or the object tree)
 void
 gen_view_list_tree_surfaces(Group *tree)
 {
-    //Object *o;
+    Object *obj;
+    Volume *vol;
+    Group *group;
 
-    // generate all view lists for all volumes, to make sure they are all up to date
-    gen_view_list_tree_volumes(tree);
+    tree->mesh_complete = TRUE;
 
-    // TODO 
+    // All solid volumes, and groups, get unioned into the parent group mesh.
+    for (obj = tree->obj_list; obj != NULL; obj = obj->next)
+    {
+        switch (obj->type)
+        {
+        case OBJ_VOLUME:
+            vol = (Volume *)obj;
+
+            // TODO1: make sure it is solid first
+
+
+
+
+            
+            if (!tree->mesh_valid)
+            {
+                // First one: copy vol->mesh into tree->mesh
+                tree->mesh = mesh_copy(vol->mesh);
+                tree->mesh_valid = TRUE;
+                vol->mesh_merged = TRUE;
+            }
+            else
+            {
+                // Merge volume mesh to tree mesh
+                vol->mesh_merged = mesh_union(vol->mesh, tree->mesh);
+                if (!vol->mesh_merged)
+                    tree->mesh_complete = FALSE;
+            }
+            break;
+
+        case OBJ_GROUP:
+            group = (Group *)obj;
+            gen_view_list_tree_surfaces(group);
+            if (!tree->mesh_valid)
+            {
+                // First one: copy group->mesh into tree->mesh
+                tree->mesh = mesh_copy(group->mesh);
+                tree->mesh_valid = TRUE;
+                group->mesh_merged = TRUE;
+            }
+            else
+            {
+                // Merge volume mesh to tree mesh
+                group->mesh_merged = mesh_union(group->mesh, tree->mesh);
+                if (group->mesh_merged)
+                    tree->mesh_complete = FALSE;
+            }
+            break;
+        }
+
+        // Then all the holes (negative volumes) get intersected with the parent group mesh.
+        // No groups here, only volumes
+        // TODO1
 
 
 
 
 
+
+    }
 }
 
 // Regenerate the view lists for all faces of a volume, and also do some special stuff that
-// only volumes need (regenerate the vol surface mesh)
-void
+// only volumes need (initialise the vol surface mesh). Return TRUE if volume was regenerated,
+// or FALSE if everything was up to date.
+BOOL
 gen_view_list_vol(Volume *vol)
 {
     Face *f;
@@ -320,7 +392,7 @@ gen_view_list_vol(Volume *vol)
             break;
     }
     if (f == NULL)
-        return;     // all faces are valid, nothing to do
+        return FALSE;     // all faces are valid, nothing to do
 
     for (f = vol->faces; f != NULL; f = (Face *)f->hdr.next)
         f->view_valid = FALSE;  // invalidate them all
@@ -341,6 +413,9 @@ gen_view_list_vol(Volume *vol)
     // generate view lists for all the faces, and update the mesh
     for (f = vol->faces; f != NULL; f = (Face *)f->hdr.next)
         gen_view_list_face(f);
+
+    vol->mesh_valid = TRUE;
+    return TRUE;
 }
 
 // Regenerate the unclipped view list for a face. While here, also calculate the outward
