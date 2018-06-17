@@ -59,7 +59,7 @@ extern "C"
             *mesh2,
             params::vertex_point_map(mesh1_pm),
             params::vertex_point_map(mesh2_pm),
-            params::vertex_point_map(mesh1_pm)));
+            params::vertex_point_map(mesh2_pm)));
     }
 
     int // no BOOL here
@@ -83,7 +83,7 @@ extern "C"
             *mesh2,
             params::vertex_point_map(mesh1_pm),
             params::vertex_point_map(mesh2_pm),
-            params::vertex_point_map(mesh1_pm)));
+            params::vertex_point_map(mesh2_pm)));
     }
 
     void

@@ -143,7 +143,6 @@ invalidate_all_view_lists(Object *parent, Object *obj, float dx, float dy, float
         for (o = group->obj_list; o != NULL; o = o->next)
             invalidate_all_view_lists(o, obj, dx, dy, dz);
         group->mesh_valid = FALSE;
-        Log("Invalidate group\r\n");
         break;
 
     case OBJ_VOLUME:
@@ -233,7 +232,6 @@ gen_view_list_tree_volumes(Group *tree)
             mesh_destroy(tree->mesh);
         tree->mesh = NULL;
         tree->mesh_valid = FALSE;
-        Log("New mesh group\r\n");
     }
     return rc;
 }
@@ -331,7 +329,7 @@ gen_view_list_tree_surfaces(Group *tree, Group *parent_tree)
 
 
 
-#ifdef MERGE_GROUPS_SEPARATELY
+#ifdef MERGE_GROUPS_SEPARATELY  // NOT for prime time - it is very slow
             if (!tree->mesh_valid)
             {
                 // First one: copy vol->mesh into tree->mesh
@@ -345,7 +343,6 @@ gen_view_list_tree_surfaces(Group *tree, Group *parent_tree)
                 vol->mesh_merged = mesh_union(vol->mesh, tree->mesh);
                 if (!vol->mesh_merged)
                     tree->mesh_complete = FALSE;
-                Log("Merge volume\r\n");
             }
 #else
             if (!parent_tree->mesh_valid)
@@ -361,7 +358,6 @@ gen_view_list_tree_surfaces(Group *tree, Group *parent_tree)
                 vol->mesh_merged = mesh_union(vol->mesh, parent_tree->mesh);
                 if (!vol->mesh_merged)
                     parent_tree->mesh_complete = FALSE;
-                Log("Merge volume\r\n");
             }
 #endif
             break;
@@ -383,7 +379,6 @@ gen_view_list_tree_surfaces(Group *tree, Group *parent_tree)
                 group->mesh_merged = mesh_union(group->mesh, tree->mesh);
                 if (!group->mesh_merged)
                     tree->mesh_complete = FALSE;
-                Log("Merge group\r\n");
             }
 #endif
             break;
@@ -432,7 +427,6 @@ gen_view_list_vol(Volume *vol)
     if (vol->mesh != NULL)
         mesh_destroy(vol->mesh);
     vol->mesh = mesh_new();
-    Log("New mesh vol\r\n");
 
     // generate view lists for all the faces, and update the mesh
     for (f = vol->faces; f != NULL; f = (Face *)f->hdr.next)

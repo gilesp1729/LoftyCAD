@@ -526,7 +526,6 @@ right_click(AUX_EVENTREC *event)
     if (parent->lock != old_parent_lock || group_changed || dims_changed || sel_changed)
     {
         // we have changed the drawing - write an undo checkpoint
-        drawing_changed = TRUE;
-        write_checkpoint(&object_tree, curr_filename);
+        update_drawing();
     }
 }

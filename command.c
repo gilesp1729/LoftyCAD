@@ -485,8 +485,7 @@ Command(int message, int wParam, int lParam)
                 if (rc)
                 {
                     link_group((Object *)group, &object_tree);
-                    drawing_changed = TRUE;
-                    write_checkpoint(&object_tree, curr_filename);
+                    update_drawing();
                     populate_treeview();
                 }
                 else
@@ -564,8 +563,7 @@ Command(int message, int wParam, int lParam)
             clip_xoffset = 0;
             clip_yoffset = 0;
             clip_zoffset = 0;
-            drawing_changed = TRUE;
-            write_checkpoint(&object_tree, curr_filename);
+            update_drawing();
         skip_cut:
             break;
 
@@ -612,8 +610,7 @@ Command(int message, int wParam, int lParam)
             if (nz(facing_plane->C))
                 clip_zoffset += 10;
 
-            drawing_changed = TRUE;
-            write_checkpoint(&object_tree, curr_filename);
+            update_drawing();
             break;
 
         case ID_EDIT_DELETE:
@@ -628,8 +625,7 @@ Command(int message, int wParam, int lParam)
                 }
             }
             clear_selection(&selection);
-            drawing_changed = TRUE;
-            write_checkpoint(&object_tree, curr_filename);
+            update_drawing();
             break;
 
         case ID_EDIT_SELECTALL:

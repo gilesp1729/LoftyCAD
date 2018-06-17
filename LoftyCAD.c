@@ -620,6 +620,16 @@ clear_selection(Object **sel_list)
     *sel_list = NULL;
 }
 
+// When something has changed: mark drawing as changed, write a checkpoint, and update the clipped surface.
+void
+update_drawing(void)
+{
+    drawing_changed = TRUE;
+    write_checkpoint(&object_tree, curr_filename);
+    if (gen_view_list_tree_volumes(&object_tree))
+        gen_view_list_tree_surfaces(&object_tree, &object_tree);
+}
+
 // Mouse handlers
 void CALLBACK
 left_down(AUX_EVENTREC *event)
@@ -853,8 +863,7 @@ left_up(AUX_EVENTREC *event)
         ReleaseCapture();
         left_mouse = FALSE;
         change_state(STATE_NONE);
-        drawing_changed = TRUE;  // TODO test for a real change (poss just a click)
-        write_checkpoint(&object_tree, curr_filename);
+        update_drawing();
         break;
 
     case STATE_DRAWING_RECT:
@@ -917,8 +926,7 @@ left_up(AUX_EVENTREC *event)
                     (app_state == STATE_DRAWING_RECT || app_state == STATE_DRAWING_CIRCLE) ? LOCK_EDGES : LOCK_NONE;
             }
 
-            drawing_changed = TRUE;
-            write_checkpoint(&object_tree, curr_filename);
+            update_drawing();
             curr_obj = NULL;
         }
 
@@ -933,8 +941,7 @@ left_up(AUX_EVENTREC *event)
         ReleaseCapture();
         left_mouse = FALSE;
         change_state(STATE_NONE);
-        drawing_changed = TRUE;
-        write_checkpoint(&object_tree, curr_filename);
+        update_drawing();
         hide_hint();
         break;
 
@@ -1231,7 +1238,7 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             angle_snap = atoi(buf);
 
             drawing_changed = TRUE;   // TODO test for a real change
-            // Note: we can't undo this.
+            // Note: we can't undo this. Don't write a checkpoint.
 
             EndDialog(hWnd, 1);
             break;
