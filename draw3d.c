@@ -296,7 +296,8 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         group = (Group *)obj;
         if (view_rendered || view_clipped_faces)
         {
-            if (group->mesh != NULL && group->mesh_valid)
+            // The object tree is a group, but it is never merged.
+            if (group->mesh != NULL && group->mesh_valid && !group->mesh_merged)
                 mesh_foreach_face(group->mesh, draw_triangle, NULL);
 
             if (!group->mesh_complete)
@@ -316,7 +317,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             }
         }
 
-        // Not a rendered view - just draw the thing no matter what
+        // Not a rendered view - just draw the thing no matter what.
         if (!view_rendered)
         {
             for (o = group->obj_list; o != NULL; o = o->next)
@@ -1159,7 +1160,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
 
     // Generate volume view lists, and find and update all clipped surfaces
     if (gen_view_list_tree_volumes(&object_tree))
-        gen_view_list_tree_surfaces(&object_tree);
+        gen_view_list_tree_surfaces(&object_tree, &object_tree);
 
     // Draw the object tree. 
     pres = 0;

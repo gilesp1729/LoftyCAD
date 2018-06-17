@@ -46,7 +46,7 @@ check_file_changed(HWND hWnd)
     clean_checkpoints(curr_filename);
     clear_selection(&selection);
     clear_selection(&clipboard);
-    purge_tree(object_tree.obj_list);
+    purge_tree(&object_tree);
     DestroyWindow(hWnd);
 }
 
@@ -359,8 +359,7 @@ Command(int message, int wParam, int lParam)
             }
 
             clear_selection(&selection);
-            purge_tree(object_tree.obj_list);
-            object_tree.obj_list = NULL;
+            purge_tree(&object_tree);
             drawing_changed = FALSE;
             clean_checkpoints(curr_filename);
             curr_filename[0] = '\0';
@@ -524,8 +523,7 @@ Command(int message, int wParam, int lParam)
                 }
 
                 clear_selection(&selection);
-                purge_tree(object_tree.obj_list);
-                object_tree.obj_list = NULL;
+                purge_tree(&object_tree);
                 drawing_changed = FALSE;
                 clean_checkpoints(curr_filename);
                 curr_filename[0] = '\0';

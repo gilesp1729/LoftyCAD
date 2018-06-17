@@ -143,6 +143,7 @@ invalidate_all_view_lists(Object *parent, Object *obj, float dx, float dy, float
         for (o = group->obj_list; o != NULL; o = o->next)
             invalidate_all_view_lists(o, obj, dx, dy, dz);
         group->mesh_valid = FALSE;
+        Log("Invalidate group\r\n");
         break;
 
     case OBJ_VOLUME:
@@ -232,6 +233,7 @@ gen_view_list_tree_volumes(Group *tree)
             mesh_destroy(tree->mesh);
         tree->mesh = NULL;
         tree->mesh_valid = FALSE;
+        Log("New mesh group\r\n");
     }
     return rc;
 }
@@ -308,7 +310,7 @@ gen_adj_list_tree_volumes(Group *tree, Object **rep_list)
 
 // Generate mesh for entire tree (a group or the object tree)
 void
-gen_view_list_tree_surfaces(Group *tree)
+gen_view_list_tree_surfaces(Group *tree, Group *parent_tree)
 {
     Object *obj;
     Volume *vol;
@@ -329,7 +331,7 @@ gen_view_list_tree_surfaces(Group *tree)
 
 
 
-            
+#ifdef MERGE_GROUPS_SEPARATELY
             if (!tree->mesh_valid)
             {
                 // First one: copy vol->mesh into tree->mesh
@@ -343,12 +345,31 @@ gen_view_list_tree_surfaces(Group *tree)
                 vol->mesh_merged = mesh_union(vol->mesh, tree->mesh);
                 if (!vol->mesh_merged)
                     tree->mesh_complete = FALSE;
+                Log("Merge volume\r\n");
             }
+#else
+            if (!parent_tree->mesh_valid)
+            {
+                // First one: copy vol->mesh into tree->mesh
+                parent_tree->mesh = mesh_copy(vol->mesh);
+                parent_tree->mesh_valid = TRUE;
+                vol->mesh_merged = TRUE;
+            }
+            else
+            {
+                // Merge volume mesh to tree mesh
+                vol->mesh_merged = mesh_union(vol->mesh, parent_tree->mesh);
+                if (!vol->mesh_merged)
+                    parent_tree->mesh_complete = FALSE;
+                Log("Merge volume\r\n");
+            }
+#endif
             break;
 
         case OBJ_GROUP:
             group = (Group *)obj;
-            gen_view_list_tree_surfaces(group);
+            gen_view_list_tree_surfaces(group, tree);
+#ifdef MERGE_GROUPS_SEPARATELY
             if (!tree->mesh_valid)
             {
                 // First one: copy group->mesh into tree->mesh
@@ -360,9 +381,11 @@ gen_view_list_tree_surfaces(Group *tree)
             {
                 // Merge volume mesh to tree mesh
                 group->mesh_merged = mesh_union(group->mesh, tree->mesh);
-                if (group->mesh_merged)
+                if (!group->mesh_merged)
                     tree->mesh_complete = FALSE;
+                Log("Merge group\r\n");
             }
+#endif
             break;
         }
 
@@ -409,6 +432,7 @@ gen_view_list_vol(Volume *vol)
     if (vol->mesh != NULL)
         mesh_destroy(vol->mesh);
     vol->mesh = mesh_new();
+    Log("New mesh vol\r\n");
 
     // generate view lists for all the faces, and update the mesh
     for (f = vol->faces; f != NULL; f = (Face *)f->hdr.next)

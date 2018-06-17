@@ -15,7 +15,6 @@ BOOL intersects_bbox(Bbox *box1, Bbox *box2);
 
 // Regenerate a view list
 void invalidate_all_view_lists(Object *parent, Object *obj, float dx, float dy, float dz);
-void gen_view_list_tree_surfaces(Group *tree);
 void gen_view_list_vol_surface(Volume *vol);
 void gen_view_list_face(Face *face);
 void update_view_list_2D(Face *face);
@@ -26,7 +25,7 @@ void free_view_list_face(Face *face);
 // Surface meshes
 BOOL gen_view_list_vol(Volume *vol);
 BOOL gen_view_list_tree_volumes(Group *tree);
-void gen_view_list_tree_surfaces(Group *tree);
+void gen_view_list_tree_surfaces(Group *tree, Group *parent_tree);
 //void gen_adj_list_tree_volumes(Group *tree, Object **rep_list);
 //void gen_adj_list_volume(Group *tree, Volume *vol);
 

@@ -839,6 +839,7 @@ purge_obj(Object *obj)
     Object *next_obj = NULL;
     Object *o;
     Volume *vol;
+    Group *group;
 
     switch (obj->type)
     {
@@ -892,11 +893,14 @@ purge_obj(Object *obj)
         break;
 
     case OBJ_GROUP:
-        for (o = ((Group *)obj)->obj_list; o != NULL; o = next_obj)
+        group = (Group *)obj;
+        for (o = group->obj_list; o != NULL; o = next_obj)
         {
             next_obj = o->next;
             purge_obj(o);
         }
+        if (group->mesh != NULL)
+            mesh_destroy(group->mesh);
         free(obj);
         break;
     }
@@ -905,16 +909,22 @@ purge_obj(Object *obj)
 // Purge a tree, freeing everything in it, except for Points, which are
 // placed in the free list.
 void
-purge_tree(Object *tree)
+purge_tree(Group *tree)
 {
     Object *obj;
     Object *nextobj = NULL;
 
-    for (obj = tree; obj != NULL; obj = nextobj)
+    for (obj = tree->obj_list; obj != NULL; obj = nextobj)
     {
         nextobj = obj->next;
         purge_obj(obj);
     }
+    tree->obj_list = NULL;
+    if (tree->mesh != NULL)
+        mesh_destroy(tree->mesh);
+    tree->mesh = NULL;
+    tree->mesh_valid = FALSE;
+    tree->mesh_complete = FALSE;
 }
 
 

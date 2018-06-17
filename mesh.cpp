@@ -65,7 +65,25 @@ extern "C"
     int // no BOOL here
         mesh_intersection(Mesh *mesh1, Mesh *mesh2)
     {
-        return 0;
+        Exact_point_map mesh1_exact_points =
+            mesh1->add_property_map<vertex_descriptor, EK::Point_3>("e:exact_point").first;
+        Exact_point_computed mesh1_exact_points_computed =
+            mesh1->add_property_map<vertex_descriptor, bool>("e:exact_points_computed").first;
+
+        Exact_point_map mesh2_exact_points =
+            mesh2->add_property_map<vertex_descriptor, EK::Point_3>("e:exact_point").first;
+        Exact_point_computed mesh2_exact_points_computed =
+            mesh2->add_property_map<vertex_descriptor, bool>("e:exact_points_computed").first;
+
+        Coref_point_map mesh1_pm(mesh1_exact_points, mesh1_exact_points_computed, *mesh1);
+        Coref_point_map mesh2_pm(mesh2_exact_points, mesh2_exact_points_computed, *mesh2);
+
+        return (PMP::corefine_and_compute_intersection(*mesh1,
+            *mesh2,
+            *mesh2,
+            params::vertex_point_map(mesh1_pm),
+            params::vertex_point_map(mesh2_pm),
+            params::vertex_point_map(mesh1_pm)));
     }
 
     void

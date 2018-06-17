@@ -301,6 +301,6 @@ void clean_checkpoints(char *filename);
 
 // Delete an object, or the whole tree
 void purge_obj(Object *obj);
-void purge_tree(Object *tree);
+void purge_tree(Group *tree);
 
 #endif /* __OBJTREE_H__ */
