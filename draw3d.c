@@ -1179,9 +1179,15 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
     glMultMatrixf(&(matRot[0][0]));
 
     // Generate volume view lists, and find and update all clipped surfaces
-    // (only if viewing clipped surfaces directly; it's slow)
-    if (gen_view_list_tree_volumes(&object_tree) && view_clipped_faces)
+    // (only if viewing clipped surfaces directly; it's slow. Otherwise they
+    // get updated when the mouse is released)
+    if (gen_view_list_tree_volumes(&object_tree))
+        surfaces_generated = TRUE;
+    if (surfaces_generated && view_clipped_faces)
+    {
         gen_view_list_tree_surfaces(&object_tree, &object_tree);
+        surfaces_generated = FALSE;
+    }
 
     // Draw the object tree. 
     pres = 0;

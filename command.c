@@ -390,6 +390,8 @@ Command(int message, int wParam, int lParam)
                 hMenu = GetSubMenu(hMenu, 9);
                 insert_filename_to_MRU(hMenu, curr_filename);
                 populate_treeview();
+                gen_view_list_tree_volumes(&object_tree);
+                gen_view_list_tree_surfaces(&object_tree, &object_tree);
             }
 
             break;
@@ -541,6 +543,8 @@ Command(int message, int wParam, int lParam)
                     strcat_s(window_title, 256, object_tree.title);
                     SetWindowText(auxGetHWND(), window_title);
                     populate_treeview();
+                    gen_view_list_tree_volumes(&object_tree);
+                    gen_view_list_tree_surfaces(&object_tree, &object_tree);
                 }
             }
             break;

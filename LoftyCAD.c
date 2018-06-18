@@ -97,9 +97,6 @@ BOOL view_rendered = FALSE;
 // TRUE to display construction edges
 BOOL view_constr = TRUE;
 
-// TRUE to display clipping of faces to volumes
-BOOL view_clipped_faces = FALSE;
-
 // Current filename
 char curr_filename[256] = { 0, };
 
@@ -142,10 +139,17 @@ int generation = 0;
 int latest_generation = 0;
 int max_generation = 0;
 
+// TRUE when something has changed or moved, and some volume surface meshes have been
+// regenerated. The final surface mesh needs to be generated again.
+BOOL surfaces_generated = FALSE;
+
 // Debugging options
 BOOL debug_view_adj = FALSE;
 BOOL debug_view_bbox = FALSE;
 BOOL debug_view_inter = FALSE;
+// TRUE to display clipping of faces to volumes
+BOOL view_clipped_faces = FALSE;
+
 
 
 // Set material and lighting up
@@ -627,7 +631,12 @@ update_drawing(void)
     drawing_changed = TRUE;
     write_checkpoint(&object_tree, curr_filename);
     if (gen_view_list_tree_volumes(&object_tree))
+        surfaces_generated = TRUE;
+    if (surfaces_generated)
+    {
         gen_view_list_tree_surfaces(&object_tree, &object_tree);
+        surfaces_generated = FALSE;
+    }
 }
 
 // Mouse handlers

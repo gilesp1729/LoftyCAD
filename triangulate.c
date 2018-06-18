@@ -324,27 +324,10 @@ gen_view_list_tree_surfaces(Group *tree, Group *parent_tree)
         case OBJ_VOLUME:
             vol = (Volume *)obj;
 
-            // TODO1: make sure it is solid first
+            // Make sure it is solid first
+            if (vol->extrude_height < 0)
+                break;
 
-
-
-
-#ifdef MERGE_GROUPS_SEPARATELY  // NOT for prime time - it is very slow
-            if (!tree->mesh_valid)
-            {
-                // First one: copy vol->mesh into tree->mesh
-                tree->mesh = mesh_copy(vol->mesh);
-                tree->mesh_valid = TRUE;
-                vol->mesh_merged = TRUE;
-            }
-            else
-            {
-                // Merge volume mesh to tree mesh
-                vol->mesh_merged = mesh_union(vol->mesh, tree->mesh);
-                if (!vol->mesh_merged)
-                    tree->mesh_complete = FALSE;
-            }
-#else
             if (!parent_tree->mesh_valid)
             {
                 // First one: copy vol->mesh into tree->mesh
@@ -359,40 +342,36 @@ gen_view_list_tree_surfaces(Group *tree, Group *parent_tree)
                 if (!vol->mesh_merged)
                     parent_tree->mesh_complete = FALSE;
             }
-#endif
             break;
 
         case OBJ_GROUP:
             group = (Group *)obj;
             gen_view_list_tree_surfaces(group, tree);
-#ifdef MERGE_GROUPS_SEPARATELY
-            if (!tree->mesh_valid)
-            {
-                // First one: copy group->mesh into tree->mesh
-                tree->mesh = mesh_copy(group->mesh);
-                tree->mesh_valid = TRUE;
-                group->mesh_merged = TRUE;
-            }
-            else
-            {
-                // Merge volume mesh to tree mesh
-                group->mesh_merged = mesh_union(group->mesh, tree->mesh);
-                if (!group->mesh_merged)
-                    tree->mesh_complete = FALSE;
-            }
-#endif
             break;
         }
+    }
 
-        // Then all the holes (negative volumes) get intersected with the parent group mesh.
-        // No groups here, only volumes
-        // TODO1
+    // Then all the holes (negative volumes) get intersected with the parent group mesh.
+    // No groups here, only volumes. Make sure there is something to intersect with.
+    if (!parent_tree->mesh_valid)
+        return;
 
+    for (obj = tree->obj_list; obj != NULL; obj = obj->next)
+    {
+        switch (obj->type)
+        {
+        case OBJ_VOLUME:
+            vol = (Volume *)obj;
 
+            // Make sure it is a hole
+            if (vol->extrude_height > 0)
+                break;
 
-
-
-
+            // Intersect volume mesh to tree mesh
+            vol->mesh_merged = mesh_intersection(vol->mesh, parent_tree->mesh);
+            if (!vol->mesh_merged)
+                parent_tree->mesh_complete = FALSE;
+        }
     }
 }
 
