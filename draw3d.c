@@ -1280,28 +1280,6 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                 for (adj = vol->adj_list; adj != NULL; adj = adj->next)
                     draw_object(adj->prev, DRAW_HIGHLIGHT, LOCK_FACES);
             }
-
-#if 0
-            // TODO highlight edges in intersection curve. Closed in green, non-closed in red.
-            if (debug_view_inter)
-            {
-                Edge *e;
-
-                glDisable(GL_BLEND);
-                glBegin(GL_LINES);
-                if (vol->inter_closed)
-                    glColor3d(0.0, 1.0, 0.0);
-                else
-                    glColor3d(1.0, 0.0, 0.0);
-                for (e = vol->inter_edge_list; e != NULL; e = (Edge *)e->hdr.next)
-                {
-                    glVertex3f(e->endpoints[0]->x, e->endpoints[0]->y, e->endpoints[0]->z);
-                    glVertex3f(e->endpoints[1]->x, e->endpoints[1]->y, e->endpoints[1]->z);
-                }
-                glEnd();
-                glEnable(GL_BLEND);
-            }
-#endif
 #endif
         }
     }

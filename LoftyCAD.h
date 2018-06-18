@@ -65,7 +65,6 @@ extern BOOL view_debug;
 extern BOOL view_tree;
 extern BOOL view_help;
 extern BOOL view_rendered;
-extern BOOL view_clipped_faces;
 extern BOOL view_constr;
 extern BOOL view_ortho;
 
@@ -154,7 +153,7 @@ extern BOOL surfaces_generated;
 // Debug externs
 extern BOOL debug_view_adj;
 extern BOOL debug_view_bbox;
-extern BOOL debug_view_inter;
+extern BOOL view_clipped_faces;
 
 // Some forwards
 Object * Pick(GLint x_pick, GLint y_pick, OBJECT obj_type);

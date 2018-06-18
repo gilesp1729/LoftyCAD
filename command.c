@@ -250,20 +250,6 @@ Command(int message, int wParam, int lParam)
                 CheckMenuItem(hMenu, ID_DEBUG_BBOXES, MF_CHECKED);
             }
             break;
-
-        case ID_DEBUG_INTER:
-            hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
-            if (debug_view_inter)
-            {
-                debug_view_inter = FALSE;
-                CheckMenuItem(hMenu, ID_DEBUG_INTER, MF_UNCHECKED);
-            }
-            else
-            {
-                debug_view_inter = TRUE;
-                CheckMenuItem(hMenu, ID_DEBUG_INTER, MF_CHECKED);
-            }
-            break;
 #endif
 
         case ID_VIEW_TOP:
