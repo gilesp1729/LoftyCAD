@@ -21,10 +21,20 @@ In particular, it will:
 - Allow units 0.1mm, mm, etc. and snapping tolerances to distance and angle
 
 # Files handled
-- Export triangle meshes STL, DAE, 3DS?
-- Import same, and some other features (progressively)
+- Export triangle meshes STL, DAE?, 3DS?
+- Import STL, GTS, OFF, and some other features (progressively)
 - Always output full normals
 
 # Stretch goals
 - Bezier surfaces (compound curves)
+- Lofting (a nod to the original Lofty)
+
+# Building LoftyCAD
+LoftyCAD uses the CGAL computational geometry library to merge and intersect triangle meshes.
+Build CGAL from its build instructions, noting that:
+- The 32-bit version must be used, since LoftyCAD is a 32-bit program for now
+- The prerequisites are cmake, Boost, GMP and MPFR. They are precompiled.
+- Qt and libQGLViewer are not required, nor are any of the examples or demos.
+- CGAL and Boost should be checked out to directories alongside LoftyCAD, and their environment variables set up accordingly. Make sure CGAL_DIR points to the CGAL install directory.
+
 
