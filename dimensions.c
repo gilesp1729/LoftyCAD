@@ -207,22 +207,30 @@ get_dims_string(Object *obj, char buf[64])
 
     case OBJ_FACE:
         f = (Face *)obj;
-        switch (f->type & ~FACE_CONSTRUCTION)
+        if ((app_state == STATE_STARTING_EXTRUDE || app_state == STATE_DRAWING_EXTRUDE) && f->extruded)
         {
-        case FACE_RECT:
-            // use view list here, then it works for drawing rects
-            p0 = f->view_list;
-            p1 = (Point *)p0->hdr.next;
-            p2 = (Point *)p1->hdr.next;
-            sprintf_s(buf, 64, "%s,%s mm",
-                      display_rounded(buf, length(p0, p1)),
-                      display_rounded(buf2, length(p1, p2)));
-            break;
-        case FACE_CIRCLE:
-            e = f->edges[0];
-            ae = (ArcEdge *)e;
-            sprintf_s(buf, 64, "%s mmR", display_rounded(buf2, length(ae->centre, e->endpoints[0])));
-            break;
+            // We are extruding, so show the height.
+            sprintf_s(buf, 64, "%s mm high", display_rounded(buf, f->vol->extrude_height));
+        }
+        else
+        {
+            switch (f->type & ~FACE_CONSTRUCTION)
+            {
+            case FACE_RECT:
+                // use view list here, then it works for drawing rects
+                p0 = f->view_list;
+                p1 = (Point *)p0->hdr.next;
+                p2 = (Point *)p1->hdr.next;
+                sprintf_s(buf, 64, "%s,%s mm",
+                          display_rounded(buf, length(p0, p1)),
+                          display_rounded(buf2, length(p1, p2)));
+                break;
+            case FACE_CIRCLE:
+                e = f->edges[0];
+                ae = (ArcEdge *)e;
+                sprintf_s(buf, 64, "%s mmR", display_rounded(buf2, length(ae->centre, e->endpoints[0])));
+                break;
+            }
         }
         break;
     }

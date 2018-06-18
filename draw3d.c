@@ -947,6 +947,8 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         if (face->type == FACE_CYLINDRICAL || face->type == FACE_GENERAL)
                             break;
 
+                        curr_obj = picked_obj;  // for highlighting
+
                         // See if we need to create a volume first, otherwise just move the face
                         if (face->vol == NULL)
                         {
@@ -1078,6 +1080,24 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                                 );
                             clear_move_copy_flags(picked_obj);
                             picked_point = new_point;
+                        }
+
+                        // calculate the extruded height
+                        if (face->extruded)
+                        {
+                            Volume *vol = face->vol;
+                            Face *opposite;
+
+                            // find the face's opposite number
+                            if (face->hdr.next != NULL && ((Face *)face->hdr.next)->extruded)
+                                opposite = (Face *)face->hdr.next;
+                            else if (((Face *)face->hdr.prev)->extruded)
+                                opposite = (Face *)face->hdr.prev;
+                            else
+                                ASSERT(FALSE, "Where's the opposite face?");
+
+                            face->vol->extrude_height = 
+                                -distance_point_plane(&face->normal, &opposite->normal.refpt);
                         }
 
                         // Invalidate all the view lists for the volume, as any of them may have changed

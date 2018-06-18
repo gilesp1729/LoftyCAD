@@ -540,9 +540,9 @@ Face
         clone->edges = realloc(clone->edges, face->max_edges * sizeof(Edge *));
     clone->max_edges = face->max_edges;
     
-    // pair the face with its clone
-    clone->pair = face;
-    face->pair = clone;
+    // associate the face with its clone by setting the extrude flag
+    clone->extruded = TRUE;
+    face->extruded = TRUE;
 
     // Set the initial point. 
     last_point = face->initial_point;
@@ -586,7 +586,7 @@ Face
             nae->normal.C = -ae->normal.C;
             // fall through
         case EDGE_BEZIER:
-            // Since the arc/bezier and its clone now belong to paired faces,
+            // Since the arc/bezier and its clone now belong to extruded faces,
             // fix their stepsize
             ((Edge *)ne)->stepsize = ((Edge *)e)->stepsize;
             ((Edge *)ne)->nsteps = ((Edge *)e)->nsteps;

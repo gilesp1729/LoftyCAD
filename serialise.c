@@ -458,7 +458,7 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
         else if (strcmp(tok, "FACE") == 0)
         {
             int pid;
-            Face *face, *pair;
+            Face *face;
             Plane norm;
             FACE type;
             Point *init_pt;
@@ -515,16 +515,6 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
             ASSERT(pid != 0 && object[pid] != NULL && object[pid]->type == OBJ_POINT, "Bad initial point ID");
             init_pt = (Point *)object[pid];
 
-            pair = NULL;
-#if 0
-            if (version >= 0.2)         // read ???? for face (can't do 2-way pairing!)
-            {
-                tok = strtok_s(NULL, " \t\n", &nexttok);
-                pid = atoi(tok);
-                ASSERT(pid != 0 && object[pid] != NULL && object[pid]->type == OBJ_FACE, "Bad pair face ID");
-                pair = (Face *)object[pid];
-            }
-#endif
             tok = strtok_s(NULL, " \t\n", &nexttok);
             norm.refpt.x = (float)atof(tok);
             tok = strtok_s(NULL, " \t\n", &nexttok);
@@ -540,7 +530,6 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
 
             face = face_new(type, norm);
             face->initial_point = init_pt;
-            face->pair = pair;
 
             while (TRUE)
             {
@@ -575,6 +564,7 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
         else if (strcmp(tok, "VOLUME") == 0)
         {
             Volume *vol;
+            Face *last_face;
 
             tok = strtok_s(NULL, " \t\n", &nexttok);
             id = atoi(tok) + id_offset;
@@ -587,6 +577,7 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
             vol->hdr.lock = lock;
             object[id] = (Object *)vol;
 
+            // Read the list of faces that make up the volume
             while (TRUE)
             {
                 int fid;
@@ -599,7 +590,15 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
 
                 ((Face *)object[fid])->vol = vol;
                 link_tail(object[fid], (Object **)&vol->faces);
+                last_face = (Face *)object[fid];
             }
+
+            // The last two faces are always the extruded ones - mark them as such,
+            // and calculate the current extruded height
+            last_face->extruded = TRUE;
+            ((Face *)last_face->hdr.prev)->extruded = TRUE;
+            vol->extrude_height = 
+                -distance_point_plane(&last_face->normal, &((Face *)last_face->hdr.prev)->normal.refpt);
 
             ASSERT(stkptr > 0 && id == stack[stkptr - 1], "Badly formed volume record");
             stkptr--;

@@ -176,8 +176,7 @@ typedef struct Face
     int             max_edges;      // the allocated size of the above array
     Plane           normal;         // What plane is the face lying in (if flat) 
     struct Volume   *vol;           // What volume references (owns) this face
-    struct Face     *pair;          // Points to a paired face (end of prism) It is initially a coincident face 
-                                    // with the opposite normal; they move apart when extruding. 
+    BOOL            extruded;       // TRUE for the faces that were initially extruded to create a volume.
     struct Point    *initial_point; // Point in the first edge that the face starts from. Used to allow
                                     // view lists to be built up independent of the order of points
                                     // in any edge.
@@ -212,7 +211,7 @@ typedef struct Volume
     struct Object   hdr;            // Header
     struct Bbox     bbox;           // Bounding box in 3D
     struct Bbox     old_bbox;       // Bbox prior to any move (required to update damaged surfaces)
-    BOOL            vol_neg;        // If TRUE, this volume is negative, or a hole (face normals face inwards)
+    float           extrude_height; // Extrude height. If negative, it's a hole (face normals face inwards)
     struct Object   *adj_list;      // Singly linked list of other volumes whose bboxes intersect this one
     struct Point    *point_list;    // Doubly linked list of Points whose coordinates are copied from 
                                     // child faces' view lists. (use a Point list as can easily be freed)

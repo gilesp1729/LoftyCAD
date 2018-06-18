@@ -943,6 +943,7 @@ left_up(AUX_EVENTREC *event)
         change_state(STATE_NONE);
         update_drawing();
         hide_hint();
+        curr_obj = NULL;
         break;
 
     case STATE_STARTING_RECT:
