@@ -346,7 +346,7 @@ gen_view_list_tree_surfaces(Group *tree, Group *parent_tree)
 
         case OBJ_GROUP:
             group = (Group *)obj;
-            gen_view_list_tree_surfaces(group, tree);
+            gen_view_list_tree_surfaces(group, parent_tree);
             break;
         }
     }

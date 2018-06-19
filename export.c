@@ -33,9 +33,9 @@ export_triangle(void *arg, float x[3], float y[3], float z[3])
     fprintf_s(stl, "endfacet\n");
 }
 
-// Render an volume or face object to triangles
+// Render an un-merged volume or group to triangles
 void
-export_object(Object *obj)
+export_unmerged_object(Object *obj)
 {
     Object *o;
     Volume *vol;
@@ -44,13 +44,13 @@ export_object(Object *obj)
     {
     case OBJ_VOLUME:
         vol = (Volume *)obj;
-        // gen_view_list_vol(vol); // not necessary, as has already been done.
-        mesh_foreach_face(((Volume *)obj)->mesh, export_triangle, NULL);
+        if (!vol->mesh_merged)
+            mesh_foreach_face(((Volume *)obj)->mesh, export_triangle, NULL);
         break;
 
     case OBJ_GROUP:
         for (o = ((Group *)obj)->obj_list; o != NULL; o = o->next)
-            export_object(o);
+            export_unmerged_object(o);
         break;
     }
 }
@@ -66,10 +66,16 @@ export_object_tree(Group *tree, char *filename)
         return;
     fprintf_s(stl, "solid %s\n", tree->title);
 
-    for (obj = tree->obj_list; obj != NULL; obj = obj->next)
+    if (tree->mesh != NULL && tree->mesh_valid && !tree->mesh_merged)
+        mesh_foreach_face(tree->mesh, export_triangle, NULL);
+
+    if (!tree->mesh_complete)
     {
-        if (obj->type == OBJ_VOLUME || obj->type == OBJ_GROUP)
-            export_object(obj);
+        for (obj = tree->obj_list; obj != NULL; obj = obj->next)
+        {
+            if (obj->type == OBJ_VOLUME || obj->type == OBJ_GROUP)
+                export_unmerged_object(obj);
+        }
     }
 
     fprintf_s(stl, "endsolid %s\n", tree->title);

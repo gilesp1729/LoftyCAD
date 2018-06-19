@@ -390,7 +390,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
             // not necessarily snapping things at the mouse position. So we can't use
             // picking here.
             if (app_state == STATE_MOVING)
-                match_obj = picked_obj;
+                match_obj = picked_obj;  // TODO for moving edges, this will self-pick a point on the edge.
             else
                 match_obj = curr_obj;
 
@@ -1355,7 +1355,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
         switch (highlight_obj->type)
         {
         case OBJ_POINT:
-            glCallLists(5, GL_UNSIGNED_BYTE, "Point");  // TODO debug - print object ID's in here
+            glCallLists(5, GL_UNSIGNED_BYTE, "Point"); 
             break;
         case OBJ_EDGE:
             glCallLists(4, GL_UNSIGNED_BYTE, "Edge");
