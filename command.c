@@ -632,11 +632,15 @@ Command(int message, int wParam, int lParam)
         case ID_EDIT_UNDO:
             generation--;
             read_checkpoint(&object_tree, curr_filename, generation);
+            gen_view_list_tree_volumes(&object_tree);
+            gen_view_list_tree_surfaces(&object_tree, &object_tree);
             break;
 
         case ID_EDIT_REDO:
             generation++;
             read_checkpoint(&object_tree, curr_filename, generation);
+            gen_view_list_tree_volumes(&object_tree);
+            gen_view_list_tree_surfaces(&object_tree, &object_tree);
             break;
         }
         break;
