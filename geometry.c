@@ -266,8 +266,10 @@ mat_mult_by_row(float *m, float *v, float *res)
     res[3] = m[12] * v[0] + m[13] * v[1] + m[14] * v[2] + m[15] * v[3];
 }
 
+// multiply a 4x4 by a 4-vector by column. Use doubles as the precision is needed 
+// for generating view list points for arcs.
 void
-mat_mult_by_col(float *m, float *v, float *res)
+mat_mult_by_col_d(double *m, double *v, double *res)
 {
     res[0] = m[0] * v[0] + m[4] * v[1] + m[8] * v[2] + m[12] * v[3];
     res[1] = m[1] * v[0] + m[5] * v[1] + m[9] * v[2] + m[13] * v[3];
@@ -471,7 +473,7 @@ centre_3pt_circle(Point *p1, Point *p2, Point *p3, Plane *pl, Point *centre, BOO
 // Translates point c to the origin, then maps c-p1 and n vectors onto XY plane.
 // Returns 4x4 matrix which needs to be post multiplied to the modelview.
 void
-look_at_centre(Point c, Point p1, Plane n, float matrix[16])
+look_at_centre_d(Point c, Point p1, Plane n, double matrix[16])
 {
     Plane pp1, nxpp1;
 
@@ -479,7 +481,7 @@ look_at_centre(Point c, Point p1, Plane n, float matrix[16])
     pp1.B = p1.y - c.y;
     pp1.C = p1.z - c.z;
     normalise_plane(&pp1);
-    plcross(&n, &pp1, &nxpp1);
+    plcross(&n, &pp1, &nxpp1);          // TODO! make these all use double.
 
     // set rotation part
     matrix[0] = pp1.A;

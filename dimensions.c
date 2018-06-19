@@ -70,12 +70,12 @@ update_dims(Object *obj, char *buf)
     Edge *e, *e0, *e1, *e2, *e3;
     ArcEdge *ae;
     Face *f;
-    float angle;
+    double angle;
     float len, len2;
     char *nexttok = NULL;
     char *tok;
     Object *parent;
-    float matrix[16], v[4], res[4];
+    double matrix[16], v[4], res[4];
 
     // parse the changed string
     switch (obj->type)
@@ -101,7 +101,7 @@ update_dims(Object *obj, char *buf)
             new_length(ae->centre, e->endpoints[1], len);
 
             tok = strtok_s(NULL, " ,\t\n", &nexttok);
-            angle = (float)atof(tok);
+            angle = atof(tok);
             if (angle == 0)
                 break;
             if (ae->clockwise)
@@ -110,12 +110,12 @@ update_dims(Object *obj, char *buf)
                 angle = angle / RAD;
 
             // transform arc to XY plane, centre at origin, endpoint 0 on x axis
-            look_at_centre(*ae->centre, *e->endpoints[0], ae->normal, matrix);
-            v[0] = len * cosf(angle);
-            v[1] = len * sinf(angle);
+            look_at_centre_d(*ae->centre, *e->endpoints[0], ae->normal, matrix);
+            v[0] = len * cos(angle);
+            v[1] = len * sin(angle);
             v[2] = 0;
             v[3] = 1;
-            mat_mult_by_col(matrix, v, res);
+            mat_mult_by_col_d(matrix, v, res);
             e->endpoints[1]->x = res[0];
             e->endpoints[1]->y = res[1];
             e->endpoints[1]->z = res[2];
@@ -178,7 +178,7 @@ get_dims_string(Object *obj, char buf[64])
     Edge *e;
     ArcEdge *ae;
     Face *f;
-    float angle;
+    double angle;
 
     switch (obj->type)
     {
@@ -199,7 +199,7 @@ get_dims_string(Object *obj, char buf[64])
                 angle += 360;
             sprintf_s(buf, 64, "%s,%s mmR/deg",
                       display_rounded(buf, length(ae->centre, e->endpoints[0])),
-                      display_rounded(buf2, angle)
+                      display_rounded(buf2, (float)angle)
                       );
             break;
         }

@@ -3,8 +3,8 @@
 #ifndef __GEOM_H__
 #define __GEOM_H__
 
-#define PI 3.1415926f
-#define RAD 57.29577f
+#define PI 3.1415926
+#define RAD 57.29577
 
 // A large impossible coordinate value
 #define LARGE_COORD 999999
@@ -36,7 +36,7 @@ void polygon_normal(Point *list, Plane *norm);
 BOOL normal3(Point *b, Point *a, Point *c, Plane *norm);
 float angle3(Point *b, Point *a, Point *c, Plane *n);
 void mat_mult_by_row(float *m, float *v, float *res);
-void mat_mult_by_col(float *m, float *v, float *res);
+void mat_mult_by_col_d(double *m, double *v, double *res);
 
 float dot(float x0, float y0, float z0, float x1, float y1, float z1);
 float pdot(Point *p1, Point *p2);
@@ -55,7 +55,7 @@ char *display_rounded(char *buf, float val);
 void snap_2d_angle(float x0, float y0, float *x1, float *y1, int angle_tol);
 void snap_to_angle(Plane *plane, Point *p0, Point *p1, int angle_tol);
 BOOL centre_3pt_circle(Point *p1, Point *p2, Point *p3, Plane *pl, Point *centre, BOOL *clockwise);
-void look_at_centre(Point c, Point p1, Plane n, float matrix[16]);
+void look_at_centre_d(Point c, Point p1, Plane n, double matrix[16]);
 
 
 #endif

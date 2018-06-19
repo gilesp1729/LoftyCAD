@@ -681,11 +681,12 @@ gen_view_list_arc(ArcEdge *ae)
     Edge *edge = (Edge *)ae;
     Plane n = ae->normal;
     Point *p;
-    float rad = length(ae->centre, edge->endpoints[0]);
-    float t, theta, step;
-    float matrix[16];
-    float v[4];
-    float res[4];
+    double rad = length(ae->centre, edge->endpoints[0]);
+    double t, theta;
+    double step;
+    double matrix[16];
+    double v[4];
+    double res[4];
     int i;
 
     if (edge->view_valid)
@@ -694,7 +695,7 @@ gen_view_list_arc(ArcEdge *ae)
     free_view_list_edge(edge);
 
     // transform arc to XY plane, centre at origin, endpoint 0 on x axis
-    look_at_centre(*ae->centre, *edge->endpoints[0], n, matrix);
+    look_at_centre_d(*ae->centre, *edge->endpoints[0], n, matrix);
 
     // angle between two vectors c-p0 and c-p1. If the points are the same, we are
     // drawing a full circle. (where "same" means coincident - they are always distinct structures)
@@ -710,8 +711,8 @@ gen_view_list_arc(ArcEdge *ae)
     }
     else
     {
-        step = 2.0f * acosf(1.0f - tolerance / rad);
-        edge->stepsize = step;
+        step = 2.0 * acos(1.0 - tolerance / rad);
+        edge->stepsize = (float)step;
     }
     i = 0;
 
@@ -726,11 +727,11 @@ gen_view_list_arc(ArcEdge *ae)
         // draw arc from p1 (on x axis) to p2. 
         for (t = 0, i = 0; t > theta; t -= step, i++)
         {
-            v[0] = rad * cosf(t);
-            v[1] = rad * sinf(t);
+            v[0] = rad * cos(t);
+            v[1] = rad * sin(t);
             v[2] = 0;
             v[3] = 1;
-            mat_mult_by_col(matrix, v, res);
+            mat_mult_by_col_d(matrix, v, res);
             p = point_new(res[0], res[1], res[2]);
             p->hdr.ID = 0;
             objid--;
@@ -754,11 +755,11 @@ gen_view_list_arc(ArcEdge *ae)
 
         for (t = 0, i = 0; t < theta; t += step, i++)
         {
-            v[0] = rad * cosf(t);
-            v[1] = rad * sinf(t);
+            v[0] = rad * cos(t);
+            v[1] = rad * sin(t);
             v[2] = 0;
             v[3] = 1;
-            mat_mult_by_col(matrix, v, res);
+            mat_mult_by_col_d(matrix, v, res);
             p = point_new(res[0], res[1], res[2]);
             p->hdr.ID = 0;
             objid--;
@@ -788,28 +789,28 @@ gen_view_list_arc(ArcEdge *ae)
 void
 iterate_bez
 (
-BezierEdge *be,
-float x1, float y1, float z1,
-float x2, float y2, float z2,
-float x3, float y3, float z3,
-float x4, float y4, float z4
+    BezierEdge *be,
+    double x1, double y1, double z1,
+    double x2, double y2, double z2,
+    double x3, double y3, double z3,
+    double x4, double y4, double z4
 )
 {
     Point *p;
     Edge *e = (Edge *)be;
-    float t;
+    double t;
 
     // the first point has already been output, so start at stepsize
     for (t = e->stepsize; t < 1.0001f; t += e->stepsize)
     {
-        float mt = 1.0f - t;
-        float c0 = mt * mt * mt;
-        float c1 = 3 * mt * mt * t;
-        float c2 = 3 * mt * t * t;
-        float c3 = t * t * t;
-        float x = c0 * x1 + c1 * x2 + c2 * x3 + c3 * x4;
-        float y = c0 * y1 + c1 * y2 + c2 * y3 + c3 * y4;
-        float z = c0 * z1 + c1 * z2 + c2 * z3 + c3 * z4;
+        double mt = 1.0f - t;
+        double c0 = mt * mt * mt;
+        double c1 = 3 * mt * mt * t;
+        double c2 = 3 * mt * t * t;
+        double c3 = t * t * t;
+        double x = c0 * x1 + c1 * x2 + c2 * x3 + c3 * x4;
+        double y = c0 * y1 + c1 * y2 + c2 * y3 + c3 * y4;
+        double z = c0 * z1 + c1 * z2 + c2 * z3 + c3 * z4;
 
         p = point_new(x, y, z);
         p->hdr.ID = 0;
@@ -826,44 +827,44 @@ float x4, float y4, float z4
 void
 recurse_bez
 (
-BezierEdge *be,
-float x1, float y1, float z1,
-float x2, float y2, float z2,
-float x3, float y3, float z3,
-float x4, float y4, float z4
+    BezierEdge *be,
+    double x1, double y1, double z1,
+    double x2, double y2, double z2,
+    double x3, double y3, double z3,
+    double x4, double y4, double z4
 )
 {
     Point *p;
     Edge *e = (Edge *)be;
 
     // Calculate all the mid-points of the line segments
-    float x12 = (x1 + x2) / 2;
-    float y12 = (y1 + y2) / 2;
-    float z12 = (z1 + z2) / 2;
+    double x12 = (x1 + x2) / 2;
+    double y12 = (y1 + y2) / 2;
+    double z12 = (z1 + z2) / 2;
 
-    float x23 = (x2 + x3) / 2;
-    float y23 = (y2 + y3) / 2;
-    float z23 = (z2 + z3) / 2;
+    double x23 = (x2 + x3) / 2;
+    double y23 = (y2 + y3) / 2;
+    double z23 = (z2 + z3) / 2;
 
-    float x34 = (x3 + x4) / 2;
-    float y34 = (y3 + y4) / 2;
-    float z34 = (z3 + z4) / 2;
+    double x34 = (x3 + x4) / 2;
+    double y34 = (y3 + y4) / 2;
+    double z34 = (z3 + z4) / 2;
 
-    float x123 = (x12 + x23) / 2;
-    float y123 = (y12 + y23) / 2;
-    float z123 = (z12 + z23) / 2;
+    double x123 = (x12 + x23) / 2;
+    double y123 = (y12 + y23) / 2;
+    double z123 = (z12 + z23) / 2;
 
-    float x234 = (x23 + x34) / 2;
-    float y234 = (y23 + y34) / 2;
-    float z234 = (z23 + z34) / 2;
+    double x234 = (x23 + x34) / 2;
+    double y234 = (y23 + y34) / 2;
+    double z234 = (z23 + z34) / 2;
 
-    float x1234 = (x123 + x234) / 2;
-    float y1234 = (y123 + y234) / 2;
-    float z1234 = (z123 + z234) / 2;
+    double x1234 = (x123 + x234) / 2;
+    double y1234 = (y123 + y234) / 2;
+    double z1234 = (z123 + z234) / 2;
 
-    float x14 = (x1 + x4) / 2;
-    float y14 = (y1 + y4) / 2;
-    float z14 = (z1 + z4) / 2;
+    double x14 = (x1 + x4) / 2;
+    double y14 = (y1 + y4) / 2;
+    double z14 = (z1 + z4) / 2;
 
     // Do a length test < the grid unit, and a curve flatness test < the tolerance.
     // Test length squared (to save the sqrts)
