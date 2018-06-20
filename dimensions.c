@@ -116,9 +116,9 @@ update_dims(Object *obj, char *buf)
             v[2] = 0;
             v[3] = 1;
             mat_mult_by_col_d(matrix, v, res);
-            e->endpoints[1]->x = res[0];
-            e->endpoints[1]->y = res[1];
-            e->endpoints[1]->z = res[2];
+            e->endpoints[1]->x = (float)res[0];
+            e->endpoints[1]->y = (float)res[1];
+            e->endpoints[1]->z = (float)res[2];
             break;
         }
         break;

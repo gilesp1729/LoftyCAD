@@ -228,6 +228,19 @@ length(Point *p0, Point *p1)
     return (float)sqrt((x1 - x0)*(x1 - x0) + (y1 - y0)*(y1 - y0) + (z1 - z0)*(z1 - z0));
 }
 
+float
+length_squared(Point *p0, Point *p1)
+{
+    float x0 = p0->x;
+    float y0 = p0->y;
+    float z0 = p0->z;
+    float x1 = p1->x;
+    float y1 = p1->y;
+    float z1 = p1->z;
+
+    return (x1 - x0)*(x1 - x0) + (y1 - y0)*(y1 - y0) + (z1 - z0)*(z1 - z0);
+}
+
 // Normal of a 3D polygon expressed as a list of Points
 void
 polygon_normal(Point *list, Plane *norm)
@@ -466,6 +479,42 @@ centre_3pt_circle(Point *p1, Point *p2, Point *p3, Plane *pl, Point *centre, BOO
     centre->y = (d1 * n2xn3.B + d2 * n3xn1.B + d3 * n1xn2.B) / denom;
     centre->z = (d1 * n2xn3.C + d2 * n3xn1.C + d3 * n1xn2.C) / denom;
     *clockwise = denom < 0;
+
+    return TRUE;
+}
+
+// Find the centre of a circle tangent to two lines p-p1 and p-p2, passing through p1 and p2.
+// Return the sense of the arc from p1 to p2.
+// From https://stackoverflow.com/questions/39235049/find-center-of-circle-defined-by-2-points-and-their-tangent-intersection
+BOOL
+centre_2pt_tangent_circle(Point *p1, Point *p2, Point *p, Plane *pl, Point *centre, BOOL *clockwise)
+{
+    Point mid;
+    float lsq, dmsq, coeff;
+    Plane pp1, pp2, pp1xpp2;
+
+    mid.x = (p1->x + p2->x) / 2;
+    mid.y = (p1->y + p2->y) / 2;
+    mid.z = (p1->z + p2->z) / 2;
+
+    lsq = length_squared(p, p1);
+    dmsq = length_squared(p, &mid);
+    if (nz(dmsq))
+        return FALSE;
+    coeff = lsq / dmsq;
+
+    centre->x = p->x - coeff * (p->x - mid.x);
+    centre->y = p->y - coeff * (p->y - mid.y);
+    centre->z = p->z - coeff * (p->z - mid.z);
+
+    pp1.A = p1->x - centre->x;
+    pp1.B = p1->y - centre->y;
+    pp1.C = p1->z - centre->z;
+    pp2.A = p2->x - centre->x;
+    pp2.B = p2->y - centre->y;
+    pp2.C = p2->z - centre->z;
+    plcross(&pp1, &pp2, &pp1xpp2);
+    *clockwise = pldot(pl, &pp1xpp2) < 0;
 
     return TRUE;
 }

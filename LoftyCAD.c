@@ -104,11 +104,13 @@ char curr_filename[256] = { 0, };
 // When grid snapping is turned off, points are still snapped to the tolerance.
 // grid_snap must be a power of 10; tolerance must be a power of 10, and less
 // than or equal to the grid scale. (e.g. 1, 0.1)
-float grid_snap = 1.0f;
-float tolerance = 0.1f;
+#define INITIAL_GRID 1.0f
+#define INITIAL_TOL 0.1f
+float grid_snap = INITIAL_GRID;
+float tolerance = INITIAL_TOL;
 
 // Snapping tolerance, a bit more relaxed than the flatness tolerance
-float snap_tol = 0.3f;
+float snap_tol = 3 * INITIAL_TOL;
 
 // log10(1.0 / tolerance)
 int tol_log = 1;
@@ -121,6 +123,12 @@ int angle_snap = 15;
 
 // TRUE if snapping to angle
 BOOL snapping_to_angle = FALSE;
+
+// Size ("radius") of chamfer. It must be slightly larger than snap_tol.
+float chamfer_rad = 3.5f * INITIAL_TOL;
+
+// Radius of rounded corners.
+float round_rad = 2 * INITIAL_GRID;
 
 // Half-size of drawing volume, nominally in mm (although units are arbitrary)
 float half_size = 100.0f;
@@ -1226,6 +1234,8 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         SendDlgItemMessage(hWnd, IDC_PREFS_TOL, WM_SETTEXT, 0, (LPARAM)buf);
         sprintf_s(buf, 16, "%d", angle_snap);
         SendDlgItemMessage(hWnd, IDC_PREFS_ANGLE, WM_SETTEXT, 0, (LPARAM)buf);
+        sprintf_s(buf, 16, "%.2f", round_rad);
+        SendDlgItemMessage(hWnd, IDC_PREFS_ROUNDRAD, WM_SETTEXT, 0, (LPARAM)buf);
         SetFocus(GetDlgItem(hWnd, IDC_PREFS_TITLE));
         break;
 
@@ -1239,12 +1249,17 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             SendDlgItemMessage(hWnd, IDC_PREFS_GRID, WM_GETTEXT, 16, (LPARAM)buf);
             grid_snap = (float)atof(buf);
             // TODO1 check grid scale and tolerance are powers of 10
+            // The snapping tol and chamfer rad are fixed fractions ofthe tolerance. Don't change them.
             SendDlgItemMessage(hWnd, IDC_PREFS_TOL, WM_GETTEXT, 16, (LPARAM)buf);
             tolerance = (float)atof(buf);
+            snap_tol = 3 * tolerance;
+            chamfer_rad = 3.5f * tolerance;
             tol_log = (int)log10f(1.0f / tolerance);
             // TODO1 check angle snap divides 360
             SendDlgItemMessage(hWnd, IDC_PREFS_ANGLE, WM_GETTEXT, 16, (LPARAM)buf);
             angle_snap = atoi(buf);
+            SendDlgItemMessage(hWnd, IDC_PREFS_ROUNDRAD, WM_GETTEXT, 16, (LPARAM)buf);
+            round_rad = (float)atof(buf);
 
             drawing_changed = TRUE;   // TODO test for a real change
             // Note: we can't undo this. Don't write a checkpoint.

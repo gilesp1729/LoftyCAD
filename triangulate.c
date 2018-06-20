@@ -732,7 +732,7 @@ gen_view_list_arc(ArcEdge *ae)
             v[2] = 0;
             v[3] = 1;
             mat_mult_by_col_d(matrix, v, res);
-            p = point_new(res[0], res[1], res[2]);
+            p = point_new((float)res[0], (float)res[1], (float)res[2]);
             p->hdr.ID = 0;
             objid--;
             link_tail((Object *)p, (Object **)&edge->view_list);
@@ -760,7 +760,7 @@ gen_view_list_arc(ArcEdge *ae)
             v[2] = 0;
             v[3] = 1;
             mat_mult_by_col_d(matrix, v, res);
-            p = point_new(res[0], res[1], res[2]);
+            p = point_new((float)res[0], (float)res[1], (float)res[2]);
             p->hdr.ID = 0;
             objid--;
             link_tail((Object *)p, (Object **)&edge->view_list);
@@ -812,7 +812,7 @@ iterate_bez
         double y = c0 * y1 + c1 * y2 + c2 * y3 + c3 * y4;
         double z = c0 * z1 + c1 * z2 + c2 * z3 + c3 * z4;
 
-        p = point_new(x, y, z);
+        p = point_new((float)x, (float)y, (float)z);
         p->hdr.ID = 0;
         objid--;
         link_tail((Object *)p, (Object **)&e->view_list);
@@ -876,7 +876,7 @@ recurse_bez
         )
     {
         // Add (x4, y4, z4) as a point to the view list
-        p = point_new(x4, y4, z4);
+        p = point_new((float)x4, (float)y4, (float)z4);
         p->hdr.ID = 0;
         objid--;
         link_tail((Object *)p, (Object **)&e->view_list);

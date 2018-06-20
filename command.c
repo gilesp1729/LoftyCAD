@@ -474,7 +474,6 @@ Command(int message, int wParam, int lParam)
                 {
                     link_group((Object *)group, &object_tree);
                     update_drawing();
-                    populate_treeview();
                 }
                 else
                 {

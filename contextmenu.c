@@ -283,6 +283,96 @@ make_face(Group *group)
     return face;
 }
 
+// Insert an edge at a corner point; either a single straight (chamfer) or an arc (round).
+void
+insert_chamfer_round(Point *pt, Face *parent, float size, EDGE edge_type)
+{
+    Edge *e[2] = { NULL, NULL };
+    int i, k, end[2], eindex[2];
+    Point orig_pt = *pt;
+    Edge *ne;
+    float len;
+
+    if (parent->hdr.type != OBJ_FACE)
+        return;     // We can't do this
+
+    // Find the two edges that share this point
+    k = 0;
+    for (i = 0; i < parent->n_edges; i++)
+    {
+        if (parent->edges[i]->endpoints[0] == pt)
+        {
+            e[k] = parent->edges[i];
+            eindex[k] = i;
+            end[k] = 0;
+            k++;
+        }
+        else if (parent->edges[i]->endpoints[1] == pt)
+        {
+            e[k] = parent->edges[i];
+            eindex[k] = i;
+            end[k] = 1;
+            k++;
+        }
+    }
+
+    if (k != 2)
+    {
+        ASSERT(FALSE, "Point should belong to 2 edges");
+        return;   // something is wrong; the point does not belong to two edges
+    }
+
+    ASSERT(pt == e[0]->endpoints[end[0]], "Wtf?");
+    ASSERT(pt == e[1]->endpoints[end[1]], "Wtf?");
+
+    // Back the original point up by "size" along its edge. Watch short edges.
+    len = length(e[0]->endpoints[0], e[0]->endpoints[1]);
+    new_length(e[0]->endpoints[1 - end[0]], e[0]->endpoints[end[0]], len - min(size, len / 3));
+
+    // Add a new point for the other edge
+    e[1]->endpoints[end[1]] = point_newp(&orig_pt);
+
+    // Back this one up too
+    len = length(e[1]->endpoints[0], e[1]->endpoints[1]);
+    new_length(e[1]->endpoints[1 - end[1]], e[1]->endpoints[end[1]], len - min(size, len / 3));
+
+    // Add a new edge
+    ne = edge_new(edge_type);
+    ne->endpoints[0] = e[0]->endpoints[end[0]];
+    ne->endpoints[1] = e[1]->endpoints[end[1]];
+    if (edge_type == EDGE_ARC)
+    {
+        ArcEdge *ae = (ArcEdge *)ne;
+
+        ae->centre = point_new(0, 0, 0);
+        ae->normal = parent->normal;
+        if (!centre_2pt_tangent_circle(ne->endpoints[0], ne->endpoints[1], &orig_pt, &parent->normal, ae->centre, &ae->clockwise))
+            ne->type = EDGE_STRAIGHT;
+    }
+
+    // Grow the edges array if it won't take the new edge
+    if (parent->n_edges >= parent->max_edges)
+    {
+        while (parent->max_edges <= parent->n_edges)
+            parent->max_edges <<= 1;          // round up to a power of 2
+        parent->edges = realloc(parent->edges, parent->max_edges * sizeof(Edge *));
+    }
+
+    // Shuffle the edges array down and insert it
+    // Special case if e[] = 0 and n_edges-1, insert at the end
+    if (eindex[0] == 0 && eindex[1] == parent->n_edges - 1)
+    {
+        parent->edges[parent->n_edges] = ne;
+    }
+    else
+    {
+        for (k = parent->n_edges - 1; k >= eindex[1]; --k)
+            parent->edges[k + 1] = parent->edges[k];
+        parent->edges[eindex[1]] = ne;
+    }
+    parent->n_edges++;
+}
+
 // handle context menu when right-clicking on a highlightable object.
 void CALLBACK
 right_click(AUX_EVENTREC *event)
@@ -296,8 +386,11 @@ right_click(AUX_EVENTREC *event)
     BOOL group_changed = FALSE;
     BOOL dims_changed = FALSE;
     BOOL sel_changed = FALSE;
+    BOOL inserted = FALSE;
     Group *group;
     Face *face;
+    Point *p, *nextp;
+    int i;
 
     if (view_rendered)
         return;
@@ -342,6 +435,8 @@ right_click(AUX_EVENTREC *event)
         EnableMenuItem(hMenu, ID_OBJ_SELECTPARENTVOLUME, MF_GRAYED);
         EnableMenuItem(hMenu, ID_OBJ_UNGROUP, MF_GRAYED);
         EnableMenuItem(hMenu, ID_OBJ_MAKEFACE, MF_GRAYED);
+        EnableMenuItem(hMenu, ID_OBJ_CHAMFERCORNER, MF_GRAYED);
+        EnableMenuItem(hMenu, ID_OBJ_ROUNDCORNER, MF_GRAYED);
         break;
 
     case OBJ_FACE:
@@ -356,6 +451,8 @@ right_click(AUX_EVENTREC *event)
         EnableMenuItem(hMenu, ID_OBJ_GROUPEDGES, MF_GRAYED);
         EnableMenuItem(hMenu, ID_OBJ_UNGROUP, MF_GRAYED);
         EnableMenuItem(hMenu, ID_OBJ_MAKEFACE, MF_GRAYED);
+        EnableMenuItem(hMenu, ID_OBJ_CHAMFERCORNER, MF_GRAYED);
+        EnableMenuItem(hMenu, ID_OBJ_ROUNDCORNER, MF_GRAYED);
         break;
 
     case OBJ_GROUP:
@@ -366,6 +463,8 @@ right_click(AUX_EVENTREC *event)
         EnableMenuItem(hMenu, ID_LOCKING_UNLOCKED, MF_GRAYED);
         EnableMenuItem(hMenu, ID_OBJ_SELECTPARENTVOLUME, MF_GRAYED);
         EnableMenuItem(hMenu, ID_OBJ_GROUPEDGES, MF_GRAYED);
+        EnableMenuItem(hMenu, ID_OBJ_CHAMFERCORNER, MF_GRAYED);
+        EnableMenuItem(hMenu, ID_OBJ_ROUNDCORNER, MF_GRAYED);
         break;
     }
 
@@ -381,6 +480,18 @@ right_click(AUX_EVENTREC *event)
     else
     {
         CheckMenuItem(hMenu, ID_OBJ_ALWAYSSHOWDIMS, picked_obj->show_dims ? MF_CHECKED : MF_UNCHECKED);
+    }
+
+    // Rounding and chamfering depend on whether the object picked is a point or a face.
+    // The parent has to be at least a face (checked above)
+    switch (picked_obj->type)
+    {
+    case OBJ_EDGE:
+    case OBJ_VOLUME:
+    case OBJ_GROUP:
+        EnableMenuItem(hMenu, ID_OBJ_CHAMFERCORNER, MF_GRAYED);
+        EnableMenuItem(hMenu, ID_OBJ_ROUNDCORNER, MF_GRAYED);
+        break;
     }
 
     // Check the right lock state for the parent
@@ -521,9 +632,77 @@ right_click(AUX_EVENTREC *event)
         clear_selection(&selection);
         group_changed = TRUE;
         break;
+
+    // The following operations work on a point, or on all points in a face.
+    // The parent must be a face.
+    case ID_OBJ_CHAMFERCORNER:
+        switch (picked_obj->type)
+        {
+        case OBJ_POINT:
+            face = (Face *)parent;
+            insert_chamfer_round((Point *)picked_obj, face, chamfer_rad, EDGE_STRAIGHT);
+            face->type = FACE_FLAT;
+            face->view_valid = FALSE;
+            break;
+        case OBJ_FACE:
+            face = (Face *)picked_obj;
+            p = face->initial_point;
+            for (i = 0; i < face->n_edges - 1; i++)
+            {
+                // find the next point before the edge is modified
+                if (p == face->edges[i]->endpoints[0])
+                    nextp = face->edges[i]->endpoints[1];
+                else
+                {
+                    ASSERT(p == face->edges[i]->endpoints[1], "Points not connected properly");
+                    nextp = face->edges[i]->endpoints[0];
+                }
+                // insert the extra edge
+                insert_chamfer_round(p, face, chamfer_rad, EDGE_STRAIGHT);
+                p = nextp;
+                if (i > 0)
+                    i++;
+            }
+            face->type = FACE_FLAT;
+            face->view_valid = FALSE;
+        }
+        inserted = TRUE;
+        break;
+
+    case ID_OBJ_ROUNDCORNER:
+        switch (picked_obj->type)
+        {
+        case OBJ_POINT:
+            face = (Face *)parent;
+            insert_chamfer_round((Point *)picked_obj, face, round_rad, EDGE_ARC);
+            face->type = FACE_FLAT;
+            face->view_valid = FALSE;
+            break;
+        case OBJ_FACE:
+            face = (Face *)picked_obj;
+            p = face->initial_point;
+            for (i = 0; i < face->n_edges - 1; i++)
+            {
+                if (p == face->edges[i]->endpoints[0])
+                    nextp = face->edges[i]->endpoints[1];
+                else
+                {
+                    ASSERT(p == face->edges[i]->endpoints[1], "Points not connected properly");
+                    nextp = face->edges[i]->endpoints[0];
+                }
+                insert_chamfer_round(p, face, round_rad, EDGE_ARC);
+                p = nextp;
+                if (i > 0)
+                    i++;
+            }
+            face->type = FACE_FLAT;
+            face->view_valid = FALSE;
+        }
+        inserted = TRUE;
+        break;
     }
 
-    if (parent->lock != old_parent_lock || group_changed || dims_changed || sel_changed)
+    if (parent->lock != old_parent_lock || group_changed || dims_changed || sel_changed || inserted)
     {
         // we have changed the drawing - write an undo checkpoint
         update_drawing();

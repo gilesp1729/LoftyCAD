@@ -55,7 +55,7 @@ char *display_rounded(char *buf, float val);
 void snap_2d_angle(float x0, float y0, float *x1, float *y1, int angle_tol);
 void snap_to_angle(Plane *plane, Point *p0, Point *p1, int angle_tol);
 BOOL centre_3pt_circle(Point *p1, Point *p2, Point *p3, Plane *pl, Point *centre, BOOL *clockwise);
+BOOL centre_2pt_tangent_circle(Point *p1, Point *p2, Point *p, Plane *pl, Point *centre, BOOL *clockwise);
 void look_at_centre_d(Point c, Point p1, Plane n, double matrix[16]);
-
 
 #endif

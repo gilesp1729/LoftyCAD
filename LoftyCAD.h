@@ -90,6 +90,8 @@ extern int tol_log;
 extern int angle_snap;
 extern BOOL snapping_to_grid;
 extern BOOL snapping_to_angle;
+extern float chamfer_rad;
+extern float round_rad;
 extern float half_size;
 extern float clip_xoffset, clip_yoffset, clip_zoffset;
 extern int generation;

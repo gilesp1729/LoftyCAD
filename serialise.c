@@ -164,7 +164,7 @@ serialise_tree(Group *tree, char *filename)
     fopen_s(&f, filename, "wt");
     fprintf_s(f, "LOFTYCAD %.1f\n", file_version);
     fprintf_s(f, "TITLE %s\n", tree->title);
-    fprintf_s(f, "SCALE %f %f %f %d\n", half_size, grid_snap, tolerance, angle_snap);
+    fprintf_s(f, "SCALE %f %f %f %d %f\n", half_size, grid_snap, tolerance, angle_snap, round_rad);
 
     save_count++;
     for (obj = tree->obj_list; obj != NULL; obj = obj->next)
@@ -287,6 +287,9 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
             tol_log = (int)log10f(1.0f / tolerance);
             tok = strtok_s(NULL, " \t\n", &nexttok);
             angle_snap = atoi(tok);
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            if (tok != NULL)
+                round_rad = (float)atof(tok);
         }
         else if (strcmp(tok, "BEGIN") == 0)
         {
