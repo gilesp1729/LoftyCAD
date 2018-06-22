@@ -71,6 +71,7 @@ clip_tess_write(void * polygon_data)
     }
 
     mesh_add_face(mesh, &v[0], &v[1], &v[2], &fi);
+    clip_tess_tri_count++;
 }
 
 // callbacks for exporting tessellated stuff to a mesh 

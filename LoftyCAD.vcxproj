@@ -151,6 +151,7 @@
     <Image Include="icon-rect.ico" />
     <Image Include="icon-xy.ico" />
     <Image Include="icon1.ico" />
+    <Image Include="icon2.ico" />
     <Image Include="LoftyCAD.ico" />
     <Image Include="small.ico" />
   </ItemGroup>
