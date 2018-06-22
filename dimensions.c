@@ -5,6 +5,8 @@
 BOOL
 has_dims(Object *obj)
 {
+    Face *f;
+
     if (obj == NULL)
         return FALSE;
 
@@ -25,6 +27,14 @@ has_dims(Object *obj)
         switch (((Face *)obj)->type)
         {
         case FACE_FLAT:
+            // If we are extruding, then we show a height on the dims.
+            // Otherwise flat faces don't have anything.
+            f = (Face *)obj;
+            if ((app_state == STATE_STARTING_EXTRUDE || app_state == STATE_DRAWING_EXTRUDE) && f->extruded)
+                return TRUE;
+            else
+                return FALSE;
+
         case FACE_CYLINDRICAL:
         case FACE_GENERAL:
             return FALSE;
