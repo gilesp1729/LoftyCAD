@@ -284,14 +284,15 @@ make_face(Group *group)
 }
 
 // Insert an edge at a corner point; either a single straight (chamfer) or an arc (round).
+// Optionally, restrict the radius or chamfer to prevent rounds colliding at short edges.
 void
-insert_chamfer_round(Point *pt, Face *parent, float size, EDGE edge_type)
+insert_chamfer_round(Point *pt, Face *parent, float size, EDGE edge_type, BOOL restricted)
 {
     Edge *e[2] = { NULL, NULL };
     int i, k, end[2], eindex[2];
     Point orig_pt = *pt;
     Edge *ne;
-    float len;
+    float len0, len1, backoff;
 
     if (parent->hdr.type != OBJ_FACE)
         return;     // We can't do this
@@ -326,15 +327,23 @@ insert_chamfer_round(Point *pt, Face *parent, float size, EDGE edge_type)
     ASSERT(pt == e[1]->endpoints[end[1]], "Wtf?");
 
     // Back the original point up by "size" along its edge. Watch short edges.
-    len = length(e[0]->endpoints[0], e[0]->endpoints[1]);
-    new_length(e[0]->endpoints[1 - end[0]], e[0]->endpoints[end[0]], len - min(size, len / 3));
+    len0 = length(e[0]->endpoints[0], e[0]->endpoints[1]);
+    len1 = length(e[1]->endpoints[0], e[1]->endpoints[1]);
+    backoff = size;
+    if (restricted)
+    {
+        if (backoff > len0 / 3)
+            backoff = len0 / 3;
+        if (backoff > len1 / 3)
+            backoff = len1 / 3;
+    }
+    new_length(e[0]->endpoints[1 - end[0]], e[0]->endpoints[end[0]], len0 - backoff);
 
     // Add a new point for the other edge
     e[1]->endpoints[end[1]] = point_newp(&orig_pt);
 
     // Back this one up too
-    len = length(e[1]->endpoints[0], e[1]->endpoints[1]);
-    new_length(e[1]->endpoints[1 - end[1]], e[1]->endpoints[end[1]], len - min(size, len / 3));
+    new_length(e[1]->endpoints[1 - end[1]], e[1]->endpoints[end[1]], len1 - backoff);
 
     // Add a new edge
     ne = edge_new(edge_type);
@@ -640,7 +649,7 @@ right_click(AUX_EVENTREC *event)
         {
         case OBJ_POINT:
             face = (Face *)parent;
-            insert_chamfer_round((Point *)picked_obj, face, chamfer_rad, EDGE_STRAIGHT);
+            insert_chamfer_round((Point *)picked_obj, face, chamfer_rad, EDGE_STRAIGHT, FALSE);
             face->type = FACE_FLAT;
             face->view_valid = FALSE;
             break;
@@ -658,7 +667,7 @@ right_click(AUX_EVENTREC *event)
                     nextp = face->edges[i]->endpoints[0];
                 }
                 // insert the extra edge
-                insert_chamfer_round(p, face, chamfer_rad, EDGE_STRAIGHT);
+                insert_chamfer_round(p, face, chamfer_rad, EDGE_STRAIGHT, TRUE);
                 p = nextp;
                 if (i > 0)
                     i++;
@@ -674,12 +683,18 @@ right_click(AUX_EVENTREC *event)
         {
         case OBJ_POINT:
             face = (Face *)parent;
-            insert_chamfer_round((Point *)picked_obj, face, round_rad, EDGE_ARC);
+            insert_chamfer_round((Point *)picked_obj, face, round_rad, EDGE_ARC, FALSE);
             face->type = FACE_FLAT;
             face->view_valid = FALSE;
             break;
         case OBJ_FACE:
             face = (Face *)picked_obj;
+
+            // TODO - find shortest edge and ensure round radius <= (shortest_len / 2 + tol)
+            // to avoid distorting the face
+
+
+
             p = face->initial_point;
             for (i = 0; i < face->n_edges - 1; i++)
             {
@@ -690,7 +705,7 @@ right_click(AUX_EVENTREC *event)
                     ASSERT(p == face->edges[i]->endpoints[1], "Points not connected properly");
                     nextp = face->edges[i]->endpoints[0];
                 }
-                insert_chamfer_round(p, face, round_rad, EDGE_ARC);
+                insert_chamfer_round(p, face, round_rad, EDGE_ARC, TRUE);
                 p = nextp;
                 if (i > 0)
                     i++;
