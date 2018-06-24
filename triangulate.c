@@ -313,6 +313,9 @@ gen_view_list_tree_surfaces(Group *tree, Group *parent_tree)
     Object *obj;
     Volume *vol;
     Group *group;
+    POINT pt = {wWidth / 2, wHeight / 2};
+    char buf[32];
+    int n = 0;
 
     tree->mesh_complete = TRUE;
 
@@ -337,6 +340,10 @@ gen_view_list_tree_surfaces(Group *tree, Group *parent_tree)
             }
             else
             {
+                sprintf_s(buf, 32, "Union %d", n++);
+                show_hint_at(pt, buf, FALSE);
+                process_messages();
+
                 // Merge volume mesh to tree mesh
                 vol->mesh_merged = mesh_union(vol->mesh, parent_tree->mesh);
                 if (!vol->mesh_merged)
@@ -367,12 +374,17 @@ gen_view_list_tree_surfaces(Group *tree, Group *parent_tree)
             if (vol->extrude_height > 0)
                 break;
 
+            sprintf_s(buf, 32, "Intersection %d", n++);
+            show_hint_at(pt, buf, FALSE);
+            process_messages();
+
             // Intersect volume mesh to tree mesh
             vol->mesh_merged = mesh_intersection(vol->mesh, parent_tree->mesh);
             if (!vol->mesh_merged)
                 parent_tree->mesh_complete = FALSE;
         }
     }
+    hide_hint();
 }
 
 // Regenerate the view lists for all faces of a volume, and also do some special stuff that

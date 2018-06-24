@@ -6,6 +6,9 @@
 // File to export STL to (global so callbacks can see it)
 FILE *stl;
 
+// number of triangles exported
+int num_stl_tri;
+
 
 // Write a single mesh triangle with normal out to the STL file
 void
@@ -14,7 +17,6 @@ export_triangle(void *arg, float x[3], float y[3], float z[3])
     int i;
     float A, B, C, length;
 
-    glBegin(GL_POLYGON);
     cross(x[1] - x[0], y[1] - y[0], z[1] - z[0], x[2] - x[0], y[2] - y[0], z[2] - z[0], &A, &B, &C);
     length = (float)sqrt(A * A + B * B + C * C);
     if (!nz(length))
@@ -22,7 +24,6 @@ export_triangle(void *arg, float x[3], float y[3], float z[3])
         A /= length;
         B /= length;
         C /= length;
-        glNormal3d(A, B, C);
     }
 
     fprintf_s(stl, "facet normal %f %f %f\n", A, B, C);
@@ -31,6 +32,7 @@ export_triangle(void *arg, float x[3], float y[3], float z[3])
         fprintf_s(stl, "    vertex %f %f %f\n", x[i], y[i], z[i]);
     fprintf_s(stl, "  endloop\n");
     fprintf_s(stl, "endfacet\n");
+    num_stl_tri++;
 }
 
 // Render an un-merged volume or group to triangles
@@ -60,14 +62,23 @@ void
 export_object_tree(Group *tree, char *filename)
 {
     Object *obj;
+    char buf[64];
 
     fopen_s(&stl, filename, "wt");
     if (stl == NULL)
         return;
     fprintf_s(stl, "solid %s\n", tree->title);
 
+    ASSERT(tree->mesh != NULL, "Tree mesh NULL");
+    ASSERT(tree->mesh_valid, "Tree mesh not valid");
+    ASSERT(tree->mesh_complete, "Mesh incomplete - writing unmerged objects");
+
+    num_stl_tri = 0;
     if (tree->mesh != NULL && tree->mesh_valid && !tree->mesh_merged)
         mesh_foreach_face(tree->mesh, export_triangle, NULL);
+    
+    sprintf_s(buf, 64, "Mesh: %d triangles\r\n", num_stl_tri);
+    Log(buf);
 
     if (!tree->mesh_complete)
     {
@@ -76,6 +87,8 @@ export_object_tree(Group *tree, char *filename)
             if (obj->type == OBJ_VOLUME || obj->type == OBJ_GROUP)
                 export_unmerged_object(obj);
         }
+        sprintf_s(buf, 64, "Unmerged: %d triangles total\r\n", num_stl_tri);
+        Log(buf);
     }
 
     fprintf_s(stl, "endsolid %s\n", tree->title);

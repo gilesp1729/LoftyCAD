@@ -73,6 +73,22 @@ hide_hint()
     ShowWindow(hWndDims, SW_HIDE);
 }
 
+// Process any messages in the message queue - use to display status during long operations
+void
+process_messages(void)
+{
+    MSG Message;
+
+    while (PeekMessage(&Message, NULL, 0, 0, PM_NOREMOVE) == TRUE)
+    {
+        if (GetMessage(&Message, NULL, 0, 0))
+        {
+            TranslateMessage(&Message);
+            DispatchMessage(&Message);
+        }
+    }
+}
+
 // Update the dimension of an object, depending on what has been returned by the dialog box.
 void
 update_dims(Object *obj, char *buf)
