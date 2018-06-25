@@ -114,8 +114,6 @@ extern float quat_mXY[4];
 extern float quat_mYZ[4];
 extern float quat_mXZ[4];
 
-extern BOOL surfaces_generated;
-
 // Debug stuff
 
 // Debugging defines

@@ -142,7 +142,6 @@ invalidate_all_view_lists(Object *parent, Object *obj, float dx, float dy, float
         group = (Group *)parent;
         for (o = group->obj_list; o != NULL; o = o->next)
             invalidate_all_view_lists(o, obj, dx, dy, dz);
-        group->mesh_valid = FALSE;
         break;
 
     case OBJ_VOLUME:
@@ -225,7 +224,7 @@ gen_view_list_tree_volumes(Group *tree)
         }
     }
 
-    // clear and reinit the group mesh if any volumes needed regenerating
+    // clear and reinit the tree mesh if any volumes needed regenerating
     if (rc)
     {
         if (tree->mesh != NULL)
@@ -317,7 +316,10 @@ gen_view_list_tree_surfaces(Group *tree, Group *parent_tree)
     char buf[32];
     int n = 0;
 
-    tree->mesh_complete = TRUE;
+    if (parent_tree->mesh_valid)
+        return;
+
+    parent_tree->mesh_complete = TRUE;
 
     // All solid volumes, and groups, get unioned into the parent group mesh.
     for (obj = tree->obj_list; obj != NULL; obj = obj->next)
@@ -400,11 +402,15 @@ gen_view_list_vol(Volume *vol)
         if (!f->view_valid)
             break;
     }
-    if (f == NULL)
-        return FALSE;     // all faces are valid, nothing to do
+    if (f == NULL && vol->mesh_valid)
+        return FALSE;     // all faces and mesh are valid, nothing to do
 
-    for (f = vol->faces; f != NULL; f = (Face *)f->hdr.next)
-        f->view_valid = FALSE;  // invalidate them all
+    if (f != NULL)
+    {
+        // if any face is not valid, invalidate them all
+        for (f = vol->faces; f != NULL; f = (Face *)f->hdr.next)
+            f->view_valid = FALSE;
+    }
 
     // clear out the point and edge buckets and adjacency list
     free_point_list(vol->point_list);
@@ -421,15 +427,17 @@ gen_view_list_vol(Volume *vol)
 
     // generate view lists for all the faces, and update the mesh
     for (f = vol->faces; f != NULL; f = (Face *)f->hdr.next)
+    {
         gen_view_list_face(f);
+        gen_view_list_surface(f, f->view_list);
+    }
 
     vol->mesh_valid = TRUE;
     return TRUE;
 }
 
 // Regenerate the unclipped view list for a face. While here, also calculate the outward
-// normal for the face. We assume that if the face has a volume, then this will be called for
-// all faces of the volume (from gen_view_list_vol) and they will all be initially invalid.
+// normal for the face. 
 void
 gen_view_list_face(Face *face)
 {
@@ -617,11 +625,6 @@ gen_view_list_face(Face *face)
     // The view list is valid, as is the 2D view list, the face normal, and the face's
     // contribution to the volume bounding bbox.
     face->view_valid = TRUE;
-
-    // Generate the triangulated mesh for the face (the volume's mesh is assumed to 
-    // have been initialised before this is called)
-    if (face->vol != NULL)
-        gen_view_list_surface(face, face->view_list);
 }
 
 void

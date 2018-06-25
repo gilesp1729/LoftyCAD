@@ -147,10 +147,6 @@ int generation = 0;
 int latest_generation = 0;
 int max_generation = 0;
 
-// TRUE when something has changed or moved, and some volume surface meshes have been
-// regenerated. The final surface mesh needs to be generated again.
-BOOL surfaces_generated = FALSE;
-
 // Debugging options
 BOOL debug_view_adj = FALSE;
 BOOL debug_view_bbox = FALSE;
@@ -637,6 +633,7 @@ update_drawing(void)
 {
     drawing_changed = TRUE;
     write_checkpoint(&object_tree, curr_filename);
+#if 0
     if (gen_view_list_tree_volumes(&object_tree))
         surfaces_generated = TRUE;
     if (surfaces_generated)
@@ -644,6 +641,9 @@ update_drawing(void)
         gen_view_list_tree_surfaces(&object_tree, &object_tree);
         surfaces_generated = FALSE;
     }
+#else
+    gen_view_list_tree_volumes(&object_tree);
+#endif
 }
 
 // Mouse handlers

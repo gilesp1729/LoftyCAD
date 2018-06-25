@@ -207,6 +207,8 @@ Command(int message, int wParam, int lParam)
             }
             else
             {
+                gen_view_list_tree_volumes(&object_tree);
+                gen_view_list_tree_surfaces(&object_tree, &object_tree);
                 view_rendered = TRUE;
                 glDisable(GL_BLEND);
                 CheckMenuItem(hMenu, ID_VIEW_RENDEREDVIEW, MF_CHECKED);
@@ -377,7 +379,7 @@ Command(int message, int wParam, int lParam)
                 insert_filename_to_MRU(hMenu, curr_filename);
                 populate_treeview();
                 gen_view_list_tree_volumes(&object_tree);
-                gen_view_list_tree_surfaces(&object_tree, &object_tree);
+                //gen_view_list_tree_surfaces(&object_tree, &object_tree);
             }
 
             break;
@@ -430,7 +432,11 @@ Command(int message, int wParam, int lParam)
             ofn.nMaxFile = 256;
             ofn.Flags = OFN_EXPLORER | OFN_OVERWRITEPROMPT;
             if (GetSaveFileName(&ofn))
+            {
+                gen_view_list_tree_volumes(&object_tree);
+                gen_view_list_tree_surfaces(&object_tree, &object_tree);
                 export_object_tree(&object_tree, new_filename);
+            }
 
             break;
 
@@ -529,7 +535,7 @@ Command(int message, int wParam, int lParam)
                     SetWindowText(auxGetHWND(), window_title);
                     populate_treeview();
                     gen_view_list_tree_volumes(&object_tree);
-                    gen_view_list_tree_surfaces(&object_tree, &object_tree);
+                    //gen_view_list_tree_surfaces(&object_tree, &object_tree);
                 }
             }
             break;
@@ -632,14 +638,14 @@ Command(int message, int wParam, int lParam)
             generation--;
             read_checkpoint(&object_tree, curr_filename, generation);
             gen_view_list_tree_volumes(&object_tree);
-            gen_view_list_tree_surfaces(&object_tree, &object_tree);
+            //gen_view_list_tree_surfaces(&object_tree, &object_tree);
             break;
 
         case ID_EDIT_REDO:
             generation++;
             read_checkpoint(&object_tree, curr_filename, generation);
             gen_view_list_tree_volumes(&object_tree);
-            gen_view_list_tree_surfaces(&object_tree, &object_tree);
+            //gen_view_list_tree_surfaces(&object_tree, &object_tree);
             break;
         }
         break;
