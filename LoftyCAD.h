@@ -76,6 +76,7 @@ extern Group object_tree;
 extern BOOL drawing_changed;
 extern Object *curr_obj;
 extern Object *picked_obj;
+extern Object *raw_picked_obj;
 extern Point picked_point;
 extern Point last_point;
 extern Plane *picked_plane;
@@ -156,7 +157,7 @@ extern BOOL debug_view_bbox;
 extern BOOL view_clipped_faces;
 
 // Some forwards
-Object * Pick(GLint x_pick, GLint y_pick, OBJECT obj_type);
+Object * Pick(GLint x_pick, GLint y_pick, BOOL force_pick);
 Object * Pick_all_in_rect(GLint x_pick, GLint y_pick, GLint width, GLint height);
 void CALLBACK Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick);
 void CALLBACK Position(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick);

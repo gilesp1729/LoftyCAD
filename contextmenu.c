@@ -404,7 +404,11 @@ right_click(AUX_EVENTREC *event)
     if (view_rendered)
         return;
 
-    picked_obj = Pick(event->data[0], event->data[1], OBJ_FACE);
+    picked_obj = Pick(event->data[0], event->data[1], FALSE);
+    
+    // If we don't pick anything, attempt a forced pick (we might have clicked a locked volume)
+    if (picked_obj == NULL)
+        picked_obj = Pick(event->data[0], event->data[1], TRUE);
     if (picked_obj == NULL)
         return;
 

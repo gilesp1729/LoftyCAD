@@ -330,12 +330,13 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         show_dims_on(obj, pres, parent_lock);
 }
 
+// When about to draw on an object:
 // Assign a picked_plane, based on where the mouse has moved to. We still might
 // not have a picked_plane after calling this, but we will be back.
 void
 assign_picked_plane(POINT pt)
 {
-    Object *obj = Pick(pt.x, pt.y, OBJ_FACE);
+    Object *obj = Pick(pt.x, pt.y, FALSE);
 
     if (obj == NULL)
     {
@@ -347,8 +348,18 @@ assign_picked_plane(POINT pt)
     }
     else if (obj->type == OBJ_FACE)
     {
-        picked_plane = &((Face *)obj)->normal;  // Move onto face - stay on its plane
+        // Moved onto face - stay on its plane
+        picked_plane = &((Face *)obj)->normal;
         picked_obj = obj;
+    }
+    else if (obj->type == OBJ_VOLUME || obj->type == OBJ_GROUP)
+    {
+        // go back to the raw picked obj (underlying face) to get a plane
+        if (raw_picked_obj != NULL && raw_picked_obj->type == OBJ_FACE)
+        {
+            picked_plane = &((Face *)raw_picked_obj)->normal;
+            picked_obj = raw_picked_obj;
+        }
     }
     // other picked obj types just wait till the mouse moves off them
 }
@@ -372,7 +383,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
         if (!left_mouse && !right_mouse && !view_rendered)
         {
             auxGetMouseLoc(&pt.x, &pt.y);
-            highlight_obj = Pick(pt.x, pt.y, OBJ_FACE);
+            highlight_obj = Pick(pt.x, pt.y, FALSE);
 
             // See if we are in the treeview window and have something to highlight from there
             if (highlight_obj != NULL)
@@ -418,7 +429,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                 float dist;
                 Face *rf;
                 Plane norm;
-                Object *parent, *first_picked_obj, *dummy;
+                Object *parent, *dummy;
 
                 switch (app_state)
                 {
@@ -507,7 +518,6 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                     break;
 
                 case STATE_DRAWING_EDGE:
-                    first_picked_obj = picked_obj;  // it may change when picked plane is assigned
                     if (picked_plane == NULL)
                         // Uhoh. We don't have a plane yet. Check if the mouse has moved into
                         // a face object, and use that. Otherwise, just come back and try with the

@@ -64,6 +64,9 @@ Object *curr_obj = NULL;
 Object *picked_obj = NULL;
 Point picked_point;
 
+// When picked_obj is a volume or group due to locking, this is the underlying face.
+Object *raw_picked_obj = NULL;
+
 // Starts at picked_point, but is updated throughout a move/drag.
 Point last_point;
 
@@ -328,20 +331,23 @@ Reshape(int width, int height)
 // Pick an object: find the frontmost object under the cursor, or NULL if nothing is there.
 // Pick objects from "min_priority" down in the hierarchy; e.g. faces/edges/points, or just edges/points.
 // Only execption is that picking a face in a locked volume will pick the parent volume instead.
+// Setting force_pick ensures that even locked objects can be picked (use for the context menu)
 Object *
-Pick(GLint x_pick, GLint y_pick, OBJECT min_priority)
+Pick(GLint x_pick, GLint y_pick, BOOL force_pick)
 {
     GLuint buffer[512];
     GLint num_hits;
     GLuint min_obj = 0;
     OBJECT priority = OBJ_MAX;
     Object *obj = NULL;
+    OBJECT min_priority = OBJ_MAX;
 
     // Find the object under the cursor, if any
     glSelectBuffer(512, buffer);
     glRenderMode(GL_SELECT);
     Draw(TRUE, x_pick, y_pick, 3, 3);
     num_hits = glRenderMode(GL_RENDER);
+    raw_picked_obj = NULL;
 
     if (num_hits > 0)
     {
@@ -355,6 +361,7 @@ Pick(GLint x_pick, GLint y_pick, OBJECT min_priority)
         char *obj_prefix[] = { "N", "P", "E", "F", "V", "G" };
 #endif
         GLuint min_depth = 0xFFFFFFFF;
+        GLuint depth;
 
         for (i = 0; i < num_hits; i++)
         {
@@ -371,15 +378,42 @@ Pick(GLint x_pick, GLint y_pick, OBJECT min_priority)
             // find top-of-stack and what kind of object it is
             obj = (Object *)buffer[n + num_objs + 2];
             if (obj == NULL)
+            {
+                // no object worth picking
                 priority = OBJ_MAX;
+            }
             else
+            {
                 priority = obj->type;
+                depth = buffer[n + 1];
 
-            if (priority < min_priority || buffer[n + 1] < min_depth)
+                // special case: if we are in STATE_NONE and we have a face on a fully locked volume,
+                // just look straight through it so we can pick things behind it. However, we must still
+                // be able to right-click things, so don't do it if force_pick is set TRUE.
+                if 
+                (
+                    !force_pick 
+                    &&
+                    obj->type == OBJ_FACE 
+                    && 
+                    ((Face *)obj)->vol != NULL 
+                    && 
+                    ((Face *)obj)->vol->hdr.lock >= LOCK_VOLUME
+                )
+                {
+                    raw_picked_obj = obj;
+                    obj = NULL;
+                    priority = OBJ_MAX;
+                    depth = 0xFFFFFFFF;
+                }
+            }
+
+            // store the lowest priority object, closest to the viewer
+            if (priority < min_priority || depth < min_depth)
             {
                 min_depth = buffer[n + 1];
                 min_priority = priority;
-                min_obj = buffer[n + num_objs + 2];  // top of stack is last element in buffer
+                min_obj = (GLuint)obj; //  buffer[n + num_objs + 2];  // top of stack is last element in buffer
             }
 
 #ifdef DEBUG_PICK_ALL
@@ -426,6 +460,7 @@ Pick(GLint x_pick, GLint y_pick, OBJECT min_priority)
             {
                 Face *face = (Face *)obj;
 
+                raw_picked_obj = obj;
                 if (face->vol->hdr.lock >= LOCK_FACES)
                     obj = (Object *)face->vol;
 
@@ -659,7 +694,7 @@ left_down(AUX_EVENTREC *event)
 
     // Find if there is an object under the cursor, and
     // also find if it is in the selection.
-    picked_obj = Pick(event->data[0], event->data[1], OBJ_FACE);
+    picked_obj = Pick(event->data[0], event->data[1], FALSE);
 
     switch (app_state)
     {
@@ -732,6 +767,18 @@ left_down(AUX_EVENTREC *event)
             // first point.
             switch (picked_obj->type)
             {
+            case OBJ_GROUP:
+            case OBJ_VOLUME:
+                // We are on a volume or group, and the faces are locked; 
+                // access the underlying face if we have one.
+                if (raw_picked_obj != NULL && raw_picked_obj->type == OBJ_FACE)
+                {
+                    picked_plane = &((Face *)raw_picked_obj)->normal;
+                    intersect_ray_plane(left_mouseX, left_mouseY, picked_plane, &picked_point);
+                    snap_to_grid(picked_plane, &picked_point);
+                }
+                break;
+
             case OBJ_FACE:
                 // We're on a face, so we can proceed.
                 picked_plane = &((Face *)picked_obj)->normal;

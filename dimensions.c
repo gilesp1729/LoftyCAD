@@ -337,8 +337,8 @@ show_dims_on(Object *obj, PRESENTATION pres, LOCK parent_lock)
         switch (f->type)
         {
         case FACE_CIRCLE:
-            ae = (ArcEdge *)f->edges[0];
-            glRasterPos3f(ae->centre->x, ae->centre->y, ae->centre->z);
+            p0 = f->edges[0]->endpoints[0];
+            glRasterPos3f(p0->x, p0->y, p0->z);
             break;
 
         default:
