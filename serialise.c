@@ -567,7 +567,7 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
         else if (strcmp(tok, "VOLUME") == 0)
         {
             Volume *vol;
-            Face *last_face;
+            Face *last_face = NULL;
 
             tok = strtok_s(NULL, " \t\n", &nexttok);
             id = atoi(tok) + id_offset;

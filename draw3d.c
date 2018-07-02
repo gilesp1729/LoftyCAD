@@ -1096,7 +1096,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         if (face->extruded)
                         {
                             Volume *vol = face->vol;
-                            Face *opposite;
+                            Face *opposite = NULL;
 
                             // find the face's opposite number
                             if (face->hdr.next != NULL && ((Face *)face->hdr.next)->extruded)
