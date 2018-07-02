@@ -1,5 +1,5 @@
 # LoftyCAD
-Simple CAD for 3D printers. It came out of dissatisfactions with SketchUp, and with free 3D CAD programs in general.
+Simple CAD for 3D printers for Windows. It came out of dissatisfactions with SketchUp, and with free 3D CAD programs in general.
 
 # LoftyCAD goals
 # General
@@ -27,12 +27,15 @@ In particular, it will:
 
 # Stretch goals
 - Bezier surfaces (compound curves)
-- Lofting (a nod to the original Lofty)
+- Lofting (a nod to the original Lofty, which is LoftyCAD's spiritual ancestor)
+
+# Installing LoftyCAD from the prebuilt installer
+Unzip the zip in the Installer directory, to any directory on the Windows system (c:\Program Files (x86) is the standard place for 32-bit programs). Create a shortcut on the desktop as needed.
 
 # Building LoftyCAD
 LoftyCAD uses the CGAL computational geometry library to merge and intersect triangle meshes.
 Build CGAL from its build instructions, noting that:
-- The 32-bit version must be used, since LoftyCAD is a 32-bit program for now
+- The 32-bit version must be used, since LoftyCAD is a 32-bit program for now.
 - The prerequisites are cmake, Boost, GMP and MPFR. They are precompiled.
 - Qt and libQGLViewer are not required, nor are any of the examples or demos.
 - CGAL and Boost should be checked out to directories alongside LoftyCAD, and their environment variables set up accordingly. Make sure CGAL_DIR points to the CGAL install directory.
