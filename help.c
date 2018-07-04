@@ -12,18 +12,18 @@ char *state_key[] =
     "Moving",
     "Dragging_Selection",
 
-    "Starting_Edge",
-    "Starting_Rect",
-    "Starting_Circle",
-    "Starting_Bezier",
-    "Starting_Arc",
-    "Starting_Extrude",
+    "Drawing_Edge",
+    "Drawing_Face",
+    "Drawing_Face",
+    "Drawing_Edge",
+    "Drawing_Edge",
+    "Drawing_Extrude",
 
     "Drawing_Edge",
-    "Drawing_Rect",
-    "Drawing_Circle",
-    "Drawing_Bezier",
-    "Drawing_Arc",
+    "Drawing_Face",
+    "Drawing_Face",
+    "Drawing_Edge",
+    "Drawing_Edge",
     "Drawing_Extrude"
 };
 

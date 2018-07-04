@@ -9,29 +9,29 @@ xmlns="http://www.w3.org/TR/REC-html40">
 <meta name=ProgId content=Word.Document>
 <meta name=Generator content="Microsoft Word 15">
 <meta name=Originator content="Microsoft Word 15">
-<link rel=File-List href="Moving_files/filelist.xml">
+<link rel=File-List href="Drawing_Edge_files/filelist.xml">
 <!--[if gte mso 9]><xml>
  <o:DocumentProperties>
   <o:Author>Windows User</o:Author>
   <o:LastAuthor>Windows User</o:LastAuthor>
-  <o:Revision>5</o:Revision>
-  <o:TotalTime>182</o:TotalTime>
-  <o:Created>2018-07-03T00:07:00Z</o:Created>
-  <o:LastSaved>2018-07-04T06:06:00Z</o:LastSaved>
+  <o:Revision>7</o:Revision>
+  <o:TotalTime>207</o:TotalTime>
+  <o:Created>2018-07-04T05:36:00Z</o:Created>
+  <o:LastSaved>2018-07-04T06:04:00Z</o:LastSaved>
   <o:Pages>1</o:Pages>
-  <o:Words>42</o:Words>
-  <o:Characters>245</o:Characters>
-  <o:Lines>2</o:Lines>
+  <o:Words>149</o:Words>
+  <o:Characters>853</o:Characters>
+  <o:Lines>7</o:Lines>
   <o:Paragraphs>1</o:Paragraphs>
-  <o:CharactersWithSpaces>286</o:CharactersWithSpaces>
+  <o:CharactersWithSpaces>1001</o:CharactersWithSpaces>
   <o:Version>15.00</o:Version>
  </o:DocumentProperties>
  <o:OfficeDocumentSettings>
   <o:AllowPNG/>
  </o:OfficeDocumentSettings>
 </xml><![endif]-->
-<link rel=themeData href="Moving_files/themedata.thmx">
-<link rel=colorSchemeMapping href="Moving_files/colorschememapping.xml">
+<link rel=themeData href="Drawing_Edge_files/themedata.thmx">
+<link rel=colorSchemeMapping href="Drawing_Edge_files/colorschememapping.xml">
 <!--[if gte mso 9]><xml>
  <w:WordDocument>
   <w:TrackMoves>false</w:TrackMoves>
@@ -677,7 +677,8 @@ xmlns="http://www.w3.org/TR/REC-html40">
 	mso-bidi-font-family:"Times New Roman";
 	mso-fareast-language:EN-US;}
 a:link, span.MsoHyperlink
-	{mso-style-priority:99;
+	{mso-style-noshow:yes;
+	mso-style-priority:99;
 	color:#0563C1;
 	mso-themecolor:hyperlink;
 	text-decoration:underline;
@@ -771,20 +772,35 @@ table.MsoTableGrid
 <div class=WordSection1>
 
 <p class=MsoNormal><b style='mso-bidi-font-weight:normal'><span
-style='font-size:12.0pt;line-height:105%'>Moving Objects<span style='mso-tab-count:
-5'>                                                         </span></span></b><span
+style='font-size:12.0pt;line-height:105%'>Drawing an Edge<span
+style='mso-tab-count:5'>                                                       </span></span></b><span
 style='font-size:12.0pt;line-height:105%'><a href="Exploring.htm">&lt;Back</a><b
 style='mso-bidi-font-weight:normal'><o:p></o:p></b></span></p>
 
-<p class=MsoNormal><span style='font-size:12.0pt;line-height:105%'>Left-dragging
-on an object will move it, unless it is <a href="Locking_Grouping.htm">locked</a>.
-<o:p></o:p></span></p>
+<p class=MsoNormal><span style='font-size:12.0pt;line-height:105%'>Click the
+Edge, Arc or Bezier buttons in the toolbar, then drag out the edge end to end.
+Like faces, edges are drawn on existing objects, or on the standard plane that
+is facing the user’s view.<o:p></o:p></span></p>
 
-<p class=MsoNormal><span style='font-size:12.0pt;line-height:105%'>Left-dragging
-on a selection will move the whole selection.<o:p></o:p></span></p>
+<p class=MsoNormal><span style='font-size:12.0pt;line-height:105%'>You can
+start on an existing point (it will highlight when you move close) and end on
+an existing point. This is important for making a closed chain of edges for
+converting into a face later (by grouping and making a face)<o:p></o:p></span></p>
 
-<p class=MsoNormal><span style='font-size:12.0pt;line-height:105%'>The move
-takes place in the plane most closely facing the user’s view.</span></p>
+<p class=MsoNormal><span style='font-size:12.0pt;line-height:105%'>For arcs and
+beziers, you can draw approximately in freehand – the endpoints, centre and
+control points can be changed later. Select the edge to show them.</span></p>
+
+<p class=MsoNormal>Note: if you just want to round corners on a face, that is
+more easily done by drawing the face first and selecting Round Corners from the
+right-click menu. You can round one or all. The radius is set in Preferences.</p>
+
+<p class=MsoNormal><b style='mso-bidi-font-weight:normal'><span
+style='font-size:12.0pt;line-height:105%'>Making a Face from Edges<o:p></o:p></span></b></p>
+
+<p class=MsoNormal><span style='font-size:12.0pt;line-height:105%'>Draw a closed
+set of edges that connect end to end. Then right-click one and select Group
+Connected Edges, followed by Make Face.<o:p></o:p></span></p>
 
 </div>
 
