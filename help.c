@@ -3,7 +3,6 @@
 #include "LoftyCAD.h"
 #include <CommCtrl.h>
 #include <CommDlg.h>
-#include <richedit.h>
 #include <stdio.h>
 
 char *state_key[] =

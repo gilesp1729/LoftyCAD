@@ -294,7 +294,6 @@ show_dims_on(Object *obj, PRESENTATION pres, LOCK parent_lock)
     HDC hdc = auxGetHDC();
     Face *f;
     Edge *e;
-    ArcEdge *ae;
     Point *p0, *p1, *p2;
     BOOL locked;
     BOOL selected = pres & DRAW_SELECTED;
