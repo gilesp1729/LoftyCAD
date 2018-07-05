@@ -8,7 +8,7 @@ Simple to use like Sketchup, but with some improvements:
 In particular, it will:
 - Retain the identity of 3D shapes, do not merge irreversibly with others
 - Not allow silly extrusions
-- Produce a single triangle mesh from merged objects
+- Produce a single triangle mesh from merged objects, CSG fashion
 - NEVER produce non-manifold triangle meshes requiring repairs
 - Write STL files directly
 
@@ -26,11 +26,12 @@ In particular, it will:
 - Always output full normals
 
 # Stretch goals
+- Editing faces by breaking edges and adding points
 - Bezier surfaces (compound curves)
 - Lofting (a nod to the original Lofty, which is LoftyCAD's spiritual ancestor)
 
 # Installing LoftyCAD from the prebuilt installer
-Unzip the zip in the Installer directory, to any directory on the Windows system (c:\Program Files (x86) is the standard place for 32-bit programs). Create a shortcut on the desktop as needed.
+Unzip the zip in the Installer directory, to any directory on the Windows system (c:\Program Files (x86) is the standard place for 32-bit programs). Create a shortcut on the desktop as needed. The install.bat file will do this and also register the file associations.
 
 # Building LoftyCAD
 LoftyCAD uses the CGAL computational geometry library to merge and intersect triangle meshes.
