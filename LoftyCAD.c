@@ -1329,7 +1329,6 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
                      _In_ int       nCmdShow)
 {
 	UNREFERENCED_PARAMETER(hPrevInstance);
-	UNREFERENCED_PARAMETER(lpCmdLine);
 
 	MSG msg;
 	HACCEL hAccelTable;
@@ -1465,6 +1464,32 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
         // Display help for the resting state
         change_state(STATE_NONE);
 
+        // Open any file passed on the cmd line
+        if (lpCmdLine[0] != '\0')
+        {
+            char window_title[256];
+            int lens, start;
+
+            // Strip quotes.
+            start = 0;
+            if (lpCmdLine[0] == '"')
+                start = 1;
+            strcpy_s(curr_filename, 256, &lpCmdLine[start]);
+            lens = strlen(curr_filename) - 1;
+            if (curr_filename[lens] == '"')
+                curr_filename[lens] = '\0';
+
+            deserialise_tree(&object_tree, curr_filename, FALSE);
+            strcpy_s(window_title, 256, curr_filename);
+            strcat_s(window_title, 256, " - ");
+            strcat_s(window_title, 256, object_tree.title);
+            SetWindowText(auxGetHWND(), window_title);
+            hMenu = GetSubMenu(GetMenu(auxGetHWND()), 0);
+            hMenu = GetSubMenu(hMenu, 9);
+            insert_filename_to_MRU(hMenu, curr_filename);
+            populate_treeview();
+            gen_view_list_tree_volumes(&object_tree);
+        }
 
         hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_LOFTYCAD));
 
