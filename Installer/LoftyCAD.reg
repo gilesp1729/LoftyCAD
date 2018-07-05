@@ -1,0 +1,8 @@
+Windows Registry Editor Version 5.00
+
+[HKEY_CURRENT_USER\Software\Classes\aloftyideal.LoftyCAD\shell\open\command]
+@="\"C:\\Program Files (x86)\\LoftyCAD\\LoftyCAD.exe\" \"%1\""
+
+[HKEY_CURRENT_USER\Software\Classes\.lcd]
+@="aloftyideal.LoftyCAD"
+
