@@ -316,7 +316,9 @@ gen_view_list_tree_surfaces(Group *tree, Group *parent_tree)
     char buf[32];
     int n = 0;
 
-    if (parent_tree->mesh_valid)
+    // If the parent tree is up to date, we have nothing to do. (but don't do this
+    // check if recursing)
+    if (tree == parent_tree && parent_tree->mesh_valid)
         return;
 
     parent_tree->mesh_complete = TRUE;
