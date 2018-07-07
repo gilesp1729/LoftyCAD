@@ -60,12 +60,13 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         LoadAndDisplayIcon(hWnd, IDI_BEZIER_EDGE, IDB_BEZIER_EDGE, IDS_BEZIER_EDGE);
         LoadAndDisplayIcon(hWnd, IDI_ARC_EDGE, IDB_ARC_EDGE, IDS_ARC_EDGE);
         LoadAndDisplayIcon(hWnd, IDI_EXTRUDE, IDB_EXTRUDE, IDS_EXTRUDE);
-        LoadAndDisplayIcon(hWnd, 0, IDB_XY, IDS_XY);
-        LoadAndDisplayIcon(hWnd, 0, IDB_YZ, IDS_YZ);
-        LoadAndDisplayIcon(hWnd, 0, IDB_XZ, IDS_XZ);
-        LoadAndDisplayIcon(hWnd, 0, IDB_MINUS_XY, IDS_MINUS_XY);
-        LoadAndDisplayIcon(hWnd, 0, IDB_MINUS_YZ, IDS_MINUS_YZ);
-        LoadAndDisplayIcon(hWnd, 0, IDB_MINUS_XZ, IDS_MINUS_XZ);
+        LoadAndDisplayIcon(hWnd, IDI_TOP, IDB_XY, IDS_XY);
+        LoadAndDisplayIcon(hWnd, IDI_FRONT, IDB_YZ, IDS_YZ);
+        LoadAndDisplayIcon(hWnd, IDI_LEFT, IDB_XZ, IDS_XZ);
+        LoadAndDisplayIcon(hWnd, IDI_BOTTOM, IDB_MINUS_XY, IDS_MINUS_XY);
+        LoadAndDisplayIcon(hWnd, IDI_BACK, IDB_MINUS_YZ, IDS_MINUS_YZ);
+        LoadAndDisplayIcon(hWnd, IDI_RIGHT, IDB_MINUS_XZ, IDS_MINUS_XZ);
+        LoadAndDisplayIcon(hWnd, IDI_RENDERED, IDB_RENDERED, IDS_RENDERED);
 
         // Tools are disabled when in render view
         EnableWindow(GetDlgItem(hWnd, IDB_EDGE), !view_rendered);
@@ -173,6 +174,33 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 #endif
                 trackball_InitQuat(quat_mXZ);
                 SetWindowPos(auxGetHWND(), HWND_TOP, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOREPOSITION);
+                break;
+
+            case IDB_RENDERED:
+                hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
+                if (view_rendered)
+                {
+                    view_rendered = FALSE;
+                    glEnable(GL_BLEND);
+                    CheckMenuItem(hMenu, ID_VIEW_RENDEREDVIEW, MF_UNCHECKED);
+                }
+                else
+                {
+                    gen_view_list_tree_volumes(&object_tree);
+                    gen_view_list_tree_surfaces(&object_tree, &object_tree);
+                    view_rendered = TRUE;
+                    glDisable(GL_BLEND);
+                    CheckMenuItem(hMenu, ID_VIEW_RENDEREDVIEW, MF_CHECKED);
+                }
+                EnableWindow(GetDlgItem(hWndToolbar, IDB_EDGE), !view_rendered);
+                EnableWindow(GetDlgItem(hWndToolbar, IDB_RECT), !view_rendered);
+                EnableWindow(GetDlgItem(hWndToolbar, IDB_CIRCLE), !view_rendered);
+                EnableWindow(GetDlgItem(hWndToolbar, IDB_ARC_EDGE), !view_rendered);
+                EnableWindow(GetDlgItem(hWndToolbar, IDB_BEZIER_EDGE), !view_rendered);
+                EnableWindow(GetDlgItem(hWndToolbar, IDB_EXTRUDE), !view_rendered);
+                EnableWindow(GetDlgItem(hWndToolbar, IDB_CONST_EDGE), !view_rendered);
+                EnableWindow(GetDlgItem(hWndToolbar, IDB_CONST_RECT), !view_rendered);
+                EnableWindow(GetDlgItem(hWndToolbar, IDB_CONST_CIRCLE), !view_rendered);
                 break;
             }
         }

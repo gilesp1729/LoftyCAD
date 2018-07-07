@@ -168,9 +168,6 @@
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="small.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
     <Image Include="LoftyCAD.ico">
       <Filter>Resource Files</Filter>
     </Image>
@@ -208,6 +205,30 @@
       <Filter>Resource Files</Filter>
     </Image>
     <Image Include="icon-bezier.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="icon2.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="cube-right32.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="cube-back32.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="cube-bottom32.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="cube-front32.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="cube-left32.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="cube-rendered32.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="cube-top32.ico">
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>

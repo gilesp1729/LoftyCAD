@@ -139,6 +139,13 @@
     <ResourceCompile Include="LoftyCAD.rc" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="cube-back32.ico" />
+    <Image Include="cube-bottom32.ico" />
+    <Image Include="cube-front32.ico" />
+    <Image Include="cube-left32.ico" />
+    <Image Include="cube-rendered32.ico" />
+    <Image Include="cube-right32.ico" />
+    <Image Include="cube-top32.ico" />
     <Image Include="icon-arc.ico" />
     <Image Include="icon-bezier.ico" />
     <Image Include="icon-circle.ico" />
@@ -153,7 +160,6 @@
     <Image Include="icon1.ico" />
     <Image Include="icon2.ico" />
     <Image Include="LoftyCAD.ico" />
-    <Image Include="small.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
