@@ -31,7 +31,7 @@ In particular, it will:
 - Lofting (a nod to the original Lofty, which is LoftyCAD's spiritual ancestor)
 
 # Installing LoftyCAD from the prebuilt installer
-Unzip the zip in the Installer directory, to any directory on the Windows system (c:\Program Files (x86) is the standard place for 32-bit programs). Create a shortcut on the desktop as needed. The install.bat file will do this and also register the file associations.
+Unzip the zip in the Installer directory, to any directory on the Windows system (c:\Program Files (x86) is the standard place for 32-bit programs). The install.bat file will do this, register the file associations, and create a desktop link.
 
 # Building LoftyCAD
 LoftyCAD uses the CGAL computational geometry library to merge and intersect triangle meshes.

@@ -12,3 +12,4 @@ if %errorlevel% neq 0 (
 
 powershell.exe -NoP -NonI -Command "Expand-Archive -Force '.\LoftyCAD-release.zip' 'c:\Program Files (x86)\LoftyCAD\'
 regedit /s LoftyCAD.reg
+mklink %USERPROFILE%\Desktop\LoftyCAD "c:\Program Files (x86)\LoftyCAD\LoftyCAD.exe"
