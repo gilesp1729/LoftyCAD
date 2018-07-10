@@ -50,13 +50,17 @@ HWND init_help_window(void)
 void
 display_help(char *key)
 {
-    char fname[256] = "html\\";   // TODO this really needs to be someplace standard
-    char fullpath[256];
+    char fname[256]; 
+    char *slosh;
 
+    GetModuleFileName(NULL, fname, 256);
+    slosh = strrchr(fname, '\\');
+    if (slosh != NULL)
+        *slosh = '\0';
+    strcat_s(fname, 256, "\\html\\");
     strcat_s(fname, 256, key);
     strcat_s(fname, 256, ".htm");
-    GetFullPathName(fname, 256, fullpath, NULL);
-    DisplayHTMLPage(hWndHelp, fullpath);
+    DisplayHTMLPage(hWndHelp, fname);
 }
 
 void

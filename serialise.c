@@ -653,15 +653,20 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
 void
 write_checkpoint(Group *tree, char *filename)
 {
-    char basename[256], check[256];
+    char basename[256], check[256], tmpdir[256];
     int baselen;
     char *pdot;
 
-    strcpy_s(basename, 256, filename);
+    pdot = strrchr(filename, '\\');
+    if (pdot != NULL)
+        strcpy_s(basename, 256, pdot+1);          // cut off any directory in file
+    else
+        strcpy_s(basename, 256, filename);
     baselen = strlen(basename);
     if (baselen > 4 && (pdot = strrchr(basename, '.')) != NULL)
         *pdot = '\0';                                            // cut off ".lcd" 
-    sprintf_s(check, 256, "%s_%04d.lcd", basename, ++generation);
+    GetTempPath(256, tmpdir);
+    sprintf_s(check, 256, "%s%s_%04d.lcd", tmpdir, basename, ++generation);
     serialise_tree(tree, check);
     latest_generation = generation;
     if (generation > max_generation)
@@ -674,7 +679,7 @@ write_checkpoint(Group *tree, char *filename)
 BOOL
 read_checkpoint(Group *tree, char *filename, int generation)
 {
-    char basename[256], check[256];
+    char basename[256], check[256], tmpdir[256];
     int baselen;
     BOOL rc;
     char *pdot;
@@ -685,11 +690,16 @@ read_checkpoint(Group *tree, char *filename, int generation)
 
     if (generation > 0)
     {
-        strcpy_s(basename, 256, filename);
+        pdot = strrchr(filename, '\\');
+        if (pdot != NULL)
+            strcpy_s(basename, 256, pdot+1);          // cut off any directory in file
+        else
+            strcpy_s(basename, 256, filename);
         baselen = strlen(basename);
         if (baselen > 4 && (pdot = strrchr(basename, '.')) != NULL)
             *pdot = '\0';                                            // cut off ".lcd" 
-        sprintf_s(check, 256, "%s_%04d.lcd", basename, generation);
+        GetTempPath(256, tmpdir);
+        sprintf_s(check, 256, "%s%s_%04d.lcd", tmpdir, basename, generation);
         rc = deserialise_tree(tree, check, FALSE);
     }
     else if (filename[0] != '\0')
