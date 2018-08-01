@@ -375,7 +375,7 @@ gen_view_list_tree_surfaces(Group *tree, Group *parent_tree)
             vol = (Volume *)obj;
 
             // Make sure it is a hole
-            if (vol->extrude_height > 0)
+            if (vol->extrude_height >= 0)
                 break;
 
             sprintf_s(buf, 32, "Intersection %d", n++);
@@ -502,6 +502,10 @@ gen_view_list_face(Face *face)
             else
             {
                 ASSERT(last_point == e->endpoints[1], "Point order messed up");
+                if (last_point != e->endpoints[1])
+                {
+              //      DebugBreak();
+                }
                 last_point = e->endpoints[0];
             }
 

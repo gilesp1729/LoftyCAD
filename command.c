@@ -426,7 +426,10 @@ Command(int message, int wParam, int lParam)
             memset(&ofn, 0, sizeof(OPENFILENAME));
             ofn.lStructSize = sizeof(OPENFILENAME);
             ofn.hwndOwner = auxGetHWND();
-            ofn.lpstrFilter = "STL Files (*.STL)\0*.STL\0All Files\0*.*\0\0";
+            ofn.lpstrFilter =
+                "STL Meshes (*.STL)\0*.STL\0"
+                "Geomview Object File Format Files (*.OFF)\0*.OFF\0"
+                "All Files\0*.*\0\0";
             ofn.nFilterIndex = 1;
             ofn.lpstrDefExt = "stl";
             strcpy_s(new_filename, 256, curr_filename);
@@ -440,7 +443,7 @@ Command(int message, int wParam, int lParam)
             {
                 gen_view_list_tree_volumes(&object_tree);
                 gen_view_list_tree_surfaces(&object_tree, &object_tree);
-                export_object_tree(&object_tree, new_filename);
+                export_object_tree(&object_tree, new_filename, ofn.nFilterIndex);
             }
 
             break;
@@ -452,8 +455,10 @@ Command(int message, int wParam, int lParam)
             ofn.lpstrFilter = 
                 "LoftyCAD Files (*.LCD)\0*.LCD\0"
                 "STL Meshes (*.STL)\0*.STL\0"
-                "GNU Triangulated Surface Files (*.GTS)\0*.GTS\0"
                 "Geomview Object File Format Files (*.OFF)\0*.OFF\0"
+#if 0
+                "GNU Triangulated Surface Files (*.GTS)\0*.GTS\0"
+#endif
                 "All Files\0*.*\0\0";
             ofn.nFilterIndex = 1;
             ofn.lpstrDefExt = "lcd";
@@ -475,11 +480,13 @@ Command(int message, int wParam, int lParam)
                     rc = read_stl_to_group(group, new_filename);
                     break;
                 case 3:
-                    rc = read_gts_to_group(group, new_filename);
-                    break;
-                case 4:
                     rc = read_off_to_group(group, new_filename);
                     break;
+#if 0
+                case 4:
+                    rc = read_gts_to_group(group, new_filename);
+                    break;
+#endif
                 }
                 if (rc)
                 {

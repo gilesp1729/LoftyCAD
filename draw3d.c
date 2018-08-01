@@ -279,7 +279,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             // Draw from the triangulated mesh for the volume.
             ASSERT(((Volume *)obj)->mesh_valid, "Mesh is not up to date");
             color(OBJ_FACE, FALSE, selected, highlighted, FALSE);
-            mesh_foreach_face(((Volume *)obj)->mesh, draw_triangle, NULL);
+            mesh_foreach_face_coords(((Volume *)obj)->mesh, draw_triangle, NULL);
         }
         
         if (!view_rendered)
@@ -298,7 +298,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         {
             // The object tree is a group, but it is never merged.
             if (group->mesh != NULL && group->mesh_valid && !group->mesh_merged)
-                mesh_foreach_face(group->mesh, draw_triangle, NULL);
+                mesh_foreach_face_coords(group->mesh, draw_triangle, NULL);
 
             if (!group->mesh_complete)
             {

@@ -108,7 +108,7 @@ populate_treeview_tree(Group *tree, HTREEITEM hItem)
     Object *obj;
     TVINSERTSTRUCT tvins;
     TVITEM tvi = { 0, };
-    char descr[64];
+    char descr[80];
     HTREEITEM hGroup;
 
     for (obj = tree->obj_list; obj != NULL; obj = obj->next)
@@ -117,9 +117,9 @@ populate_treeview_tree(Group *tree, HTREEITEM hItem)
         {
             Group *grp = (Group *)obj;
             if (grp->title[0] == '\0')
-                sprintf_s(descr, 64, "Group %d", obj->ID);
+                sprintf_s(descr, 80, "Group %d", obj->ID);
             else
-                sprintf_s(descr, 64, "Group %d: %s", obj->ID, grp->title);
+                sprintf_s(descr, 80, "Group %d: %s", obj->ID, grp->title);
             tvi.pszText = descr;
             tvi.cchTextMax = strlen(tvi.pszText);
             tvi.lParam = (LPARAM)obj;

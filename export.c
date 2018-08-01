@@ -2,17 +2,23 @@
 #include "LoftyCAD.h"
 #include <stdio.h>
 
-// globals for STL file writing
-// File to export STL to (global so callbacks can see it)
-FILE *stl;
+// globals for STL/OFF file writing
+// File to export STL/OFF to (global so callbacks can see it)
+FILE *stl, *off;
 
 // number of triangles exported
-int num_stl_tri;
+int num_exported_tri;
+
+// number of vertices for an OFF file
+int num_exported_vertices;
+
+// reindex array to count vertex indices in an OFF file
+int *reindex;
 
 
-// Write a single mesh triangle with normal out to the STL file
+// Write a single mesh triangle with normal out to an STL file
 void
-export_triangle(void *arg, float x[3], float y[3], float z[3])
+export_triangle_stl(void *arg, float x[3], float y[3], float z[3])
 {
     int i;
     float A, B, C, length;
@@ -32,12 +38,33 @@ export_triangle(void *arg, float x[3], float y[3], float z[3])
         fprintf_s(stl, "    vertex %f %f %f\n", x[i], y[i], z[i]);
     fprintf_s(stl, "  endloop\n");
     fprintf_s(stl, "endfacet\n");
-    num_stl_tri++;
+    num_exported_tri++;
 }
 
-// Render an un-merged volume or group to triangles
+// Write a vertex out to an OFF file, counting is zero-based position along the way
 void
-export_unmerged_object(Object *obj)
+export_vertex_off(void *arg, Vertex_index *v, float x, float y, float z)
+{
+    fprintf_s(off, "%f %f %f\n", x, y, z);
+    reindex[*(int *)v] = num_exported_vertices++;
+}
+
+// Write a single mesh triangle out to an OFF file
+void
+export_triangle_off(void *arg, int nv, Vertex_index *vi)
+{
+    int *ivi = (int *)vi;
+    int i;
+
+    fprintf_s(off, "%d", nv);
+    for (i = 0; i < nv; i++)
+        fprintf_s(off, " %d", reindex[ivi[i]]);
+    fprintf_s(off, "\n");
+}
+
+// Render an un-merged volume or group to triangles and export it to an STL file
+void
+export_unmerged_object_stl(Object *obj)
 {
     Object *o;
     Volume *vol;
@@ -47,52 +74,88 @@ export_unmerged_object(Object *obj)
     case OBJ_VOLUME:
         vol = (Volume *)obj;
         if (!vol->mesh_merged)
-            mesh_foreach_face(((Volume *)obj)->mesh, export_triangle, NULL);
+            mesh_foreach_face_coords(((Volume *)obj)->mesh, export_triangle_stl, NULL);
         break;
 
     case OBJ_GROUP:
         for (o = ((Group *)obj)->obj_list; o != NULL; o = o->next)
-            export_unmerged_object(o);
+            export_unmerged_object_stl(o);
         break;
     }
 }
 
-// export every volume to STL
+// export every volume to STL (index=1) or OFF (index = 2)
 void
-export_object_tree(Group *tree, char *filename)
+export_object_tree(Group *tree, char *filename, int file_index)
 {
     Object *obj;
     char buf[64];
 
-    fopen_s(&stl, filename, "wt");
-    if (stl == NULL)
-        return;
-    fprintf_s(stl, "solid %s\n", tree->title);
-
-    ASSERT(tree->mesh != NULL, "Tree mesh NULL");
-    ASSERT(tree->mesh_valid, "Tree mesh not valid");
-    ASSERT(tree->mesh_complete, "Mesh incomplete - writing unmerged objects");
-
-    num_stl_tri = 0;
-    if (tree->mesh != NULL && tree->mesh_valid && !tree->mesh_merged)
-        mesh_foreach_face(tree->mesh, export_triangle, NULL);
-    
-    sprintf_s(buf, 64, "Mesh: %d triangles\r\n", num_stl_tri);
-    Log(buf);
-
-    if (!tree->mesh_complete)
+    switch (file_index)
     {
-        for (obj = tree->obj_list; obj != NULL; obj = obj->next)
-        {
-            if (obj->type == OBJ_VOLUME || obj->type == OBJ_GROUP)
-                export_unmerged_object(obj);
-        }
-        sprintf_s(buf, 64, "Unmerged: %d triangles total\r\n", num_stl_tri);
-        Log(buf);
-    }
+    case 1: // Export to an STL file
+        fopen_s(&stl, filename, "wt");
+        if (stl == NULL)
+            return;
+        fprintf_s(stl, "solid %s\n", tree->title);
 
-    fprintf_s(stl, "endsolid %s\n", tree->title);
-    fclose(stl);
+        ASSERT(tree->mesh != NULL, "Tree mesh NULL");
+        ASSERT(tree->mesh_valid, "Tree mesh not valid");
+        ASSERT(tree->mesh_complete, "Mesh incomplete - writing unmerged objects");
+
+        num_exported_tri = 0;
+        if (tree->mesh != NULL && tree->mesh_valid && !tree->mesh_merged)
+            mesh_foreach_face_coords(tree->mesh, export_triangle_stl, NULL);
+
+        sprintf_s(buf, 64, "Mesh: %d triangles\r\n", num_exported_tri);
+        Log(buf);
+
+        if (!tree->mesh_complete)
+        {
+            for (obj = tree->obj_list; obj != NULL; obj = obj->next)
+            {
+                if (obj->type == OBJ_VOLUME || obj->type == OBJ_GROUP)
+                    export_unmerged_object_stl(obj);
+            }
+            sprintf_s(buf, 64, "Unmerged: %d triangles total\r\n", num_exported_tri);
+            Log(buf);
+        }
+
+        fprintf_s(stl, "endsolid %s\n", tree->title);
+        fclose(stl);
+        break;
+
+    case 2: // export to an OFF File
+        fopen_s(&off, filename, "wt");
+        if (off == NULL)
+            return;
+        fprintf_s(off, "OFF\n", tree->title);
+
+        ASSERT(tree->mesh != NULL, "Tree mesh NULL");
+        ASSERT(tree->mesh_valid, "Tree mesh not valid");
+        ASSERT(tree->mesh_complete, "Mesh incomplete - unmerged objects cannot be written");
+
+        num_exported_tri = 0;
+        num_exported_vertices = 0;
+        if (tree->mesh != NULL && tree->mesh_valid && !tree->mesh_merged)
+        {
+            int n_vertices = mesh_num_vertices(tree->mesh);
+            int n_faces = mesh_num_faces(tree->mesh);
+
+            fprintf_s(off, "%d %d %d\n", n_vertices, n_faces, 0);
+            reindex = (int *)calloc(n_vertices, sizeof(int));
+
+            mesh_foreach_vertex(tree->mesh, export_vertex_off, NULL);
+            mesh_foreach_face_vertices(tree->mesh, export_triangle_off, NULL);
+
+            free(reindex);
+        }
+
+        sprintf_s(buf, 64, "Mesh: %d triangles\r\n", num_exported_tri);
+        Log(buf);
+        fclose(off);
+        break;
+    }
 }
 
 
@@ -232,7 +295,7 @@ export_object(GLUtesselator *tess, Object *obj)
 
 // Tessellate every solid object in the tree to triangles and export to STL
 void
-export_object_tree(Group *tree, char *filename)
+export_object_tree(Group *tree, char *filename, int file_index)
 {
     Object *obj;
     GLUtesselator *tess = gluNewTess();

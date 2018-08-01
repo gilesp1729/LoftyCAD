@@ -41,8 +41,15 @@ void mesh_add_vertex(Mesh *mesh, float x, float y, float z, Vertex_index *vi);
 void mesh_add_face(Mesh *mesh, Vertex_index *v1, Vertex_index *v2, Vertex_index *v3, Face_index *fi);
 BOOL mesh_union(Mesh *mesh1, Mesh *mesh2);
 BOOL mesh_intersection(Mesh *mesh1, Mesh *mesh2);
-typedef void(*FaceCB)(void *arg, float x[3], float y[3], float z[3]);
-void mesh_foreach_face(Mesh *mesh, FaceCB callback, void *callback_arg);
+
+typedef void(*FaceCoordCB)(void *arg, float x[3], float y[3], float z[3]);
+typedef void(*FaceVertexCB)(void *arg, int nv, Vertex_index *vi);
+typedef void(*VertexCB)(void *arg, Vertex_index *v, float x, float y, float z);
+void mesh_foreach_vertex(Mesh *mesh, VertexCB callback, void *callback_arg);
+void mesh_foreach_face_vertices(Mesh *mesh, FaceVertexCB callback, void *callback_arg);
+void mesh_foreach_face_coords(Mesh *mesh, FaceCoordCB callback, void *callback_arg);
+int mesh_num_vertices(Mesh *mesh);
+int mesh_num_faces(Mesh *mesh);
 
 // Triangulate and render
 void init_triangulator(void);
@@ -50,11 +57,11 @@ void tess_vertex(GLUtesselator *tess, Point *p);
 void face_shade(GLUtesselator *tess, Face *face, BOOL selected, BOOL highlighted, BOOL locked);
 
 // Export to STL (export.c)
-void export_object_tree(Group *tree, char *filename);
+void export_object_tree(Group *tree, char *filename, int file_index);
 
 // Import from STL and various formats (import.c)
 BOOL read_stl_to_group(Group *group, char *filename);
-BOOL read_gts_to_group(Group *group, char *filename);
+//BOOL read_gts_to_group(Group *group, char *filename);
 BOOL read_off_to_group(Group *group, char *filename);
 
 extern GLUtesselator *rtess;

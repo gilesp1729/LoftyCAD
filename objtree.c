@@ -280,7 +280,7 @@ free_point_list(Point *pt_list)
     else
     {
         for (p = free_list_pt; p->hdr.next != NULL; p = (Point *)p->hdr.next)
-            ;   // run down to the last free element
+            ;   // run down to the last free element  TODO: Slow
         p->hdr.next = (Object *)pt_list;
     }
 }

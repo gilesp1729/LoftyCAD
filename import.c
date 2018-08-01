@@ -10,36 +10,47 @@
 
 // Helpers for STL reading; find existing points and edges by coordinate
 Point *
-find_point_coord(Point *pt, Point **points)
+find_point_coord(Point *pt, BOOL *new_point, Point **points)
 {
     Point *p;
+  //  int n = 0;
 
+    *new_point = FALSE;
     for (p = *points; p != NULL; p = (Point *)p->hdr.next)
     {
         if (near_pt(pt, p))
             break;
+    //    n++;
     }
+
     if (p == NULL)
     {
         p = point_newp(pt);
         link((Object *)p, (Object **)points);
+        *new_point = TRUE;
     }
 
     return p;
 }
 
 Edge *
-find_edge_coords(Point *p0, Point *p1, Edge **edges)
+find_edge_coords(Point *p0, Point *p1, BOOL search_edges, Edge **edges)
 {
-    Edge *e;
+    Edge *e = NULL;
+  //  int n = 0;
 
-    for (e = *edges; e != NULL; e = (Edge *)e->hdr.next)
+    if (search_edges)
     {
-        if (near_pt(e->endpoints[0], p0) && near_pt(e->endpoints[1], p1))
-            break;
-        if (near_pt(e->endpoints[0], p1) && near_pt(e->endpoints[1], p0))
-            break;
+        for (e = *edges; e != NULL; e = (Edge *)e->hdr.next)
+        {
+            if (e->endpoints[0] == p0 && e->endpoints[1] == p1)
+                break;
+            if (e->endpoints[0] == p1 && e->endpoints[1] == p0)
+                break;
+         //   n++;
+        }
     }
+
     if (e == NULL)
     {
         e = edge_new(EDGE_STRAIGHT);
@@ -91,25 +102,48 @@ read_stl_to_group(Group *group, char *filename)
     Plane norm;
     Point pt[3];
     Point *p0, *p1, *p2;
+    int n_tri = 0;
+    short attrib;
+    BOOL new_p0, new_p1, new_p2;
 
     fopen_s(&f, filename, "rt");
     if (f == NULL)
         return FALSE;
 
+    // Search for "solid ". If not found, assume it's a binary STL file.
+    if (fread_s(buf, 512, 1, 6, f) != 6)
+        goto error_return;
+    if (strncmp(buf, "solid ", 6) == 0)
+    {
+        if (fgets(buf, 512, f) == NULL)
+            goto error_return;
+        tok = strtok_s(buf, "\n", &nexttok);  // rest of line till \n
+        if (tok != NULL)
+            strcpy_s(group->title, 256, tok);
+        vol = vol_new();
+    }
+    else
+    {
+        fclose(f);
+        fopen_s(&f, filename, "rb");        // make sure it's binary!
+        if (fread_s(buf, 512, 1, 80, f) != 80)
+            goto error_return;
+        strcpy_s(group->title, 80, buf);
+        if (fread_s(&n_tri, 4, 1, 4, f) != 4)
+            goto error_return;
+        vol = vol_new();
+
+        goto binary_stl;
+    }
+
+    // Read in the rest of the ASCII STL file.
     while (TRUE)
     {
         if (fgets(buf, 512, f) == NULL)
             break;
 
         tok = strtok_s(buf, " \t\n", &nexttok);
-        if (strcmp(tok, "solid") == 0)
-        {
-            tok = strtok_s(NULL, "\n", &nexttok);  // rest of line till \n
-            if (tok != NULL)
-                strcpy_s(group->title, 256, tok);
-            vol = vol_new();
-        }
-        else if (strcmp(tok, "facet") == 0)
+        if (strcmp(tok, "facet") == 0)
         {
             tok = strtok_s(NULL, " \t\n", &nexttok);  // absorb "normal"
             tok = strtok_s(NULL, " \t\n", &nexttok);
@@ -135,14 +169,20 @@ read_stl_to_group(Group *group, char *filename)
             if (i != 3)
                 goto error_return;
 
-            p0 = find_point_coord(&pt[0], &points);
-            p1 = find_point_coord(&pt[1], &points);
-            p2 = find_point_coord(&pt[2], &points);
+            p0 = find_point_coord(&pt[0], &new_p0, &points);
+            p1 = find_point_coord(&pt[1], &new_p1, &points);
+            p2 = find_point_coord(&pt[2], &new_p2, &points);
+            if (near_pt(&pt[0], &pt[1]))
+                continue;
+            if (near_pt(&pt[1], &pt[2]))
+                continue;
+            if (near_pt(&pt[2], &pt[0]))
+                continue;
 
             tf = face_new(FACE_FLAT, norm);
-            tf->edges[0] = find_edge_coords(p0, p1, &edges);
-            tf->edges[1] = find_edge_coords(p1, p2, &edges);
-            tf->edges[2] = find_edge_coords(p2, p0, &edges);
+            tf->edges[0] = find_edge_coords(p0, p1, !(new_p0 || new_p1), &edges);
+            tf->edges[1] = find_edge_coords(p1, p2, !(new_p1 || new_p2), &edges);
+            tf->edges[2] = find_edge_coords(p2, p0, !(new_p2 || new_p0), &edges);
             tf->n_edges = 3;
             if
                 (
@@ -159,6 +199,7 @@ read_stl_to_group(Group *group, char *filename)
 
             tf->vol = vol;
             link((Object *)tf, (Object **)&vol->faces);
+            n_tri++;
         }
         else if (strcmp(tok, "endsolid") == 0)
         {
@@ -173,8 +214,73 @@ read_stl_to_group(Group *group, char *filename)
 error_return:
     fclose(f);
     return FALSE;
+
+binary_stl:
+    i = 0;
+    while (TRUE)
+    {
+        if (fread_s(&norm.A, 4, 1, 4, f) != 4)
+            goto binary_eof;
+        if (fread_s(&norm.B, 4, 1, 4, f) != 4)
+            goto binary_eof;
+        if (fread_s(&norm.C, 4, 1, 4, f) != 4)
+            goto binary_eof;
+
+        if (fread_s(&pt[0].x, 4, 1, 4, f) != 4)
+            goto binary_eof;
+        if (fread_s(&pt[0].y, 4, 1, 4, f) != 4)
+            goto binary_eof;
+        if (fread_s(&pt[0].z, 4, 1, 4, f) != 4)
+            goto binary_eof;
+
+        if (fread_s(&pt[1].x, 4, 1, 4, f) != 4)
+            goto binary_eof;
+        if (fread_s(&pt[1].y, 4, 1, 4, f) != 4)
+            goto binary_eof;
+        if (fread_s(&pt[1].z, 4, 1, 4, f) != 4)
+            goto binary_eof;
+
+        if (fread_s(&pt[2].x, 4, 1, 4, f) != 4)
+            goto binary_eof;
+        if (fread_s(&pt[2].y, 4, 1, 4, f) != 4)
+            goto binary_eof;
+        if (fread_s(&pt[2].z, 4, 1, 4, f) != 4)
+            goto binary_eof;
+
+        if (fread_s(&attrib, 2, 1, 2, f) != 2)  // ignore this
+            goto binary_eof;
+
+        p0 = find_point_coord(&pt[0], &new_p0, &points);
+        p1 = find_point_coord(&pt[1], &new_p1, &points);
+        p2 = find_point_coord(&pt[2], &new_p2, &points);
+
+        tf = face_new(FACE_FLAT, norm);
+        tf->edges[0] = find_edge_coords(p0, p1, !(new_p0 || new_p1), &edges);
+        tf->edges[1] = find_edge_coords(p1, p2, !(new_p1 || new_p2), &edges);
+        tf->edges[2] = find_edge_coords(p2, p0, !(new_p2 || new_p0), &edges);
+        tf->n_edges = 3;
+        if
+            (
+            tf->edges[0]->endpoints[1] == tf->edges[1]->endpoints[0]
+            ||
+            tf->edges[0]->endpoints[1] == tf->edges[1]->endpoints[1]
+            )
+            tf->initial_point = tf->edges[0]->endpoints[0];
+        else
+            tf->initial_point = tf->edges[0]->endpoints[1];
+
+        tf->vol = vol;
+        link((Object *)tf, (Object **)&vol->faces);
+        i++;
+    }
+
+binary_eof:
+    link_group((Object *)vol, group);
+    fclose(f);
+    return TRUE;
 }
 
+#if 0
 // Read a GTS file
 BOOL
 read_gts_to_group(Group *group, char *filename)
@@ -285,6 +391,7 @@ error:
     free(edges);
     return FALSE;
 }
+#endif // 0
 
 // Read a Geomview (OOGL) OFF file
 BOOL
@@ -354,6 +461,14 @@ read_off_to_group(Group *group, char *filename)
         tok = strtok_s(NULL, " \t\n", &nexttok);
         p3 = atoi(tok);
 
+        if (p1 == p2 || p2 == p3 || p1 == p3)
+            ASSERT(FALSE, "Degenerate triangles");
+        if (near_pt(points[p1], points[p2]))
+            continue;
+        if (near_pt(points[p2], points[p3]))
+            continue;
+        if (near_pt(points[p3], points[p1]))
+            continue;
         tf->edges[0] = find_edge(points[p1], points[p2], &edges);
         tf->edges[1] = find_edge(points[p2], points[p3], &edges);
         tf->edges[2] = find_edge(points[p3], points[p1], &edges);

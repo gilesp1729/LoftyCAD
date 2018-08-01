@@ -1,7 +1,9 @@
 // C interface to a little bit of CGAL's polygon mesh processing library.
 
 #include "mesh.h"
-typedef void(*FaceCB)(void *arg, float x[3], float y[3], float z[3]);
+typedef void(*FaceCoordCB)(void *arg, float x[3], float y[3], float z[3]);
+typedef void(*FaceVertexCB)(void *arg, int nv, Vertex_index *vi);
+typedef void(*VertexCB)(void *arg, Vertex_index *v, float x, float y, float z);
 
 extern "C"
 {
@@ -87,7 +89,34 @@ extern "C"
     }
 
     void
-        mesh_foreach_face(Mesh *mesh, FaceCB callback, void *callback_arg)
+        mesh_foreach_vertex(Mesh *mesh, VertexCB callback, void *callback_arg)
+    {
+        BOOST_FOREACH(Vertex_index v, mesh->vertices())
+        {
+            (*callback)(callback_arg, &v, mesh->point(v).x(), mesh->point(v).y(), mesh->point(v).z());
+        }
+    }
+
+    void
+        mesh_foreach_face_vertices(Mesh *mesh, FaceVertexCB callback, void *callback_arg)
+    {
+        Vertex_index vi[3];
+        int i;
+
+        BOOST_FOREACH(Face_index f, mesh->faces())
+        {
+            i = 0;
+            BOOST_FOREACH(Vertex_index v, CGAL::vertices_around_face(mesh->halfedge(f), *mesh))
+            {
+                vi[i] = v;
+                i++;
+            }
+            (*callback)(callback_arg, i, vi);
+        }
+    }
+
+    void
+        mesh_foreach_face_coords(Mesh *mesh, FaceCoordCB callback, void *callback_arg)
     {
         float x[3], y[3], z[3];
         int i;
@@ -101,11 +130,19 @@ extern "C"
                 y[i] = mesh->point(v).y();
                 z[i] = mesh->point(v).z();
                 i++;
-                //ASSERT(i < 3, "Too many points in mesh face");
             }
             (*callback)(callback_arg, x, y, z);
         }
     }
 
+    int
+        mesh_num_vertices(Mesh *mesh)
+    {
+        return mesh->number_of_vertices();
+    }
+    int
+        mesh_num_faces(Mesh *mesh)
+    {
+        return mesh->number_of_faces();
+    }
 }
-
