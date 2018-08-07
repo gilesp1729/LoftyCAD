@@ -73,7 +73,7 @@ group_connected_edges(Edge *edge)
                 continue;
 
             e = (Edge *)obj;
-            if (near_pt(e->endpoints[0], end0.edge->endpoints[end0.which_end]))
+            if (near_pt(e->endpoints[0], end0.edge->endpoints[end0.which_end], snap_tol))
             {
                 // endpoint 0 of obj connects to end0. Put obj in the list.
                 delink_group(obj, &object_tree);
@@ -87,7 +87,7 @@ group_connected_edges(Edge *edge)
             }
 
             // Check for endpoint 1 connecting to end0 similarly
-            else if (near_pt(e->endpoints[1], end0.edge->endpoints[end0.which_end]))
+            else if (near_pt(e->endpoints[1], end0.edge->endpoints[end0.which_end], snap_tol))
             {
                 delink_group(obj, &object_tree);
                 link_group(obj, group);
@@ -98,7 +98,7 @@ group_connected_edges(Edge *edge)
             }
 
             // And the same for end1. New edges are linked at the tail. 
-            else if (near_pt(e->endpoints[0], end1.edge->endpoints[end1.which_end]))
+            else if (near_pt(e->endpoints[0], end1.edge->endpoints[end1.which_end], snap_tol))
             {
                 delink_group(obj, &object_tree);
                 link_tail_group(obj, group);
@@ -108,7 +108,7 @@ group_connected_edges(Edge *edge)
                 advanced = TRUE;
             }
 
-            else if (near_pt(e->endpoints[1], end1.edge->endpoints[end1.which_end]))
+            else if (near_pt(e->endpoints[1], end1.edge->endpoints[end1.which_end], snap_tol))
             {
                 delink_group(obj, &object_tree);
                 link_tail_group(obj, group);
@@ -118,7 +118,7 @@ group_connected_edges(Edge *edge)
                 advanced = TRUE;
             }
 
-            if (near_pt(end0.edge->endpoints[end0.which_end], end1.edge->endpoints[end1.which_end]))
+            if (near_pt(end0.edge->endpoints[end0.which_end], end1.edge->endpoints[end1.which_end], snap_tol))
             {
                 // We have closed the chain. Mark the group as a closed edge group by
                 // setting its lock to Edges (it's hacky, but the lock is written to the
@@ -171,22 +171,22 @@ make_face(Group *group)
     // anything else)
     e = (Edge *)group->obj_list;
     next_edge = (Edge *)group->obj_list->next;
-    if (near_pt(e->endpoints[0], next_edge->endpoints[0]))
+    if (near_pt(e->endpoints[0], next_edge->endpoints[0], snap_tol))
     {
         initial = 1;
         pt = e->endpoints[0];
     }
-    else if (near_pt(e->endpoints[0], next_edge->endpoints[1]))
+    else if (near_pt(e->endpoints[0], next_edge->endpoints[1], snap_tol))
     {
         initial = 1;
         pt = e->endpoints[0];
     }
-    else if (near_pt(e->endpoints[1], next_edge->endpoints[0]))
+    else if (near_pt(e->endpoints[1], next_edge->endpoints[0], snap_tol))
     {
         initial = 0;
         pt = e->endpoints[1];
     }
-    else if (near_pt(e->endpoints[1], next_edge->endpoints[1]))
+    else if (near_pt(e->endpoints[1], next_edge->endpoints[1], snap_tol))
     {
         initial = 0;
         pt = e->endpoints[1];
@@ -207,13 +207,13 @@ make_face(Group *group)
         if (e->hdr.next->type != OBJ_EDGE)
             return NULL;
 
-        if (near_pt(next_edge->endpoints[0], pt))
+        if (near_pt(next_edge->endpoints[0], pt, snap_tol))
         {
             next_edge->endpoints[0] = pt;       // share the point
             link_tail((Object *)next_edge->endpoints[0], (Object **)&plist);
             final = 1;
         }
-        else if (near_pt(next_edge->endpoints[1], pt))
+        else if (near_pt(next_edge->endpoints[1], pt, snap_tol))
         {
             next_edge->endpoints[1] = pt;
             link_tail((Object *)next_edge->endpoints[1], (Object **)&plist);
@@ -228,7 +228,7 @@ make_face(Group *group)
     }
 
     // Share the last point back to the beginning
-    ASSERT(near_pt(((Edge *)group->obj_list)->endpoints[initial], pt), "The edges don't close at the starting point");
+    ASSERT(near_pt(((Edge *)group->obj_list)->endpoints[initial], pt, snap_tol), "The edges don't close at the starting point");
     next_edge->endpoints[final] = ((Edge *)group->obj_list)->endpoints[initial];
 
     // Get the normal and see if we need to reverse

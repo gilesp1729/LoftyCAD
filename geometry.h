@@ -15,14 +15,14 @@
 // test for "near" zero.
 #define nz(val)  (fabsf(val) < SMALL_COORD)
 
-// test for near points (within the snapping tolerance)
-#define near_pt(p1, p2) \
+// test for near points (within the snapping tolerance, or the small coord tolerance)
+#define near_pt(p1, p2, tol) \
     (   \
-        fabsf((p1)->x - (p2)->x) < snap_tol  \
+        fabsf((p1)->x - (p2)->x) < tol  \
         &&  \
-        fabsf((p1)->y - (p2)->y) < snap_tol  \
+        fabsf((p1)->y - (p2)->y) < tol  \
         &&  \
-        fabsf((p1)->z - (p2)->z) < snap_tol  \
+        fabsf((p1)->z - (p2)->z) < tol  \
     )
 
 void ray_from_eye(GLint x, GLint y, Plane *line);

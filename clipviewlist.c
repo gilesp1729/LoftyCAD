@@ -40,7 +40,7 @@ clip_tess_write(void * polygon_data)
 
             for (np = face->vol->point_list; np != NULL; np = (Point *)np->hdr.next)
             {
-                if (near_pt(np, &clip_tess_points[i]))
+                if (near_pt(np, &clip_tess_points[i], SMALL_COORD))
                 {
                     found = TRUE;
                     break;
@@ -177,13 +177,13 @@ gen_view_list_surface(Face *face, Point *facet)
                 tess_vertex(clip_tess, v);
 
                 // Skip coincident points for robustness (don't create zero-area triangles)
-                while (v->hdr.next != NULL && near_pt(v, (Point *)v->hdr.next))
+                while (v->hdr.next != NULL && near_pt(v, (Point *)v->hdr.next, SMALL_COORD))
                     v = (Point *)v->hdr.next;
 
                 v = (Point *)v->hdr.next;
 
                 // If face(t) is closed, skip the closing point. Watch for dups at the end.
-                while (v != NULL && near_pt(v, vfirst))
+                while (v != NULL && near_pt(v, vfirst, SMALL_COORD))
                     v = (Point *)v->hdr.next;
             }
             gluTessEndContour(clip_tess);

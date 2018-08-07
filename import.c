@@ -18,7 +18,7 @@ find_point_coord(Point *pt, BOOL *new_point, Point **points)
     *new_point = FALSE;
     for (p = *points; p != NULL; p = (Point *)p->hdr.next)
     {
-        if (near_pt(pt, p))
+        if (near_pt(pt, p, SMALL_COORD))
             break;
     //    n++;
     }
@@ -128,7 +128,8 @@ read_stl_to_group(Group *group, char *filename)
         fopen_s(&f, filename, "rb");        // make sure it's binary!
         if (fread_s(buf, 512, 1, 80, f) != 80)
             goto error_return;
-        strcpy_s(group->title, 80, buf);
+        strncpy_s(group->title, 80, buf, _TRUNCATE);
+        group->title[79] = '\0';    // in case there's no NULL char
         if (fread_s(&n_tri, 4, 1, 4, f) != 4)
             goto error_return;
         vol = vol_new();
@@ -172,11 +173,11 @@ read_stl_to_group(Group *group, char *filename)
             p0 = find_point_coord(&pt[0], &new_p0, &points);
             p1 = find_point_coord(&pt[1], &new_p1, &points);
             p2 = find_point_coord(&pt[2], &new_p2, &points);
-            if (near_pt(&pt[0], &pt[1]))
+            if (near_pt(&pt[0], &pt[1], SMALL_COORD))
                 continue;
-            if (near_pt(&pt[1], &pt[2]))
+            if (near_pt(&pt[1], &pt[2], SMALL_COORD))
                 continue;
-            if (near_pt(&pt[2], &pt[0]))
+            if (near_pt(&pt[2], &pt[0], SMALL_COORD))
                 continue;
 
             tf = face_new(FACE_FLAT, norm);
@@ -249,6 +250,13 @@ binary_stl:
 
         if (fread_s(&attrib, 2, 1, 2, f) != 2)  // ignore this
             goto binary_eof;
+
+        if (near_pt(&pt[0], &pt[1], SMALL_COORD))
+            continue;
+        if (near_pt(&pt[1], &pt[2], SMALL_COORD))
+            continue;
+        if (near_pt(&pt[2], &pt[0], SMALL_COORD))
+            continue;
 
         p0 = find_point_coord(&pt[0], &new_p0, &points);
         p1 = find_point_coord(&pt[1], &new_p1, &points);
@@ -463,11 +471,11 @@ read_off_to_group(Group *group, char *filename)
 
         if (p1 == p2 || p2 == p3 || p1 == p3)
             ASSERT(FALSE, "Degenerate triangles");
-        if (near_pt(points[p1], points[p2]))
+        if (near_pt(points[p1], points[p2], SMALL_COORD))
             continue;
-        if (near_pt(points[p2], points[p3]))
+        if (near_pt(points[p2], points[p3], SMALL_COORD))
             continue;
-        if (near_pt(points[p3], points[p1]))
+        if (near_pt(points[p3], points[p1], SMALL_COORD))
             continue;
         tf->edges[0] = find_edge(points[p1], points[p2], &edges);
         tf->edges[1] = find_edge(points[p2], points[p3], &edges);

@@ -504,7 +504,7 @@ gen_view_list_face(Face *face)
                 ASSERT(last_point == e->endpoints[1], "Point order messed up");
                 if (last_point != e->endpoints[1])
                 {
-              //      DebugBreak();
+                    DebugBreak();
                 }
                 last_point = e->endpoints[0];
             }
@@ -720,7 +720,7 @@ gen_view_list_arc(ArcEdge *ae)
 
     // angle between two vectors c-p0 and c-p1. If the points are the same, we are
     // drawing a full circle. (where "same" means coincident - they are always distinct structures)
-    if (near_pt(edge->endpoints[0], edge->endpoints[1]))
+    if (near_pt(edge->endpoints[0], edge->endpoints[1], SMALL_COORD))
         theta = ae->clockwise ? -2 * PI : 2 * PI;
     else
         theta = angle3(edge->endpoints[0], ae->centre, edge->endpoints[1], &n);
@@ -1063,13 +1063,13 @@ face_shade(GLUtesselator *tess, Face *face, BOOL selected, BOOL highlighted, BOO
             tess_vertex(tess, v);
 
             // Skip coincident points for robustness (don't create zero-area triangles)
-            while (v->hdr.next != NULL && near_pt(v, (Point *)v->hdr.next))
+            while (v->hdr.next != NULL && near_pt(v, (Point *)v->hdr.next, SMALL_COORD))
                 v = (Point *)v->hdr.next;
 
             v = (Point *)v->hdr.next;
                 
             // If face(t) is closed, skip the closing point. Watch for dups at the end.
-            while (v != NULL && near_pt(v, vfirst))
+            while (v != NULL && near_pt(v, vfirst, SMALL_COORD))
                 v = (Point *)v->hdr.next;
         }
         gluTessEndContour(tess);

@@ -68,7 +68,7 @@ find_in_neighbourhood_point(Point *point, Object *obj)
     {
     case OBJ_POINT:
         p = (Point *)obj;
-        if (near_pt(point, p))
+        if (near_pt(point, p, snap_tol))
             return obj;
         break;
 
