@@ -49,9 +49,9 @@ check_file_changed(HWND hWnd)
     }
 
     clean_checkpoints(curr_filename);
-    clear_selection(&selection);
-    clear_selection(&clipboard);
-    purge_tree(&object_tree);
+    // clear_selection(&selection);
+    // clear_selection(&clipboard);
+    // purge_tree(&object_tree);
     DestroyWindow(hWnd);
 }
 
