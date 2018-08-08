@@ -266,7 +266,7 @@ void link_single_checked(Object *new_obj, Object **obj_list)
     link_single(new_obj, obj_list);
 }
 
-// Clean out a view list (a singly linked list of Points, by joining it to the free list.
+// Clean out a view list (a singly linked list of Points) by joining it to the free list.
 // The points already have ID's of 0. 
 void
 free_point_list(Point *pt_list)
@@ -280,7 +280,7 @@ free_point_list(Point *pt_list)
     else
     {
         for (p = free_list_pt; p->hdr.next != NULL; p = (Point *)p->hdr.next)
-            ;   // run down to the last free element  TODO: Slow
+            ;   // run down to the last free element  TODO SLOW
         p->hdr.next = (Object *)pt_list;
     }
 }

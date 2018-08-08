@@ -230,20 +230,6 @@ Command(int message, int wParam, int lParam)
             break;
 
 #ifdef DEBUG_HIGHLIGHTING_ENABLED
-        case ID_DEBUG_ADJACENT:
-            hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
-            if (debug_view_adj)
-            {
-                debug_view_adj = FALSE;
-                CheckMenuItem(hMenu, ID_DEBUG_ADJACENT, MF_UNCHECKED);
-            }
-            else
-            {
-                debug_view_adj = TRUE;
-                CheckMenuItem(hMenu, ID_DEBUG_ADJACENT, MF_CHECKED);
-            }
-            break;
-
         case ID_DEBUG_BBOXES:
             hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
             if (debug_view_bbox)

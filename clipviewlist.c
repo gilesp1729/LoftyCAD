@@ -37,8 +37,9 @@ clip_tess_write(void * polygon_data)
         if (clip_tess_points[i].vi == NULL)
         {
             BOOL found = FALSE;
+            Point *b = find_bucket(&clip_tess_points[i], face->vol->point_bucket);
 
-            for (np = face->vol->point_list; np != NULL; np = (Point *)np->hdr.next)
+            for (np = b; np != NULL; np = np->bucket_next)
             {
                 if (near_pt(np, &clip_tess_points[i], SMALL_COORD))
                 {
@@ -61,7 +62,8 @@ clip_tess_write(void * polygon_data)
                 np->hdr.ID = 0;
                 objid--;
                 np->vi = v[i];
-                link((Object *)np, (Object **)&face->vol->point_list);
+                np->bucket_next = b;
+                b = np;
             }
         }
         else

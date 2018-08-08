@@ -115,6 +115,10 @@ extern float quat_mXY[4];
 extern float quat_mYZ[4];
 extern float quat_mXZ[4];
 
+extern float bucket_size;
+extern int n_buckets;
+
+
 // Debug stuff
 
 // Debugging defines
@@ -152,7 +156,6 @@ extern float quat_mXZ[4];
 
 
 // Debug externs
-extern BOOL debug_view_adj;
 extern BOOL debug_view_bbox;
 extern BOOL view_clipped_faces;
 

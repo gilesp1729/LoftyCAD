@@ -211,10 +211,6 @@ gen_view_list_tree_volumes(Group *tree)
             vol = (Volume * )obj;
             if (gen_view_list_vol(vol))
                 rc = TRUE;
-
-            // while here, clean out the volume's adjacency list
-            free_obj_list(vol->adj_list);
-            vol->adj_list = NULL;
             break;
 
         case OBJ_GROUP:
@@ -414,13 +410,8 @@ gen_view_list_vol(Volume *vol)
             f->view_valid = FALSE;
     }
 
-    // clear out the point and edge buckets and adjacency list
-    free_point_list(vol->point_list);
-    free_point_list(vol->edge_list);
-    vol->point_list = NULL;
-    vol->edge_list = NULL;
-    free_obj_list(vol->adj_list);
-    vol->adj_list = NULL;
+    // clear out the point bucket and free all its points
+    free_bucket_points(vol->point_bucket);
 
     // create a new mesh
     if (vol->mesh != NULL)

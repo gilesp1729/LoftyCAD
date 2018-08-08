@@ -97,6 +97,8 @@ typedef struct Point
                                     // points from being moved twice.
     PFLAG           flags;          // Flag to indicate start of facet or contour in view lists.
     Vertex_index    *vi;            // Index to CGAL mesh vertex (used when building meshes)
+    struct Edge     *start_list;    // List of edges that start at this point (i.e. this point is endpoint 0)
+    struct Point    *bucket_next;   // Next point in sorting bucket (used for searching points by coordinate)
 } Point;
 
 // 2D point struct.
@@ -127,13 +129,14 @@ typedef enum
     PLANE_GENERAL                   // Plane is not parallel to any of the above
 } PLANE;
 
-// Edges of various kinds. Edges are shared; they do not appear in a list unless they are in the
-// top level object tree.
+// Edges of various kinds. Edges are shared when used in faces, or they can start on their own
+// in the object tree.
 typedef struct Edge
 {
     struct Object   hdr;            // Header
     EDGE            type;           // What kind of edge this is
     struct Point    *endpoints[2];  // Two endpoints (valid for any edge type)
+    struct Edge     *start_next;    // Next edge in the starting list (edges that start at endpoint 0)
     struct Point    *view_list;     // List of intermediate points on the curve, generated 
                                     // between the two endpoints, to be flat within the
                                     // specified tolerance. Only used for arcs and beziers.
@@ -212,11 +215,9 @@ typedef struct Volume
     struct Bbox     bbox;           // Bounding box in 3D
     struct Bbox     old_bbox;       // Bbox prior to any move (required to update damaged surfaces)
     float           extrude_height; // Extrude height. If negative, it's a hole (face normals face inwards)
-    struct Object   *adj_list;      // Singly linked list of other volumes whose bboxes intersect this one
-    struct Point    *point_list;    // Doubly linked list of Points whose coordinates are copied from 
-                                    // child faces' view lists. (use a Point list as can easily be freed)
-                                    // Allows sharing of mesh vertices when building triangle meshes.
-    struct Point    *edge_list;     // List edges for sharing similarly (use a Point list as can easily be freed)
+    struct Point    ***point_bucket;  // Bucket structure of Points whose coordinates are copied from 
+                                    // child faces' view lists. Allow sharing points when importing
+                                    // STL meshes, and sharing of mesh vertices when building triangle meshes.
     Mesh            *mesh;          // Surface mesh for this volume.
     BOOL            mesh_valid;     // If TRUE, the mesh is up to date.
     BOOL            mesh_merged;    // If TRUE, the mesh has been merged to its parent group mesh.

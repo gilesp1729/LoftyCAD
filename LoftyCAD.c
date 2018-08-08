@@ -109,6 +109,7 @@ char curr_filename[256] = { 0, };
 // than or equal to the grid scale. (e.g. 1, 0.1)
 #define INITIAL_GRID 1.0f
 #define INITIAL_TOL 0.1f
+#define INITIAL_HALFSIZE 100.0f
 float grid_snap = INITIAL_GRID;
 float tolerance = INITIAL_TOL;
 
@@ -134,7 +135,7 @@ float chamfer_rad = 3.5f * INITIAL_TOL;
 float round_rad = 2 * INITIAL_GRID;
 
 // Half-size of drawing volume, nominally in mm (although units are arbitrary)
-float half_size = 100.0f;
+float half_size = INITIAL_HALFSIZE;
 
 // Initial values of translation components
 float xTrans = 0;
@@ -151,12 +152,15 @@ int latest_generation = 0;
 int max_generation = 0;
 
 // Debugging options
-BOOL debug_view_adj = FALSE;
 BOOL debug_view_bbox = FALSE;
 // TRUE to display clipping of faces to volumes
 BOOL view_clipped_faces = FALSE;
 
-
+// Size and span of point-searching buckets used in coordinate matching.
+// Chosen so that there are 20 buckets covering +/-halfsize, in X and Y (we don't bucket on Z)
+// If these change, n_buckets must be even.
+float bucket_size = INITIAL_GRID * 10;
+int n_buckets = 20;
 
 // Set material and lighting up
 void
@@ -1455,7 +1459,6 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
         CheckMenuItem(hMenu, ID_VIEW_CONSTRUCTIONEDGES, view_constr ? MF_CHECKED : MF_UNCHECKED);
         CheckMenuItem(hMenu, ID_VIEW_DEBUGLOG, view_debug ? MF_CHECKED : MF_UNCHECKED);
         CheckMenuItem(hMenu, ID_DEBUG_BBOXES, debug_view_bbox ? MF_CHECKED : MF_UNCHECKED);
-        CheckMenuItem(hMenu, ID_DEBUG_ADJACENT, debug_view_adj ? MF_CHECKED : MF_UNCHECKED);
 #ifndef DEBUG_HIGHLIGHTING_ENABLED
         EnableMenuItem(hMenu, ID_DEBUG_BBOXES, MF_GRAYED);
         EnableMenuItem(hMenu, ID_DEBUG_ADJACENT, MF_GRAYED);

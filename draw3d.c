@@ -1271,14 +1271,6 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                 glVertex3f(box.xmax, box.ymax, box.zmax);
                 glEnd();
             }
-
-            if (debug_view_adj)
-            {
-                Object *adj;
-
-                for (adj = vol->adj_list; adj != NULL; adj = adj->next)
-                    draw_object(adj->prev, DRAW_HIGHLIGHT, LOCK_FACES);
-            }
 #endif
         }
     }

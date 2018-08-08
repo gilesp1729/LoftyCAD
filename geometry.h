@@ -10,7 +10,7 @@
 #define LARGE_COORD 999999
 
 // A small coordinate value for testing
-#define SMALL_COORD 0.00001
+#define SMALL_COORD 0.000001
 
 // test for "near" zero.
 #define nz(val)  (fabsf(val) < SMALL_COORD)
@@ -57,5 +57,10 @@ void snap_to_angle(Plane *plane, Point *p0, Point *p1, int angle_tol);
 BOOL centre_3pt_circle(Point *p1, Point *p2, Point *p3, Plane *pl, Point *centre, BOOL *clockwise);
 BOOL centre_2pt_tangent_circle(Point *p1, Point *p2, Point *p, Plane *pl, Point *centre, BOOL *clockwise);
 void look_at_centre_d(Point c, Point p1, Plane n, double matrix[16]);
+Point ***init_buckets(void);
+Point *find_bucket(Point *p, Point ***bucket);
+void empty_bucket(Point ***bucket);
+void free_bucket_points(Point ***bucket);
+void free_bucket(Point ***bucket);
 
 #endif

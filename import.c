@@ -8,47 +8,39 @@
 // They are assumed to contain one contiguous body, which will become a volume
 // with lots of triangular faces.
 
-// Helpers for STL reading; find existing points and edges by coordinate
+// Helpers for STL reading; find existing points by coordinate
 Point *
-find_point_coord(Point *pt, BOOL *new_point, Point **points)
+find_point_coord(Point *pt, Point ***bucket)
 {
     Point *p;
-  //  int n = 0;
+    Point *b = find_bucket(pt, bucket);
 
-    *new_point = FALSE;
-    for (p = *points; p != NULL; p = (Point *)p->hdr.next)
+    for (p = b; p != NULL; p = p->bucket_next)
     {
         if (near_pt(pt, p, SMALL_COORD))
             break;
-    //    n++;
     }
 
     if (p == NULL)
     {
         p = point_newp(pt);
-        link((Object *)p, (Object **)points);
-        *new_point = TRUE;
+        p->bucket_next = b;
+        b = p;
     }
 
     return p;
 }
 
+// Find edges by endpoints, using the start_list.
 Edge *
-find_edge_coords(Point *p0, Point *p1, BOOL search_edges, Edge **edges)
+find_edge(Point *p0, Point *p1)
 {
     Edge *e = NULL;
-  //  int n = 0;
 
-    if (search_edges)
+    for (e = p0->start_list; e != NULL; e = e->start_next)
     {
-        for (e = *edges; e != NULL; e = (Edge *)e->hdr.next)
-        {
-            if (e->endpoints[0] == p0 && e->endpoints[1] == p1)
-                break;
-            if (e->endpoints[0] == p1 && e->endpoints[1] == p0)
-                break;
-         //   n++;
-        }
+        if (e->endpoints[1] == p1)
+            break;
     }
 
     if (e == NULL)
@@ -56,35 +48,13 @@ find_edge_coords(Point *p0, Point *p1, BOOL search_edges, Edge **edges)
         e = edge_new(EDGE_STRAIGHT);
         e->endpoints[0] = p0;
         e->endpoints[1] = p1;
-        link((Object *)e, (Object **)edges);
+        e->start_next = p0->start_list;
+        p0->start_list = e;
     }
 
     return e;
 }
 
-// Find an edge by matching its endpoints by pointer 
-Edge *
-find_edge(Point *p0, Point *p1, Edge **edges)
-{
-    Edge *e;
-
-    for (e = *edges; e != NULL; e = (Edge *)e->hdr.next)
-    {
-        if (e->endpoints[0] == p0 && e->endpoints[1] == p1)
-            break;
-        if (e->endpoints[0] == p1 && e->endpoints[1] == p0)
-            break;
-    }
-    if (e == NULL)
-    {
-        e = edge_new(EDGE_STRAIGHT);
-        e->endpoints[0] = p0;
-        e->endpoints[1] = p1;
-        link((Object *)e, (Object **)edges);
-    }
-
-    return e;
-}
 
 // Read an STL mesh
 BOOL
@@ -96,7 +66,6 @@ read_stl_to_group(Group *group, char *filename)
     char *nexttok = NULL;
     int i;
     Point *points = NULL;
-    Edge *edges = NULL;
     Face *tf;
     Volume *vol = NULL;
     Plane norm;
@@ -104,7 +73,6 @@ read_stl_to_group(Group *group, char *filename)
     Point *p0, *p1, *p2;
     int n_tri = 0;
     short attrib;
-    BOOL new_p0, new_p1, new_p2;
 
     fopen_s(&f, filename, "rt");
     if (f == NULL)
@@ -121,6 +89,7 @@ read_stl_to_group(Group *group, char *filename)
         if (tok != NULL)
             strcpy_s(group->title, 256, tok);
         vol = vol_new();
+        vol->point_bucket = init_buckets();
     }
     else
     {
@@ -133,6 +102,7 @@ read_stl_to_group(Group *group, char *filename)
         if (fread_s(&n_tri, 4, 1, 4, f) != 4)
             goto error_return;
         vol = vol_new();
+        vol->point_bucket = init_buckets();
 
         goto binary_stl;
     }
@@ -170,9 +140,9 @@ read_stl_to_group(Group *group, char *filename)
             if (i != 3)
                 goto error_return;
 
-            p0 = find_point_coord(&pt[0], &new_p0, &points);
-            p1 = find_point_coord(&pt[1], &new_p1, &points);
-            p2 = find_point_coord(&pt[2], &new_p2, &points);
+            p0 = find_point_coord(&pt[0], vol->point_bucket);
+            p1 = find_point_coord(&pt[1], vol->point_bucket);
+            p2 = find_point_coord(&pt[2], vol->point_bucket);
             if (near_pt(&pt[0], &pt[1], SMALL_COORD))
                 continue;
             if (near_pt(&pt[1], &pt[2], SMALL_COORD))
@@ -181,9 +151,9 @@ read_stl_to_group(Group *group, char *filename)
                 continue;
 
             tf = face_new(FACE_FLAT, norm);
-            tf->edges[0] = find_edge_coords(p0, p1, !(new_p0 || new_p1), &edges);
-            tf->edges[1] = find_edge_coords(p1, p2, !(new_p1 || new_p2), &edges);
-            tf->edges[2] = find_edge_coords(p2, p0, !(new_p2 || new_p0), &edges);
+            tf->edges[0] = find_edge(p0, p1);
+            tf->edges[1] = find_edge(p1, p2);
+            tf->edges[2] = find_edge(p2, p0);
             tf->n_edges = 3;
             if
                 (
@@ -209,6 +179,7 @@ read_stl_to_group(Group *group, char *filename)
     }
 
     link_group((Object *)vol, group);
+    empty_bucket(vol->point_bucket);
     fclose(f);
     return TRUE;
 
@@ -258,14 +229,14 @@ binary_stl:
         if (near_pt(&pt[2], &pt[0], SMALL_COORD))
             continue;
 
-        p0 = find_point_coord(&pt[0], &new_p0, &points);
-        p1 = find_point_coord(&pt[1], &new_p1, &points);
-        p2 = find_point_coord(&pt[2], &new_p2, &points);
+        p0 = find_point_coord(&pt[0], vol->point_bucket);
+        p1 = find_point_coord(&pt[1], vol->point_bucket);
+        p2 = find_point_coord(&pt[2], vol->point_bucket);
 
         tf = face_new(FACE_FLAT, norm);
-        tf->edges[0] = find_edge_coords(p0, p1, !(new_p0 || new_p1), &edges);
-        tf->edges[1] = find_edge_coords(p1, p2, !(new_p1 || new_p2), &edges);
-        tf->edges[2] = find_edge_coords(p2, p0, !(new_p2 || new_p0), &edges);
+        tf->edges[0] = find_edge(p0, p1);
+        tf->edges[1] = find_edge(p1, p2);
+        tf->edges[2] = find_edge(p2, p0);
         tf->n_edges = 3;
         if
             (
@@ -284,6 +255,7 @@ binary_stl:
 
 binary_eof:
     link_group((Object *)vol, group);
+    empty_bucket(vol->point_bucket);
     fclose(f);
     return TRUE;
 }
@@ -411,7 +383,6 @@ read_off_to_group(Group *group, char *filename)
     char *nexttok = NULL;
     int i, npoints, nedges, nfaces;
     Point **points;
-    Edge *edges = NULL;
     Volume *vol;
 
     fopen_s(&f, filename, "rt");
@@ -477,9 +448,9 @@ read_off_to_group(Group *group, char *filename)
             continue;
         if (near_pt(points[p3], points[p1], SMALL_COORD))
             continue;
-        tf->edges[0] = find_edge(points[p1], points[p2], &edges);
-        tf->edges[1] = find_edge(points[p2], points[p3], &edges);
-        tf->edges[2] = find_edge(points[p3], points[p1], &edges);
+        tf->edges[0] = find_edge(points[p1], points[p2]);
+        tf->edges[1] = find_edge(points[p2], points[p3]);
+        tf->edges[2] = find_edge(points[p3], points[p1]);
         tf->n_edges = 3;
         if
         (
