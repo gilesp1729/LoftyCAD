@@ -90,7 +90,6 @@ read_stl_to_group(Group *group, char *filename)
             strcpy_s(group->title, 256, tok);
         vol = vol_new();
         vol->hdr.lock = LOCK_FACES;
-        vol->point_bucket = init_buckets();
     }
     else
     {
@@ -104,7 +103,6 @@ read_stl_to_group(Group *group, char *filename)
             goto error_return;
         vol = vol_new();
         vol->hdr.lock = LOCK_FACES;
-        vol->point_bucket = init_buckets();
 
         goto binary_stl;
     }

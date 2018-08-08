@@ -158,6 +158,8 @@ Volume *vol_new(void)
     vol->hdr.ID = objid++;
     clear_bbox(&vol->bbox);
     clear_bbox(&vol->old_bbox);
+    vol->point_bucket = init_buckets();
+
     return vol;
 }
 
@@ -889,6 +891,7 @@ purge_obj(Object *obj)
             next_face = (Face *)face->hdr.next;
             purge_obj((Object *)face);
         }
+        free_bucket(vol->point_bucket);
         free(obj);
         break;
 

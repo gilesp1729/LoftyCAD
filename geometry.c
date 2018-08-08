@@ -644,4 +644,24 @@ void free_bucket_points(Point ***bucket)
 // Free a bucket structure, and all the Points it references.
 void free_bucket(Point ***bucket)
 {
+    int i, j;
+    Point *p, *nextp;
+
+    for (i = 0; i < n_buckets; i++)
+    {
+        Point **bh = bucket[i];
+
+        for (j = 0; j < n_buckets; j++)
+        {
+            for (p = bh[j]; p != NULL; p = nextp)
+            {
+                nextp = p->bucket_next;
+                p->hdr.next = (Object *)free_list_pt;
+                free_list_pt = p;
+            }
+            bh[j] = NULL;
+        }
+        free(bucket[i]);
+    }
+    free(bucket);
 }
