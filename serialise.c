@@ -191,13 +191,19 @@ check_and_grow(unsigned int id, Object ***object, unsigned int *objsize)
 
     if (id >= *objsize)
     {
-        int halfsize;
+        int orig_size, new_size;
+        unsigned int new_objsize = *objsize * 2;
+
+        while (new_objsize < id)
+            new_objsize *= 2;
 
         // make sure the new bit of the object array is zeroed out after the realloc
-        *object = (Object **)realloc(*object, sizeof(Object *) * (*objsize * 2));
-        halfsize = sizeof(Object *) * (*objsize);
-        memset((char *)(*object) + halfsize, 0, halfsize);
-        *objsize *= 2;
+        // it's usually just the second half, but sometimes it jumps by more than *2
+        *object = (Object **)realloc(*object, sizeof(Object *) * new_objsize);
+        orig_size = sizeof(Object *) * (*objsize);
+        new_size = sizeof(Object *) * new_objsize;
+        memset((char *)(*object) + orig_size, 0, new_size - orig_size);
+        *objsize = new_objsize;
     }
 }
 
@@ -580,7 +586,7 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
             vol->hdr.lock = lock;
             object[id] = (Object *)vol;
 
-            // Read the list of faces that make up the volume
+            // Read the list of faces that make up the volume. TODO - this might be VERY long, too long for any conceivable buffer...
             while (TRUE)
             {
                 int fid;
