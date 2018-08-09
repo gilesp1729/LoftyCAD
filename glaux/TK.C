@@ -1104,13 +1104,14 @@ PIXELFORMATDESCRIPTOR pfd;
           *  Validate the region even if there are no DisplayFunc.
           *  Otherwise, USER will not stop sending WM_PAINT messages.
           */
-
          hdc = BeginPaint(tkhwnd, &paint);
 
          if (DisplayFunc)
-            {
+         {
+            KillTimer(hWnd, 9999);   // stop timer while drawing, in case it's slow
             (*DisplayFunc)();
-            }
+            SetTimer(hWnd, 9999, 50, NULL);
+         }
 
          EndPaint(tkhwnd, &paint);
          return (0);
@@ -1220,7 +1221,7 @@ PIXELFORMATDESCRIPTOR pfd;
 
       case WM_MOUSEMOVE:
 
-         if (MouseMoveFunc)
+          if (MouseMoveFunc)
             {
             GLenum mask = 0;
             if (wParam & MK_LBUTTON) 
@@ -1233,7 +1234,12 @@ PIXELFORMATDESCRIPTOR pfd;
                 mask |= TK_SHIFT;
             if (wParam & MK_CONTROL)
                 mask |= TK_CONTROL;
-            if ((*MouseMoveFunc)(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam), mask))
+            if 
+            (
+                (*MouseMoveFunc)(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam), mask)
+                &&
+                ((mask & (TK_LEFTBUTTON | TK_MIDDLEBUTTON | TK_RIGHTBUTTON)) != 0)    // only redraw if mouse is down
+            )
                {
                ForceRedraw( hWnd );
                }
