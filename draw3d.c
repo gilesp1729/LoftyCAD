@@ -172,11 +172,14 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         }
         else
         {
-            // Just draw the point, the picking will still work
-            glBegin(GL_POINTS);
-            color(OBJ_POINT, FALSE, selected, highlighted, locked);
-            glVertex3f(p->x, p->y, p->z);
-            glEnd();
+            // Just draw the point (if not locked), the picking will still work
+            if (!locked)
+            {
+                glBegin(GL_POINTS);
+                color(OBJ_POINT, FALSE, selected, highlighted, locked);
+                glVertex3f(p->x, p->y, p->z);
+                glEnd();
+            }
         }
         glPopName();
         break;
