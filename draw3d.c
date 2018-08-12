@@ -125,11 +125,11 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
     case OBJ_POINT:
         push_name = snapping || parent_lock < obj->type;
         locked = parent_lock >= obj->type;
-        glPushName(push_name ? (GLuint)obj : 0);
+        p = (Point *)obj;
         if ((selected || highlighted) && !push_name)
             return;
 
-        p = (Point *)obj;
+        glPushName(push_name ? (GLuint)obj : 0);
         if (selected || highlighted)
         {
             // Draw a square blob in the facing plane, so it's more easily seen

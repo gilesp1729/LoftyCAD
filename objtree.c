@@ -213,7 +213,7 @@ link_tail(Object *new_obj, Object **obj_list)
     {
         Object *last;
 
-        // TODO - this could be slow! Keep a tail pointer, esp if it's from a group?
+        // TODO SLOW - this could be (is!) slow! Keep a tail pointer, esp if it's from a group?
         for (last = *obj_list; last->next != NULL; last = last->next)
             ;
 
@@ -348,6 +348,7 @@ clear_move_copy_flags(Object *obj)
         clear_move_copy_flags((Object *)edge->endpoints[0]);
         clear_move_copy_flags((Object *)edge->endpoints[1]);
         obj->copied_to = NULL;
+
         switch (type)
         {
         case EDGE_ARC:

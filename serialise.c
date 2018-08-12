@@ -2,6 +2,9 @@
 #include "LoftyCAD.h"
 #include <stdio.h>
 
+#define IS_GROUP(obj) ((obj) != NULL && (obj)->type == OBJ_GROUP)
+#define MAXLINE 1024
+
 // Version of output file
 double file_version = 0.2;
 
@@ -27,7 +30,7 @@ char *facetypes[] = { "RECT", "CIRCLE", "FLAT", "CYLINDRICAL", "GENERAL" };
 void
 serialise_obj(Object *obj, FILE *f)
 {
-    int i;
+    int i, n;
     Edge *e;
     EDGE type, constr;
     ArcEdge *ae;
@@ -91,7 +94,7 @@ serialise_obj(Object *obj, FILE *f)
     }
 
     // Now write the object itself
-    fprintf_s(f, "%s %d %s ", objname[obj->type], obj->ID, locktypes[obj->lock]);
+    n = fprintf_s(f, "%s %d %s ", objname[obj->type], obj->ID, locktypes[obj->lock]);
     switch (obj->type)
     {
     case OBJ_POINT:
@@ -128,21 +131,39 @@ serialise_obj(Object *obj, FILE *f)
 
     case OBJ_FACE:
         face = (Face *)obj;
-        fprintf_s(f, "%s%s %d %f %f %f %f %f %f ",
+        n += fprintf_s(f, "%s%s %d %f %f %f %f %f %f ",
                   facetypes[face->type & ~FACE_CONSTRUCTION],
                   (face->type & FACE_CONSTRUCTION) ? "(C)" : (obj->show_dims ? "(D)" : ""),
                   face->initial_point->hdr.ID,
                   face->normal.refpt.x, face->normal.refpt.y, face->normal.refpt.z,
                   face->normal.A, face->normal.B, face->normal.C);
         for (i = 0; i < face->n_edges; i++)
-            fprintf_s(f, "%d ", face->edges[i]->hdr.ID);
+        {
+            if (n >= MAXLINE - 10)          // not enough room for one more ID
+            {
+                if (i < face->n_edges - 1)
+                    fprintf_s(f, "+");      // write continuation char if more to come
+                fprintf_s(f, "\n");         // and start a new line
+                n = 0;
+            }
+            n += fprintf_s(f, "%d ", face->edges[i]->hdr.ID);
+        }
         fprintf_s(f, "\n");
         break;
 
     case OBJ_VOLUME:
         vol = (Volume *)obj;
         for (face = vol->faces; face != NULL; face = (Face *)face->hdr.next)
-            fprintf_s(f, "%d ", face->hdr.ID);
+        {
+            if (n >= MAXLINE - 10)
+            {
+                if (face->hdr.next != NULL)
+                    fprintf_s(f, "+");
+                fprintf_s(f, "\n");
+                n = 0;
+            }
+            n += fprintf_s(f, "%d ", face->hdr.ID);
+        }
         fprintf_s(f, "\n");
         break;
 
@@ -160,6 +181,7 @@ serialise_tree(Group *tree, char *filename)
 {
     FILE *f;
     Object *obj;
+    int n;
 
     fopen_s(&f, filename, "wt");
     fprintf_s(f, "LOFTYCAD %.1f\n", file_version);
@@ -174,8 +196,18 @@ serialise_tree(Group *tree, char *filename)
     if (selection != NULL)
     {
         fprintf_s(f, "SELECTION ");
+        n = 10;
         for (obj = selection; obj != NULL; obj = obj->next)
-            fprintf_s(f, "%d ", obj->prev->ID);
+        {
+            if (n >= MAXLINE - 10)
+            {
+                if (obj->next != NULL)
+                    fprintf_s(f, "+");
+                fprintf_s(f, "\n");
+                n = 0;
+            }
+            n += fprintf_s(f, "%d ", obj->prev->ID);
+        }
         fprintf_s(f, "\n");
     }
 
@@ -222,10 +254,6 @@ locktype_of(char *tok)
     return 0;
 }
 
-#define IS_GROUP(obj) ((obj) != NULL && (obj)->type == OBJ_GROUP)
-
-// TODO - this might be exceeded for vols consisting of large numbers of faces. make it dynamic somehow?
-#define MAXLINE 1024
 
 // Deserialise a tree from file. 
 BOOL
@@ -547,6 +575,14 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
                 tok = strtok_s(NULL, " \t\n", &nexttok);
                 if (tok == NULL)
                     break;
+
+                if (tok[0] == '+')    // handle continuation character '+' at end of line
+                {
+                    if (fgets(buf, MAXLINE, f) == NULL)
+                        break;
+                    tok = strtok_s(buf, " \t\n", &nexttok);
+                }
+
                 eid = atoi(tok) + id_offset;
                 ASSERT(eid > 0 && object[eid] != NULL, "Bad edge ID");
 
@@ -586,7 +622,7 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
             vol->hdr.lock = lock;
             object[id] = (Object *)vol;
 
-            // Read the list of faces that make up the volume. TODO - this might be VERY long, too long for any conceivable buffer...
+            // Read the list of faces that make up the volume.
             while (TRUE)
             {
                 int fid;
@@ -594,6 +630,14 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
                 tok = strtok_s(NULL, " \t\n", &nexttok);
                 if (tok == NULL)
                     break;
+
+                if (tok[0] == '+')    // handle continuation character '+' at end of line
+                {
+                    if (fgets(buf, MAXLINE, f) == NULL)
+                        break;
+                    tok = strtok_s(buf, " \t\n", &nexttok);
+                }
+
                 fid = atoi(tok) + id_offset;
                 ASSERT(fid > 0 && object[fid] != NULL, "Bad face ID");
 
@@ -639,6 +683,14 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
                 tok = strtok_s(NULL, " \t\n", &nexttok);
                 if (tok == NULL)
                     break;
+
+                if (tok[0] == '+')    // handle continuation character '+' at end of line
+                {
+                    if (fgets(buf, MAXLINE, f) == NULL)
+                        break;
+                    tok = strtok_s(buf, " \t\n", &nexttok);
+                }
+
                 id = atoi(tok) + id_offset;
                 ASSERT(id > 0 && object[id] != NULL, "Bad selection ID");
                 link_single(object[id], &selection);
