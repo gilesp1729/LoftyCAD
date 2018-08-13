@@ -582,7 +582,7 @@ init_buckets(void)
 }
 
 // Find a bucket header for a given point. The buckets are bottom-inclusive, top-exclusive in X and Y.
-Point *
+Point **
 find_bucket(Point *p, Point ***bucket)
 {
     int bias = n_buckets / 2;
@@ -601,7 +601,7 @@ find_bucket(Point *p, Point ***bucket)
     else if (j >= n_buckets)
         j = n_buckets - 1;
     
-    return bh[j];
+    return &bh[j];
 }
 
 // Clear a bucket structure to empty, but don't free anything.
@@ -659,7 +659,6 @@ void free_bucket(Point ***bucket)
                 p->hdr.next = (Object *)free_list_pt;
                 free_list_pt = p;
             }
-            bh[j] = NULL;
         }
         free(bucket[i]);
     }

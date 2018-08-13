@@ -13,9 +13,9 @@ Point *
 find_point_coord(Point *pt, Point ***bucket)
 {
     Point *p;
-    Point *b = find_bucket(pt, bucket);
+    Point **b = find_bucket(pt, bucket);
 
-    for (p = b; p != NULL; p = p->bucket_next)
+    for (p = *b; p != NULL; p = p->bucket_next)
     {
         if (near_pt(pt, p, SMALL_COORD))
             break;
@@ -24,8 +24,8 @@ find_point_coord(Point *pt, Point ***bucket)
     if (p == NULL)
     {
         p = point_newp(pt);
-        p->bucket_next = b;
-        b = p;
+        p->bucket_next = *b;
+        *b = p;
     }
 
     return p;
