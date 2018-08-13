@@ -265,7 +265,7 @@ Volume *vol_new(void);
 Group *group_new(void);
 Face *make_flat_face(Edge *edge);
 
-// Link and delink from doubly linked lists
+// Link and delink from doubly linked lists (list.c)
 void link(Object *new_obj, Object **obj_list);
 void delink(Object *obj, Object **obj_list);
 void link_tail(Object *new_obj, Object **obj_list);
@@ -278,6 +278,13 @@ void free_point_list(Point *pt_list);
 void link_single(Object *new_obj, Object **obj_list);
 void link_single_checked(Object *new_obj, Object **obj_list);
 void free_obj_list(Object *obj_list);
+
+// bucket stuff (list.c)
+Point ***init_buckets(void);
+Point **find_bucket(Point *p, Point ***bucket);
+void empty_bucket(Point ***bucket);
+void free_bucket_points(Point ***bucket);
+void free_bucket(Point ***bucket);
 
 // Copy and move object
 Object *copy_obj(Object *obj, float xoffset, float yoffset, float zoffset);

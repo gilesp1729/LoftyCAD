@@ -120,6 +120,7 @@
     <ClCompile Include="help.c" />
     <ClCompile Include="htmlbrowser.c" />
     <ClCompile Include="import.c" />
+    <ClCompile Include="list.c" />
     <ClCompile Include="mesh.cpp" />
     <ClCompile Include="neighbourhood.c" />
     <ClCompile Include="objtree.c" />
