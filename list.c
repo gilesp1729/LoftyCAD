@@ -31,8 +31,8 @@ void delink(Object *obj, ListHead *obj_list)
     else
         obj_list->tail = obj->prev;
 
-    ASSERT(obj_list->head->prev == NULL, "First element should not have a prev");
-    ASSERT(obj_list->tail->next == NULL, "Last element should not have a next");
+    ASSERT(obj_list->head == NULL || obj_list->head->prev == NULL, "First element should not have a prev");
+    ASSERT(obj_list->tail == NULL || obj_list->tail->next == NULL, "Last element should not have a next");
 }
 
 void
