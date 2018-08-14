@@ -129,6 +129,13 @@ typedef enum
     PLANE_GENERAL                   // Plane is not parallel to any of the above
 } PLANE;
 
+// List header containing a head and a tail pointer.
+typedef struct ListHead
+{
+    struct Object *head;
+    struct Object *tail;
+} ListHead;
+
 // Edges of various kinds. Edges are shared when used in faces, or they can start on their own
 // in the object tree.
 typedef struct Edge
@@ -137,7 +144,7 @@ typedef struct Edge
     EDGE            type;           // What kind of edge this is
     struct Point    *endpoints[2];  // Two endpoints (valid for any edge type)
     struct Edge     *start_next;    // Next edge in the starting list (edges that start at endpoint 0)
-    struct Point    *view_list;     // List of intermediate points on the curve, generated 
+    struct ListHead view_list;      // List of intermediate points on the curve, generated 
                                     // between the two endpoints, to be flat within the
                                     // specified tolerance. Only used for arcs and beziers.
     BOOL            view_valid;     // is TRUE if the view list is up to date.
@@ -183,11 +190,11 @@ typedef struct Face
     struct Point    *initial_point; // Point in the first edge that the face starts from. Used to allow
                                     // view lists to be built up independent of the order of points
                                     // in any edge.
-    struct Point    *view_list;     // List(s) of XYZ coordinates of GL points to be rendered as line loop(s)
+    struct ListHead view_list;      // List(s) of XYZ coordinates of GL points to be rendered as line loop(s)
                                     // (for the edges) and polygon(s) (for the face). Point flags indicate
                                     // the presence of multiple facets. Regenerated whenever
                                     // something has changed. Doubly linked list.
-    struct Point    *spare_list;    // List of spare points allocated by the tessellator's combine
+    struct ListHead spare_list;     // List of spare points allocated by the tessellator's combine
                                     // callback. They are recorded here so they can be freed. Also used
                                     // for intermediate results while clipping.
     BOOL            view_valid;     // is TRUE if the view list is up to date.
@@ -221,7 +228,7 @@ typedef struct Volume
     Mesh            *mesh;          // Surface mesh for this volume.
     BOOL            mesh_valid;     // If TRUE, the mesh is up to date.
     BOOL            mesh_merged;    // If TRUE, the mesh has been merged to its parent group mesh.
-    struct Face     *faces;         // Doubly linked list of faces making up the volume
+    struct ListHead faces;          // Doubly linked list of faces making up the volume
 } Volume;
 
 // The group struct is used for groups, and also for the main object tree.
@@ -234,14 +241,14 @@ typedef struct Group
     BOOL            mesh_merged;    // If TRUE, the mesh has been merged to its parent group mesh.
     BOOL            mesh_complete;  // If TRUE, all volumes have been completely merged to this mesh.
                                     // (otherwise, some will need to be added separately to the output)
-    struct Object   *obj_list;      // Doubly linked list of objects making up the group
+    struct ListHead obj_list;       // Doubly linked list of objects making up the group
 } Group;
 
 // Externs
 
 extern unsigned int objid;
-extern Point *free_list_pt;
-extern Object *free_list_obj;
+extern ListHead free_list_pt;
+extern ListHead free_list_obj;
 
 // Flatness test
 #define IS_FLAT(face)       \
@@ -266,18 +273,18 @@ Group *group_new(void);
 Face *make_flat_face(Edge *edge);
 
 // Link and delink from doubly linked lists (list.c)
-void link(Object *new_obj, Object **obj_list);
-void delink(Object *obj, Object **obj_list);
-void link_tail(Object *new_obj, Object **obj_list);
+void link(Object *new_obj, ListHead *obj_list);
+void delink(Object *obj, ListHead *obj_list);
+void link_tail(Object *new_obj, ListHead *obj_list);
 void link_group(Object *new_obj, Group *group);
 void delink_group(Object *obj, Group *group);
 void link_tail_group(Object *new_obj, Group *group);
-void free_point_list(Point *pt_list);
+void free_point_list(ListHead *pt_list);
 
 // ...and for singly linked lists (using prev pointer to point to arbitrary object)
-void link_single(Object *new_obj, Object **obj_list);
-void link_single_checked(Object *new_obj, Object **obj_list);
-void free_obj_list(Object *obj_list);
+void link_single(Object *new_obj, ListHead *obj_list);
+void link_single_checked(Object *new_obj, ListHead *obj_list);
+void free_obj_list(ListHead *obj_list);
 
 // bucket stuff (list.c)
 Point ***init_buckets(void);

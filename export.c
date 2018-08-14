@@ -78,7 +78,7 @@ export_unmerged_object_stl(Object *obj)
         break;
 
     case OBJ_GROUP:
-        for (o = ((Group *)obj)->obj_list; o != NULL; o = o->next)
+        for (o = ((Group *)obj)->obj_list.head; o != NULL; o = o->next)
             export_unmerged_object_stl(o);
         break;
     }
@@ -112,7 +112,7 @@ export_object_tree(Group *tree, char *filename, int file_index)
 
         if (!tree->mesh_complete)
         {
-            for (obj = tree->obj_list; obj != NULL; obj = obj->next)
+            for (obj = tree->obj_list.head; obj != NULL; obj = obj->next)
             {
                 if (obj->type == OBJ_VOLUME || obj->type == OBJ_GROUP)
                     export_unmerged_object_stl(obj);

@@ -169,7 +169,7 @@ read_stl_to_group(Group *group, char *filename)
                 goto error_return;      // have not seen "solid" at the beginning
 
             tf->vol = vol;
-            link((Object *)tf, (Object **)&vol->faces);
+            link((Object *)tf, &vol->faces);
             n_tri++;
         }
         else if (strcmp(tok, "endsolid") == 0)
@@ -249,7 +249,7 @@ binary_stl:
             tf->initial_point = tf->edges[0]->endpoints[1];
 
         tf->vol = vol;
-        link((Object *)tf, (Object **)&vol->faces);
+        link((Object *)tf, &vol->faces);
         i++;
     }
 
@@ -356,7 +356,7 @@ read_gts_to_group(Group *group, char *filename)
             tf->initial_point = tf->edges[0]->endpoints[1];
 
         tf->vol = vol;
-        link((Object *)tf, (Object **)&vol->faces);
+        link((Object *)tf, &vol->faces);
     }
 
     link_group((Object *)vol, group);
@@ -463,7 +463,7 @@ read_off_to_group(Group *group, char *filename)
             tf->initial_point = tf->edges[0]->endpoints[1];
 
         tf->vol = vol;
-        link((Object *)tf, (Object **)&vol->faces);
+        link((Object *)tf, &vol->faces);
     }
 
     link_group((Object *)vol, group);

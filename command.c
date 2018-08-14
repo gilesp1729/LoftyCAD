@@ -541,18 +541,19 @@ Command(int message, int wParam, int lParam)
         case ID_EDIT_CUT:
             // You can't cut a component, only a top-level object (in the object tree).
             // Check that they are (all) in fact top-level before unlinking them.
-            for (obj = selection; obj != NULL; obj = obj->next)
+            for (obj = selection.head; obj != NULL; obj = obj->next)
             {
                 if (!is_top_level_object(obj->prev, &object_tree))
                     goto skip_cut;
             }
 
-            for (obj = selection; obj != NULL; obj = obj->next)
+            for (obj = selection.head; obj != NULL; obj = obj->next)
                 delink_group(obj->prev, &object_tree);
 
             clear_selection(&clipboard);
             clipboard = selection;
-            selection = NULL;
+            selection.head = NULL;
+            selection.tail = NULL;
             clip_xoffset = 0;
             clip_yoffset = 0;
             clip_zoffset = 0;
@@ -566,7 +567,8 @@ Command(int message, int wParam, int lParam)
             // Excel does it like this, and it drives me nuts sometimes.
             clear_selection(&clipboard);
             clipboard = selection;
-            selection = NULL;
+            selection.head = NULL;
+            selection.tail = NULL;
             if (nz(facing_plane->A))
                 clip_xoffset = 10;          // TODO - scale this so it is not too large when zoomed
             else
@@ -587,7 +589,7 @@ Command(int message, int wParam, int lParam)
             // Link the objects in the clipboard to the object tree. Do this by making a 
             // copy of them, as we might want to paste the same thing multiple times.
             // Each successive copy will go in at an increasing offset in the facing plane.
-            for (obj = clipboard; obj != NULL; obj = obj->next)
+            for (obj = clipboard.head; obj != NULL; obj = obj->next)
             {
                 Object * new_obj = copy_obj(obj->prev, clip_xoffset, clip_yoffset, clip_zoffset);
 
@@ -609,7 +611,7 @@ Command(int message, int wParam, int lParam)
         case ID_EDIT_DELETE:
             // You can't delete a component, only a top-level object (in the object tree).
             // Check that they are in fact top-level before deleting them.
-            for (obj = selection; obj != NULL; obj = obj->next)
+            for (obj = selection.head; obj != NULL; obj = obj->next)
             {
                 if (is_top_level_object(obj->prev, &object_tree))
                 {
@@ -624,7 +626,7 @@ Command(int message, int wParam, int lParam)
         case ID_EDIT_SELECTALL:
             // Put all top-level objects on the selection list.
             clear_selection(&selection);
-            for (obj = object_tree.obj_list; obj != NULL; obj = obj->next)
+            for (obj = object_tree.obj_list.head; obj != NULL; obj = obj->next)
                 link_single(obj, &selection);
             break;
 
@@ -712,9 +714,9 @@ Command(int message, int wParam, int lParam)
         {
             EnableMenuItem((HMENU)wParam, ID_EDIT_UNDO, generation > 0 ? MF_ENABLED : MF_GRAYED);
             EnableMenuItem((HMENU)wParam, ID_EDIT_REDO, generation < latest_generation ? MF_ENABLED : MF_GRAYED);
-            EnableMenuItem((HMENU)wParam, ID_EDIT_CUT, selection != NULL ? MF_ENABLED : MF_GRAYED);
-            EnableMenuItem((HMENU)wParam, ID_EDIT_COPY, selection != NULL ? MF_ENABLED : MF_GRAYED);
-            EnableMenuItem((HMENU)wParam, ID_EDIT_DELETE, selection != NULL ? MF_ENABLED : MF_GRAYED);
+            EnableMenuItem((HMENU)wParam, ID_EDIT_CUT, selection.head != NULL ? MF_ENABLED : MF_GRAYED);
+            EnableMenuItem((HMENU)wParam, ID_EDIT_COPY, selection.head != NULL ? MF_ENABLED : MF_GRAYED);
+            EnableMenuItem((HMENU)wParam, ID_EDIT_DELETE, selection.head != NULL ? MF_ENABLED : MF_GRAYED);
         }
         else if ((HMENU)wParam == GetSubMenu(GetMenu(auxGetHWND()), 2))
         {

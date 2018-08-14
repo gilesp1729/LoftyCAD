@@ -70,8 +70,8 @@ extern BOOL view_ortho;
 
 extern STATE app_state;
 extern BOOL construction;
-extern Object *selection;
-extern Object *clipboard;
+extern ListHead selection;
+extern ListHead clipboard;
 extern Group object_tree;
 extern BOOL drawing_changed;
 extern Object *curr_obj;
@@ -161,7 +161,7 @@ extern BOOL view_clipped_faces;
 
 // Some forwards
 Object * Pick(GLint x_pick, GLint y_pick, BOOL force_pick);
-Object * Pick_all_in_rect(GLint x_pick, GLint y_pick, GLint width, GLint height);
+void Pick_all_in_rect(GLint x_pick, GLint y_pick, GLint width, GLint height);
 void CALLBACK Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick);
 void CALLBACK Position(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick);
 HWND init_help_window(void);
@@ -172,7 +172,7 @@ void change_state(STATE new_state);
 BOOL is_selected_direct(Object *obj, Object **prev_in_list);
 BOOL is_selected_parent(Object *obj);
 BOOL remove_from_selection(Object *obj);
-void clear_selection(Object **sel_list);
+void clear_selection(ListHead *sel_list);
 
 void populate_treeview(void);
 void CALLBACK right_click(AUX_EVENTREC *event);

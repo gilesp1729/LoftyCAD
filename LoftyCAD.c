@@ -47,8 +47,8 @@ BOOL construction = FALSE;
 // A list of objects that are currently selected. The "prev" pointer points to 
 // the actual object (it's a singly linked list). There is also a clipboard,
 // which is arranged similarly.
-Object *selection = NULL;
-Object *clipboard = NULL;
+ListHead selection = { NULL, NULL };
+ListHead clipboard = { NULL, NULL };
 
 // Top level group of objects to be drawn
 Group object_tree = { 0, };
@@ -495,9 +495,8 @@ Pick(GLint x_pick, GLint y_pick, BOOL force_pick)
     return obj;
 }
 
-// Pick all top-level objects intersecting the given rect. Return a list
-// suitable for assigning to the selection.
-Object * 
+// Pick all top-level objects intersecting the given rect and select.
+void 
 Pick_all_in_rect(GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
 {
     GLuint buffer[4096];
@@ -549,7 +548,7 @@ Pick_all_in_rect(GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
 
                 // If parent is not already in the list, add it
                 if (obj != NULL)
-                    link_single_checked(parent, &list);
+                    link_single_checked(parent, &selection);
 
 #ifdef DEBUG_PICK_ALL
                 if (view_debug)
@@ -594,10 +593,7 @@ Pick_all_in_rect(GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
             Log(buf);
         }
 #endif
-        return list;
     }
-
-    return NULL;
 }
 
 // callback version of Draw for AUX/TK
@@ -616,7 +612,7 @@ is_selected_direct(Object *obj, Object **prev_in_list)
     BOOL present = FALSE;
 
     *prev_in_list = NULL;
-    for (sel = selection; sel != NULL; sel = sel->next)
+    for (sel = selection.head; sel != NULL; sel = sel->next)
     {
         if (sel->prev == obj)
         {
@@ -658,12 +654,11 @@ is_selected_parent(Object *obj)
 }
 #endif
 
-// Clear the selection, or the clipboard.
+// Clear the selection, or the clipboard.   TODO - replace this with a plain old call to free_obj_list.
 void
-clear_selection(Object **sel_list)
+clear_selection(ListHead *sel_list)
 {
-    free_obj_list(*sel_list);
-    *sel_list = NULL;
+    free_obj_list(sel_list);
 }
 
 // When something has changed: mark drawing as changed, write a checkpoint, and update the clipped surface.
@@ -943,7 +938,7 @@ left_up(AUX_EVENTREC *event)
             // is not known till the mouse is released.
             // Generate four edges, and put them on the face's edge list.
             rf = (Face *)curr_obj;
-            p00 = rf->view_list;
+            p00 = rf->view_list.head;
             p01 = (Point *)p00->hdr.next;
             p02 = (Point *)p01->hdr.next;
             p03 = (Point *)p02->hdr.next;
@@ -968,7 +963,8 @@ left_up(AUX_EVENTREC *event)
 
             // Take the points out of the face's view list, as they are about
             // to be freed when the view list is regenerated.
-            rf->view_list = NULL;
+            rf->view_list.head = NULL;
+            rf->view_list.tail = NULL;
 
             // the face now has its edges. Generate its view list and the normal
             rf->n_edges = 4;
@@ -1041,8 +1037,8 @@ remove_from_selection(Object *obj)
     {
         if (prev_in_list == NULL)
         {
-            sel_obj = selection;
-            selection = sel_obj->next;
+            sel_obj = selection.head;
+            selection.head = sel_obj->next;
         }
         else
         {
@@ -1051,8 +1047,8 @@ remove_from_selection(Object *obj)
         }
 
         ASSERT(sel_obj->prev == picked_obj, "Selection list broken");
-        sel_obj->next = free_list_obj;  // put it in the free list
-        free_list_obj = sel_obj;
+        sel_obj->next = free_list_obj.head;  // put it in the free list
+        free_list_obj.head = sel_obj;
         hide_hint();    // in case the dims was displayed
         return TRUE;
     }
@@ -1096,7 +1092,7 @@ left_click(AUX_EVENTREC *event)
     {
         if (event->data[AUX_MOUSESTATUS] & AUX_DBLCLK)
         {
-            if (selection != NULL && (event->data[AUX_MOUSESTATUS] & AUX_SHIFT) == 0)
+            if (selection.head != NULL && (event->data[AUX_MOUSESTATUS] & AUX_SHIFT) == 0)
                 clear_selection(&selection);
 
             // test for this first, as we get called twice and don't want to unselect it
@@ -1110,12 +1106,12 @@ left_click(AUX_EVENTREC *event)
         }
         else if (remove_from_selection(picked_obj))
         {
-            if (selection != NULL && (event->data[AUX_MOUSESTATUS] & AUX_SHIFT) == 0)
+            if (selection.head != NULL && (event->data[AUX_MOUSESTATUS] & AUX_SHIFT) == 0)
                 clear_selection(&selection);
         }
         else
         {
-            if (selection != NULL && (event->data[AUX_MOUSESTATUS] & AUX_SHIFT) == 0)
+            if (selection.head != NULL && (event->data[AUX_MOUSESTATUS] & AUX_SHIFT) == 0)
                 clear_selection(&selection);
 
             // select it
@@ -1181,7 +1177,7 @@ micro_move_selection(float x, float y)
         break;
     }
 
-    for (obj = selection; obj != NULL; obj = obj->next)
+    for (obj = selection.head; obj != NULL; obj = obj->next)
     {
         Object *parent;
 

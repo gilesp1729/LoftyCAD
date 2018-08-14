@@ -94,7 +94,7 @@ populate_treeview_object(Object *obj, Object *parent, HTREEITEM hItem)
         hItem = (HTREEITEM)SendDlgItemMessage(hWndTree, IDC_TREEVIEW, TVM_INSERTITEM, 0, (LPARAM)&tvins);
         if (parent->lock < LOCK_FACES)
         {
-            for (face = ((Volume *)obj)->faces; face != NULL; face = (Face *)face->hdr.next)
+            for (face = ((Volume *)obj)->faces.head; face != NULL; face = (Face *)face->hdr.next)
                 populate_treeview_object((Object *)face, parent, hItem);
         }
         break;
@@ -111,7 +111,7 @@ populate_treeview_tree(Group *tree, HTREEITEM hItem)
     char descr[128];
     HTREEITEM hGroup;
 
-    for (obj = tree->obj_list; obj != NULL; obj = obj->next)
+    for (obj = tree->obj_list.head; obj != NULL; obj = obj->next)
     {
         if (obj->type == OBJ_GROUP)
         {

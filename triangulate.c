@@ -140,7 +140,7 @@ invalidate_all_view_lists(Object *parent, Object *obj, float dx, float dy, float
     {
     case OBJ_GROUP:
         group = (Group *)parent;
-        for (o = group->obj_list; o != NULL; o = o->next)
+        for (o = group->obj_list.head; o != NULL; o = o->next)
             invalidate_all_view_lists(o, obj, dx, dy, dz);
         break;
 
@@ -154,7 +154,7 @@ invalidate_all_view_lists(Object *parent, Object *obj, float dx, float dy, float
         clear_bbox(&vol->bbox);
         vol->mesh_valid = FALSE;
 
-        for (f = vol->faces; f != NULL; f = (Face *)f->hdr.next)
+        for (f = vol->faces.head; f != NULL; f = (Face *)f->hdr.next)
             invalidate_all_view_lists((Object *)f, obj, dx, dy, dz);
         break;
 
@@ -203,7 +203,7 @@ gen_view_list_tree_volumes(Group *tree)
     BOOL rc = FALSE;
 
     // generate all view lists for all volumes, to make sure they are all up to date
-    for (obj = tree->obj_list; obj != NULL; obj = obj->next)
+    for (obj = tree->obj_list.head; obj != NULL; obj = obj->next)
     {
         switch (obj->type)
         {
@@ -320,7 +320,7 @@ gen_view_list_tree_surfaces(Group *tree, Group *parent_tree)
     parent_tree->mesh_complete = TRUE;
 
     // All solid volumes, and groups, get unioned into the parent group mesh.
-    for (obj = tree->obj_list; obj != NULL; obj = obj->next)
+    for (obj = tree->obj_list.head; obj != NULL; obj = obj->next)
     {
         switch (obj->type)
         {
@@ -363,7 +363,7 @@ gen_view_list_tree_surfaces(Group *tree, Group *parent_tree)
     if (!parent_tree->mesh_valid)
         return;
 
-    for (obj = tree->obj_list; obj != NULL; obj = obj->next)
+    for (obj = tree->obj_list.head; obj != NULL; obj = obj->next)
     {
         switch (obj->type)
         {
@@ -395,7 +395,7 @@ gen_view_list_vol(Volume *vol)
 {
     Face *f;
 
-    for (f = vol->faces; f != NULL; f = (Face *)f->hdr.next)
+    for (f = vol->faces.head; f != NULL; f = (Face *)f->hdr.next)
     {
         if (!f->view_valid)
             break;
@@ -406,7 +406,7 @@ gen_view_list_vol(Volume *vol)
     if (f != NULL)
     {
         // if any face is not valid, invalidate them all
-        for (f = vol->faces; f != NULL; f = (Face *)f->hdr.next)
+        for (f = vol->faces.head; f != NULL; f = (Face *)f->hdr.next)
             f->view_valid = FALSE;
     }
 
@@ -419,10 +419,10 @@ gen_view_list_vol(Volume *vol)
     vol->mesh = mesh_new();
 
     // generate view lists for all the faces, and update the mesh
-    for (f = vol->faces; f != NULL; f = (Face *)f->hdr.next)
+    for (f = vol->faces.head; f != NULL; f = (Face *)f->hdr.next)
     {
         gen_view_list_face(f);
-        gen_view_list_surface(f, f->view_list);
+        gen_view_list_surface(f);
     }
 
     vol->mesh_valid = TRUE;
@@ -438,7 +438,7 @@ gen_view_list_face(Face *face)
     Edge *e;
     Point *last_point;
     Point *p, *v;
-    Object **list;
+    ListHead *list;
     //char buf[256];
 
     if (face->view_valid)
@@ -450,9 +450,9 @@ gen_view_list_face(Face *face)
     // But for cylinders, we construct it in the spare list, and then rearrange it into 
     // the real view list to make facets.
     if (IS_FLAT(face))
-        list = (Object **)&face->view_list;
+        list = &face->view_list;
     else
-        list = (Object **)&face->spare_list;
+        list = &face->spare_list;
     
     // Add points at tail of list, to preserve order
     // First the start point
@@ -520,7 +520,7 @@ gen_view_list_face(Face *face)
                 last_point = e->endpoints[1];
 
                 // copy the view list forwards. Skip the first point as it has already been added
-                for (v = (Point *)e->view_list->hdr.next; v != NULL; v = (Point *)v->hdr.next)
+                for (v = (Point *)e->view_list.head->next; v != NULL; v = (Point *)v->hdr.next)
                 {
                     p = point_newp(v);
                     p->hdr.ID = 0;
@@ -536,10 +536,11 @@ gen_view_list_face(Face *face)
                 last_point = e->endpoints[0];
 
                 // copy the view list backwards, skipping the last point.
-                for (v = (Point *)e->view_list; v->hdr.next->next != NULL; v = (Point *)v->hdr.next)
-                    ;
+                for (v = (Point *)e->view_list.head; v->hdr.next->next != NULL; v = (Point *)v->hdr.next)
+                    ;   // TODO SLOW - use a tail ptr here
 
-                for (; v != NULL; v = (Point *)v->hdr.prev)
+                //for (v = (Point *)e->view_list.tail->prev; v != NULL; v = (Point *)v->hdr.prev)
+                for ( ; v != NULL; v = (Point *)v->hdr.prev)
                 {
                     p = point_newp(v);
                     p->hdr.ID = 0;
@@ -563,7 +564,7 @@ gen_view_list_face(Face *face)
     if (IS_FLAT(face))
     {
         // calculate the normal vector.  Store a new refpt here too, in case something has moved.
-        polygon_normal(face->view_list, &face->normal);
+        polygon_normal(face->view_list.head, &face->normal);
         face->normal.refpt = *face->edges[0]->endpoints[0];
 
         // Update the 2D view list
@@ -576,7 +577,7 @@ gen_view_list_face(Face *face)
         ASSERT((face->type & ~FACE_CONSTRUCTION) == FACE_CYLINDRICAL, "Only cylinder faces should be here");
 
         // Rearrange the cylinder view list into a set of facets, each with its own normal.
-        for (i = 0, v = face->spare_list; v->hdr.next != NULL; v = (Point *)v->hdr.next, i++)
+        for (i = 0, v = face->spare_list.head; v->hdr.next != NULL; v = (Point *)v->hdr.next, i++)
         {
             Point *vnext = (Point *)v->hdr.next;
             Point *lprev = (Point *)last->hdr.prev;
@@ -588,25 +589,25 @@ gen_view_list_face(Face *face)
             p->hdr.ID = 0;
             objid--;
             p->flags = FLAG_NEW_FACET;
-            link_tail((Object *)p, (Object **)&face->view_list);
+            link_tail((Object *)p, &face->view_list);
 
             // Four points for the quad
             p = point_newp(v);
             p->hdr.ID = 0;
             objid--;
-            link_tail((Object *)p, (Object **)&face->view_list);
+            link_tail((Object *)p, &face->view_list);
             p = point_newp(vnext);
             p->hdr.ID = 0;
             objid--;
-            link_tail((Object *)p, (Object **)&face->view_list);
+            link_tail((Object *)p, &face->view_list);
             p = point_newp(lprev);
             p->hdr.ID = 0;
             objid--;
-            link_tail((Object *)p, (Object **)&face->view_list);
+            link_tail((Object *)p, &face->view_list);
             p = point_newp(last);
             p->hdr.ID = 0;
             objid--;
-            link_tail((Object *)p, (Object **)&face->view_list);
+            link_tail((Object *)p, &face->view_list);
 
             // Walk last backwards until we meet in the middle
             last = lprev;
@@ -615,8 +616,7 @@ gen_view_list_face(Face *face)
         }
 
         // We are finished with the spare list for now, so free it
-        free_point_list(face->spare_list);
-        face->spare_list = NULL;
+        free_point_list(&face->spare_list);
     }
 
     // The view list is valid, as is the 2D view list, the face normal, and the face's
@@ -635,7 +635,7 @@ update_view_list_2D(Face *face)
     if (!IS_FLAT(face))
         return;
 
-    for (i = 0, v = face->view_list; v != NULL; v = (Point *)v->hdr.next, i++)
+    for (i = 0, v = face->view_list.head; v != NULL; v = (Point *)v->hdr.next, i++)
     {
         float a = fabsf(face->normal.A);
         float b = fabsf(face->normal.B);
@@ -670,10 +670,8 @@ update_view_list_2D(Face *face)
 void
 free_view_list_face(Face *face)
 {
-    free_point_list(face->view_list);
-    free_point_list(face->spare_list);
-    face->view_list = NULL;
-    face->spare_list = NULL;
+    free_point_list(&face->view_list);
+    free_point_list(&face->spare_list);
     face->view_valid = FALSE;
     face->n_view2D = 0;
 }
@@ -681,8 +679,7 @@ free_view_list_face(Face *face)
 void
 free_view_list_edge(Edge *edge)
 {
-    free_point_list(edge->view_list);
-    edge->view_list = NULL;
+    free_point_list(&edge->view_list);
     edge->view_valid = FALSE;
 }
 
@@ -747,7 +744,7 @@ gen_view_list_arc(ArcEdge *ae)
             p = point_new((float)res[0], (float)res[1], (float)res[2]);
             p->hdr.ID = 0;
             objid--;
-            link_tail((Object *)p, (Object **)&edge->view_list);
+            link_tail((Object *)p, &edge->view_list);
 #ifdef DEBUG_VIEW_LIST_ARC
             {
                 char buf[64];
@@ -775,7 +772,7 @@ gen_view_list_arc(ArcEdge *ae)
             p = point_new((float)res[0], (float)res[1], (float)res[2]);
             p->hdr.ID = 0;
             objid--;
-            link_tail((Object *)p, (Object **)&edge->view_list);
+            link_tail((Object *)p, &edge->view_list);
 #ifdef DEBUG_VIEW_LIST_ARC
             {
                 char buf[64];
@@ -792,7 +789,7 @@ gen_view_list_arc(ArcEdge *ae)
     p = point_newp(edge->endpoints[1]);
     p->hdr.ID = 0;
     objid--;
-    link_tail((Object *)p, (Object **)&edge->view_list);
+    link_tail((Object *)p, &edge->view_list);
 
     edge->view_valid = TRUE;
 }
@@ -827,7 +824,7 @@ iterate_bez
         p = point_new((float)x, (float)y, (float)z);
         p->hdr.ID = 0;
         objid--;
-        link_tail((Object *)p, (Object **)&e->view_list);
+        link_tail((Object *)p, &e->view_list);
         e->nsteps++;
     }
 }
@@ -891,7 +888,7 @@ recurse_bez
         p = point_new((float)x4, (float)y4, (float)z4);
         p->hdr.ID = 0;
         objid--;
-        link_tail((Object *)p, (Object **)&e->view_list);
+        link_tail((Object *)p, &e->view_list);
         e->nsteps++;
     }
     else
@@ -918,7 +915,7 @@ gen_view_list_bez(BezierEdge *be)
     p = point_newp(e->endpoints[0]);
     p->hdr.ID = 0;
     objid--;
-    link_tail((Object *)p, (Object **)&e->view_list);
+    link_tail((Object *)p, &e->view_list);
 
     // Perform fixed step division if stepsize > 0
     if (e->stepping && e->nsteps > 0)
@@ -1036,7 +1033,7 @@ face_shade(GLUtesselator *tess, Face *face, BOOL selected, BOOL highlighted, BOO
 
     // If there are no facets, just use the face normal
     norm = face->normal;
-    v = face->view_list;
+    v = face->view_list.head;
     while (v != NULL)
     {
         if (v->flags == FLAG_NEW_FACET)

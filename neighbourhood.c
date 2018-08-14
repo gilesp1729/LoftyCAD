@@ -95,7 +95,7 @@ find_in_neighbourhood_point(Point *point, Object *obj)
 
     case OBJ_VOLUME:
         vol = (Volume *)obj;
-        for (f = vol->faces; f != NULL; f = (Face *)f->hdr.next)
+        for (f = vol->faces.head; f != NULL; f = (Face *)f->hdr.next)
         {
             Object *test = find_in_neighbourhood_point(point, (Object *)f);
 
@@ -106,7 +106,7 @@ find_in_neighbourhood_point(Point *point, Object *obj)
 
     case OBJ_GROUP:
         group = (Group *)obj;
-        for (o = group->obj_list; o != NULL; o = o->next)
+        for (o = group->obj_list.head; o != NULL; o = o->next)
         {
             Object *test = find_in_neighbourhood_point(point, o);
 
@@ -168,7 +168,7 @@ find_in_neighbourhood_face(Face *face, Object *obj)
 
     case OBJ_VOLUME:
         vol = (Volume *)obj;
-        for (f = vol->faces; f != NULL; f = (Face *)f->hdr.next)
+        for (f = vol->faces.head; f != NULL; f = (Face *)f->hdr.next)
         {
             Object *test = find_in_neighbourhood_face(face, (Object *)f);
 
@@ -178,7 +178,7 @@ find_in_neighbourhood_face(Face *face, Object *obj)
         break;
 
     case OBJ_GROUP:
-        for (o = ((Group *)obj)->obj_list; o != NULL; o = o->next)
+        for (o = ((Group *)obj)->obj_list.head; o != NULL; o = o->next)
         {
             Object *test = find_in_neighbourhood_face(face, o);
 
@@ -205,7 +205,7 @@ find_in_neighbourhood(Object *match_obj, Group *tree)
     if (match_obj == NULL)
         return NULL;
 
-    for (obj = tree->obj_list; obj != NULL; obj = obj->next)
+    for (obj = tree->obj_list.head; obj != NULL; obj = obj->next)
     {
         Object *test = NULL;
 
@@ -226,7 +226,7 @@ find_in_neighbourhood(Object *match_obj, Group *tree)
         case OBJ_VOLUME:
             // When moving volumes, need to HL faces. Combinatorial explosion of tests..
             vol = (Volume *)match_obj;
-            for (f = vol->faces; f != NULL; f = (Face *)f->hdr.next)
+            for (f = vol->faces.head; f != NULL; f = (Face *)f->hdr.next)
             {
                 test = find_in_neighbourhood_face(f, obj);
                 if (test != NULL)

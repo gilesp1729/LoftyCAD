@@ -244,7 +244,7 @@ get_dims_string(Object *obj, char buf[64])
             {
             case FACE_RECT:
                 // use view list here, then it works for drawing rects
-                p0 = f->view_list;
+                p0 = f->view_list.head;
                 p1 = (Point *)p0->hdr.next;
                 p2 = (Point *)p1->hdr.next;
                 sprintf_s(buf, 64, "%s,%s mm",
@@ -344,7 +344,7 @@ show_dims_on(Object *obj, PRESENTATION pres, LOCK parent_lock)
             // use view list here if there are no edges yet, then it works for rects being drawn in.
             if (f->n_edges == 0)
             {
-                p0 = f->view_list;
+                p0 = f->view_list.head;
                 p1 = (Point *)p0->hdr.next;
                 p2 = (Point *)p1->hdr.next;
             }

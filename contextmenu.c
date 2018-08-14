@@ -31,7 +31,7 @@ group_connected_edges(Edge *edge)
     // It had better be in the object tree to start with! Check to be sure,
     // and while here, find out how many top-level edges there are as an
     // upper bound on passes later on.
-    for (obj = object_tree.obj_list; obj != NULL; obj = obj->next)
+    for (obj = object_tree.obj_list.head; obj != NULL; obj = obj->next)
     {
         if (obj->type == OBJ_EDGE)
         {
@@ -65,7 +65,7 @@ group_connected_edges(Edge *edge)
     {
         BOOL advanced = FALSE;
 
-        for (obj = object_tree.obj_list; obj != NULL; obj = nextobj)
+        for (obj = object_tree.obj_list.head; obj != NULL; obj = nextobj)
         {
             nextobj = obj->next;
 
@@ -136,7 +136,7 @@ group_connected_edges(Edge *edge)
 
     // We have not been able to close the chain. Ungroup everything we've grouped
     // so far and return.
-    for (obj = group->obj_list; obj != NULL; obj = nextobj)
+    for (obj = group->obj_list.head; obj != NULL; obj = nextobj)
     {
         nextobj = obj->next;
         delink_group(obj, group);
@@ -157,7 +157,7 @@ make_face(Group *group)
     Plane norm;
     BOOL reverse = FALSE;
     int initial, final, n_edges;
-    Point *plist = NULL;
+    ListHead plist = { NULL, NULL };
     Point *pt;
     int i;
 
@@ -169,8 +169,8 @@ make_face(Group *group)
     // which order to build the final edge array on the face. Join the
     // endpoints up into a list (the next/prev pointers aren't used for
     // anything else)
-    e = (Edge *)group->obj_list;
-    next_edge = (Edge *)group->obj_list->next;
+    e = (Edge *)group->obj_list.head;
+    next_edge = (Edge *)group->obj_list.head->next;
     if (near_pt(e->endpoints[0], next_edge->endpoints[0], snap_tol))
     {
         initial = 1;
@@ -197,7 +197,7 @@ make_face(Group *group)
         return NULL;
     }
 
-    link_tail((Object *)e->endpoints[initial], (Object **)&plist);
+    link_tail((Object *)e->endpoints[initial], &plist);
     n_edges = 1;
 
     for (; e->hdr.next != NULL; e = next_edge)
@@ -210,13 +210,13 @@ make_face(Group *group)
         if (near_pt(next_edge->endpoints[0], pt, snap_tol))
         {
             next_edge->endpoints[0] = pt;       // share the point
-            link_tail((Object *)next_edge->endpoints[0], (Object **)&plist);
+            link_tail((Object *)next_edge->endpoints[0], &plist);
             final = 1;
         }
         else if (near_pt(next_edge->endpoints[1], pt, snap_tol))
         {
             next_edge->endpoints[1] = pt;
-            link_tail((Object *)next_edge->endpoints[1], (Object **)&plist);
+            link_tail((Object *)next_edge->endpoints[1], &plist);
             final = 0;
         }
         else
@@ -228,11 +228,11 @@ make_face(Group *group)
     }
 
     // Share the last point back to the beginning
-    ASSERT(near_pt(((Edge *)group->obj_list)->endpoints[initial], pt, snap_tol), "The edges don't close at the starting point");
-    next_edge->endpoints[final] = ((Edge *)group->obj_list)->endpoints[initial];
+    ASSERT(near_pt(((Edge *)group->obj_list.head)->endpoints[initial], pt, snap_tol), "The edges don't close at the starting point");
+    next_edge->endpoints[final] = ((Edge *)group->obj_list.head)->endpoints[initial];
 
     // Get the normal and see if we need to reverse
-    polygon_normal((Point *)plist, &norm);
+    polygon_normal((Point *)plist.head, &norm);
     if (dot(norm.A, norm.B, norm.C, facing_plane->A, facing_plane->B, facing_plane->C) < 0)
     {
         reverse = TRUE;
@@ -263,8 +263,8 @@ make_face(Group *group)
     }
     else
     {
-        face->initial_point = ((Edge *)group->obj_list)->endpoints[initial];
-        for (i = 0, e = (Edge *)group->obj_list; e != NULL; e = next_edge, i++)
+        face->initial_point = ((Edge *)group->obj_list.head)->endpoints[initial];
+        for (i = 0, e = (Edge *)group->obj_list.head; e != NULL; e = next_edge, i++)
         {
             next_edge = (Edge *)e->hdr.next;
             face->edges[i] = e;
@@ -273,7 +273,7 @@ make_face(Group *group)
     }
 
     // Delete the group
-    ASSERT(group->obj_list == NULL, "Edge group is not empty");
+    ASSERT(group->obj_list.head == NULL, "Edge group is not empty");
     delink_group((Object *)group, &object_tree);
     purge_obj((Object *)group);
 
@@ -621,7 +621,7 @@ right_click(AUX_EVENTREC *event)
     case ID_OBJ_GROUPSELECTED:
         group = group_new();
         link_group((Object *)group, &object_tree);
-        for (sel_obj = selection; sel_obj != NULL; sel_obj = sel_obj->next)
+        for (sel_obj = selection.head; sel_obj != NULL; sel_obj = sel_obj->next)
         {
             // TODO - bug here if a component is selected. You should onnly ever be able to 
             // put the parent in the group.
@@ -635,7 +635,7 @@ right_click(AUX_EVENTREC *event)
     case ID_OBJ_UNGROUP:
         group = (Group *)picked_obj;
         delink_group(picked_obj, &object_tree);
-        for (o = group->obj_list; o != NULL; o = o_next)
+        for (o = group->obj_list.head; o != NULL; o = o_next)
         {
             o_next = o->next;
             delink_group(o, group);

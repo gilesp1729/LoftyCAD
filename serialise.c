@@ -82,13 +82,13 @@ serialise_obj(Object *obj, FILE *f)
     case OBJ_VOLUME:
         fprintf_s(f, "BEGIN %d\n", obj->ID);
         vol = (Volume *)obj;
-        for (face = vol->faces; face != NULL; face = (Face *)face->hdr.next)
+        for (face = vol->faces.head; face != NULL; face = (Face *)face->hdr.next)
             serialise_obj((Object *)face, f);
         break;
 
     case OBJ_GROUP:
         fprintf_s(f, "BEGINGROUP %d %s\n", obj->ID, ((Group *)obj)->title);
-        for (o = ((Group *)obj)->obj_list; o != NULL; o = o->next)
+        for (o = ((Group *)obj)->obj_list.head; o != NULL; o = o->next)
             serialise_obj(o, f);
         break;
     }
@@ -153,7 +153,7 @@ serialise_obj(Object *obj, FILE *f)
 
     case OBJ_VOLUME:
         vol = (Volume *)obj;
-        for (face = vol->faces; face != NULL; face = (Face *)face->hdr.next)
+        for (face = vol->faces.head; face != NULL; face = (Face *)face->hdr.next)
         {
             if (n >= MAXLINE - 10)
             {
@@ -189,15 +189,15 @@ serialise_tree(Group *tree, char *filename)
     fprintf_s(f, "SCALE %f %f %f %d %f\n", half_size, grid_snap, tolerance, angle_snap, round_rad);
 
     save_count++;
-    for (obj = tree->obj_list; obj != NULL; obj = obj->next)
+    for (obj = tree->obj_list.head; obj != NULL; obj = obj->next)
         serialise_obj(obj, f);
 
     // Write selection out.
-    if (selection != NULL)
+    if (selection.head != NULL)
     {
         fprintf_s(f, "SELECTION ");
         n = 10;
-        for (obj = selection; obj != NULL; obj = obj->next)
+        for (obj = selection.head; obj != NULL; obj = obj->next)
         {
             if (n >= MAXLINE - 10)
             {
@@ -642,7 +642,7 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
                 ASSERT(fid > 0 && object[fid] != NULL, "Bad face ID");
 
                 ((Face *)object[fid])->vol = vol;
-                link_tail(object[fid], (Object **)&vol->faces);
+                link_tail(object[fid], &vol->faces);
                 last_face = (Face *)object[fid];
             }
 

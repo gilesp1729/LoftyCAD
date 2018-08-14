@@ -4,8 +4,8 @@
 
 
 // Free lists for Points and Objects. Only singly linked.
-Point *free_list_pt = NULL;
-Object *free_list_obj = NULL;
+ListHead free_list_pt = { NULL, NULL };
+ListHead free_list_obj = { NULL, NULL };
 
 // Creation functions for objects
 Object *obj_new(void)
@@ -13,10 +13,10 @@ Object *obj_new(void)
     Object *obj;
 
     // Try and obtain an object from the free list first
-    if (free_list_obj != NULL)
+    if (free_list_obj.head != NULL)
     {
-        obj = free_list_obj;
-        free_list_obj = free_list_obj->next;
+        obj = free_list_obj.head;
+        free_list_obj.head = free_list_obj.head->next;
         memset(obj, 0, sizeof(Object));
     }
     else
@@ -34,10 +34,10 @@ Point *point_new(float x, float y, float z)
     Point   *pt;
     
     // Try and obtain a point from the free list first
-    if (free_list_pt != NULL)
+    if (free_list_pt.head != NULL)
     {
-        pt = free_list_pt;
-        free_list_pt = (Point *)free_list_pt->hdr.next;
+        pt = free_list_pt.head;
+        free_list_pt.head = (Point *)free_list_pt.head->next;
         memset(pt, 0, sizeof(Point));
     }
     else
@@ -58,10 +58,10 @@ Point *point_newp(Point *p)
 {
     Point   *pt;
 
-    if (free_list_pt != NULL)
+    if (free_list_pt.head != NULL)
     {
-        pt = free_list_pt;
-        free_list_pt = (Point *)free_list_pt->hdr.next;
+        pt = free_list_pt.head;
+        free_list_pt.head = (Point *)free_list_pt.head->next;
         memset(pt, 0, sizeof(Point));
     }
     else
@@ -173,49 +173,13 @@ Group *group_new(void)
     return grp;
 }
 
-// Clean out a view list (a singly linked list of Points) by joining it to the free list.
-// The points already have ID's of 0. 
-void
-free_point_list(Point *pt_list)
-{
-    Point *p;
-
-    if (free_list_pt == NULL)
-    {
-        free_list_pt = pt_list;
-    }
-    else
-    {
-        for (p = free_list_pt; p->hdr.next != NULL; p = (Point *)p->hdr.next)
-            ;   // run down to the last free element  TODO SLOW
-        p->hdr.next = (Object *)pt_list;
-    }
-}
-
-// Free all elements in a singly linked list of Objects, similarly to the above.
-void free_obj_list(Object *obj_list)
-{
-    Object *o;
-
-    if (free_list_obj == NULL)
-    {
-        free_list_obj = obj_list;
-    }
-    else
-    {
-        for (o = free_list_obj; o->next != NULL; o = o->next)
-            ;   // run down to the last free element
-        o->next = obj_list;
-    }
-}
-
 // Test if an object is in the object tree at the top level.
 BOOL
 is_top_level_object(Object *obj, Group *tree)
 {
     Object *o;
 
-    for (o = tree->obj_list; o != NULL; o = o->next)
+    for (o = tree->obj_list.head; o != NULL; o = o->next)
     {
         if (obj == o)
             return TRUE;
@@ -276,21 +240,21 @@ clear_move_copy_flags(Object *obj)
             edge = face->edges[i];
             clear_move_copy_flags((Object *)edge);
         }
-        for (p = face->view_list; p != NULL; p = (Point *)p->hdr.next)
+        for (p = face->view_list.head; p != NULL; p = (Point *)p->hdr.next)
             clear_move_copy_flags((Object *)p);
         obj->copied_to = NULL;
         break;
 
     case OBJ_VOLUME:
         vol = (Volume *)obj;
-        for (face = vol->faces; face != NULL; face = (Face *)face->hdr.next)
+        for (face = vol->faces.head; face != NULL; face = (Face *)face->hdr.next)
             clear_move_copy_flags((Object *)face);
         obj->copied_to = NULL;
         break;
 
     case OBJ_GROUP:
         grp = (Group *)obj;
-        for (o = grp->obj_list; o != NULL; o = o->next)
+        for (o = grp->obj_list.head; o != NULL; o = o->next)
             clear_move_copy_flags(o);
         obj->copied_to = NULL;
         break;
@@ -402,18 +366,18 @@ copy_obj(Object *obj, float xoffset, float yoffset, float zoffset)
         new_vol = vol_new();
         new_obj = (Object *)new_vol;
         new_obj->lock = obj->lock;
-        for (face = vol->faces; face != NULL; face = (Face *)face->hdr.next)
+        for (face = vol->faces.head; face != NULL; face = (Face *)face->hdr.next)
         {
             new_face = (Face *)copy_obj((Object *)face, xoffset, yoffset, zoffset);
             new_face->vol = new_vol;
-            link_tail((Object *)new_face, (Object **)&new_vol->faces);
+            link_tail((Object *)new_face, &new_vol->faces);
         }
         break;
 
     case OBJ_GROUP:
         grp = (Group *)obj;
         new_grp = group_new();
-        for (o = grp->obj_list; o != NULL; o = o->next)
+        for (o = grp->obj_list.head; o != NULL; o = o->next)
         {
             new_obj = copy_obj(o, xoffset, yoffset, zoffset);
             link_tail_group(new_obj, new_grp);
@@ -584,12 +548,12 @@ move_obj(Object *obj, float xoffset, float yoffset, float zoffset)
 
     case OBJ_VOLUME:
         vol = (Volume *)obj;
-        for (face = vol->faces; face != NULL; face = (Face *)face->hdr.next)
+        for (face = vol->faces.head; face != NULL; face = (Face *)face->hdr.next)
             move_obj((Object *)face, xoffset, yoffset, zoffset);
         break;
 
     case OBJ_GROUP:
-        for (o = ((Group *)obj)->obj_list; o != NULL; o = o->next)
+        for (o = ((Group *)obj)->obj_list.head; o != NULL; o = o->next)
             move_obj(o, xoffset, yoffset, zoffset);
         break;
     }
@@ -653,7 +617,7 @@ find_obj(Object *parent, Object *obj)
 
     case OBJ_VOLUME:
         vol = (Volume *)parent;
-        for (face = vol->faces; face != NULL; face = (Face *)face->hdr.next)
+        for (face = vol->faces.head; face != NULL; face = (Face *)face->hdr.next)
         {
             if ((Object *)face == obj)
                 return TRUE;
@@ -692,7 +656,7 @@ find_parent_object(Group *tree, Object *obj, BOOL deep_search)
             return (Object *)f->vol;
     }
 
-    for (top_level = tree->obj_list; top_level != NULL; top_level = top_level->next)
+    for (top_level = tree->obj_list.head; top_level != NULL; top_level = top_level->next)
     {
         if (top_level->type == OBJ_GROUP)
         {
@@ -754,8 +718,8 @@ purge_obj(Object *obj)
     case OBJ_POINT:
         if (obj->ID == 0)
             break;              // it's already been freed
-        obj->next = (Object *)free_list_pt;
-        free_list_pt = (Point *)obj;
+        obj->next = (Object *)free_list_pt.head;
+        free_list_pt.head = (Point *)obj;
         obj->ID = 0;
         break;
 
@@ -792,7 +756,7 @@ purge_obj(Object *obj)
 
     case OBJ_VOLUME:
         vol = (Volume *)obj;
-        for (face = vol->faces; face != NULL; face = next_face)
+        for (face = vol->faces.head; face != NULL; face = next_face)
         {
             next_face = (Face *)face->hdr.next;
             purge_obj((Object *)face);
@@ -803,7 +767,7 @@ purge_obj(Object *obj)
 
     case OBJ_GROUP:
         group = (Group *)obj;
-        for (o = group->obj_list; o != NULL; o = next_obj)
+        for (o = group->obj_list.head; o != NULL; o = next_obj)
         {
             next_obj = o->next;
             purge_obj(o);
@@ -823,12 +787,13 @@ purge_tree(Group *tree)
     Object *obj;
     Object *nextobj = NULL;
 
-    for (obj = tree->obj_list; obj != NULL; obj = nextobj)
+    for (obj = tree->obj_list.head; obj != NULL; obj = nextobj)
     {
         nextobj = obj->next;
         purge_obj(obj);
     }
-    tree->obj_list = NULL;
+    tree->obj_list.head = NULL;
+    tree->obj_list.tail = NULL;
     if (tree->mesh != NULL)
         mesh_destroy(tree->mesh);
     tree->mesh = NULL;

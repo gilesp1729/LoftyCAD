@@ -220,7 +220,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             gen_view_list_arc(ae);
             glBegin(GL_LINE_STRIP);
             color(OBJ_EDGE, edge->type & EDGE_CONSTRUCTION, selected, highlighted, locked);
-            for (p = edge->view_list; p != NULL; p = (Point *)p->hdr.next)
+            for (p = edge->view_list.head; p != NULL; p = (Point *)p->hdr.next)
                 glVertex3f(p->x, p->y, p->z);
 
             glEnd();
@@ -238,7 +238,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             gen_view_list_bez(be);
             glBegin(GL_LINE_STRIP);
             color(OBJ_EDGE, edge->type & EDGE_CONSTRUCTION, selected, highlighted, locked);
-            for (p = edge->view_list; p != NULL; p = (Point *)p->hdr.next)
+            for (p = edge->view_list.head; p != NULL; p = (Point *)p->hdr.next)
                 glVertex3f(p->x, p->y, p->z);
 
             glEnd();
@@ -288,7 +288,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         if (!view_rendered)
         {
             // Draw individual faces
-            for (face = ((Volume *)obj)->faces; face != NULL; face = (Face *)face->hdr.next)
+            for (face = ((Volume *)obj)->faces.head; face != NULL; face = (Face *)face->hdr.next)
                 draw_object((Object *)face, (pres & ~DRAW_WITH_DIMENSIONS), parent_lock);
         }
         break;
@@ -305,7 +305,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
 
             if (!group->mesh_complete)
             {
-                for (o = group->obj_list; o != NULL; o = o->next)
+                for (o = group->obj_list.head; o != NULL; o = o->next)
                 {
                     BOOL merged = FALSE;
 
@@ -323,7 +323,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         // Not a rendered view - just draw the thing no matter what.
         if (!view_rendered)
         {
-            for (o = group->obj_list; o != NULL; o = o->next)
+            for (o = group->obj_list.head; o != NULL; o = o->next)
                 draw_object(o, (pres & ~DRAW_WITH_DIMENSIONS), o->lock);
         }
         break;
@@ -440,14 +440,13 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                     // Each move, clear the selection, then pick all objects lying within
                     // the selection rectangle, adding their top-level parents to the selection.
                     clear_selection(&selection);
-                    selection = 
-                        Pick_all_in_rect
-                        (
-                            (orig_left_mouseX + pt.x) / 2, 
-                            (orig_left_mouseY + pt.y) / 2, 
-                            abs(pt.x - orig_left_mouseX), 
-                            abs(pt.y - orig_left_mouseY)
-                        );
+                    Pick_all_in_rect
+                    (
+                        (orig_left_mouseX + pt.x) / 2, 
+                        (orig_left_mouseY + pt.y) / 2, 
+                        abs(pt.x - orig_left_mouseX), 
+                        abs(pt.y - orig_left_mouseY)
+                    );
 
                     break;
 
@@ -493,7 +492,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                     }
                     else // Move the whole selection en bloc
                     {
-                        for (obj = selection; obj != NULL; obj = obj->next)
+                        for (obj = selection.head; obj != NULL; obj = obj->next)
                         {
                             move_obj
                                 (
@@ -854,8 +853,8 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         p02 = point_newp(&new_point);
                         p03 = point_newp(&p3);
 
-                        // put the points into the view list
-                        rf->view_list = rf->initial_point = p00;
+                        // put the points into the view list. Only the head/next used for now
+                        rf->view_list.head = rf->initial_point = p00;
                         p00->hdr.next = (Object *)p01;
                         p01->hdr.next = (Object *)p02;
                         p02->hdr.next = (Object *)p03;
@@ -870,7 +869,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         rf = (Face *)curr_obj;
 
                         // Dig out the points that need updating, and update them
-                        p00 = (Point *)rf->view_list;
+                        p00 = (Point *)rf->view_list.head;
                         p01 = (Point *)p00->hdr.next;
                         p02 = (Point *)p01->hdr.next;
                         p03 = (Point *)p02->hdr.next;
@@ -973,7 +972,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
 
                             delink_group((Object *)face, &object_tree);
                             vol = vol_new();
-                            link((Object *)face, (Object **)&vol->faces);
+                            link((Object *)face, &vol->faces);
                             face->vol = vol;
                             face->view_valid = FALSE;
 
@@ -986,7 +985,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                                 // opposite sense (and with an opposite normal)
                                 opposite = clone_face_reverse(face);
                                 clear_move_copy_flags(picked_obj);
-                                link((Object *)opposite, (Object **)&vol->faces);
+                                link((Object *)opposite, &vol->faces);
                                 opposite->vol = vol;
 
                                 // Create faces that link the picked face to its clone
@@ -1052,7 +1051,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                                     side->edges[3] = e;
                                     side->n_edges = 4;
 
-                                    link((Object *)side, (Object **)&vol->faces);
+                                    link((Object *)side, &vol->faces);
                                 }
                                 break;
                             }
@@ -1202,7 +1201,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
 
     // Draw selection. Watch for highlighted objects appearing in the selection list.
     // Pass lock state of top-level parent to determine what is shown.
-    for (obj = selection; obj != NULL; obj = obj->next)
+    for (obj = selection.head; obj != NULL; obj = obj->next)
     {
         Object *parent = find_parent_object(&object_tree, obj->prev, FALSE);
 

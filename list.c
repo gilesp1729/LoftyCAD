@@ -3,57 +3,64 @@
 #include <stdio.h>
 
 
-// Free lists for Points and Objects. Only singly linked.
-extern Point *free_list_pt;
-extern Object *free_list_obj;
-
 // Link and unlink objects in a doubly linked list
-void link(Object *new_obj, Object **obj_list)
+void link(Object *new_obj, ListHead *obj_list)
 {
-    new_obj->next = *obj_list;
+    new_obj->next = obj_list->head;
     new_obj->prev = NULL;
-    if (*obj_list == NULL)
-    {
-        *obj_list = new_obj;
-    }
+    if (obj_list->head == NULL)
+        obj_list->tail = new_obj;
     else
-    {
-        (*obj_list)->prev = new_obj;
-        *obj_list = new_obj;
-    }
+        obj_list->head->prev = new_obj;
+
+    obj_list->head = new_obj;
+
+    ASSERT(obj_list->head->prev == NULL, "First element should not have a prev");
+    ASSERT(obj_list->tail->next == NULL, "Last element should not have a next");
 }
 
-void delink(Object *obj, Object **obj_list)
+void delink(Object *obj, ListHead *obj_list)
 {
     if (obj->prev != NULL)
         obj->prev->next = obj->next;
     else
-        *obj_list = obj->next;
+        obj_list->head = obj->next;
 
     if (obj->next != NULL)
         obj->next->prev = obj->prev;
+    else
+        obj_list->tail = obj->prev;
+
+    ASSERT(obj_list->head->prev == NULL, "First element should not have a prev");
+    ASSERT(obj_list->tail->next == NULL, "Last element should not have a next");
 }
 
 void
-link_tail(Object *new_obj, Object **obj_list)
+link_tail(Object *new_obj, ListHead *obj_list)
 {
     new_obj->next = NULL;
-    if (*obj_list == NULL)
+    if (obj_list->head == NULL)
     {
-        *obj_list = new_obj;
+        obj_list->head = new_obj;
         new_obj->prev = NULL;
     }
     else
     {
-        Object *last;
+        //Object *last;
 
         // TODO SLOW - this could be (is!) slow! Keep a tail pointer, esp if it's from a group?
-        for (last = *obj_list; last->next != NULL; last = last->next)
-            ;
+        //for (last = obj_list->head; last->next != NULL; last = last->next)
+        //    ;
 
-        last->next = new_obj;
-        new_obj->prev = last;
+        //last->next = new_obj;
+        //new_obj->prev = last;
+        obj_list->tail->next = new_obj;
+        new_obj->prev = obj_list->tail;
     }
+    obj_list->tail = new_obj;
+
+    ASSERT(obj_list->head->prev == NULL, "First element should not have a prev");
+    ASSERT(obj_list->tail->next == NULL, "Last element should not have a next");
 }
 
 // Link and delink objects into a group object list
@@ -81,25 +88,68 @@ void link_tail_group(Object *new_obj, Group *group)
 // Link objects into a singly linked list, chained through the next pointer.
 // the prev pointer is used to point to the object, so it doesn't interfere
 // with whatever list the object is actually participating in.
-void link_single(Object *new_obj, Object **obj_list)
+void link_single(Object *new_obj, ListHead *obj_list)
 {
     Object *list_obj = obj_new();
 
-    list_obj->next = *obj_list;
-    *obj_list = list_obj;
+    list_obj->next = obj_list->head;
+    obj_list->head = list_obj;
     list_obj->prev = new_obj;
 }
 
 // Like link_single, but first checks if the object is already in the list.
-void link_single_checked(Object *new_obj, Object **obj_list)
+void link_single_checked(Object *new_obj, ListHead *obj_list)
 {
     Object *o;
-    for (o = *obj_list; o != NULL; o = o->next)
+
+    for (o = obj_list->head; o != NULL; o = o->next)
     {
         if (o->prev == new_obj)
             return;
     }
     link_single(new_obj, obj_list);
+}
+
+// Clean out a view list (a singly linked list of Points) by joining it to the free list.
+// The points already have ID's of 0. 
+void
+free_point_list(ListHead *pt_list)
+{
+    Point *p;
+
+    if (free_list_pt.head == NULL)
+    {
+        free_list_pt.head = pt_list->head;
+    }
+    else
+    {
+        for (p = free_list_pt.head; p->hdr.next != NULL; p = (Point *)p->hdr.next)
+            ;   // run down to the last free element  TODO SLOW
+        p->hdr.next = pt_list->head;
+    }
+
+    pt_list->head = NULL;
+    pt_list->tail = NULL;
+}
+
+// Free all elements in a singly linked list of Objects, similarly to the above.
+void free_obj_list(ListHead *obj_list)
+{
+    Object *o;
+
+    if (free_list_obj.head == NULL)
+    {
+        free_list_obj.head = obj_list->head;
+    }
+    else
+    {
+        for (o = free_list_obj.head; o->next != NULL; o = o->next)
+            ;   // run down to the last free element TODO SLOW
+        o->next = obj_list->head;
+    }
+
+    obj_list->head = NULL;
+    obj_list->tail = NULL;
 }
 
 // Allocate the point bucket list structure.
@@ -167,8 +217,8 @@ void free_bucket_points(Point ***bucket)
             for (p = bh[j]; p != NULL; p = nextp)
             {
                 nextp = p->bucket_next;
-                p->hdr.next = (Object *)free_list_pt;
-                free_list_pt = p;
+                p->hdr.next = free_list_pt.head;
+                free_list_pt.head = p;
             }
             bh[j] = NULL;
         }
@@ -190,8 +240,8 @@ void free_bucket(Point ***bucket)
             for (p = bh[j]; p != NULL; p = nextp)
             {
                 nextp = p->bucket_next;
-                p->hdr.next = (Object *)free_list_pt;
-                free_list_pt = p;
+                p->hdr.next = free_list_pt.head;
+                free_list_pt.head = p;
             }
         }
         free(bucket[i]);

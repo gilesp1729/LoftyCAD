@@ -161,11 +161,11 @@ init_clip_tess(void)
 
 // Generate triangulated surface for the face and add it to its parent volume.
 void
-gen_view_list_surface(Face *face, Point *facet)
+gen_view_list_surface(Face *face)
 {
     Point *v, *vfirst;
 
-    v = face->view_list;
+    v = face->view_list.head;
     {
         while (v != NULL)
         {

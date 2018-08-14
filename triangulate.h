@@ -31,7 +31,7 @@ void gen_view_list_tree_surfaces(Group *tree, Group *parent_tree);
 
 // Clip a view list (clipviewlist.c)
 void init_clip_tess(void);
-void gen_view_list_surface(Face *face, Point *facet);
+void gen_view_list_surface(Face *face);
 
 // Mesh functions, and interface to CGAL (mesh.cpp)
 Mesh *mesh_new(void);
