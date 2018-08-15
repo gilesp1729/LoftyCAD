@@ -38,8 +38,8 @@ Point *point_new(float x, float y, float z)
     // Try and obtain a point from the free list first
     if (free_list_pt.head != NULL)
     {
-        pt = free_list_pt.head;
-        free_list_pt.head = (Point *)free_list_pt.head->next;
+        pt = (Point *)free_list_pt.head;
+        free_list_pt.head = free_list_pt.head->next;
         if (free_list_pt.head == NULL)
             free_list_pt.tail = NULL;
         memset(pt, 0, sizeof(Point));
@@ -64,8 +64,8 @@ Point *point_newp(Point *p)
 
     if (free_list_pt.head != NULL)
     {
-        pt = free_list_pt.head;
-        free_list_pt.head = (Point *)free_list_pt.head->next;
+        pt = (Point *)free_list_pt.head;
+        free_list_pt.head = free_list_pt.head->next;
         if (free_list_pt.head == NULL)
             free_list_pt.tail = NULL;
         memset(pt, 0, sizeof(Point));
@@ -246,14 +246,14 @@ clear_move_copy_flags(Object *obj)
             edge = face->edges[i];
             clear_move_copy_flags((Object *)edge);
         }
-        for (p = face->view_list.head; p != NULL; p = (Point *)p->hdr.next)
+        for (p = (Point *)face->view_list.head; p != NULL; p = (Point *)p->hdr.next)
             clear_move_copy_flags((Object *)p);
         obj->copied_to = NULL;
         break;
 
     case OBJ_VOLUME:
         vol = (Volume *)obj;
-        for (face = vol->faces.head; face != NULL; face = (Face *)face->hdr.next)
+        for (face = (Face *)vol->faces.head; face != NULL; face = (Face *)face->hdr.next)
             clear_move_copy_flags((Object *)face);
         obj->copied_to = NULL;
         break;
@@ -372,7 +372,7 @@ copy_obj(Object *obj, float xoffset, float yoffset, float zoffset)
         new_vol = vol_new();
         new_obj = (Object *)new_vol;
         new_obj->lock = obj->lock;
-        for (face = vol->faces.head; face != NULL; face = (Face *)face->hdr.next)
+        for (face = (Face *)vol->faces.head; face != NULL; face = (Face *)face->hdr.next)
         {
             new_face = (Face *)copy_obj((Object *)face, xoffset, yoffset, zoffset);
             new_face->vol = new_vol;
@@ -554,7 +554,7 @@ move_obj(Object *obj, float xoffset, float yoffset, float zoffset)
 
     case OBJ_VOLUME:
         vol = (Volume *)obj;
-        for (face = vol->faces.head; face != NULL; face = (Face *)face->hdr.next)
+        for (face = (Face *)vol->faces.head; face != NULL; face = (Face *)face->hdr.next)
             move_obj((Object *)face, xoffset, yoffset, zoffset);
         break;
 
@@ -623,7 +623,7 @@ find_obj(Object *parent, Object *obj)
 
     case OBJ_VOLUME:
         vol = (Volume *)parent;
-        for (face = vol->faces.head; face != NULL; face = (Face *)face->hdr.next)
+        for (face = (Face *)vol->faces.head; face != NULL; face = (Face *)face->hdr.next)
         {
             if ((Object *)face == obj)
                 return TRUE;
@@ -764,7 +764,7 @@ purge_obj(Object *obj)
 
     case OBJ_VOLUME:
         vol = (Volume *)obj;
-        for (face = vol->faces.head; face != NULL; face = next_face)
+        for (face = (Face *)vol->faces.head; face != NULL; face = next_face)
         {
             next_face = (Face *)face->hdr.next;
             purge_obj((Object *)face);

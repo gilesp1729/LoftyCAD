@@ -938,7 +938,7 @@ left_up(AUX_EVENTREC *event)
             // is not known till the mouse is released.
             // Generate four edges, and put them on the face's edge list.
             rf = (Face *)curr_obj;
-            p00 = rf->view_list.head;
+            p00 = (Point *)rf->view_list.head;
             p01 = (Point *)p00->hdr.next;
             p02 = (Point *)p01->hdr.next;
             p03 = (Point *)p02->hdr.next;
@@ -1039,18 +1039,22 @@ remove_from_selection(Object *obj)
         {
             sel_obj = selection.head;
             selection.head = sel_obj->next;
+            if (selection.head == NULL)
+                selection.tail = NULL;
         }
         else
         {
             sel_obj = prev_in_list->next;
             prev_in_list->next = sel_obj->next;
+            if (prev_in_list->next == NULL)
+                selection.tail = prev_in_list;
         }
 
         ASSERT(sel_obj->prev == picked_obj, "Selection list broken");
         sel_obj->next = free_list_obj.head;  // put it in the free list
-        free_list_obj.head = sel_obj;
         if (free_list_obj.head == NULL)
-            free_list_obj.tail = NULL;
+            free_list_obj.tail = sel_obj;
+        free_list_obj.head = sel_obj;
 
         hide_hint();    // in case the dims was displayed
         return TRUE;

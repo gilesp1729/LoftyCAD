@@ -13,6 +13,9 @@ extern char *facetypes[];
 // Object being highlighted by mouse over in treeview
 Object *treeview_highlight;
 
+// Limit of children, to stop ridiculously large expansions
+#define TREEVIEW_LIMIT     2000
+
 // Populate a treeview item for the components of an object.
 void
 populate_treeview_object(Object *obj, Object *parent, HTREEITEM hItem)
@@ -94,8 +97,25 @@ populate_treeview_object(Object *obj, Object *parent, HTREEITEM hItem)
         hItem = (HTREEITEM)SendDlgItemMessage(hWndTree, IDC_TREEVIEW, TVM_INSERTITEM, 0, (LPARAM)&tvins);
         if (parent->lock < LOCK_FACES)
         {
-            for (face = ((Volume *)obj)->faces.head; face != NULL; face = (Face *)face->hdr.next)
-                populate_treeview_object((Object *)face, parent, hItem);
+            for (i = 0, face = (Face *)((Volume *)obj)->faces.head; face != NULL; face = (Face *)face->hdr.next, i++)
+            {
+                if (i < TREEVIEW_LIMIT)
+                {
+                    populate_treeview_object((Object *)face, parent, hItem);
+                }
+                else
+                {
+                    tvi.pszText = "(Limit on faces reached)";
+                    tvi.cchTextMax = strlen(tvi.pszText);
+                    tvi.lParam = (LPARAM)NULL;
+                    tvi.mask = TVIF_TEXT;
+                    tvins.item = tvi;
+                    tvins.hParent = hItem;
+                    tvins.hInsertAfter = TVI_FIRST;
+                    hItem = (HTREEITEM)SendDlgItemMessage(hWndTree, IDC_TREEVIEW, TVM_INSERTITEM, 0, (LPARAM)&tvins);
+                    break;
+                }
+            }
         }
         break;
     }

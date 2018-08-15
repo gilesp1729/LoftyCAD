@@ -82,7 +82,7 @@ serialise_obj(Object *obj, FILE *f)
     case OBJ_VOLUME:
         fprintf_s(f, "BEGIN %d\n", obj->ID);
         vol = (Volume *)obj;
-        for (face = vol->faces.head; face != NULL; face = (Face *)face->hdr.next)
+        for (face = (Face *)vol->faces.head; face != NULL; face = (Face *)face->hdr.next)
             serialise_obj((Object *)face, f);
         break;
 
@@ -153,7 +153,7 @@ serialise_obj(Object *obj, FILE *f)
 
     case OBJ_VOLUME:
         vol = (Volume *)obj;
-        for (face = vol->faces.head; face != NULL; face = (Face *)face->hdr.next)
+        for (face = (Face *)vol->faces.head; face != NULL; face = (Face *)face->hdr.next)
         {
             if (n >= MAXLINE - 10)
             {

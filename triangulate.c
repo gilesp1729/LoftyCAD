@@ -154,7 +154,7 @@ invalidate_all_view_lists(Object *parent, Object *obj, float dx, float dy, float
         clear_bbox(&vol->bbox);
         vol->mesh_valid = FALSE;
 
-        for (f = vol->faces.head; f != NULL; f = (Face *)f->hdr.next)
+        for (f = (Face *)vol->faces.head; f != NULL; f = (Face *)f->hdr.next)
             invalidate_all_view_lists((Object *)f, obj, dx, dy, dz);
         break;
 
@@ -395,7 +395,7 @@ gen_view_list_vol(Volume *vol)
 {
     Face *f;
 
-    for (f = vol->faces.head; f != NULL; f = (Face *)f->hdr.next)
+    for (f = (Face *)vol->faces.head; f != NULL; f = (Face *)f->hdr.next)
     {
         if (!f->view_valid)
             break;
@@ -406,7 +406,7 @@ gen_view_list_vol(Volume *vol)
     if (f != NULL)
     {
         // if any face is not valid, invalidate them all
-        for (f = vol->faces.head; f != NULL; f = (Face *)f->hdr.next)
+        for (f = (Face *)vol->faces.head; f != NULL; f = (Face *)f->hdr.next)
             f->view_valid = FALSE;
     }
 
@@ -419,7 +419,7 @@ gen_view_list_vol(Volume *vol)
     vol->mesh = mesh_new();
 
     // generate view lists for all the faces, and update the mesh
-    for (f = vol->faces.head; f != NULL; f = (Face *)f->hdr.next)
+    for (f = (Face *)vol->faces.head; f != NULL; f = (Face *)f->hdr.next)
     {
         gen_view_list_face(f);
         gen_view_list_surface(f);
@@ -560,7 +560,7 @@ gen_view_list_face(Face *face)
     if (IS_FLAT(face))
     {
         // calculate the normal vector.  Store a new refpt here too, in case something has moved.
-        polygon_normal(face->view_list.head, &face->normal);
+        polygon_normal((Point *)face->view_list.head, &face->normal);
         face->normal.refpt = *face->edges[0]->endpoints[0];
 
         // Update the 2D view list
@@ -573,7 +573,7 @@ gen_view_list_face(Face *face)
         ASSERT((face->type & ~FACE_CONSTRUCTION) == FACE_CYLINDRICAL, "Only cylinder faces should be here");
 
         // Rearrange the cylinder view list into a set of facets, each with its own normal.
-        for (i = 0, v = face->spare_list.head; v->hdr.next != NULL; v = (Point *)v->hdr.next, i++)
+        for (i = 0, v = (Point *)face->spare_list.head; v->hdr.next != NULL; v = (Point *)v->hdr.next, i++)
         {
             Point *vnext = (Point *)v->hdr.next;
             Point *lprev = (Point *)last->hdr.prev;
@@ -631,7 +631,7 @@ update_view_list_2D(Face *face)
     if (!IS_FLAT(face))
         return;
 
-    for (i = 0, v = face->view_list.head; v != NULL; v = (Point *)v->hdr.next, i++)
+    for (i = 0, v = (Point *)face->view_list.head; v != NULL; v = (Point *)v->hdr.next, i++)
     {
         float a = fabsf(face->normal.A);
         float b = fabsf(face->normal.B);
@@ -1029,7 +1029,7 @@ face_shade(GLUtesselator *tess, Face *face, BOOL selected, BOOL highlighted, BOO
 
     // If there are no facets, just use the face normal
     norm = face->normal;
-    v = face->view_list.head;
+    v = (Point *)face->view_list.head;
     while (v != NULL)
     {
         if (v->flags == FLAG_NEW_FACET)

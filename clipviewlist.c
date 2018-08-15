@@ -165,7 +165,7 @@ gen_view_list_surface(Face *face)
 {
     Point *v, *vfirst;
 
-    v = face->view_list.head;
+    v = (Point *)face->view_list.head;
     {
         while (v != NULL)
         {

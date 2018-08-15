@@ -220,7 +220,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             gen_view_list_arc(ae);
             glBegin(GL_LINE_STRIP);
             color(OBJ_EDGE, edge->type & EDGE_CONSTRUCTION, selected, highlighted, locked);
-            for (p = edge->view_list.head; p != NULL; p = (Point *)p->hdr.next)
+            for (p = (Point *)edge->view_list.head; p != NULL; p = (Point *)p->hdr.next)
                 glVertex3f(p->x, p->y, p->z);
 
             glEnd();
@@ -238,7 +238,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             gen_view_list_bez(be);
             glBegin(GL_LINE_STRIP);
             color(OBJ_EDGE, edge->type & EDGE_CONSTRUCTION, selected, highlighted, locked);
-            for (p = edge->view_list.head; p != NULL; p = (Point *)p->hdr.next)
+            for (p = (Point *)edge->view_list.head; p != NULL; p = (Point *)p->hdr.next)
                 glVertex3f(p->x, p->y, p->z);
 
             glEnd();
@@ -288,7 +288,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         if (!view_rendered)
         {
             // Draw individual faces
-            for (face = ((Volume *)obj)->faces.head; face != NULL; face = (Face *)face->hdr.next)
+            for (face = (Face *)((Volume *)obj)->faces.head; face != NULL; face = (Face *)face->hdr.next)
                 draw_object((Object *)face, (pres & ~DRAW_WITH_DIMENSIONS), parent_lock);
         }
         break;
@@ -854,7 +854,8 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         p03 = point_newp(&p3);
 
                         // put the points into the view list. Only the head/next used for now
-                        rf->view_list.head = rf->initial_point = p00;
+                        rf->view_list.head = (Object *)p00;
+                        rf->initial_point = p00;
                         p00->hdr.next = (Object *)p01;
                         p01->hdr.next = (Object *)p02;
                         p02->hdr.next = (Object *)p03;

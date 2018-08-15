@@ -95,7 +95,7 @@ find_in_neighbourhood_point(Point *point, Object *obj)
 
     case OBJ_VOLUME:
         vol = (Volume *)obj;
-        for (f = vol->faces.head; f != NULL; f = (Face *)f->hdr.next)
+        for (f = (Face *)vol->faces.head; f != NULL; f = (Face *)f->hdr.next)
         {
             Object *test = find_in_neighbourhood_point(point, (Object *)f);
 
@@ -168,7 +168,7 @@ find_in_neighbourhood_face(Face *face, Object *obj)
 
     case OBJ_VOLUME:
         vol = (Volume *)obj;
-        for (f = vol->faces.head; f != NULL; f = (Face *)f->hdr.next)
+        for (f = (Face *)vol->faces.head; f != NULL; f = (Face *)f->hdr.next)
         {
             Object *test = find_in_neighbourhood_face(face, (Object *)f);
 
@@ -226,7 +226,7 @@ find_in_neighbourhood(Object *match_obj, Group *tree)
         case OBJ_VOLUME:
             // When moving volumes, need to HL faces. Combinatorial explosion of tests..
             vol = (Volume *)match_obj;
-            for (f = vol->faces.head; f != NULL; f = (Face *)f->hdr.next)
+            for (f = (Face *)vol->faces.head; f != NULL; f = (Face *)f->hdr.next)
             {
                 test = find_in_neighbourhood_face(f, obj);
                 if (test != NULL)
