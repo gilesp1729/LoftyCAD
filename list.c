@@ -46,14 +46,6 @@ link_tail(Object *new_obj, ListHead *obj_list)
     }
     else
     {
-        //Object *last;
-
-        // TODO SLOW - this could be (is!) slow! Keep a tail pointer, esp if it's from a group?
-        //for (last = obj_list->head; last->next != NULL; last = last->next)
-        //    ;
-
-        //last->next = new_obj;
-        //new_obj->prev = last;
         obj_list->tail->next = new_obj;
         new_obj->prev = obj_list->tail;
     }
@@ -93,6 +85,8 @@ void link_single(Object *new_obj, ListHead *obj_list)
     Object *list_obj = obj_new();
 
     list_obj->next = obj_list->head;
+    if (obj_list->head == NULL)
+        obj_list->tail = list_obj;
     obj_list->head = list_obj;
     list_obj->prev = new_obj;
 }
@@ -115,17 +109,20 @@ void link_single_checked(Object *new_obj, ListHead *obj_list)
 void
 free_point_list(ListHead *pt_list)
 {
-    Point *p;
+    if (pt_list->head == NULL)
+        return;
 
     if (free_list_pt.head == NULL)
     {
+        ASSERT(free_list_pt.tail == NULL, "Tail should be NULL");
         free_list_pt.head = pt_list->head;
+        free_list_pt.tail = pt_list->tail;
     }
     else
     {
-        for (p = free_list_pt.head; p->hdr.next != NULL; p = (Point *)p->hdr.next)
-            ;   // run down to the last free element  TODO SLOW
-        p->hdr.next = pt_list->head;
+        ASSERT(free_list_pt.tail != NULL, "Tail should not be NULL");
+        free_list_pt.tail->next = pt_list->head;
+        free_list_pt.tail = pt_list->tail;
     }
 
     pt_list->head = NULL;
@@ -135,17 +132,20 @@ free_point_list(ListHead *pt_list)
 // Free all elements in a singly linked list of Objects, similarly to the above.
 void free_obj_list(ListHead *obj_list)
 {
-    Object *o;
+    if (obj_list->head == NULL)
+        return;
 
     if (free_list_obj.head == NULL)
     {
+        ASSERT(free_list_obj.tail == NULL, "Tail should be NULL");
         free_list_obj.head = obj_list->head;
+        free_list_obj.tail = obj_list->tail;
     }
     else
     {
-        for (o = free_list_obj.head; o->next != NULL; o = o->next)
-            ;   // run down to the last free element TODO SLOW
-        o->next = obj_list->head;
+        ASSERT(free_list_obj.tail != NULL, "Tail should not be NULL");
+        free_list_obj.tail->next = obj_list->head;
+        free_list_obj.tail = obj_list->tail;
     }
 
     obj_list->head = NULL;
@@ -218,7 +218,9 @@ void free_bucket_points(Point ***bucket)
             {
                 nextp = p->bucket_next;
                 p->hdr.next = free_list_pt.head;
-                free_list_pt.head = p;
+                if (free_list_pt.head == NULL)
+                    free_list_pt.tail = (Object *)p;
+                free_list_pt.head = (Object *)p;
             }
             bh[j] = NULL;
         }
@@ -241,7 +243,9 @@ void free_bucket(Point ***bucket)
             {
                 nextp = p->bucket_next;
                 p->hdr.next = free_list_pt.head;
-                free_list_pt.head = p;
+                if (free_list_pt.head == NULL)
+                    free_list_pt.tail = (Object *)p;
+                free_list_pt.head = (Object *)p;
             }
         }
         free(bucket[i]);

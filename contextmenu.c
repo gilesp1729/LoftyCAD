@@ -390,7 +390,7 @@ right_click(AUX_EVENTREC *event)
     int rc;
     POINT pt;
     Object *parent, *sel_obj, *o, *o_next;
-    char buf[32];
+    char buf[128];
     LOCK old_parent_lock;
     BOOL group_changed = FALSE;
     BOOL dims_changed = FALSE;
@@ -421,19 +421,19 @@ right_click(AUX_EVENTREC *event)
     switch (picked_obj->type)
     {
     case OBJ_POINT:
-        sprintf_s(buf, 32, "Point %d", picked_obj->ID);
+        sprintf_s(buf, 128, "Point %d", picked_obj->ID);
         break;
     case OBJ_EDGE:
-        sprintf_s(buf, 32, "Edge %d", picked_obj->ID);
+        sprintf_s(buf, 128, "Edge %d", picked_obj->ID);
         break;
     case OBJ_FACE:
-        sprintf_s(buf, 32, "Face %d", picked_obj->ID);
+        sprintf_s(buf, 128, "Face %d", picked_obj->ID);
         break;
     case OBJ_VOLUME:
-        sprintf_s(buf, 32, "Volume %d", picked_obj->ID);
+        sprintf_s(buf, 128, "Volume %d", picked_obj->ID);
         break;
     case OBJ_GROUP:
-        sprintf_s(buf, 32, "Group %d %s", picked_obj->ID, ((Group *)picked_obj)->title);
+        sprintf_s(buf, 128, "Group %d %s", picked_obj->ID, ((Group *)picked_obj)->title);
         break;
     }
     ModifyMenu(hMenu, 0, MF_BYPOSITION | MF_GRAYED | MF_STRING, 0, buf);

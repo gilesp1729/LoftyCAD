@@ -17,6 +17,8 @@ Object *obj_new(void)
     {
         obj = free_list_obj.head;
         free_list_obj.head = free_list_obj.head->next;
+        if (free_list_obj.head == NULL)
+            free_list_obj.tail = NULL;
         memset(obj, 0, sizeof(Object));
     }
     else
@@ -38,6 +40,8 @@ Point *point_new(float x, float y, float z)
     {
         pt = free_list_pt.head;
         free_list_pt.head = (Point *)free_list_pt.head->next;
+        if (free_list_pt.head == NULL)
+            free_list_pt.tail = NULL;
         memset(pt, 0, sizeof(Point));
     }
     else
@@ -62,6 +66,8 @@ Point *point_newp(Point *p)
     {
         pt = free_list_pt.head;
         free_list_pt.head = (Point *)free_list_pt.head->next;
+        if (free_list_pt.head == NULL)
+            free_list_pt.tail = NULL;
         memset(pt, 0, sizeof(Point));
     }
     else
@@ -719,7 +725,9 @@ purge_obj(Object *obj)
         if (obj->ID == 0)
             break;              // it's already been freed
         obj->next = (Object *)free_list_pt.head;
-        free_list_pt.head = (Point *)obj;
+        if (free_list_pt.head == NULL)
+            free_list_pt.tail = obj;
+        free_list_pt.head = obj;
         obj->ID = 0;
         break;
 

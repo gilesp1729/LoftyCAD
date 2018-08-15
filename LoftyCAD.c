@@ -633,7 +633,7 @@ is_selected_parent(Object *obj)
     Object *sel, *parent;
     BOOL present = FALSE;
 
-    for (sel = selection; sel != NULL; sel = sel->next)
+    for (sel = selection.head; sel != NULL; sel = sel->next)
     {
         if (sel->prev == obj)
         {
@@ -1049,6 +1049,9 @@ remove_from_selection(Object *obj)
         ASSERT(sel_obj->prev == picked_obj, "Selection list broken");
         sel_obj->next = free_list_obj.head;  // put it in the free list
         free_list_obj.head = sel_obj;
+        if (free_list_obj.head == NULL)
+            free_list_obj.tail = NULL;
+
         hide_hint();    // in case the dims was displayed
         return TRUE;
     }

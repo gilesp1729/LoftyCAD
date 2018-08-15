@@ -536,11 +536,7 @@ gen_view_list_face(Face *face)
                 last_point = e->endpoints[0];
 
                 // copy the view list backwards, skipping the last point.
-                for (v = (Point *)e->view_list.head; v->hdr.next->next != NULL; v = (Point *)v->hdr.next)
-                    ;   // TODO SLOW - use a tail ptr here
-
-                //for (v = (Point *)e->view_list.tail->prev; v != NULL; v = (Point *)v->hdr.prev)
-                for ( ; v != NULL; v = (Point *)v->hdr.prev)
+                for (v = (Point *)e->view_list.tail->prev; v != NULL; v = (Point *)v->hdr.prev)
                 {
                     p = point_newp(v);
                     p->hdr.ID = 0;
