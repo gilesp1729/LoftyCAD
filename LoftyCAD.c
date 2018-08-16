@@ -157,10 +157,10 @@ BOOL debug_view_bbox = FALSE;
 BOOL view_clipped_faces = FALSE;
 
 // Size and span of point-searching buckets used in coordinate matching.
-// Chosen so that there are 20 buckets covering +/-halfsize, in X and Y (we don't bucket on Z)
+// Chosen so that there are 40 buckets covering +/-halfsize, in X and Y (we don't bucket on Z)
 // If these change, n_buckets must be even.
-float bucket_size = INITIAL_GRID * 10;
-int n_buckets = 20;
+float bucket_size = INITIAL_GRID * 5;
+int n_buckets = 40;
 
 // Set material and lighting up
 void

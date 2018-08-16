@@ -37,7 +37,8 @@ find_edge(Point *p0, Point *p1)
 {
     Edge *e = NULL;
 
-    for (e = p0->start_list; e != NULL; e = e->start_next)
+    // See if the edge is in p0's start list
+    for (e = p0->start_list; e != NULL; e = e->start_next) 
     {
         if (e->endpoints[1] == p1)
             break;
@@ -45,6 +46,17 @@ find_edge(Point *p0, Point *p1)
 
     if (e == NULL)
     {
+        // See if the edge is in p1's start list
+        for (e = p1->start_list; e != NULL; e = e->start_next)
+        {
+            if (e->endpoints[1] == p0)
+                break;
+        }
+    }
+
+    if (e == NULL)
+    {
+        // Create a new edge, and put it in p0's start list
         e = edge_new(EDGE_STRAIGHT);
         e->endpoints[0] = p0;
         e->endpoints[1] = p1;

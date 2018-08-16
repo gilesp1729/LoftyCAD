@@ -95,6 +95,7 @@ typedef struct Point
     float           z;
     BOOL            moved;          // When a point is moved, this is set TRUE. This stops shared
                                     // points from being moved twice.
+    unsigned int    drawn;          // Drawn number increments and stops shared points being drawn twice.
     PFLAG           flags;          // Flag to indicate start of facet or contour in view lists.
     Vertex_index    *vi;            // Index to CGAL mesh vertex (used when building meshes)
     struct Edge     *start_list;    // List of edges that start at this point (i.e. this point is endpoint 0)
@@ -142,6 +143,7 @@ typedef struct Edge
 {
     struct Object   hdr;            // Header
     EDGE            type;           // What kind of edge this is
+    unsigned int    drawn;          // Drawn number increments and stops shared edges being drawn twice.
     struct Point    *endpoints[2];  // Two endpoints (valid for any edge type)
     struct Edge     *start_next;    // Next edge in the starting list (edges that start at endpoint 0)
     struct ListHead view_list;      // List of intermediate points on the curve, generated 

@@ -9,6 +9,9 @@ static int num_moves = 0;
 
 static Plane temp_plane;
 
+// Current drawn number (increments for every draw, eventualy rolls over - how soon? TODO
+static unsigned int curr_drawn_no = 0;
+
 // Some standard colors sent to GL.
 void
 color(OBJECT obj_type, BOOL construction, BOOL selected, BOOL highlighted, BOOL locked)
@@ -175,6 +178,12 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             // Just draw the point (if not locked), the picking will still work
             if (!locked)
             {
+                if (!(selected || highlighted))
+                {
+                    if (p->drawn == curr_drawn_no)
+                        return;
+                    p->drawn = curr_drawn_no;
+                }
                 glBegin(GL_POINTS);
                 color(OBJ_POINT, FALSE, selected, highlighted, locked);
                 glVertex3f(p->x, p->y, p->z);
@@ -197,7 +206,15 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
 
         // Disable blending here so highlight shows up with multiply-blending
         if (selected || highlighted)
+        {
             glDisable(GL_BLEND);
+        }
+        else  // normal drawing, check the drawn no. and don't draw shared edges twice
+        {
+            if (edge->drawn == curr_drawn_no)
+                return;
+            edge->drawn = curr_drawn_no;
+        }
 
         switch (edge->type & ~EDGE_CONSTRUCTION)
         {
@@ -1198,6 +1215,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
     if (app_state >= STATE_STARTING_EDGE)
         pres |= DRAW_HIGHLIGHT_LOCKED;
     glInitNames();
+    curr_drawn_no++;
     draw_object((Object *)&object_tree, pres, LOCK_NONE);  // locks come from objects
 
     // Draw selection. Watch for highlighted objects appearing in the selection list.
