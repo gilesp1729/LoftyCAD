@@ -329,7 +329,9 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
         {
             // Stack the object ID being constructed
             tok = strtok_s(NULL, " \t\n", &nexttok);
-            stack[stkptr++] = atoi(tok) + id_offset;
+            id = atoi(tok) + id_offset;
+            check_and_grow(id, &object, &objsize);
+            stack[stkptr++] = id;
         }
         else if (strcmp(tok, "BEGINGROUP") == 0)
         {
