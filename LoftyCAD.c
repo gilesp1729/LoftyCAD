@@ -353,6 +353,8 @@ Pick(GLint x_pick, GLint y_pick, BOOL force_pick)
     num_hits = glRenderMode(GL_RENDER);
     raw_picked_obj = NULL;
 
+   // if (num_hits < 0)
+   //     DebugBreak();
     if (num_hits > 0)
     {
         int n = 0;

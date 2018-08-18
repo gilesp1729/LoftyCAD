@@ -65,6 +65,10 @@ if ( !(x) ) {                                           \
 #define TKASSERT(x)
 #endif  /* DBG */
 
+
+// Refresh interval (ms)
+#define REFRESH_INTERVAL 80
+
 /******************************************************************************/
 
 static struct _WINDOWINFO {
@@ -1110,7 +1114,7 @@ PIXELFORMATDESCRIPTOR pfd;
          {
             KillTimer(hWnd, 9999);   // stop timer while drawing, in case it's slow
             (*DisplayFunc)();
-            SetTimer(hWnd, 9999, 50, NULL);
+            SetTimer(hWnd, 9999, REFRESH_INTERVAL, NULL);
          }
 
          EndPaint(tkhwnd, &paint);
@@ -1211,7 +1215,7 @@ PIXELFORMATDESCRIPTOR pfd;
                }
 
                //GP - set redraw timer
-               SetTimer(hWnd, 9999, 50, NULL);
+               SetTimer(hWnd, 9999, REFRESH_INTERVAL, NULL);
             }
 
          // Allow DefWindowProc() to finish the default processing (which includes

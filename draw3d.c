@@ -202,8 +202,6 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         if ((selected || highlighted) && !push_name)
             return;
 
-        glPushName(push_name ? (GLuint)obj : 0);
-
         // Disable blending here so highlight shows up with multiply-blending
         if (selected || highlighted)
         {
@@ -216,6 +214,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             edge->drawn = curr_drawn_no;
         }
 
+        glPushName(push_name ? (GLuint)obj : 0);
         switch (edge->type & ~EDGE_CONSTRUCTION)
         {
         case EDGE_STRAIGHT:
