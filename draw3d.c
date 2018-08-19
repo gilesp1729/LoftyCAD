@@ -284,6 +284,28 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         face_shade(rtess, face, selected, highlighted, locked);
         glPopName();
 
+#if 0
+        // TEST draw edges etc for front facing faces only
+        if (face->type <= FACE_FLAT)
+        {
+            float mv[16], pj[16], net[16], nvec[4], dot;
+            float eye[4] = { 0, 0, 1, 0 };
+
+            // We only need do this once.
+            glGetFloatv(GL_MODELVIEW_MATRIX, mv);
+            //glGetFloatv(GL_PROJECTION_MATRIX, pj);
+            //mat_mult(mv, pj, net);  // note backwards, we transpose the matrices to invert any rotations
+
+            mat_mult_by_row(mv, eye, nvec); 
+            //nvec[0] -= face->normal.refpt.x;
+            //nvec[1] -= face->normal.refpt.y;
+            //nvec[2] -= face->normal.refpt.z;
+            dot = face->normal.A * nvec[0] + face->normal.B * nvec[1] + face->normal.C * nvec[2];
+            if (dot < 0)
+                break;
+        }
+#endif
+
         // Don't pass draw with dims down to sub-components, to minimise clutter
         if (draw_components && !top_level_only)
         {

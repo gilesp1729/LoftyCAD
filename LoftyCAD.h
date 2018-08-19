@@ -41,6 +41,13 @@ typedef enum STATE
     STATE_DRAWING_OFFSET = STATE_DRAWING_EDGE - STATE_STARTING_EDGE
 } STATE;
 
+typedef enum
+{
+    BLEND_OPAQUE,               // No blending, objects are opaque.
+    BLEND_MULTIPLY,             // Multiply blending (works independent of front-to-back ordering)
+    BLEND_ALPHA                 // Alpha blending (note: may be errors, as objects are NOT sorted front-to-back)
+} BlendMode;
+
 // Externs
 extern HINSTANCE hInst;
 
@@ -117,6 +124,8 @@ extern float quat_mXZ[4];
 
 extern float bucket_size;
 extern int n_buckets;
+
+extern BlendMode view_blend;
 
 
 // Debug stuff

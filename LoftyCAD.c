@@ -162,6 +162,8 @@ BOOL view_clipped_faces = FALSE;
 float bucket_size = INITIAL_GRID * 5;
 int n_buckets = 40;
 
+BlendMode view_blend = BLEND_MULTIPLY;
+
 // Set material and lighting up
 void
 SetMaterial(bBlack)
@@ -848,6 +850,7 @@ left_up(AUX_EVENTREC *event)
         Log(buf);
 #endif
 #endif
+        // Treat this as a row matrix, to get the inverse of any rotation in it
         mat_mult_by_row(mv, eye, nvec);
 #ifdef DEBUG_LEFT_UP_FACING
         sprintf_s(buf, 256, "Eye: %f %f %f\r\n", nvec[0], nvec[1], nvec[2]);
@@ -1460,7 +1463,9 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
         CheckMenuItem(hMenu, ID_VIEW_TREE, view_tree ? MF_CHECKED : MF_UNCHECKED);
         CheckMenuItem(hMenu, ID_VIEW_ORTHO, view_ortho ? MF_CHECKED : MF_UNCHECKED);
         CheckMenuItem(hMenu, ID_VIEW_PERSPECTIVE, !view_ortho ? MF_CHECKED : MF_UNCHECKED);
-        CheckMenuItem(hMenu, ID_VIEW_CLIPPEDFACE, view_clipped_faces ? MF_CHECKED : MF_UNCHECKED);
+        CheckMenuItem(hMenu, ID_VIEW_BLEND_MULTIPLY, view_blend == BLEND_MULTIPLY ? MF_CHECKED : MF_UNCHECKED);
+        CheckMenuItem(hMenu, ID_VIEW_BLEND_ALPHA, view_blend == BLEND_ALPHA ? MF_CHECKED : MF_UNCHECKED);
+        CheckMenuItem(hMenu, ID_VIEW_BLEND_OPAQUE, view_blend == BLEND_OPAQUE ? MF_CHECKED : MF_UNCHECKED);
         CheckMenuItem(hMenu, ID_VIEW_CONSTRUCTIONEDGES, view_constr ? MF_CHECKED : MF_UNCHECKED);
         CheckMenuItem(hMenu, ID_VIEW_DEBUGLOG, view_debug ? MF_CHECKED : MF_UNCHECKED);
         CheckMenuItem(hMenu, ID_DEBUG_BBOXES, debug_view_bbox ? MF_CHECKED : MF_UNCHECKED);

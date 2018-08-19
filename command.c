@@ -319,6 +319,33 @@ Command(int message, int wParam, int lParam)
             }
             break;
 
+        case ID_VIEW_BLEND_OPAQUE:
+            view_blend = BLEND_OPAQUE;
+            glBlendFunc(GL_ONE, GL_ZERO);                           // no blending
+            hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
+            CheckMenuItem(hMenu, ID_VIEW_BLEND_OPAQUE, MF_CHECKED);
+            CheckMenuItem(hMenu, ID_VIEW_BLEND_MULTIPLY, MF_UNCHECKED);
+            CheckMenuItem(hMenu, ID_VIEW_BLEND_ALPHA, MF_UNCHECKED);
+            break;
+
+        case ID_VIEW_BLEND_MULTIPLY:
+            view_blend = BLEND_MULTIPLY;
+            glBlendFunc(GL_ZERO, GL_SRC_COLOR);                     // multiply blending
+            hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
+            CheckMenuItem(hMenu, ID_VIEW_BLEND_OPAQUE, MF_UNCHECKED);
+            CheckMenuItem(hMenu, ID_VIEW_BLEND_MULTIPLY, MF_CHECKED);
+            CheckMenuItem(hMenu, ID_VIEW_BLEND_ALPHA, MF_UNCHECKED);
+            break;
+
+        case ID_VIEW_BLEND_ALPHA:
+            view_blend = BLEND_ALPHA;
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);      // alpha blending
+            hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
+            CheckMenuItem(hMenu, ID_VIEW_BLEND_OPAQUE, MF_UNCHECKED);
+            CheckMenuItem(hMenu, ID_VIEW_BLEND_MULTIPLY, MF_UNCHECKED);
+            CheckMenuItem(hMenu, ID_VIEW_BLEND_ALPHA, MF_CHECKED);
+            break;
+
         case ID_FILE_NEW:
         case ID_FILE_OPEN:
             if (drawing_changed)
