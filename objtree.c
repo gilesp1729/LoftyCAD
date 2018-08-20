@@ -163,7 +163,6 @@ Volume *vol_new(void)
     vol->hdr.type = OBJ_VOLUME;
     vol->hdr.ID = objid++;
     clear_bbox(&vol->bbox);
-    clear_bbox(&vol->old_bbox);
     vol->point_bucket = init_buckets();
 
     return vol;

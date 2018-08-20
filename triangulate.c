@@ -147,10 +147,8 @@ invalidate_all_view_lists(Object *parent, Object *obj, float dx, float dy, float
     case OBJ_VOLUME:
         vol = (Volume *)parent;
 
-        // Remember the pre-move bbox, as it affects which other vols get their surfaces updated.
         // Clear the current bbox so it gets updated with the view list.
         // Mark this volume as needing a new mesh update.
-        vol->old_bbox = vol->bbox;
         clear_bbox(&vol->bbox);
         vol->mesh_valid = FALSE;
 
@@ -230,76 +228,6 @@ gen_view_list_tree_volumes(Group *tree)
     }
     return rc;
 }
-
-#if 0
-// Build the adjacency list for a volume. (note: this may be slow, as it 
-// is part of an N**2 search...)
-// If the vol needs repairing, use union of old and new bboxes.
-void
-gen_adj_list_volume(Group *tree, Volume *vol)
-{
-    Object *obj;
-    Volume *v;
-    Bbox box;
-
-    for (obj = tree->obj_list; obj != NULL; obj = obj->next)
-    {
-        switch (obj->type)
-        {
-        case OBJ_VOLUME:
-            v = (Volume *)obj;
-            if (v == vol)
-                break;
-
-            // Vols to be repaired have often moved; the old and new bboxes both must
-            // be used to determine adjacency
-            if (!vol->surf_valid)
-                union_bbox(&vol->bbox, &vol->old_bbox, &box);
-            else
-                box = vol->bbox;
-            if (intersects_bbox(&box, &v->bbox))
-                link_single((Object *)v, &vol->adj_list);
-            break;
-
-        case OBJ_GROUP:
-            gen_adj_list_volume((Group *)obj, vol);
-            break;
-        }
-    }
-}
-
-// Build adjacency lists for all volumes (all those whose bboxes intersect).
-// If a vol needs repairing, place it and all of its adjacents in a repair 
-// list (weeding out dups)
-void
-gen_adj_list_tree_volumes(Group *tree, Object **rep_list)
-{
-    Object *obj, *o;
-    Volume *vol;
-
-    for (obj = tree->obj_list; obj != NULL; obj = obj->next)
-    {
-        switch (obj->type)
-        {
-        case OBJ_VOLUME:
-            vol = (Volume *)obj;
-            gen_adj_list_volume(&object_tree, vol);
-            if (!vol->surf_valid)
-            {
-                // Place this volume, and its adjacents, into the repair list. Weed out duplicates
-                link_single_checked((Object *)vol, rep_list);
-                for (o = vol->adj_list; o != NULL; o = o->next)
-                    link_single_checked(o->prev, rep_list);
-            }
-            break;
-
-        case OBJ_GROUP:
-            gen_adj_list_tree_volumes((Group *)obj, rep_list);
-            break;
-        }
-    }
-}
-#endif
 
 // Generate mesh for entire tree (a group or the object tree)
 void

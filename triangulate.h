@@ -26,8 +26,6 @@ void free_view_list_face(Face *face);
 BOOL gen_view_list_vol(Volume *vol);
 BOOL gen_view_list_tree_volumes(Group *tree);
 void gen_view_list_tree_surfaces(Group *tree, Group *parent_tree);
-//void gen_adj_list_tree_volumes(Group *tree, Object **rep_list);
-//void gen_adj_list_volume(Group *tree, Volume *vol);
 
 // Clip a view list (clipviewlist.c)
 void init_clip_tess(void);

@@ -37,8 +37,6 @@ BOOL normal3(Point *b, Point *a, Point *c, Plane *norm);
 float angle3(Point *b, Point *a, Point *c, Plane *n);
 void mat_mult_by_row(float *m, float *v, float *res);
 void mat_mult_by_col_d(double *m, double *v, double *res);
-void mat_mult(float *m1, float *m2, float *res);
-
 
 float dot(float x0, float y0, float z0, float x1, float y1, float z1);
 float pdot(Point *p1, Point *p2);

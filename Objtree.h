@@ -222,7 +222,6 @@ typedef struct Volume
 {
     struct Object   hdr;            // Header
     struct Bbox     bbox;           // Bounding box in 3D
-    struct Bbox     old_bbox;       // Bbox prior to any move (required to update damaged surfaces)
     float           extrude_height; // Extrude height. If negative, it's a hole (face normals face inwards)
     struct Point    ***point_bucket;  // Bucket structure of Points whose coordinates are copied from 
                                     // child faces' view lists. Allow sharing points when importing
