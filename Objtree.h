@@ -17,6 +17,7 @@ typedef enum
     OBJ_FACE,
     OBJ_VOLUME,
     OBJ_GROUP,
+    OBJ_TRANSFORM,
     OBJ_MAX         // must be highest
 } OBJECT;
 
@@ -206,22 +207,56 @@ typedef struct Face
     int             n_alloc2D;      // Alloced size of 2D view list (in units of sizeof(Point2D))
 } Face;
 
-// Bounding box for a volume
+// Bounding box for a volume or a group
 typedef struct Bbox
 {
-    float xmin;                     // Min and max coordinates for the volume
-    float xmax;
-    float ymin;
-    float ymax;
-    float zmin;
-    float zmax;
+    float           xmin;          // Min and max coordinates for the volume
+    float           xmax;
+    float           ymin;
+    float           ymax;
+    float           zmin;
+    float           zmax;
+    float           xc;            // Centre of bbox, calculated when required
+    float           yc;
+    float           zc;
 } Bbox;
+
+// Flags that characterise transforms. They are a bitfield. If it is zero,
+// the transform is unitary and does not affect the result, so can be skipped.
+typedef enum
+{
+    XF_SCALE_NONUNITY = 1,          // There is a non-unity scale to be applied.
+    XF_ROTATE_X = 2,                // There is a rotation about the X axis.
+    XF_ROTATE_Y = 4,                // There is a rotation about the Y axis.
+    XF_ROTATE_Z = 8                 // There is a rotation about the Z axis.
+} TRANSFLAGS;
+
+// Transform for a volume or a group. In this order:
+// subtract centre, do scaling, do rotation, add back centre.
+typedef struct Transform
+{
+    struct Object   hdr;            // Header, to allow list insertion
+    float           xc;             // Centre of transform, copied from centre of vol/group bbox
+    float           yc;
+    float           zc;
+    float           sx;             // Scale factors. Scaling is applied first.
+    float           sy;
+    float           sz;
+    BOOL            enable_scale;   // TRUE to allow the scaling to be applied
+    float           rx;             // Rotation angles, in degrees, about axes. Rotations are applied second.
+    float           ry;
+    float           rz;
+    BOOL            enable_rotation; // TRUE to allow the rotation to be applied
+    float           mat[9];         // Net matrix from scales and rotates
+    TRANSFLAGS      flags;          // Transform flag bits, that allow optimisation of the speed of application.
+} Transform;
 
 // Volume struct. This is the usual top-level 3D object.
 typedef struct Volume
 {
     struct Object   hdr;            // Header
-    struct Bbox     bbox;           // Bounding box in 3D
+    struct Bbox     bbox;           // Bounding box for the volume in 3D, based on untransformed points
+    struct Transform *xform;        // Transform to be applied to volume
     float           extrude_height; // Extrude height. If negative, it's a hole (face normals face inwards)
     struct Point    ***point_bucket;  // Bucket structure of Points whose coordinates are copied from 
                                     // child faces' view lists. Allow sharing points when importing
@@ -242,6 +277,8 @@ typedef struct Group
     BOOL            mesh_merged;    // If TRUE, the mesh has been merged to its parent group mesh.
     BOOL            mesh_complete;  // If TRUE, all volumes have been completely merged to this mesh.
                                     // (otherwise, some will need to be added separately to the output)
+    struct Bbox     bbox;           // Bounding box for the group in 3D, based on bboxes of volumes in the group
+    struct Transform *xform;        // Transform to be applied to group
     struct ListHead obj_list;       // Doubly linked list of objects making up the group
 } Group;
 
@@ -271,6 +308,7 @@ Edge *edge_new(EDGE edge_type);
 Face *face_new(FACE face_type, Plane norm);
 Volume *vol_new(void);
 Group *group_new(void);
+Transform *xform_new(void);
 Face *make_flat_face(Edge *edge);
 
 // Link and delink from doubly linked lists (list.c)

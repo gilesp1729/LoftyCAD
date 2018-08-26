@@ -104,6 +104,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
     BezierEdge *be;
     Point *p;
     Object *o;
+    Volume *vol;
     Group *group;
     float dx, dy, dz;
     BOOL push_name, locked;
@@ -131,6 +132,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         p = (Point *)obj;
         if ((selected || highlighted) && !push_name)
             return;
+        // TODO XFORM - transform these points
 
         glPushName(push_name ? (GLuint)obj : 0);
         if (selected || highlighted)
@@ -222,6 +224,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             color(OBJ_EDGE, edge->type & EDGE_CONSTRUCTION, selected, highlighted, locked);
             glVertex3f(edge->endpoints[0]->x, edge->endpoints[0]->y, edge->endpoints[0]->z);
             glVertex3f(edge->endpoints[1]->x, edge->endpoints[1]->y, edge->endpoints[1]->z);
+            // TODO XFORM - transform these points
             glEnd();
             glPopName();
             if (draw_components)
@@ -238,6 +241,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             color(OBJ_EDGE, edge->type & EDGE_CONSTRUCTION, selected, highlighted, locked);
             for (p = (Point *)edge->view_list.head; p != NULL; p = (Point *)p->hdr.next)
                 glVertex3f(p->x, p->y, p->z);
+            // TODO XFORM - transform these points
 
             glEnd();
             glPopName();
@@ -256,6 +260,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             color(OBJ_EDGE, edge->type & EDGE_CONSTRUCTION, selected, highlighted, locked);
             for (p = (Point *)edge->view_list.head; p != NULL; p = (Point *)p->hdr.next)
                 glVertex3f(p->x, p->y, p->z);
+            // TODO XFORM - transform these points
 
             glEnd();
             glPopName();
@@ -293,19 +298,23 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         break;
 
     case OBJ_VOLUME:
-        if (view_rendered || view_clipped_faces)
+        vol = (Volume *)obj;
+        if (view_rendered)
         {
             // Draw from the triangulated mesh for the volume.
-            ASSERT(((Volume *)obj)->mesh_valid, "Mesh is not up to date");
+            ASSERT(vol->mesh_valid, "Mesh is not up to date");
             color(OBJ_FACE, FALSE, selected, highlighted, FALSE);
-            mesh_foreach_face_coords(((Volume *)obj)->mesh, draw_triangle, NULL);
+            mesh_foreach_face_coords(vol->mesh, draw_triangle, NULL);
         }
-        
-        if (!view_rendered)
+        else        
         {
             // Draw individual faces
-            for (face = (Face *)((Volume *)obj)->faces.head; face != NULL; face = (Face *)face->hdr.next)
+            if (vol->xform != NULL)
+                link_tail((Object *)vol->xform, &xlist);
+            for (face = (Face *)vol->faces.head; face != NULL; face = (Face *)face->hdr.next)
                 draw_object((Object *)face, (pres & ~DRAW_WITH_DIMENSIONS), parent_lock);
+            if (vol->xform != NULL)
+                delink((Object *)vol->xform, &xlist);
         }
         break;
 
@@ -313,7 +322,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         // Draw from the triangulated mesh, and then draw any remaining
         // volume meshes that were not completely merged.
         group = (Group *)obj;
-        if (view_rendered || view_clipped_faces)
+        if (view_rendered)
         {
             // The object tree is a group, but it is never merged.
             if (group->mesh != NULL && group->mesh_valid && !group->mesh_merged)
@@ -335,12 +344,16 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
                 }
             }
         }
-
-        // Not a rendered view - just draw the thing no matter what.
-        if (!view_rendered)
+        else
         {
+            // Not a rendered view - just draw the thing no matter what.
+
+            if (vol->xform != NULL)
+                link_tail((Object *)group->xform, &xlist);
             for (o = group->obj_list.head; o != NULL; o = o->next)
                 draw_object(o, (pres & ~DRAW_WITH_DIMENSIONS), o->lock);
+            if (vol->xform != NULL)
+                delink((Object *)group->xform, &xlist);
         }
         break;
     }
@@ -1254,11 +1267,14 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
         if (app_state >= STATE_STARTING_EDGE)
             pres |= DRAW_HIGHLIGHT_LOCKED;
         draw_object(highlight_obj, pres, parent != NULL ? parent->lock : LOCK_NONE);
+
+#ifdef DEBUG_HIGHLIGHTING_ENABLED
+        // The bounding box for a volume, or the parent volume of any highlighted component.
+        // TODO: this will not work for groups, as find_parent_object won't return them.
         if (app_state == STATE_NONE && parent != NULL && parent->type == OBJ_VOLUME)
         {
             Volume *vol = (Volume *)parent;
 
-#ifdef DEBUG_HIGHLIGHTING_ENABLED
             if (debug_view_bbox)
             {
                 Bbox box = vol->bbox;
@@ -1293,12 +1309,59 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                 glVertex3f(box.xmax, box.ymax, box.zmin);
                 glVertex3f(box.xmax, box.ymax, box.zmax);
                 glEnd();
+                glPopName();
             }
-#endif
         }
+
+        // Normals for all the faces in a volume.
+        if (app_state == STATE_NONE && highlight_obj != NULL && highlight_obj->type == OBJ_VOLUME)
+        {
+            Volume *vol = (Volume *)highlight_obj;
+
+            if (debug_view_normals)
+            {
+                Face *f;
+
+                for (f = (Face *)vol->faces.head; f != NULL; f = (Face *)f->hdr.next)
+                {
+                    if (IS_FLAT(f))
+                    {
+                        Plane *n = &f->normal;
+
+                        glPushName(0);
+                        glColor3d(1.0, 0.4, 0.4);
+                        glBegin(GL_LINES);
+                        glVertex3f(n->refpt.x, n->refpt.y, n->refpt.z);
+                        glVertex3f(n->refpt.x + n->A, n->refpt.y + n->B, n->refpt.z + n->C);
+                        glEnd();
+                        glPopName();
+                    }
+                }
+            }
+        }
+
+        // The normal for a single highlighted face.
+        if (app_state == STATE_NONE && highlight_obj != NULL && highlight_obj->type == OBJ_FACE)
+        {
+            Face *f = (Face *)highlight_obj;
+
+            if (debug_view_normals && IS_FLAT(f))
+            {
+                Plane *n = &f->normal;
+
+                glPushName(0);
+                glColor3d(1.0, 0.4, 0.4);
+                glBegin(GL_LINES);
+                glVertex3f(n->refpt.x, n->refpt.y, n->refpt.z);
+                glVertex3f(n->refpt.x + n->A, n->refpt.y + n->B, n->refpt.z + n->C);
+                glEnd();
+                glPopName();
+            }
+        }
+#endif
     }
     
-    if(!picking)
+    if (!picking)
     {
         // Draw axes XYZ in RGB. 
         glPushName(0);

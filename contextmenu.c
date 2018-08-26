@@ -727,3 +727,37 @@ right_click(AUX_EVENTREC *event)
         update_drawing();
     }
 }
+
+// Transform dialog procedure.
+int WINAPI
+transform_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    char buf[16];
+
+    switch (msg)
+    {
+    case WM_INITDIALOG:
+
+
+
+
+        break;
+
+    case WM_COMMAND:
+        switch (LOWORD(wParam))
+        {
+        case IDOK:
+
+
+
+
+            EndDialog(hWnd, 1);
+            break;
+
+        case IDCANCEL:
+            EndDialog(hWnd, 0);
+        }
+    }
+
+    return 0;
+}

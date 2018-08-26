@@ -175,7 +175,20 @@ Group *group_new(void)
     grp->hdr.type = OBJ_GROUP;
     grp->hdr.ID = objid++;
     grp->hdr.lock = LOCK_FACES;
+    clear_bbox(&grp->bbox);
     return grp;
+}
+
+Transform *xform_new(void)
+{
+    Transform *xform = calloc(1, sizeof(Transform));
+
+    xform->hdr.type = OBJ_TRANSFORM;
+    xform->hdr.ID = 0;  // these do not use object ID's
+    xform->sx = 1.0f;   // set up a unity transform with no rotation. Nothing is enabled.
+    xform->sy = 1.0f;
+    xform->sz = 1.0f;
+    return xform;
 }
 
 // Test if an object is in the object tree at the top level.

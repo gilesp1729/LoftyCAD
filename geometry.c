@@ -568,3 +568,135 @@ new_length(Point *p0, Point *p1, float len)
     p1->z = p0->z + v.z * len;
 }
 
+// set 3x3 to identity
+void
+mat_set_ident_3x3(float *mat)
+{
+    mat[0] = 1.0f;
+    mat[1] = 0.0f;
+    mat[2] = 0.0f;
+    mat[3] = 0.0f;
+    mat[4] = 1.0f;
+    mat[5] = 0.0f;
+    mat[6] = 0.0f;
+    mat[7] = 0.0f;
+    mat[8] = 1.0f;
+}
+
+// copy 3x3
+void
+mat_copy_3x3(float *from, float *to)
+{
+    int i;
+    for (i = 0; i < 9; i++)
+        to[i] = from[i];
+}
+
+// multiply 3x3 on left by m, put result back into mat: mat = m * mat
+void
+mat_mult_3x3(float *m, float *mat)
+{
+    float res[9];
+
+    res[0] = m[0] * mat[0] + m[1] * mat[3] + m[2] * mat[6];
+    res[1] = m[0] * mat[1] + m[1] * mat[4] + m[2] * mat[7];
+    res[2] = m[0] * mat[2] + m[1] * mat[5] + m[2] * mat[8];
+
+    res[3] = m[3] * mat[0] + m[4] * mat[3] + m[5] * mat[6];
+    res[4] = m[3] * mat[1] + m[4] * mat[4] + m[5] * mat[7];
+    res[5] = m[3] * mat[2] + m[4] * mat[5] + m[5] * mat[8];
+
+    res[6] = m[6] * mat[0] + m[7] * mat[3] + m[8] * mat[6];
+    res[7] = m[6] * mat[1] + m[7] * mat[4] + m[8] * mat[7];
+    res[8] = m[6] * mat[2] + m[7] * mat[5] + m[8] * mat[8];
+
+    mat_copy_3x3(res, mat);
+}
+
+// Evaluate a transform matrix and characterise it.
+void
+evaluate_transform(Transform *xform)
+{
+    float scale[9], rotate_x[9], rotate_y[9], rotate_z[9];
+
+    // Start with the identity
+    mat_set_ident_3x3(scale);
+    mat_set_ident_3x3(rotate_x);
+    mat_set_ident_3x3(rotate_y);
+    mat_set_ident_3x3(rotate_z);
+    mat_set_ident_3x3(xform->mat);
+
+    xform->flags = 0;
+    if (xform->sx != 1.0f || xform->sy != 1.0f || xform->sz != 1.0f)
+    {
+        xform->flags |= XF_SCALE_NONUNITY;
+        scale[0] = xform->sx;
+        scale[5] = xform->sy;
+        scale[8] = xform->sz;
+        if (xform->enable_scale)
+            mat_copy_3x3(scale, xform->mat);
+    }
+
+    if (xform->rx != 0.0f)
+    {
+        float cosrx = cosf(xform->rx / RAD);
+        float sinrx = sinf(xform->rx / RAD);
+
+        xform->flags |= XF_ROTATE_X;
+        rotate_x[4] = cosrx;
+        rotate_x[5] = -sinrx;
+        rotate_x[7] = sinrx;
+        rotate_x[8] = cosrx;
+        if (xform->enable_rotation)
+            mat_mult_3x3(rotate_x, xform->mat);
+    }
+
+    if (xform->ry != 0.0f)
+    {
+        float cosry = cosf(xform->ry / RAD);
+        float sinry = sinf(xform->ry / RAD);
+
+        xform->flags |= XF_ROTATE_Y;
+        rotate_y[0] = cosry;
+        rotate_y[2] = sinry;
+        rotate_y[6] = -sinry;
+        rotate_y[8] = cosry;
+        if (xform->enable_rotation)
+            mat_mult_3x3(rotate_y, xform->mat);
+    }
+
+    if (xform->rz != 0.0f)
+    {
+        float cosrz = cosf(xform->rz / RAD);
+        float sinrz = sinf(xform->rz / RAD);
+
+        xform->flags |= XF_ROTATE_Z;
+        rotate_z[0] = cosrz;
+        rotate_z[1] = -sinrz;
+        rotate_z[3] = sinrz;
+        rotate_z[4] = cosrz;
+        if (xform->enable_rotation)
+            mat_mult_3x3(rotate_z, xform->mat);
+    }
+}
+
+// Apply a transform to an XYZ coordinate. It must have already been evaluated.
+void
+transform_xyz(Transform *xform, float x, float y, float z, float *tx, float *ty, float *tz)
+{
+}
+
+// Apply a list of transforms to an XYZ coordinate.
+void
+transform_list_xyz(ListHead *xform_list, float x, float y, float z, float *tx, float *ty, float *tz)
+{
+    Transform *xf;
+
+    for (xf = (Transform *)xform_list->head; xf != NULL; xf = (Transform *)xf->hdr.next)
+    {
+        transform_xyz(xf, x, y, z, tx, ty, tz);
+        x = *tx;
+        y = *ty;
+        z = *tz;
+    }
+}

@@ -199,6 +199,7 @@ gen_view_list_tree_volumes(Group *tree)
     Object *obj;
     Volume *vol;
     BOOL rc = FALSE;
+    Bbox *box;
 
     // generate all view lists for all volumes, to make sure they are all up to date
     for (obj = tree->obj_list.head; obj != NULL; obj = obj->next)
@@ -209,11 +210,20 @@ gen_view_list_tree_volumes(Group *tree)
             vol = (Volume * )obj;
             if (gen_view_list_vol(vol))
                 rc = TRUE;
+
+            // update the group bbox with the volume bbox
+            union_bbox(&vol->bbox, &tree->bbox, &tree->bbox);
             break;
 
         case OBJ_GROUP:
             if (gen_view_list_tree_volumes((Group *)obj))
                 rc = TRUE;
+
+            // update the group bbox centre
+            box = &((Group *)obj)->bbox;
+            box->xc = (box->xmin + box->xmax) / 2;
+            box->yc = (box->ymin + box->ymax) / 2;
+            box->zc = (box->zmin + box->zmax) / 2;
             break;
         }
     }
@@ -322,6 +332,7 @@ BOOL
 gen_view_list_vol(Volume *vol)
 {
     Face *f;
+    Bbox *box = &vol->bbox;
 
     for (f = (Face *)vol->faces.head; f != NULL; f = (Face *)f->hdr.next)
     {
@@ -346,12 +357,18 @@ gen_view_list_vol(Volume *vol)
         mesh_destroy(vol->mesh);
     vol->mesh = mesh_new();
 
-    // generate view lists for all the faces, and update the mesh
+    // generate view lists for all the faces
     for (f = (Face *)vol->faces.head; f != NULL; f = (Face *)f->hdr.next)
-    {
         gen_view_list_face(f);
+
+    // update the volume bbox centre
+    box->xc = (box->xmin + box->xmax) / 2;
+    box->yc = (box->ymin + box->ymax) / 2;
+    box->zc = (box->zmin + box->zmax) / 2;
+
+    // update the triangle mesh for the volume
+    for (f = (Face *)vol->faces.head; f != NULL; f = (Face *)f->hdr.next)
         gen_view_list_surface(f);
-    }
 
     vol->mesh_valid = TRUE;
     return TRUE;
@@ -387,9 +404,9 @@ gen_view_list_face(Face *face)
     p = point_newp(face->initial_point);
     p->hdr.ID = 0;
     objid--;        // prevent explosion of objid's
-    link_tail((Object *)p, list);
     if (face->vol != NULL)
         expand_bbox(&face->vol->bbox, p);
+    link_tail((Object *)p, list);
 
 #if DEBUG_VIEW_LIST_RECT_FACE
     sprintf_s(buf, 256, "Face %d IP %d\r\n", face->hdr.ID, face->initial_point->hdr.ID);
@@ -431,9 +448,9 @@ gen_view_list_face(Face *face)
             p = point_newp(last_point);
             p->hdr.ID = 0;
             objid--;
-            link_tail((Object *)p, list);
             if (face->vol != NULL)
                 expand_bbox(&face->vol->bbox, p);
+            link_tail((Object *)p, list);
             break;
 
         case EDGE_ARC:
@@ -453,9 +470,9 @@ gen_view_list_face(Face *face)
                     p = point_newp(v);
                     p->hdr.ID = 0;
                     objid--;
-                    link_tail((Object *)p, list);
                     if (face->vol != NULL)
                         expand_bbox(&face->vol->bbox, p);
+                    link_tail((Object *)p, list);
                 }
             }
             else
@@ -469,18 +486,18 @@ gen_view_list_face(Face *face)
                     p = point_newp(v);
                     p->hdr.ID = 0;
                     objid--;
-                    link_tail((Object *)p, list);
                     if (face->vol != NULL)
                         expand_bbox(&face->vol->bbox, p);
+                    link_tail((Object *)p, list);
                 }
             }
 
             p = point_newp(last_point);
             p->hdr.ID = 0;
             objid--;
-            link_tail((Object *)p, list);
             if (face->vol != NULL)
                 expand_bbox(&face->vol->bbox, p);
+            link_tail((Object *)p, list);
             break;
         }
     }
@@ -920,6 +937,7 @@ tess_vertex(GLUtesselator *tess, Point *p)
 {
     double coords[3] = { p->x, p->y, p->z };
 
+    // TODO XFORM - transform these points. Get the xform list in here somehow
     gluTessVertex(tess, coords, p);
 }
 

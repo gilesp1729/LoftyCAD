@@ -153,8 +153,7 @@ int max_generation = 0;
 
 // Debugging options
 BOOL debug_view_bbox = FALSE;
-// TRUE to display clipping of faces to volumes
-BOOL view_clipped_faces = FALSE;
+BOOL debug_view_normals = FALSE;
 
 // Size and span of point-searching buckets used in coordinate matching.
 // Chosen so that there are 40 buckets covering +/-halfsize, in X and Y (we don't bucket on Z)
@@ -1469,6 +1468,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
         CheckMenuItem(hMenu, ID_VIEW_CONSTRUCTIONEDGES, view_constr ? MF_CHECKED : MF_UNCHECKED);
         CheckMenuItem(hMenu, ID_VIEW_DEBUGLOG, view_debug ? MF_CHECKED : MF_UNCHECKED);
         CheckMenuItem(hMenu, ID_DEBUG_BBOXES, debug_view_bbox ? MF_CHECKED : MF_UNCHECKED);
+        CheckMenuItem(hMenu, ID_DEBUG_NORMALS, debug_view_normals ? MF_CHECKED : MF_UNCHECKED);
 #ifndef DEBUG_HIGHLIGHTING_ENABLED
         EnableMenuItem(hMenu, ID_DEBUG_BBOXES, MF_GRAYED);
         EnableMenuItem(hMenu, ID_DEBUG_ADJACENT, MF_GRAYED);

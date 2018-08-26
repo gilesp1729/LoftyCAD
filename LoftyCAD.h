@@ -166,7 +166,7 @@ extern BlendMode view_blend;
 
 // Debug externs
 extern BOOL debug_view_bbox;
-extern BOOL view_clipped_faces;
+extern BOOL debug_view_normals;
 
 // Some forwards
 Object * Pick(GLint x_pick, GLint y_pick, BOOL force_pick);

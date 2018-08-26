@@ -188,20 +188,6 @@ Command(int message, int wParam, int lParam)
             EnableWindow(GetDlgItem(hWndToolbar, IDB_CONST_CIRCLE), view_constr);
             break;
 
-        case ID_VIEW_CLIPPEDFACE:
-            hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
-            if (view_clipped_faces)
-            {
-                view_clipped_faces = FALSE;
-                CheckMenuItem(hMenu, ID_VIEW_CLIPPEDFACE, MF_UNCHECKED);
-            }
-            else
-            {
-                view_clipped_faces = TRUE;
-                CheckMenuItem(hMenu, ID_VIEW_CLIPPEDFACE, MF_CHECKED);
-            }
-            break;
-
         case ID_VIEW_RENDEREDVIEW:
             hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
             if (view_rendered)
@@ -241,6 +227,20 @@ Command(int message, int wParam, int lParam)
             {
                 debug_view_bbox = TRUE;
                 CheckMenuItem(hMenu, ID_DEBUG_BBOXES, MF_CHECKED);
+            }
+            break;
+
+        case ID_DEBUG_NORMALS:
+            hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
+            if (debug_view_normals)
+            {
+                debug_view_normals = FALSE;
+                CheckMenuItem(hMenu, ID_DEBUG_NORMALS, MF_UNCHECKED);
+            }
+            else
+            {
+                debug_view_normals = TRUE;
+                CheckMenuItem(hMenu, ID_DEBUG_NORMALS, MF_CHECKED);
             }
             break;
 #endif
