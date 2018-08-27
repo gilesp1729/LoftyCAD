@@ -248,6 +248,7 @@ typedef struct Transform
     float           rz;
     BOOL            enable_rotation; // TRUE to allow the rotation to be applied
     float           mat[9];         // Net matrix from scales and rotates
+    float           inv_mat[9];     // Inverse matrix
     TRANSFLAGS      flags;          // Transform flag bits, that allow optimisation of the speed of application.
 } Transform;
 

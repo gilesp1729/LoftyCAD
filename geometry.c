@@ -613,80 +613,148 @@ mat_mult_3x3(float *m, float *mat)
     mat_copy_3x3(res, mat);
 }
 
-// Evaluate a transform matrix and characterise it.
+// Evaluate a transform matrix and characterise it. Build both forward and inverse matrices.
 void
 evaluate_transform(Transform *xform)
 {
     float scale[9], rotate_x[9], rotate_y[9], rotate_z[9];
+    float inv_scale[9], inv_rotate_x[9], inv_rotate_y[9], inv_rotate_z[9];
 
     // Start with the identity
     mat_set_ident_3x3(scale);
     mat_set_ident_3x3(rotate_x);
     mat_set_ident_3x3(rotate_y);
     mat_set_ident_3x3(rotate_z);
+    mat_set_ident_3x3(inv_scale);
+    mat_set_ident_3x3(inv_rotate_x);
+    mat_set_ident_3x3(inv_rotate_y);
+    mat_set_ident_3x3(inv_rotate_z);
     mat_set_ident_3x3(xform->mat);
+    mat_set_ident_3x3(xform->inv_mat);
 
     xform->flags = 0;
-    if (xform->sx != 1.0f || xform->sy != 1.0f || xform->sz != 1.0f)
+    if (xform->enable_scale)
     {
-        xform->flags |= XF_SCALE_NONUNITY;
-        scale[0] = xform->sx;
-        scale[5] = xform->sy;
-        scale[8] = xform->sz;
-        if (xform->enable_scale)
-            mat_copy_3x3(scale, xform->mat);
+        if (xform->sx != 1.0f || xform->sy != 1.0f || xform->sz != 1.0f)
+        {
+            xform->flags |= XF_SCALE_NONUNITY;
+            scale[0] = xform->sx;
+            scale[5] = xform->sy;
+            scale[8] = xform->sz;
+            inv_scale[0] = 1.0f / xform->sx;
+            inv_scale[5] = 1.0f / xform->sy;
+            inv_scale[8] = 1.0f / xform->sz;
+        }
     }
 
-    if (xform->rx != 0.0f)
+    if (xform->enable_rotation)
     {
-        float cosrx = cosf(xform->rx / RAD);
-        float sinrx = sinf(xform->rx / RAD);
+        if (xform->rx != 0.0f)
+        {
+            float cosrx = cosf(xform->rx / RADF);
+            float sinrx = sinf(xform->rx / RADF);
 
-        xform->flags |= XF_ROTATE_X;
-        rotate_x[4] = cosrx;
-        rotate_x[5] = -sinrx;
-        rotate_x[7] = sinrx;
-        rotate_x[8] = cosrx;
-        if (xform->enable_rotation)
-            mat_mult_3x3(rotate_x, xform->mat);
+            xform->flags |= XF_ROTATE_X;
+            rotate_x[4] = cosrx;
+            rotate_x[5] = -sinrx;
+            rotate_x[7] = sinrx;
+            rotate_x[8] = cosrx;
+            inv_rotate_x[4] = cosrx;
+            inv_rotate_x[5] = sinrx;
+            inv_rotate_x[7] = -sinrx;
+            inv_rotate_x[8] = cosrx;
+        }
+
+        if (xform->ry != 0.0f)
+        {
+            float cosry = cosf(xform->ry / RADF);
+            float sinry = sinf(xform->ry / RADF);
+
+            xform->flags |= XF_ROTATE_Y;
+            rotate_y[0] = cosry;
+            rotate_y[2] = sinry;
+            rotate_y[6] = -sinry;
+            rotate_y[8] = cosry;
+            inv_rotate_y[0] = cosry;
+            inv_rotate_y[2] = -sinry;
+            inv_rotate_y[6] = sinry;
+            inv_rotate_y[8] = cosry;
+        }
+
+        if (xform->rz != 0.0f)
+        {
+            float cosrz = cosf(xform->rz / RADF);
+            float sinrz = sinf(xform->rz / RADF);
+
+            xform->flags |= XF_ROTATE_Z;
+            rotate_z[0] = cosrz;
+            rotate_z[1] = -sinrz;
+            rotate_z[3] = sinrz;
+            rotate_z[4] = cosrz;
+            inv_rotate_z[0] = cosrz;
+            inv_rotate_z[1] = sinrz;
+            inv_rotate_z[3] = -sinrz;
+            inv_rotate_z[4] = cosrz;
+        }
     }
 
-    if (xform->ry != 0.0f)
-    {
-        float cosry = cosf(xform->ry / RAD);
-        float sinry = sinf(xform->ry / RAD);
+    // Forward transform = RzRyRxS
+    if (xform->flags & XF_SCALE_NONUNITY)
+        mat_copy_3x3(scale, xform->mat);
+    if (xform->flags & XF_ROTATE_X)
+        mat_mult_3x3(rotate_x, xform->mat);
+    if (xform->flags & XF_ROTATE_Y)
+        mat_mult_3x3(rotate_y, xform->mat);
+    if (xform->flags & XF_ROTATE_Z)
+        mat_mult_3x3(rotate_z, xform->mat);
 
-        xform->flags |= XF_ROTATE_Y;
-        rotate_y[0] = cosry;
-        rotate_y[2] = sinry;
-        rotate_y[6] = -sinry;
-        rotate_y[8] = cosry;
-        if (xform->enable_rotation)
-            mat_mult_3x3(rotate_y, xform->mat);
-    }
-
-    if (xform->rz != 0.0f)
-    {
-        float cosrz = cosf(xform->rz / RAD);
-        float sinrz = sinf(xform->rz / RAD);
-
-        xform->flags |= XF_ROTATE_Z;
-        rotate_z[0] = cosrz;
-        rotate_z[1] = -sinrz;
-        rotate_z[3] = sinrz;
-        rotate_z[4] = cosrz;
-        if (xform->enable_rotation)
-            mat_mult_3x3(rotate_z, xform->mat);
-    }
+    // Inverse transform is the same, but multiply the inverse matrices in the reverse order
+    if (xform->flags & XF_ROTATE_Z)
+        mat_copy_3x3(inv_rotate_z, xform->inv_mat);
+    if (xform->flags & XF_ROTATE_Y)
+        mat_mult_3x3(inv_rotate_y, xform->inv_mat);
+    if (xform->flags & XF_ROTATE_X)
+        mat_mult_3x3(inv_rotate_x, xform->inv_mat);
+    if (xform->flags & XF_SCALE_NONUNITY)
+        mat_mult_3x3(inv_scale, xform->inv_mat);
 }
 
 // Apply a transform to an XYZ coordinate. It must have already been evaluated.
 void
 transform_xyz(Transform *xform, float x, float y, float z, float *tx, float *ty, float *tz)
 {
+    float *mat;
+
+    if (xform->flags == 0)
+        return;                             // Nothing to see here
+
+    x -= xform->xc;                         // Bring xform centre to origin
+    y -= xform->yc;
+    z -= xform->zc;
+    mat = xform->mat;
+
+    // Optimise some common cases to save multiply-adds.
+    switch (xform->flags)
+    {
+    case XF_SCALE_NONUNITY:                 // Just a scale
+        *tx = (x * mat[0]) + xform->xc;
+        *ty = (y * mat[4]) + xform->yc;
+        *tz = (z * mat[8]) + xform->zc;
+        break;
+
+    case XF_ROTATE_X:                       // Simple rotations about a single axis: 4 multiply-adds
+        break;
+
+    // Add these in if found worth doing.
+    //case XF_ROTATE_X | XF_SCALE_NONUNITY:   // Simple rotations with scale: 5 multiply-adds
+
+    default:                                // Do a general 3x3 multiply by vector
+        break;
+    }
 }
 
-// Apply a list of transforms to an XYZ coordinate.
+// Apply a list of transforms to an XYZ coordinate. We have to do them one at a time
+// since they will have different centres.
 void
 transform_list_xyz(ListHead *xform_list, float x, float y, float z, float *tx, float *ty, float *tz)
 {

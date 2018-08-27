@@ -54,8 +54,11 @@ clip_tess_write(void * polygon_data)
             }
             else
             {
-                // TODO XFORM - transform these coords before adding vertex to mesh. Clip_tess_pts is untransformed.
-                mesh_add_vertex(mesh, clip_tess_points[i].x, clip_tess_points[i].y, clip_tess_points[i].z, &v[i]);
+                float tx, ty, tz;
+
+                // Transform these coords before adding vertex to mesh. Clip_tess_pts is untransformed.
+                transform_list_xyz(&xform_list, clip_tess_points[i].x, clip_tess_points[i].y, clip_tess_points[i].z, &tx, &ty, &tz);
+                mesh_add_vertex(mesh, tx, ty, tz, &v[i]);
                 clip_tess_points[i].vi = v[i];
 
                 // Copy the point with its coordinates, and stash it in the point bucket.

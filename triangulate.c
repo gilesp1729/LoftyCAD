@@ -931,13 +931,18 @@ void render_errorData(GLenum errno, void * polygon_data)
     ASSERT(FALSE, "tesselator error");
 }
 
-// Shortcut to pass a Point to gluTessVertex, both as coords and the vertex data pointer
+// Shortcut to pass a Point to gluTessVertex, both as coords and the vertex data pointer.
+// Transform the point along the way
 void
 tess_vertex(GLUtesselator *tess, Point *p)
 {
-    double coords[3] = { p->x, p->y, p->z };
+    double coords[3];
+    float tx, ty, tz;
 
-    // TODO XFORM - transform these points. Get the xform list in here somehow
+    transform_list_xyz(&xform_list, p->x, p->y, p->z, &tx, &ty, &tz);
+    coords[0] = tx;
+    coords[1] = ty;
+    coords[2] = tz;
     gluTessVertex(tess, coords, p);
 }
 

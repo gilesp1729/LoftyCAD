@@ -63,5 +63,6 @@ BOOL read_stl_to_group(Group *group, char *filename);
 BOOL read_off_to_group(Group *group, char *filename);
 
 extern GLUtesselator *rtess;
+extern ListHead xform_list;
 
 #endif // __TRI_H__

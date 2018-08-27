@@ -5,6 +5,7 @@
 
 #define PI 3.1415926
 #define RAD 57.29577
+#define RADF 57.29577f
 
 // A large impossible coordinate value
 #define LARGE_COORD 999999

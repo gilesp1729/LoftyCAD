@@ -9,8 +9,11 @@ static int num_moves = 0;
 
 static Plane temp_plane;
 
-// Current drawn number (increments for every draw, eventualy rolls over - how soon? TODO
+// Current drawn number (increments for every draw, eventualy rolls over - how soon? TODO)
 static unsigned int curr_drawn_no = 0;
+
+// List of transforms to be applied to point coordinates
+ListHead xform_list = { NULL, NULL };
 
 // Some standard colors sent to GL.
 void
@@ -92,6 +95,16 @@ draw_triangle(void *arg, float x[3], float y[3], float z[3])
     glEnd();
 }
 
+// Send a coordinate to glVertex3f, after transforming it by the transforms in the list.
+void
+glVertex3_trans(float x, float y, float z)
+{
+    float tx, ty, tz;
+
+    transform_list_xyz(&xform_list, x, y, z, &tx, &ty, &tz);
+    glVertex3f(tx, ty, tz);
+}
+
 // Draw any object. Control select/highlight colors per object type, how the parent is locked,
 // and whether to draw components or just the top-level object, among other things.
 void
@@ -132,7 +145,6 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         p = (Point *)obj;
         if ((selected || highlighted) && !push_name)
             return;
-        // TODO XFORM - transform these points
 
         glPushName(push_name ? (GLuint)obj : 0);
         if (selected || highlighted)
@@ -147,30 +159,30 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             case PLANE_MINUS_XY:
                 dx = 1;         // TODO - scale this unit so it is not too large when zoomed in
                 dy = 1;
-                glVertex3f(p->x - dx, p->y - dy, p->z);
-                glVertex3f(p->x + dx, p->y - dy, p->z);
-                glVertex3f(p->x + dx, p->y + dy, p->z);
-                glVertex3f(p->x - dx, p->y + dy, p->z);
+                glVertex3_trans(p->x - dx, p->y - dy, p->z);
+                glVertex3_trans(p->x + dx, p->y - dy, p->z);
+                glVertex3_trans(p->x + dx, p->y + dy, p->z);
+                glVertex3_trans(p->x - dx, p->y + dy, p->z);
                 break;
             case PLANE_YZ:
             case PLANE_MINUS_YZ:
                 dx = 0;
                 dy = 1;
                 dz = 1;
-                glVertex3f(p->x, p->y - dy, p->z - dz);
-                glVertex3f(p->x, p->y + dy, p->z - dz);
-                glVertex3f(p->x, p->y + dy, p->z + dz);
-                glVertex3f(p->x, p->y - dy, p->z + dz);
+                glVertex3_trans(p->x, p->y - dy, p->z - dz);
+                glVertex3_trans(p->x, p->y + dy, p->z - dz);
+                glVertex3_trans(p->x, p->y + dy, p->z + dz);
+                glVertex3_trans(p->x, p->y - dy, p->z + dz);
                 break;
             case PLANE_XZ:
             case PLANE_MINUS_XZ:
                 dx = 1;
                 dy = 0;
                 dz = 1;
-                glVertex3f(p->x - dx, p->y, p->z - dz);
-                glVertex3f(p->x + dx, p->y, p->z - dz);
-                glVertex3f(p->x + dx, p->y, p->z + dz);
-                glVertex3f(p->x - dx, p->y, p->z + dz);
+                glVertex3_trans(p->x - dx, p->y, p->z - dz);
+                glVertex3_trans(p->x + dx, p->y, p->z - dz);
+                glVertex3_trans(p->x + dx, p->y, p->z + dz);
+                glVertex3_trans(p->x - dx, p->y, p->z + dz);
             }
             glEnd();
             glEnable(GL_CULL_FACE);
@@ -188,7 +200,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
                 }
                 glBegin(GL_POINTS);
                 color(OBJ_POINT, FALSE, selected, highlighted, locked);
-                glVertex3f(p->x, p->y, p->z);
+                glVertex3_trans(p->x, p->y, p->z);
                 glEnd();
             }
         }
@@ -222,9 +234,8 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         case EDGE_STRAIGHT:
             glBegin(GL_LINES);
             color(OBJ_EDGE, edge->type & EDGE_CONSTRUCTION, selected, highlighted, locked);
-            glVertex3f(edge->endpoints[0]->x, edge->endpoints[0]->y, edge->endpoints[0]->z);
-            glVertex3f(edge->endpoints[1]->x, edge->endpoints[1]->y, edge->endpoints[1]->z);
-            // TODO XFORM - transform these points
+            glVertex3_trans(edge->endpoints[0]->x, edge->endpoints[0]->y, edge->endpoints[0]->z);
+            glVertex3_trans(edge->endpoints[1]->x, edge->endpoints[1]->y, edge->endpoints[1]->z);
             glEnd();
             glPopName();
             if (draw_components)
@@ -240,8 +251,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             glBegin(GL_LINE_STRIP);
             color(OBJ_EDGE, edge->type & EDGE_CONSTRUCTION, selected, highlighted, locked);
             for (p = (Point *)edge->view_list.head; p != NULL; p = (Point *)p->hdr.next)
-                glVertex3f(p->x, p->y, p->z);
-            // TODO XFORM - transform these points
+                glVertex3_trans(p->x, p->y, p->z);
 
             glEnd();
             glPopName();
@@ -259,8 +269,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             glBegin(GL_LINE_STRIP);
             color(OBJ_EDGE, edge->type & EDGE_CONSTRUCTION, selected, highlighted, locked);
             for (p = (Point *)edge->view_list.head; p != NULL; p = (Point *)p->hdr.next)
-                glVertex3f(p->x, p->y, p->z);
-            // TODO XFORM - transform these points
+                glVertex3_trans(p->x, p->y, p->z);
 
             glEnd();
             glPopName();
@@ -310,11 +319,11 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         {
             // Draw individual faces
             if (vol->xform != NULL)
-                link_tail((Object *)vol->xform, &xlist);
+                link_tail((Object *)vol->xform, &xform_list);
             for (face = (Face *)vol->faces.head; face != NULL; face = (Face *)face->hdr.next)
                 draw_object((Object *)face, (pres & ~DRAW_WITH_DIMENSIONS), parent_lock);
             if (vol->xform != NULL)
-                delink((Object *)vol->xform, &xlist);
+                delink((Object *)vol->xform, &xform_list);
         }
         break;
 
@@ -347,13 +356,12 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         else
         {
             // Not a rendered view - just draw the thing no matter what.
-
-            if (vol->xform != NULL)
-                link_tail((Object *)group->xform, &xlist);
+            if (group->xform != NULL)
+                link_tail((Object *)group->xform, &xform_list);
             for (o = group->obj_list.head; o != NULL; o = o->next)
                 draw_object(o, (pres & ~DRAW_WITH_DIMENSIONS), o->lock);
-            if (vol->xform != NULL)
-                delink((Object *)group->xform, &xlist);
+            if (group->xform != NULL)
+                delink((Object *)group->xform, &xform_list);
         }
         break;
     }
@@ -1231,6 +1239,8 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
         pres |= DRAW_HIGHLIGHT_LOCKED;
     glInitNames();
     curr_drawn_no++;
+    xform_list.head = NULL;
+    xform_list.tail = NULL;
     draw_object((Object *)&object_tree, pres, LOCK_NONE);  // locks come from objects
 
     // Draw selection. Watch for highlighted objects appearing in the selection list.
@@ -1242,6 +1252,8 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
         if (obj->prev != curr_obj && obj->prev != highlight_obj)
         {
             pres = DRAW_SELECTED | DRAW_WITH_DIMENSIONS;
+            xform_list.head = NULL;
+            xform_list.tail = NULL;
             draw_object(obj->prev, pres, parent->lock);
         }
     }
@@ -1256,6 +1268,8 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
         pres = DRAW_HIGHLIGHT | DRAW_WITH_DIMENSIONS;
         if (app_state >= STATE_STARTING_EDGE)
             pres |= DRAW_HIGHLIGHT_LOCKED;
+        xform_list.head = NULL;
+        xform_list.tail = NULL;
         draw_object(curr_obj, pres, parent != NULL ? parent->lock : LOCK_NONE);
     }
 
@@ -1266,6 +1280,8 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
         pres = DRAW_HIGHLIGHT | DRAW_WITH_DIMENSIONS;
         if (app_state >= STATE_STARTING_EDGE)
             pres |= DRAW_HIGHLIGHT_LOCKED;
+        xform_list.head = NULL;
+        xform_list.tail = NULL;
         draw_object(highlight_obj, pres, parent != NULL ? parent->lock : LOCK_NONE);
 
 #ifdef DEBUG_HIGHLIGHTING_ENABLED
