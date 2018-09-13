@@ -180,7 +180,7 @@ gen_view_list_surface(Face *face)
             gluTessBeginContour(clip_tess);
             while (VALID_VP(v))
             {
-                tess_vertex(clip_tess, v);
+                tess_vertex(clip_tess, v);   /// TODO XFORM - don't transform here - it's done when mesh formed
 
                 // Skip coincident points for robustness (don't create zero-area triangles)
                 while (v->hdr.next != NULL && near_pt(v, (Point *)v->hdr.next, SMALL_COORD))

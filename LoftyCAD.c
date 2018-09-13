@@ -671,6 +671,8 @@ update_drawing(void)
     drawing_changed = TRUE;
     write_checkpoint(&object_tree, curr_filename);
 #if 0
+    xform_list.head = NULL;
+    xform_list.tail = NULL;
     if (gen_view_list_tree_volumes(&object_tree))
         surfaces_generated = TRUE;
     if (surfaces_generated)
@@ -679,6 +681,8 @@ update_drawing(void)
         surfaces_generated = FALSE;
     }
 #else
+    xform_list.head = NULL;
+    xform_list.tail = NULL;
     gen_view_list_tree_volumes(&object_tree);
 #endif
 }
@@ -1501,6 +1505,8 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
             hMenu = GetSubMenu(hMenu, 9);
             insert_filename_to_MRU(hMenu, curr_filename);
             populate_treeview();
+            xform_list.head = NULL;
+            xform_list.tail = NULL;
             gen_view_list_tree_volumes(&object_tree);
         }
 

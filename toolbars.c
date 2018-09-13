@@ -186,6 +186,8 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 }
                 else
                 {
+                    xform_list.head = NULL;
+                    xform_list.tail = NULL;
                     gen_view_list_tree_volumes(&object_tree);
                     gen_view_list_tree_surfaces(&object_tree, &object_tree);
                     view_rendered = TRUE;

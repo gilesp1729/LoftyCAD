@@ -37,6 +37,7 @@ serialise_obj(Object *obj, FILE *f)
     BezierEdge *be;
     Face *face;
     Volume *vol;
+    Group *group;
     Object *o;
 
     // check for object already saved
@@ -87,8 +88,9 @@ serialise_obj(Object *obj, FILE *f)
         break;
 
     case OBJ_GROUP:
-        fprintf_s(f, "BEGINGROUP %d %s\n", obj->ID, ((Group *)obj)->title);
-        for (o = ((Group *)obj)->obj_list.head; o != NULL; o = o->next)
+        group = (Group *)obj;
+        fprintf_s(f, "BEGINGROUP %d %s\n", obj->ID, group->title);
+        for (o = group->obj_list.head; o != NULL; o = o->next)
             serialise_obj(o, f);
         break;
     }
@@ -165,10 +167,21 @@ serialise_obj(Object *obj, FILE *f)
             n += fprintf_s(f, "%d ", face->hdr.ID);
         }
         fprintf_s(f, "\n");
+        if (vol->xform != NULL)  // TODO XFORM - write it out
+        {
+
+
+        }
         break;
 
     case OBJ_GROUP:
         fprintf_s(f, "\n");
+        group = (Group *)obj;
+        if (group->xform != NULL)  // TODO XFORM - write it out
+        {
+
+
+        }
         break;
     }
 

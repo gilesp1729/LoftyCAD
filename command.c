@@ -198,6 +198,8 @@ Command(int message, int wParam, int lParam)
             }
             else
             {
+                xform_list.head = NULL;
+                xform_list.tail = NULL;
                 gen_view_list_tree_volumes(&object_tree);
                 gen_view_list_tree_surfaces(&object_tree, &object_tree);
                 view_rendered = TRUE;
@@ -396,6 +398,8 @@ Command(int message, int wParam, int lParam)
                 hMenu = GetSubMenu(hMenu, 9);
                 insert_filename_to_MRU(hMenu, curr_filename);
                 populate_treeview();
+                xform_list.head = NULL;
+                xform_list.tail = NULL;
                 gen_view_list_tree_volumes(&object_tree);
                 //gen_view_list_tree_surfaces(&object_tree, &object_tree);
             }
@@ -454,6 +458,8 @@ Command(int message, int wParam, int lParam)
             ofn.Flags = OFN_EXPLORER | OFN_OVERWRITEPROMPT;
             if (GetSaveFileName(&ofn))
             {
+                xform_list.head = NULL;
+                xform_list.tail = NULL;
                 gen_view_list_tree_volumes(&object_tree);
                 gen_view_list_tree_surfaces(&object_tree, &object_tree);
                 export_object_tree(&object_tree, new_filename, ofn.nFilterIndex);
@@ -559,6 +565,8 @@ Command(int message, int wParam, int lParam)
                     strcat_s(window_title, 256, object_tree.title);
                     SetWindowText(auxGetHWND(), window_title);
                     populate_treeview();
+                    xform_list.head = NULL;
+                    xform_list.tail = NULL;
                     gen_view_list_tree_volumes(&object_tree);
                     //gen_view_list_tree_surfaces(&object_tree, &object_tree);
                 }
@@ -664,6 +672,8 @@ Command(int message, int wParam, int lParam)
         case ID_EDIT_UNDO:
             generation--;
             read_checkpoint(&object_tree, curr_filename, generation);
+            xform_list.head = NULL;
+            xform_list.tail = NULL;
             gen_view_list_tree_volumes(&object_tree);
             //gen_view_list_tree_surfaces(&object_tree, &object_tree);
             break;
@@ -671,6 +681,8 @@ Command(int message, int wParam, int lParam)
         case ID_EDIT_REDO:
             generation++;
             read_checkpoint(&object_tree, curr_filename, generation);
+            xform_list.head = NULL;
+            xform_list.tail = NULL;
             gen_view_list_tree_volumes(&object_tree);
             //gen_view_list_tree_surfaces(&object_tree, &object_tree);
             break;

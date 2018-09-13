@@ -198,6 +198,7 @@ gen_view_list_tree_volumes(Group *tree)
 {
     Object *obj;
     Volume *vol;
+    Group *group;
     BOOL rc = FALSE;
     Bbox *box;
 
@@ -208,19 +209,28 @@ gen_view_list_tree_volumes(Group *tree)
         {
         case OBJ_VOLUME:
             vol = (Volume * )obj;
-            if (gen_view_list_vol(vol))
+            if (vol->xform != NULL)
+                link_tail((Object *)vol->xform, &xform_list);
+            if (gen_view_list_vol(vol)) 
                 rc = TRUE;
+            if (vol->xform != NULL)
+                delink((Object *)vol->xform, &xform_list);
 
             // update the group bbox with the volume bbox
             union_bbox(&vol->bbox, &tree->bbox, &tree->bbox);
             break;
 
         case OBJ_GROUP:
-            if (gen_view_list_tree_volumes((Group *)obj))
+            group = (Group *)obj;
+            if (group->xform != NULL)
+                link_tail((Object *)group->xform, &xform_list);
+            if (gen_view_list_tree_volumes(group))
                 rc = TRUE;
+            if (group->xform != NULL)
+                delink((Object *)group->xform, &xform_list);
 
             // update the group bbox centre
-            box = &((Group *)obj)->bbox;
+            box = &group->bbox;
             box->xc = (box->xmin + box->xmax) / 2;
             box->yc = (box->ymin + box->ymax) / 2;
             box->zc = (box->zmin + box->zmax) / 2;
@@ -896,7 +906,7 @@ render_beginData(GLenum type, void * polygon_data)
 {
     Plane *norm = (Plane *)polygon_data;
 
-    glNormal3f(norm->A, norm->B, norm->C);
+    glNormal3f(norm->A, norm->B, norm->C);  // TODO XFORM - need to transform this too! But it probably doesn't matter.
     glBegin(type);
 }
 
@@ -904,8 +914,10 @@ void
 render_vertexData(void * vertex_data, void * polygon_data)
 {
     Point *v = (Point *)vertex_data;
+    float tx, ty, tz;
 
-    glVertex3f(v->x, v->y, v->z);
+    transform_list_xyz(&xform_list, v->x, v->y, v->z, &tx, &ty, &tz);
+    glVertex3f(tx, ty, tz);
 }
 
 void 
@@ -932,17 +944,14 @@ void render_errorData(GLenum errno, void * polygon_data)
 }
 
 // Shortcut to pass a Point to gluTessVertex, both as coords and the vertex data pointer.
-// Transform the point along the way
 void
 tess_vertex(GLUtesselator *tess, Point *p)
 {
     double coords[3];
-    float tx, ty, tz;
 
-    transform_list_xyz(&xform_list, p->x, p->y, p->z, &tx, &ty, &tz);
-    coords[0] = tx;
-    coords[1] = ty;
-    coords[2] = tz;
+    coords[0] = p->x;
+    coords[1] = p->y;
+    coords[2] = p->z;
     gluTessVertex(tess, coords, p);
 }
 

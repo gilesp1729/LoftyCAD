@@ -639,10 +639,10 @@ evaluate_transform(Transform *xform)
         {
             xform->flags |= XF_SCALE_NONUNITY;
             scale[0] = xform->sx;
-            scale[5] = xform->sy;
+            scale[4] = xform->sy;
             scale[8] = xform->sz;
             inv_scale[0] = 1.0f / xform->sx;
-            inv_scale[5] = 1.0f / xform->sy;
+            inv_scale[4] = 1.0f / xform->sy;
             inv_scale[8] = 1.0f / xform->sz;
         }
     }
@@ -726,7 +726,12 @@ transform_xyz(Transform *xform, float x, float y, float z, float *tx, float *ty,
     float *mat;
 
     if (xform->flags == 0)
+    {
+        *tx = x;
+        *ty = y;
+        *tz = z;
         return;                             // Nothing to see here
+    }
 
     x -= xform->xc;                         // Bring xform centre to origin
     y -= xform->yc;
@@ -760,6 +765,9 @@ transform_list_xyz(ListHead *xform_list, float x, float y, float z, float *tx, f
 {
     Transform *xf;
 
+    *tx = x;
+    *ty = y;
+    *tz = z;
     for (xf = (Transform *)xform_list->head; xf != NULL; xf = (Transform *)xf->hdr.next)
     {
         transform_xyz(xf, x, y, z, tx, ty, tz);
