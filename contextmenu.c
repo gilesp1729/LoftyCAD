@@ -395,6 +395,7 @@ right_click(AUX_EVENTREC *event)
     BOOL group_changed = FALSE;
     BOOL dims_changed = FALSE;
     BOOL sel_changed = FALSE;
+    BOOL xform_changed = FALSE;
     BOOL inserted = FALSE;
     Group *group;
     Face *face;
@@ -504,6 +505,16 @@ right_click(AUX_EVENTREC *event)
     case OBJ_GROUP:
         EnableMenuItem(hMenu, ID_OBJ_CHAMFERCORNER, MF_GRAYED);
         EnableMenuItem(hMenu, ID_OBJ_ROUNDCORNER, MF_GRAYED);
+        break;
+    }
+
+    // We can only do transforms on a volume or a group.
+    switch (picked_obj->type)
+    {
+    case OBJ_POINT:
+    case OBJ_EDGE:
+    case OBJ_FACE:
+        EnableMenuItem(hMenu, ID_OBJ_TRANSFORM, MF_GRAYED);
         break;
     }
 
@@ -719,9 +730,16 @@ right_click(AUX_EVENTREC *event)
         }
         inserted = TRUE;
         break;
+
+    case ID_OBJ_TRANSFORM:
+        xform_changed = 
+            DialogBoxParam(hInst, MAKEINTRESOURCE(IDD_TRANSFORM), auxGetHWND(), transform_dialog, (LPARAM)picked_obj);
+        if (xform_changed)
+            invalidate_all_view_lists(parent, picked_obj, 0, 0, 0);
+        break;
     }
 
-    if (parent->lock != old_parent_lock || group_changed || dims_changed || sel_changed || inserted)
+    if (parent->lock != old_parent_lock || group_changed || dims_changed || sel_changed || xform_changed || inserted)
     {
         // we have changed the drawing - write an undo checkpoint
         update_drawing();
@@ -733,24 +751,84 @@ int WINAPI
 transform_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     char buf[16];
+    char title[128];
+    Object *obj;
+    static Transform *xform = NULL;
 
     switch (msg)
     {
     case WM_INITDIALOG:
+        obj = (Object *)lParam;
+        switch (obj->type)
+        {
+        case OBJ_VOLUME:
+            sprintf_s(title, 128, "Volume %d", obj->ID);
+            xform = ((Volume *)obj)->xform;
+            break;
+        case OBJ_GROUP:
+            sprintf_s(title, 128, "Group %d %s", obj->ID, ((Group *)picked_obj)->title);
+            xform = ((Group *)obj)->xform;
+            break;
+        default:
+            ASSERT(FALSE, "We must have a volume or a group");
+        }
 
+        SendDlgItemMessage(hWnd, IDC_TITLE, WM_SETTEXT, 0, (LPARAM)title);
 
+        if (xform == NULL)
+            break;
 
+        CheckDlgButton(hWnd, IDC_CHECK_SCALE, xform->enable_scale ? MF_CHECKED : MF_UNCHECKED);
+        sprintf_s(buf, 16, "%.2f", xform->sx);
+        SendDlgItemMessage(hWnd, IDC_SCALE_X, WM_SETTEXT, 0, (LPARAM)buf);
+        sprintf_s(buf, 16, "%.2f", xform->sy);
+        SendDlgItemMessage(hWnd, IDC_SCALE_Y, WM_SETTEXT, 0, (LPARAM)buf);
+        sprintf_s(buf, 16, "%.2f", xform->sz);
+        SendDlgItemMessage(hWnd, IDC_SCALE_Z, WM_SETTEXT, 0, (LPARAM)buf);
 
+        CheckDlgButton(hWnd, IDC_CHECK_ROTATE, xform->enable_rotation ? MF_CHECKED : MF_UNCHECKED);
+        sprintf_s(buf, 16, "%.2f", xform->rx);
+        SendDlgItemMessage(hWnd, IDC_ROTATE_X, WM_SETTEXT, 0, (LPARAM)buf);
+        sprintf_s(buf, 16, "%.2f", xform->ry);
+        SendDlgItemMessage(hWnd, IDC_ROTATE_Y, WM_SETTEXT, 0, (LPARAM)buf);
+        sprintf_s(buf, 16, "%.2f", xform->rz);
+        SendDlgItemMessage(hWnd, IDC_ROTATE_Z, WM_SETTEXT, 0, (LPARAM)buf);
+
+        sprintf_s(buf, 16, "%.2f", xform->xc);
+        SendDlgItemMessage(hWnd, IDC_CENTRE_X, WM_SETTEXT, 0, (LPARAM)buf);
+        sprintf_s(buf, 16, "%.2f", xform->yc);
+        SendDlgItemMessage(hWnd, IDC_CENTRE_Y, WM_SETTEXT, 0, (LPARAM)buf);
+        sprintf_s(buf, 16, "%.2f", xform->zc);
+        SendDlgItemMessage(hWnd, IDC_CENTRE_Z, WM_SETTEXT, 0, (LPARAM)buf);
         break;
 
     case WM_COMMAND:
         switch (LOWORD(wParam))
         {
         case IDOK:
+            xform->enable_scale = IsDlgButtonChecked(hWnd, IDC_CHECK_SCALE);
+            SendDlgItemMessage(hWnd, IDC_SCALE_X, WM_GETTEXT, 16, (LPARAM)buf);
+            xform->sx = (float)atof(buf);
+            if (xform->sx == 0)
+                xform->sx = 1;
+            SendDlgItemMessage(hWnd, IDC_SCALE_Y, WM_GETTEXT, 16, (LPARAM)buf);
+            xform->sy = (float)atof(buf);
+            if (xform->sy == 0)
+                xform->sy = 1;
+            SendDlgItemMessage(hWnd, IDC_SCALE_Z, WM_GETTEXT, 16, (LPARAM)buf);
+            xform->sz = (float)atof(buf);
+            if (xform->sz == 0)
+                xform->sz = 1;
 
+            xform->enable_rotation = IsDlgButtonChecked(hWnd, IDC_CHECK_ROTATE);
+            SendDlgItemMessage(hWnd, IDC_ROTATE_X, WM_GETTEXT, 16, (LPARAM)buf);
+            xform->rx = (float)atof(buf);
+            SendDlgItemMessage(hWnd, IDC_ROTATE_Y, WM_GETTEXT, 16, (LPARAM)buf);
+            xform->ry = (float)atof(buf);
+            SendDlgItemMessage(hWnd, IDC_ROTATE_Z, WM_GETTEXT, 16, (LPARAM)buf);
+            xform->rz = (float)atof(buf);
 
-
-
+            evaluate_transform(xform);
             EndDialog(hWnd, 1);
             break;
 

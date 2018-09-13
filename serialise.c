@@ -167,20 +167,34 @@ serialise_obj(Object *obj, FILE *f)
             n += fprintf_s(f, "%d ", face->hdr.ID);
         }
         fprintf_s(f, "\n");
-        if (vol->xform != NULL)  // TODO XFORM - write it out
+        if (vol->xform != NULL)
         {
+            Transform *xform = vol->xform;
 
-
+            fprintf_s(f, "TRANSFORM %d %d %f %f %f %d %f %f %f\n",
+                      obj->ID,
+                      xform->enable_scale,
+                      xform->sx, xform->sy, xform->sz,
+                      xform->enable_rotation,
+                      xform->rx, xform->ry, xform->rz
+                      );
         }
         break;
 
     case OBJ_GROUP:
         fprintf_s(f, "\n");
         group = (Group *)obj;
-        if (group->xform != NULL)  // TODO XFORM - write it out
+        if (group->xform != NULL)
         {
+            Transform *xform = group->xform;
 
-
+            fprintf_s(f, "TRANSFORM %d %d %f %f %f %d %f %f %f\n",
+                      obj->ID,
+                      xform->enable_scale,
+                      xform->sx, xform->sy, xform->sz,
+                      xform->enable_rotation,
+                      xform->rx, xform->ry, xform->rz
+                      );
         }
         break;
     }

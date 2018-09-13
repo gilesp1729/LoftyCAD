@@ -1254,7 +1254,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
             pres = DRAW_SELECTED | DRAW_WITH_DIMENSIONS;
             xform_list.head = NULL;
             xform_list.tail = NULL;
-            draw_object(obj->prev, pres, parent->lock);
+            draw_object(obj->prev, pres, parent->lock);     // TODO XFORM - transform faces belonging to vol/group
         }
     }
 
@@ -1270,7 +1270,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
             pres |= DRAW_HIGHLIGHT_LOCKED;
         xform_list.head = NULL;
         xform_list.tail = NULL;
-        draw_object(curr_obj, pres, parent != NULL ? parent->lock : LOCK_NONE);
+        draw_object(curr_obj, pres, parent != NULL ? parent->lock : LOCK_NONE);     // TODO XFORM - transform faces belonging to vol/group
     }
 
     if (highlight_obj != NULL)
