@@ -434,7 +434,7 @@ right_click(AUX_EVENTREC *event)
         sprintf_s(buf, 128, "Volume %d", picked_obj->ID);
         break;
     case OBJ_GROUP:
-        sprintf_s(buf, 128, "Group %d %s", picked_obj->ID, ((Group *)picked_obj)->title);
+        sprintf_s(buf, 128, "Group %d: %s", picked_obj->ID, ((Group *)picked_obj)->title);
         break;
     }
     ModifyMenu(hMenu, 0, MF_BYPOSITION | MF_GRAYED | MF_STRING, 0, buf);
@@ -752,7 +752,8 @@ transform_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     char buf[16];
     char title[128];
-    Object *obj;
+    static Object *obj;
+    Bbox *box = NULL;
     static Transform *xform = NULL;
 
     switch (msg)
@@ -764,19 +765,30 @@ transform_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         case OBJ_VOLUME:
             sprintf_s(title, 128, "Volume %d", obj->ID);
             xform = ((Volume *)obj)->xform;
+            box = &((Volume *)obj)->bbox;
             break;
         case OBJ_GROUP:
-            sprintf_s(title, 128, "Group %d %s", obj->ID, ((Group *)picked_obj)->title);
+            sprintf_s(title, 128, "Group %d: %s", obj->ID, ((Group *)picked_obj)->title);
             xform = ((Group *)obj)->xform;
+            box = &((Group *)obj)->bbox;
             break;
         default:
             ASSERT(FALSE, "We must have a volume or a group");
+            break;
         }
 
         SendDlgItemMessage(hWnd, IDC_TITLE, WM_SETTEXT, 0, (LPARAM)title);
 
         if (xform == NULL)
+        {
+            sprintf_s(buf, 16, "%.2f", box->xc);
+            SendDlgItemMessage(hWnd, IDC_CENTRE_X, WM_SETTEXT, 0, (LPARAM)buf);
+            sprintf_s(buf, 16, "%.2f", box->yc);
+            SendDlgItemMessage(hWnd, IDC_CENTRE_Y, WM_SETTEXT, 0, (LPARAM)buf);
+            sprintf_s(buf, 16, "%.2f", box->zc);
+            SendDlgItemMessage(hWnd, IDC_CENTRE_Z, WM_SETTEXT, 0, (LPARAM)buf);
             break;
+        }
 
         CheckDlgButton(hWnd, IDC_CHECK_SCALE, xform->enable_scale ? MF_CHECKED : MF_UNCHECKED);
         sprintf_s(buf, 16, "%.2f", xform->sx);
@@ -806,6 +818,25 @@ transform_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         switch (LOWORD(wParam))
         {
         case IDOK:
+            if (xform == NULL)
+            {
+                xform = xform_new();
+                switch (obj->type)
+                {
+                case OBJ_VOLUME:
+                    ((Volume *)obj)->xform = xform;
+                    box = &((Volume *)obj)->bbox;
+                    break;
+                case OBJ_GROUP:
+                    ((Group *)obj)->xform = xform;
+                    box = &((Group *)obj)->bbox;
+                    break;
+                }
+                xform->xc = box->xc;
+                xform->yc = box->yc;
+                xform->zc = box->zc;
+            }
+
             xform->enable_scale = IsDlgButtonChecked(hWnd, IDC_CHECK_SCALE);
             SendDlgItemMessage(hWnd, IDC_SCALE_X, WM_GETTEXT, 16, (LPARAM)buf);
             xform->sx = (float)atof(buf);

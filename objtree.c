@@ -390,6 +390,14 @@ copy_obj(Object *obj, float xoffset, float yoffset, float zoffset)
             new_face->vol = new_vol;
             link_tail((Object *)new_face, &new_vol->faces);
         }
+        if (vol->xform != NULL)
+        {
+            new_vol->xform = xform_new();
+            *new_vol->xform = *vol->xform;
+            new_vol->xform->xc += xoffset;
+            new_vol->xform->yc += yoffset;
+            new_vol->xform->zc += zoffset;
+        }
         break;
 
     case OBJ_GROUP:
@@ -401,6 +409,14 @@ copy_obj(Object *obj, float xoffset, float yoffset, float zoffset)
             link_tail_group(new_obj, new_grp);
         }
         new_obj = (Object *)new_grp;
+        if (grp->xform != NULL)
+        {
+            new_grp->xform = xform_new();
+            *new_grp->xform = *grp->xform;
+            new_grp->xform->xc += xoffset;
+            new_grp->xform->yc += yoffset;
+            new_grp->xform->zc += zoffset;
+        }
         break;
     }
  
@@ -514,6 +530,7 @@ move_obj(Object *obj, float xoffset, float yoffset, float zoffset)
     BezierEdge *be;
     Face *face;
     Volume *vol;
+    Group *grp;
     Object *o;
 
     switch (obj->type)
@@ -568,11 +585,24 @@ move_obj(Object *obj, float xoffset, float yoffset, float zoffset)
         vol = (Volume *)obj;
         for (face = (Face *)vol->faces.head; face != NULL; face = (Face *)face->hdr.next)
             move_obj((Object *)face, xoffset, yoffset, zoffset);
+        if (vol->xform != NULL)
+        {
+            vol->xform->xc += xoffset;
+            vol->xform->yc += yoffset;
+            vol->xform->zc += zoffset;
+        }
         break;
 
     case OBJ_GROUP:
-        for (o = ((Group *)obj)->obj_list.head; o != NULL; o = o->next)
+        grp = (Group *)obj;
+        for (o = grp->obj_list.head; o != NULL; o = o->next)
             move_obj(o, xoffset, yoffset, zoffset);
+        if (grp->xform != NULL)
+        {
+            grp->xform->xc += xoffset;
+            grp->xform->yc += yoffset;
+            grp->xform->zc += zoffset;
+        }
         break;
     }
 }
@@ -782,6 +812,8 @@ purge_obj(Object *obj)
             purge_obj((Object *)face);
         }
         free_bucket(vol->point_bucket);
+        if (vol->xform != NULL)
+            free(vol->xform);
         free(obj);
         break;
 
@@ -794,6 +826,8 @@ purge_obj(Object *obj)
         }
         if (group->mesh != NULL)
             mesh_destroy(group->mesh);
+        if (group->xform != NULL)
+            free(group->xform);
         free(obj);
         break;
     }

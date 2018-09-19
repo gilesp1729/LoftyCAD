@@ -140,6 +140,7 @@ invalidate_all_view_lists(Object *parent, Object *obj, float dx, float dy, float
     {
     case OBJ_GROUP:
         group = (Group *)parent;
+        clear_bbox(&group->bbox);
         for (o = group->obj_list.head; o != NULL; o = o->next)
             invalidate_all_view_lists(o, obj, dx, dy, dz);
         break;
@@ -209,12 +210,8 @@ gen_view_list_tree_volumes(Group *tree)
         {
         case OBJ_VOLUME:
             vol = (Volume * )obj;
-            if (vol->xform != NULL)
-                link_tail((Object *)vol->xform, &xform_list);
-            if (gen_view_list_vol(vol)) 
+            if (gen_view_list_vol(vol))
                 rc = TRUE;
-            if (vol->xform != NULL)
-                delink((Object *)vol->xform, &xform_list);
 
             // update the group bbox with the volume bbox
             union_bbox(&vol->bbox, &tree->bbox, &tree->bbox);
@@ -222,12 +219,8 @@ gen_view_list_tree_volumes(Group *tree)
 
         case OBJ_GROUP:
             group = (Group *)obj;
-            if (group->xform != NULL)
-                link_tail((Object *)group->xform, &xform_list);
             if (gen_view_list_tree_volumes(group))
                 rc = TRUE;
-            if (group->xform != NULL)
-                delink((Object *)group->xform, &xform_list);
 
             // update the group bbox centre
             box = &group->bbox;
@@ -254,6 +247,7 @@ void
 gen_view_list_tree_surfaces(Group *tree, Group *parent_tree)
 {
     Object *obj;
+    Face *f;
     Volume *vol;
     Group *group;
     POINT pt = {wWidth / 2, wHeight / 2};
@@ -275,9 +269,20 @@ gen_view_list_tree_surfaces(Group *tree, Group *parent_tree)
         case OBJ_VOLUME:
             vol = (Volume *)obj;
 
+            // update the triangle mesh for the volume (all volumes)
+            if (vol->xform != NULL)
+                link_tail((Object *)vol->xform, &xform_list);
+            for (f = (Face *)vol->faces.head; f != NULL; f = (Face *)f->hdr.next)
+                gen_view_list_surface(f);
+            if (vol->xform != NULL)
+                delink((Object *)vol->xform, &xform_list);
+
             // Make sure it is solid first
             if (vol->extrude_height < 0)
                 break;
+
+            vol->mesh_valid = TRUE;
+
 
             if (!parent_tree->mesh_valid)
             {
@@ -301,7 +306,11 @@ gen_view_list_tree_surfaces(Group *tree, Group *parent_tree)
 
         case OBJ_GROUP:
             group = (Group *)obj;
+            if (group->xform != NULL)
+                link_tail((Object *)group->xform, &xform_list);
             gen_view_list_tree_surfaces(group, parent_tree);
+            if (group->xform != NULL)
+                delink((Object *)group->xform, &xform_list);
             break;
         }
     }
@@ -376,11 +385,11 @@ gen_view_list_vol(Volume *vol)
     box->yc = (box->ymin + box->ymax) / 2;
     box->zc = (box->zmin + box->zmax) / 2;
 
-    // update the triangle mesh for the volume
-    for (f = (Face *)vol->faces.head; f != NULL; f = (Face *)f->hdr.next)
-        gen_view_list_surface(f);
+    // update the triangle mesh for the volume. NOT HERE as the transforms don't work.
+    //for (f = (Face *)vol->faces.head; f != NULL; f = (Face *)f->hdr.next)
+    //    gen_view_list_surface(f);
 
-    vol->mesh_valid = TRUE;
+    //vol->mesh_valid = TRUE;
     return TRUE;
 }
 
