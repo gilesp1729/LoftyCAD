@@ -818,6 +818,7 @@ transform_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         switch (LOWORD(wParam))
         {
         case IDOK:
+        case IDC_APPLY:
             if (xform == NULL)
             {
                 xform = xform_new();
@@ -860,11 +861,27 @@ transform_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             xform->rz = (float)atof(buf);
 
             evaluate_transform(xform);
-            EndDialog(hWnd, 1);
+            if (LOWORD(wParam) == IDOK)    // TODO XFORM - do inval and update here, if too hard get rid of Apply button
+                EndDialog(hWnd, 1);
             break;
 
         case IDCANCEL:
             EndDialog(hWnd, 0);
+            break;
+
+        case IDC_REMOVE:
+            free(xform);
+            switch (obj->type)
+            {
+            case OBJ_VOLUME:
+                ((Volume *)obj)->xform = NULL;
+                break;
+            case OBJ_GROUP:
+                ((Group *)obj)->xform = NULL;
+                break;
+            }
+            EndDialog(hWnd, 1);     // TODO XFORM - behave as Apply here and stay in dialog
+            break;
         }
     }
 

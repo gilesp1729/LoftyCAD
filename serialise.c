@@ -171,8 +171,9 @@ serialise_obj(Object *obj, FILE *f)
         {
             Transform *xform = vol->xform;
 
-            fprintf_s(f, "TRANSFORM %d %d %f %f %f %d %f %f %f\n",
+            fprintf_s(f, "TRANSFORM %d %f %f %f %d %f %f %f %d %f %f %f\n",
                       obj->ID,
+                      xform->xc, xform->yc, xform->zc,
                       xform->enable_scale,
                       xform->sx, xform->sy, xform->sz,
                       xform->enable_rotation,
@@ -188,8 +189,9 @@ serialise_obj(Object *obj, FILE *f)
         {
             Transform *xform = group->xform;
 
-            fprintf_s(f, "TRANSFORM %d %d %f %f %f %d %f %f %f\n",
+            fprintf_s(f, "TRANSFORM %d %f %f %f %d %f %f %f %d %f %f %f\n",
                       obj->ID,
+                      xform->xc, xform->yc, xform->zc,
                       xform->enable_scale,
                       xform->sx, xform->sy, xform->sz,
                       xform->enable_rotation,
@@ -721,6 +723,13 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
                 break;
             }
             tok = strtok_s(NULL, " \t\n", &nexttok);
+            xform->xc = (float)atof(tok);
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            xform->yc = (float)atof(tok);
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            xform->zc = (float)atof(tok);
+
+            tok = strtok_s(NULL, " \t\n", &nexttok);
             xform->enable_scale = atoi(tok);
             tok = strtok_s(NULL, " \t\n", &nexttok);
             xform->sx = (float)atof(tok);
@@ -728,6 +737,7 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
             xform->sy = (float)atof(tok);
             tok = strtok_s(NULL, " \t\n", &nexttok);
             xform->sz = (float)atof(tok);
+
             tok = strtok_s(NULL, " \t\n", &nexttok);
             xform->enable_rotation = atoi(tok);
             tok = strtok_s(NULL, " \t\n", &nexttok);
