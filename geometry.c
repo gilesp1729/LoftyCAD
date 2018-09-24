@@ -747,14 +747,17 @@ transform_xyz(Transform *xform, float x, float y, float z, float *tx, float *ty,
         *tz = (z * mat[8]) + xform->zc;
         break;
 
-    case XF_ROTATE_X:                       // Simple rotations about a single axis: 4 multiply-adds
-        break;  // TODO XFORM
+    //case XF_ROTATE_X:                       // Simple rotations about a single axis: 4 multiply-adds
+    //    break; 
 
     // Add these in if found worth doing.
     //case XF_ROTATE_X | XF_SCALE_NONUNITY:   // Simple rotations with scale: 5 multiply-adds
 
     default:                                // Do a general 3x3 multiply by vector
-        break;  // TODO XFORM
+        *tx = x * mat[0] + y * mat[1] + z * mat[2] + xform->xc;
+        *ty = x * mat[3] + y * mat[4] + z * mat[5] + xform->yc;
+        *tz = x * mat[6] + y * mat[7] + z * mat[8] + xform->zc;
+        break;
     }
 }
 
