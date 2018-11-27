@@ -398,6 +398,7 @@ copy_obj(Object *obj, float xoffset, float yoffset, float zoffset)
             new_vol->xform->yc += yoffset;
             new_vol->xform->zc += zoffset;
         }
+        new_vol->extrude_height = vol->extrude_height;
         break;
 
     case OBJ_GROUP:
