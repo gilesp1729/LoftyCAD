@@ -745,6 +745,25 @@ find_top_level_parent(Group *tree, Object *obj)
     return top_level;
 }
 
+// Build xform list for volume, and groups leading to the volume
+void
+build_parent_xform_list(Object *obj, Object *parent, ListHead *xform_list)
+{
+    Object *top_parent = parent;
+
+    xform_list->head = NULL;
+    xform_list->tail = NULL;
+    if (obj->type < OBJ_VOLUME && parent->type == OBJ_VOLUME)
+    {
+        if (((Volume *)parent)->xform != NULL)
+            link((Object *)((Volume *)parent)->xform, xform_list);
+        for (; top_parent->parent_group->hdr.parent_group != NULL; top_parent = (Object *)top_parent->parent_group)
+        {
+            if (((Group *)top_parent)->xform != NULL)
+                link((Object *)((Group *)top_parent)->xform, xform_list);
+        }
+    }
+}
 
 // Purge an object. Points are put in the free list.
 void

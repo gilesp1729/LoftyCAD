@@ -1249,12 +1249,11 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
     {
         Object *parent = find_parent_object(&object_tree, obj->prev, FALSE);
 
+        build_parent_xform_list(obj->prev, parent, &xform_list);
         if (obj->prev != curr_obj && obj->prev != highlight_obj)
         {
             pres = DRAW_SELECTED | DRAW_WITH_DIMENSIONS;
-            xform_list.head = NULL;
-            xform_list.tail = NULL;
-            draw_object(obj->prev, pres, parent->lock);     // TODO XFORM - transform faces belonging to vol/group
+            draw_object(obj->prev, pres, parent->lock);
         }
     }
 
@@ -1277,11 +1276,10 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
     {
         Object *parent = find_parent_object(&object_tree, highlight_obj, FALSE);
 
+        build_parent_xform_list(highlight_obj, parent, &xform_list);
         pres = DRAW_HIGHLIGHT | DRAW_WITH_DIMENSIONS;
         if (app_state >= STATE_STARTING_EDGE)
             pres |= DRAW_HIGHLIGHT_LOCKED;
-        xform_list.head = NULL;
-        xform_list.tail = NULL;
         draw_object(highlight_obj, pres, parent != NULL ? parent->lock : LOCK_NONE);
 
 #ifdef DEBUG_HIGHLIGHTING_ENABLED

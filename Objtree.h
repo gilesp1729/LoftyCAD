@@ -345,6 +345,7 @@ Object *find_in_neighbourhood(Object *match_obj, Group *tree);
 Object *find_parent_object(Group *tree, Object *obj, BOOL deep_search);
 Object *find_top_level_parent(Group *tree, Object *obj);
 BOOL is_top_level_object(Object *obj, Group *tree);
+void build_parent_xform_list(Object *obj, Object *parent, ListHead *xform_list);
 
 // Write and read a tree to a file (serialise.c)
 void serialise_tree(Group *tree, char *filename);
