@@ -753,6 +753,9 @@ build_parent_xform_list(Object *obj, Object *parent, ListHead *xform_list)
 
     xform_list->head = NULL;
     xform_list->tail = NULL;
+    if (parent == NULL)
+        return;
+
     if (obj->type < OBJ_VOLUME && parent->type == OBJ_VOLUME)
     {
         if (((Volume *)parent)->xform != NULL)
