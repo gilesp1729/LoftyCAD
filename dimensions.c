@@ -6,6 +6,7 @@ BOOL
 has_dims(Object *obj)
 {
     Face *f;
+    Volume *v;
 
     if (obj == NULL)
         return FALSE;
@@ -42,6 +43,12 @@ has_dims(Object *obj)
         break;
 
     case OBJ_VOLUME:
+        v = (Volume *)obj;
+        if (((Face *)v->faces.tail)->type == FACE_CIRCLE)    // Cylinders only for now
+            return TRUE;
+        else
+            return FALSE;
+
     case OBJ_GROUP:
         return FALSE;
     }
@@ -94,10 +101,11 @@ void
 update_dims(Object *obj, char *buf)
 {
     Edge *e, *e0, *e1, *e2, *e3;
-    ArcEdge *ae;
-    Face *f;
+    ArcEdge *ae, *ae1, *ae2;
+    Face *f, *c1, *c2;
+    Volume *vol;
     double angle;
-    float len, len2;
+    float len, len2, rad;
     char *nexttok = NULL;
     char *tok;
     Object *parent;
@@ -179,13 +187,45 @@ update_dims(Object *obj, char *buf)
         case FACE_CIRCLE:
             e = f->edges[0];
             ae = (ArcEdge *)e;
-            len = (float)atof(buf);
-            if (len == 0)
+            rad = (float)atof(buf);
+            if (rad == 0)
                 break;
-            new_length(ae->centre, e->endpoints[0], len);
-            new_length(ae->centre, e->endpoints[1], len);
+            new_length(ae->centre, e->endpoints[0], rad);
+            new_length(ae->centre, e->endpoints[1], rad);
             break;
         }
+        break;
+
+    case OBJ_VOLUME:
+        vol = (Volume *)obj;
+        if (((Face *)vol->faces.tail)->type == FACE_CIRCLE)    // Cylinders only for now
+        {
+            c1 = (Face *)vol->faces.tail;
+            c2 = (Face *)c1->hdr.prev;
+            ASSERT(c1->type == FACE_CIRCLE, "Face 1 must be a circle");
+            ASSERT(c2->type == FACE_CIRCLE, "Face 2 must be a circle");
+            e1 = c1->edges[0];
+            ae1 = (ArcEdge *)e1;
+            e2 = c2->edges[0];
+            ae2 = (ArcEdge *)e2;
+            tok = strtok_s(buf, " ,\t\n", &nexttok);
+            rad = (float)atof(tok);
+            if (rad == 0)
+                break;
+            tok = strtok_s(NULL, " ,\t\n", &nexttok);
+            len = (float)atof(tok);
+            if (len == 0)
+                break;
+            new_length(ae1->centre, e1->endpoints[0], rad);
+            new_length(ae1->centre, e1->endpoints[1], rad);
+            new_length(ae2->centre, e2->endpoints[0], rad);
+            new_length(ae2->centre, e2->endpoints[1], rad);
+
+            new_length(ae2->centre, ae1->centre, len);
+            new_length(e2->endpoints[0], e1->endpoints[0], len);
+            new_length(e2->endpoints[1], e1->endpoints[1], len);
+        }
+
         break;
     }
 
@@ -201,9 +241,10 @@ get_dims_string(Object *obj, char buf[64])
 {
     char buf2[64];
     Point *p0, *p1, *p2;
-    Edge *e;
-    ArcEdge *ae;
-    Face *f;
+    Edge *e, *e1, *e2;
+    ArcEdge *ae, *ae1, *ae2;
+    Face *f, *c1, *c2;
+    Volume *v;
     double angle;
 
     switch (obj->type)
@@ -258,6 +299,28 @@ get_dims_string(Object *obj, char buf[64])
                 break;
             }
         }
+        break;
+
+    case OBJ_VOLUME:
+        v = (Volume *)obj;
+        if (((Face *)v->faces.tail)->type == FACE_CIRCLE)    // Cylinders only for now
+        {
+            c1 = (Face *)v->faces.tail;
+            c2 = (Face *)c1->hdr.prev;
+            ASSERT(c1->type == FACE_CIRCLE, "Face 1 must be a circle");
+            ASSERT(c2->type == FACE_CIRCLE, "Face 2 must be a circle");
+            e1 = c1->edges[0];
+            ae1 = (ArcEdge *)e1;
+            e2 = c2->edges[0];
+            ae2 = (ArcEdge *)e2;
+            sprintf_s
+            (
+                buf, 64, "%s,%s mmR/h", 
+                display_rounded(buf, length(ae1->centre, e1->endpoints[0])),
+                display_rounded(buf2, length(ae1->centre, ae2->centre))
+            );
+        }
+
         break;
     }
 }

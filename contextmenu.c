@@ -401,6 +401,8 @@ right_click(AUX_EVENTREC *event)
     Face *face;
     Point *p, *nextp;
     int i;
+    OPENFILENAME ofn;
+    char group_filename[256];
 
     if (view_rendered)
         return;
@@ -448,6 +450,7 @@ right_click(AUX_EVENTREC *event)
         EnableMenuItem(hMenu, ID_LOCKING_VOLUME, MF_GRAYED);
         EnableMenuItem(hMenu, ID_OBJ_SELECTPARENTVOLUME, MF_GRAYED);
         EnableMenuItem(hMenu, ID_OBJ_UNGROUP, MF_GRAYED);
+        EnableMenuItem(hMenu, ID_OBJ_SAVEGROUP, MF_GRAYED);
         EnableMenuItem(hMenu, ID_OBJ_MAKEFACE, MF_GRAYED);
         EnableMenuItem(hMenu, ID_OBJ_CHAMFERCORNER, MF_GRAYED);
         EnableMenuItem(hMenu, ID_OBJ_ROUNDCORNER, MF_GRAYED);
@@ -458,12 +461,14 @@ right_click(AUX_EVENTREC *event)
         EnableMenuItem(hMenu, ID_OBJ_SELECTPARENTVOLUME, MF_GRAYED);
         EnableMenuItem(hMenu, ID_OBJ_GROUPEDGES, MF_GRAYED);
         EnableMenuItem(hMenu, ID_OBJ_UNGROUP, MF_GRAYED);
+        EnableMenuItem(hMenu, ID_OBJ_SAVEGROUP, MF_GRAYED);
         EnableMenuItem(hMenu, ID_OBJ_MAKEFACE, MF_GRAYED);
         break;
 
     case OBJ_VOLUME:
         EnableMenuItem(hMenu, ID_OBJ_GROUPEDGES, MF_GRAYED);
         EnableMenuItem(hMenu, ID_OBJ_UNGROUP, MF_GRAYED);
+        EnableMenuItem(hMenu, ID_OBJ_SAVEGROUP, MF_GRAYED);
         EnableMenuItem(hMenu, ID_OBJ_MAKEFACE, MF_GRAYED);
         EnableMenuItem(hMenu, ID_OBJ_CHAMFERCORNER, MF_GRAYED);
         EnableMenuItem(hMenu, ID_OBJ_ROUNDCORNER, MF_GRAYED);
@@ -657,7 +662,26 @@ right_click(AUX_EVENTREC *event)
         group_changed = TRUE;
         break;
 
-    // The following operations work on a point, or on all points in a face.
+    case ID_OBJ_SAVEGROUP:
+        memset(&ofn, 0, sizeof(OPENFILENAME));
+        ofn.lStructSize = sizeof(OPENFILENAME);
+        ofn.hwndOwner = auxGetHWND();
+        ofn.lpstrFilter = "LoftyCAD Files (*.LCD)\0*.LCD\0All Files\0*.*\0\0";
+        ofn.nFilterIndex = 1;
+        ofn.lpstrDefExt = "lcd";
+        strcpy_s(group_filename, 256, "GROUP");
+        ofn.lpstrFile = group_filename;
+        ofn.nMaxFile = 256;
+        ofn.Flags = OFN_EXPLORER | OFN_OVERWRITEPROMPT;
+        if (GetSaveFileName(&ofn))
+        {
+            group = (Group *)picked_obj;
+            serialise_tree(group, group_filename);
+        }
+
+        break;
+
+        // The following operations work on a point, or on all points in a face.
     // The parent must be a face.
     case ID_OBJ_CHAMFERCORNER:
         switch (picked_obj->type)
