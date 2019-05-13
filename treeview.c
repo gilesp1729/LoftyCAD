@@ -23,14 +23,22 @@ populate_treeview_object(Object *obj, Object *parent, HTREEITEM hItem)
     TVINSERTSTRUCT tvins;
     TVITEM tvi;
     char descr[64];
+    char buf[64], buf2[64], buf3[64];
     int i;
+    Point *p;
     Face *face;
     Edge *edge;
 
     switch (obj->type)
     {
     case OBJ_POINT:
-        sprintf_s(descr, 64, "Point %d", obj->ID);
+        p = (Point *)obj;
+        sprintf_s(descr, 64, "Point %d (%s,%s,%s)", 
+                  obj->ID, 
+                  display_rounded(buf, p->x),
+                  display_rounded(buf2, p->y),
+                  display_rounded(buf3, p->z)
+                  );
         tvi.pszText = descr;
         tvi.cchTextMax = strlen(tvi.pszText);
         tvi.lParam = (LPARAM)obj;

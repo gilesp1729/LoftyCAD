@@ -1199,8 +1199,8 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
         if (zoom_delta != 0)
         {
             zTrans += 0.002f * half_size * zoom_delta;
-            if (zTrans > -0.8f * half_size)
-                zTrans = -0.8f * half_size;
+            if (zTrans > -0.3f * half_size)
+                zTrans = -0.3f * half_size;
             Position(FALSE, 0, 0, 0, 0);
             zoom_delta = 0;
         }

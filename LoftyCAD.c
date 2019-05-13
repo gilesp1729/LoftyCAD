@@ -113,6 +113,9 @@ char curr_filename[256] = { 0, };
 float grid_snap = INITIAL_GRID;
 float tolerance = INITIAL_TOL;
 
+// Perspective zTrans adjustment
+#define ZOOM_Z_SCALE 0.25f
+
 // Snapping tolerance, a bit more relaxed than the flatness tolerance
 float snap_tol = 3 * INITIAL_TOL;
 
@@ -140,7 +143,7 @@ float half_size = INITIAL_HALFSIZE;
 // Initial values of translation components
 float xTrans = 0;
 float yTrans = 0;
-float zTrans = -200;    // twice the initial half_size
+float zTrans = -2.0f * INITIAL_HALFSIZE;
 int zoom_delta = 0;
 
 // Clipboard paste offsets
@@ -262,7 +265,9 @@ Position(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
 {
     GLint viewport[4], width, height;
     float h, w, znear, zfar, zoom_factor;
-    // char buf[64];
+#ifdef DEBUG_POSITION_ZOOM
+    char buf[64];
+#endif
 
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
@@ -294,14 +299,13 @@ Position(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
             h = half_size * zoom_factor * (float)height / width;
             glOrtho(-w, w, -h, h, znear, zfar);
         }
-        glTranslated(xTrans, yTrans, zTrans);
+        glTranslated(xTrans, yTrans, -2.0f * half_size);
     }
     else
     {
-        // In perspective mode, zooming is done more by narrowing the frustum
-        // and less by moving back (zTrans)
-        // TODO: make the near clipping plane less obvious in use
-        zoom_factor = ((-0.5f * zTrans / half_size) - 1) * 0.5f + 0.4f;
+        // In perspective mode, zooming is done more by narrowing the frustum.
+        // Don't back off to zTrans, as you always hit the near clipping plane
+        zoom_factor = (-0.5f * zTrans / half_size) * ZOOM_Z_SCALE;
 #ifdef DEBUG_POSITION_ZOOM
         sprintf_s(buf, 64, "Persp Ztrans %f zoomf %f\r\n", zTrans, zoom_factor);
         Log(buf);
@@ -318,7 +322,7 @@ Position(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
             h = half_size * zoom_factor * (float)height / width;
             glFrustum(-w, w, -h, h, znear, zfar);
         }
-        glTranslated(xTrans, yTrans, zTrans * 0.5f);
+        glTranslated(xTrans, yTrans, -2.0f * half_size);
     }
 }
 
@@ -1306,10 +1310,15 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         {
         case IDOK:
             SendDlgItemMessage(hWnd, IDC_PREFS_TITLE, WM_GETTEXT, 256, (LPARAM)object_tree.title);
+
             SendDlgItemMessage(hWnd, IDC_PREFS_HALFSIZE, WM_GETTEXT, 16, (LPARAM)buf);
             half_size = (float)atof(buf);
+            zTrans = -2.0f * half_size;
+            Position(FALSE, 0, 0, 0, 0);
+
             SendDlgItemMessage(hWnd, IDC_PREFS_GRID, WM_GETTEXT, 16, (LPARAM)buf);
             grid_snap = (float)atof(buf);
+
             // TODO1 check grid scale and tolerance are powers of 10
             // The snapping tol and chamfer rad are fixed fractions ofthe tolerance. Don't change them.
             SendDlgItemMessage(hWnd, IDC_PREFS_TOL, WM_GETTEXT, 16, (LPARAM)buf);
@@ -1318,8 +1327,10 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             chamfer_rad = 3.5f * tolerance;
             tol_log = (int)log10f(1.0f / tolerance);
             // TODO1 check angle snap divides 360
+
             SendDlgItemMessage(hWnd, IDC_PREFS_ANGLE, WM_GETTEXT, 16, (LPARAM)buf);
             angle_snap = atoi(buf);
+
             SendDlgItemMessage(hWnd, IDC_PREFS_ROUNDRAD, WM_GETTEXT, 16, (LPARAM)buf);
             round_rad = (float)atof(buf);
 
