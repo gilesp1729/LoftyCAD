@@ -74,6 +74,7 @@ extern BOOL view_help;
 extern BOOL view_rendered;
 extern BOOL view_constr;
 extern BOOL view_ortho;
+extern BOOL micro_moved;
 
 extern STATE app_state;
 extern BOOL construction;

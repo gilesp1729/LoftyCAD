@@ -38,6 +38,9 @@ BOOL view_debug = FALSE;
 BOOL view_help = TRUE;
 BOOL view_tree = FALSE;
 
+// Micro moving (with arrow keys)
+BOOL micro_moved = FALSE;
+
 // State the app is in.
 STATE app_state = STATE_NONE;
 
@@ -706,6 +709,13 @@ left_down(AUX_EVENTREC *event)
         return;
     }
 
+    // Terminate a series of micro moves
+    if (micro_moved)
+    {
+        update_drawing();
+        micro_moved = FALSE;
+    }
+
     // Find if there is an object under the cursor, and
     // also find if it is in the selection.
     picked_obj = Pick(event->data[0], event->data[1], FALSE);
@@ -935,6 +945,7 @@ left_up(AUX_EVENTREC *event)
         ReleaseCapture();
         left_mouse = FALSE;
         change_state(STATE_NONE);
+        update_drawing();
         break;
 
     case STATE_MOVING:
@@ -1140,6 +1151,7 @@ left_click(AUX_EVENTREC *event)
             // select it
             link_single(picked_obj, &selection);
         }
+        update_drawing();
     }
 }
 
@@ -1211,6 +1223,7 @@ micro_move_selection(float x, float y)
         parent = find_parent_object(&object_tree, obj->prev, FALSE);
         invalidate_all_view_lists(parent, obj->prev, dx, dy, dz);
     }
+    micro_moved = TRUE;
 }
 
 // U/D/L/R arrow keys move selection by one unit in the facing plane,
@@ -1243,6 +1256,12 @@ down_arrow_key(void)
 void CALLBACK
 right_down(AUX_EVENTREC *event)
 {
+    if (micro_moved)
+    {
+        update_drawing();
+        micro_moved = FALSE;
+    }
+
     SetCapture(auxGetHWND());
     right_mouseX = event->data[AUX_MOUSEX];
     right_mouseY = event->data[AUX_MOUSEY];
@@ -1445,7 +1464,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
             treeview_dialog
             );
 
-        SetWindowPos(hWndTree, HWND_NOTOPMOST, wWidth, wHeight / 2, 0, 0, SWP_NOSIZE);
+        SetWindowPos(hWndTree, HWND_NOTOPMOST, wWidth + 150, 0, 0, 0, SWP_NOSIZE);
         if (view_tree)
             ShowWindow(hWndTree, SW_SHOW);
 

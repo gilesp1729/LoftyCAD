@@ -63,6 +63,13 @@ Command(int message, int wParam, int lParam)
     Object *obj;
     char *pdot;
 
+    // Check for micro moves
+    if (micro_moved)
+    {
+        update_drawing();
+        micro_moved = FALSE;
+    }
+
     switch (message)
     {
     case WM_COMMAND:
@@ -662,10 +669,12 @@ Command(int message, int wParam, int lParam)
             clear_selection(&selection);
             for (obj = object_tree.obj_list.head; obj != NULL; obj = obj->next)
                 link_single(obj, &selection);
+            update_drawing();
             break;
 
         case ID_EDIT_SELECTNONE:
             clear_selection(&selection);
+            update_drawing();
             break;
 
         case ID_EDIT_UNDO:

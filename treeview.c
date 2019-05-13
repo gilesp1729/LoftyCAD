@@ -28,6 +28,7 @@ populate_treeview_object(Object *obj, Object *parent, HTREEITEM hItem)
     Point *p;
     Face *face;
     Edge *edge;
+    Object *o;
 
     switch (obj->type)
     {
@@ -43,6 +44,12 @@ populate_treeview_object(Object *obj, Object *parent, HTREEITEM hItem)
         tvi.cchTextMax = strlen(tvi.pszText);
         tvi.lParam = (LPARAM)obj;
         tvi.mask = TVIF_TEXT | TVIF_PARAM;
+        if (is_selected_direct(obj, &o))
+        {
+            tvi.mask |= TVIF_STATE;
+            tvi.state = TVIS_BOLD;
+            tvi.stateMask = TVIS_BOLD;
+        }
         tvins.item = tvi;
         tvins.hParent = hItem;
         tvins.hInsertAfter = TVI_FIRST;
@@ -60,6 +67,12 @@ populate_treeview_object(Object *obj, Object *parent, HTREEITEM hItem)
         tvi.cchTextMax = strlen(tvi.pszText);
         tvi.lParam = (LPARAM)obj;
         tvi.mask = TVIF_TEXT | TVIF_PARAM;
+        if (is_selected_direct(obj, &o))
+        {
+            tvi.mask |= TVIF_STATE;
+            tvi.state = TVIS_BOLD;
+            tvi.stateMask = TVIS_BOLD;
+        }
         tvins.item = tvi;
         tvins.hParent = hItem;
         tvins.hInsertAfter = TVI_FIRST;
@@ -82,6 +95,12 @@ populate_treeview_object(Object *obj, Object *parent, HTREEITEM hItem)
         tvi.cchTextMax = strlen(tvi.pszText);
         tvi.lParam = (LPARAM)obj;
         tvi.mask = TVIF_TEXT | TVIF_PARAM;
+        if (is_selected_direct(obj, &o))
+        {
+            tvi.mask |= TVIF_STATE;
+            tvi.state = TVIS_BOLD;
+            tvi.stateMask = TVIS_BOLD;
+        }
         tvins.item = tvi;
         tvins.hParent = hItem;
         tvins.hInsertAfter = TVI_FIRST;
@@ -99,6 +118,12 @@ populate_treeview_object(Object *obj, Object *parent, HTREEITEM hItem)
         tvi.cchTextMax = strlen(tvi.pszText);
         tvi.lParam = (LPARAM)obj;
         tvi.mask = TVIF_TEXT | TVIF_PARAM;
+        if (is_selected_direct(obj, &o))
+        {
+            tvi.mask |= TVIF_STATE;
+            tvi.state = TVIS_BOLD;
+            tvi.stateMask = TVIS_BOLD;
+        }
         tvins.item = tvi;
         tvins.hParent = hItem;
         tvins.hInsertAfter = TVI_FIRST;
@@ -133,7 +158,7 @@ populate_treeview_object(Object *obj, Object *parent, HTREEITEM hItem)
 void
 populate_treeview_tree(Group *tree, HTREEITEM hItem)
 {
-    Object *obj;
+    Object *obj, *o;
     TVINSERTSTRUCT tvins;
     TVITEM tvi = { 0, };
     char descr[128];
@@ -152,6 +177,12 @@ populate_treeview_tree(Group *tree, HTREEITEM hItem)
             tvi.cchTextMax = strlen(tvi.pszText);
             tvi.lParam = (LPARAM)obj;
             tvi.mask = TVIF_TEXT | TVIF_PARAM;
+            if (is_selected_direct(obj, &o))
+            {
+                tvi.mask |= TVIF_STATE;
+                tvi.state = TVIS_BOLD;
+                tvi.stateMask = TVIS_BOLD;
+            }
             tvins.item = tvi;
             tvins.hParent = hItem;
             tvins.hInsertAfter = TVI_FIRST;
@@ -202,8 +233,8 @@ treeview_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     HMENU hMenu;
     NMTVGETINFOTIP *ngit;
-    // NMTREEVIEW *nmtv;
-    // Object *obj, *sel_obj;
+    NMTREEVIEW *nmtv;
+    Object *obj, *o;
 
     switch (msg)
     {
@@ -222,15 +253,23 @@ treeview_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             ngit = (NMTVGETINFOTIP *)lParam;
             treeview_highlight = (Object *)ngit->lParam;
             break;
-#if 0 // Don't do this - it needs too much work (e.g. handling clicks in the main window, shift, etc.)
+
         case TVN_SELCHANGED:
             nmtv = (NMTREEVIEW *)lParam;
             obj = (Object *)nmtv->itemNew.lParam;
 
-            if (obj != NULL)
-                link_single(obj, &selection);
-            break;
+#if 1 // Shift key handling is not done yet here - treat as if always shifted
+            if (nmtv->action == TVC_BYMOUSE && obj != NULL)
+            {
+                if (!is_selected_direct(obj, &o))
+                    link_single_checked(obj, &selection);
+                else
+                    remove_from_selection(obj);
+
+                update_drawing();
+            }
 #endif
+            break;
         }
         break;
     }

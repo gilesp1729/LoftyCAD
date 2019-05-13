@@ -487,7 +487,6 @@ right_click(AUX_EVENTREC *event)
         break;
     }
 
-    // TODO - bug here when groups are selected, it doesn't show up under is_selected_direct, so item is grayed
     EnableMenuItem(hMenu, ID_OBJ_GROUPSELECTED, is_selected_direct(picked_obj, &o) ? MF_ENABLED : MF_GRAYED);
 
     // Disable "enter dimensions" for objects that have no dimensions that can be easily changed
