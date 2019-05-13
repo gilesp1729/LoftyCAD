@@ -49,9 +49,6 @@ check_file_changed(HWND hWnd)
     }
 
     clean_checkpoints(curr_filename);
-    // clear_selection(&selection);
-    // clear_selection(&clipboard);
-    // purge_tree(&object_tree);
     DestroyWindow(hWnd);
 }
 
@@ -367,7 +364,7 @@ Command(int message, int wParam, int lParam)
             }
 
             clear_selection(&selection);
-            purge_tree(&object_tree);
+            purge_tree(&object_tree, clipboard.head != NULL, &saved_list);
             drawing_changed = FALSE;
             clean_checkpoints(curr_filename);
             curr_filename[0] = '\0';
@@ -546,7 +543,7 @@ Command(int message, int wParam, int lParam)
                 }
 
                 clear_selection(&selection);
-                purge_tree(&object_tree);
+                purge_tree(&object_tree, clipboard.head != NULL, &saved_list);
                 drawing_changed = FALSE;
                 clean_checkpoints(curr_filename);
                 curr_filename[0] = '\0';
@@ -585,6 +582,7 @@ Command(int message, int wParam, int lParam)
             for (obj = selection.head; obj != NULL; obj = obj->next)
                 delink_group(obj->prev, &object_tree);
 
+            clear_selection(&saved_list);
             clear_selection(&clipboard);
             clipboard = selection;
             selection.head = NULL;
@@ -600,6 +598,7 @@ Command(int message, int wParam, int lParam)
             // As above, but don't unlink the objects. The clipboard is a reference to 
             // existing objects, not a copy of them. 
             // Excel does it like this, and it drives me nuts sometimes.
+            clear_selection(&saved_list);
             clear_selection(&clipboard);
             clipboard = selection;
             selection.head = NULL;

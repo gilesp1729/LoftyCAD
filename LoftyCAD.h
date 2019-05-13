@@ -79,6 +79,7 @@ extern STATE app_state;
 extern BOOL construction;
 extern ListHead selection;
 extern ListHead clipboard;
+extern ListHead saved_list;
 extern Group object_tree;
 extern BOOL drawing_changed;
 extern Object *curr_obj;

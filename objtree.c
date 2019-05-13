@@ -857,18 +857,26 @@ purge_obj(Object *obj)
 }
 
 // Purge a tree, freeing everything in it, except for Points, which are
-// placed in the free list.
+// placed in the free list. 
 void
-purge_tree(Group *tree)
+purge_tree(Group *tree, BOOL preserve_objects, ListHead *saved_list)
 {
     Object *obj;
     Object *nextobj = NULL;
 
-    for (obj = tree->obj_list.head; obj != NULL; obj = nextobj)
+    if (preserve_objects)
     {
-        nextobj = obj->next;
-        purge_obj(obj);
+        *saved_list = tree->obj_list;
     }
+    else
+    {
+        for (obj = tree->obj_list.head; obj != NULL; obj = nextobj)
+        {
+            nextobj = obj->next;
+            purge_obj(obj);
+        }
+    }
+
     tree->obj_list.head = NULL;
     tree->obj_list.tail = NULL;
     if (tree->mesh != NULL)

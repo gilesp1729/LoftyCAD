@@ -816,8 +816,9 @@ read_checkpoint(Group *tree, char *filename, int generation)
     char *pdot;
 
     clear_selection(&selection);
+    clear_selection(&saved_list);
     clear_selection(&clipboard);
-    purge_tree(tree);
+    purge_tree(tree, FALSE, NULL);
 
     if (generation > 0)
     {

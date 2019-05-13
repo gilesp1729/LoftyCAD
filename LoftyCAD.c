@@ -50,6 +50,10 @@ BOOL construction = FALSE;
 ListHead selection = { NULL, NULL };
 ListHead clipboard = { NULL, NULL };
 
+// A list head that saves an old object tree when the clipboard still has 
+// references to it
+ListHead saved_list = { NULL, NULL };
+
 // Top level group of objects to be drawn
 Group object_tree = { 0, };
 
