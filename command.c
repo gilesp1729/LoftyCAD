@@ -401,11 +401,11 @@ Command(int message, int wParam, int lParam)
                 hMenu = GetSubMenu(GetMenu(auxGetHWND()), 0);
                 hMenu = GetSubMenu(hMenu, 9);
                 insert_filename_to_MRU(hMenu, curr_filename);
-                populate_treeview();
                 xform_list.head = NULL;
                 xform_list.tail = NULL;
                 gen_view_list_tree_volumes(&object_tree);
                 //gen_view_list_tree_surfaces(&object_tree, &object_tree);
+                populate_treeview();
             }
 
             break;
@@ -568,11 +568,11 @@ Command(int message, int wParam, int lParam)
                     strcat_s(window_title, 256, " - ");
                     strcat_s(window_title, 256, object_tree.title);
                     SetWindowText(auxGetHWND(), window_title);
-                    populate_treeview();
                     xform_list.head = NULL;
                     xform_list.tail = NULL;
                     gen_view_list_tree_volumes(&object_tree);
                     //gen_view_list_tree_surfaces(&object_tree, &object_tree);
+                    populate_treeview();
                 }
             }
             break;
@@ -684,6 +684,7 @@ Command(int message, int wParam, int lParam)
             xform_list.tail = NULL;
             gen_view_list_tree_volumes(&object_tree);
             //gen_view_list_tree_surfaces(&object_tree, &object_tree);
+            populate_treeview();
             break;
 
         case ID_EDIT_REDO:
@@ -693,6 +694,7 @@ Command(int message, int wParam, int lParam)
             xform_list.tail = NULL;
             gen_view_list_tree_volumes(&object_tree);
             //gen_view_list_tree_surfaces(&object_tree, &object_tree);
+            populate_treeview();
             break;
 
         case ID_HELP_GETTINGSTARTED:

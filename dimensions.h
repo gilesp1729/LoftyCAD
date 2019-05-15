@@ -15,5 +15,6 @@ void process_messages(void);
 BOOL has_dims(Object *obj);
 void show_dims_on(Object *obj, PRESENTATION pres, LOCK parent_lock);
 void show_dims_at(POINT pt, Object *obj, BOOL accept_input);
+char *get_dims_string(Object *obj, char buf[64]);
 
 #endif // __DIMS_H__

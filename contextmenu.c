@@ -386,9 +386,32 @@ insert_chamfer_round(Point *pt, Face *parent, float size, EDGE edge_type, BOOL r
 void CALLBACK
 right_click(AUX_EVENTREC *event)
 {
+    POINT pt;
+
+    if (view_rendered)
+        return;
+
+    picked_obj = Pick(event->data[0], event->data[1], FALSE);
+
+    // If we don't pick anything, attempt a forced pick (we might have clicked a locked volume)
+    if (picked_obj == NULL)
+        picked_obj = Pick(event->data[0], event->data[1], TRUE);
+    if (picked_obj == NULL)
+        return;
+
+    pt.x = event->data[AUX_MOUSEX];
+    pt.y = event->data[AUX_MOUSEY];
+    ClientToScreen(auxGetHWND(), &pt);
+
+    contextmenu(picked_obj, pt);
+}
+
+// Display a context menu for an object at a screen location.
+void
+contextmenu(Object *picked_obj, POINT pt)
+{
     HMENU hMenu = LoadMenu(hInst, MAKEINTRESOURCE(IDR_CONTEXT));
     int rc;
-    POINT pt;
     Object *parent, *sel_obj, *o, *o_next;
     char buf[128];
     LOCK old_parent_lock;
@@ -403,21 +426,6 @@ right_click(AUX_EVENTREC *event)
     int i;
     OPENFILENAME ofn;
     char group_filename[256];
-
-    if (view_rendered)
-        return;
-
-    picked_obj = Pick(event->data[0], event->data[1], FALSE);
-    
-    // If we don't pick anything, attempt a forced pick (we might have clicked a locked volume)
-    if (picked_obj == NULL)
-        picked_obj = Pick(event->data[0], event->data[1], TRUE);
-    if (picked_obj == NULL)
-        return;
-
-    pt.x = event->data[AUX_MOUSEX];
-    pt.y = event->data[AUX_MOUSEY];
-    ClientToScreen(auxGetHWND(), &pt);
 
     // Display the object ID at the top of the menu
     hMenu = GetSubMenu(hMenu, 0);

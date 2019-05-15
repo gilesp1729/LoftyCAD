@@ -58,10 +58,11 @@ populate_treeview_object(Object *obj, Object *parent, HTREEITEM hItem)
 
     case OBJ_EDGE:
         edge = (Edge *)obj;
-        sprintf_s(descr, 64, "Edge %d %s%s",
+        sprintf_s(descr, 64, "Edge %d %s%s %s",
                   obj->ID,
                   edgetypes[edge->type & ~EDGE_CONSTRUCTION],
-                  (edge->type & EDGE_CONSTRUCTION) ? "(C)" : ""
+                  (edge->type & EDGE_CONSTRUCTION) ? "(C)" : "",
+                  get_dims_string(obj, buf)
                   );
         tvi.pszText = descr;
         tvi.cchTextMax = strlen(tvi.pszText);
@@ -86,10 +87,11 @@ populate_treeview_object(Object *obj, Object *parent, HTREEITEM hItem)
 
     case OBJ_FACE:
         face = (Face *)obj;
-        sprintf_s(descr, 64, "Face %d %s%s", 
+        sprintf_s(descr, 64, "Face %d %s%s %s", 
                   obj->ID, 
                   facetypes[face->type & ~FACE_CONSTRUCTION],
-                  (face->type & FACE_CONSTRUCTION) ? "(C)" : ""
+                  (face->type & FACE_CONSTRUCTION) ? "(C)" : "",
+                  get_dims_string(obj, buf)
                   );
         tvi.pszText = descr;
         tvi.cchTextMax = strlen(tvi.pszText);
@@ -113,7 +115,7 @@ populate_treeview_object(Object *obj, Object *parent, HTREEITEM hItem)
         break;
 
     case OBJ_VOLUME:
-        sprintf_s(descr, 64, "Volume %d", obj->ID);
+        sprintf_s(descr, 64, "Volume %d %s", obj->ID, get_dims_string(obj, buf));
         tvi.pszText = descr;
         tvi.cchTextMax = strlen(tvi.pszText);
         tvi.lParam = (LPARAM)obj;
@@ -234,7 +236,8 @@ treeview_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     HMENU hMenu;
     NMTVGETINFOTIP *ngit;
     NMTREEVIEW *nmtv;
-    Object *obj, *o;
+    Object *obj;
+    POINT pt;
 
     switch (msg)
     {
@@ -254,13 +257,22 @@ treeview_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             treeview_highlight = (Object *)ngit->lParam;
             break;
 
+        case NM_RCLICK:
+            if (treeview_highlight == NULL)
+                break;
+            GetCursorPos(&pt);
+            contextmenu(treeview_highlight, pt);
+            break;
+
         case TVN_SELCHANGED:
             nmtv = (NMTREEVIEW *)lParam;
             obj = (Object *)nmtv->itemNew.lParam;
 
-#if 1 // Shift key handling is not done yet here - treat as if always shifted
+#if 0 // Shift key handling is not done yet here - treat as if always shifted. Prevent illegal selections (TODO)
             if (nmtv->action == TVC_BYMOUSE && obj != NULL)
             {
+                Object *o;
+
                 if (!is_selected_direct(obj, &o))
                     link_single_checked(obj, &selection);
                 else

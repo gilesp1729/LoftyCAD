@@ -189,6 +189,7 @@ void populate_treeview(void);
 void CALLBACK right_click(AUX_EVENTREC *event);
 void CALLBACK check_file_changed(HWND hWnd);
 void update_drawing(void);
+void contextmenu(Object *picked_obj, POINT pt);
 
 // Forwards for window procedures and similar
 int CALLBACK Command(int message, int wParam, int lParam);

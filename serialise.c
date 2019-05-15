@@ -802,7 +802,6 @@ write_checkpoint(Group *tree, char *filename)
     latest_generation = generation;
     if (generation > max_generation)
         max_generation = generation;
-    populate_treeview();
 }
 
 // Read back a given generation of checkpoint. Generation zero is the
@@ -839,7 +838,7 @@ read_checkpoint(Group *tree, char *filename, int generation)
         drawing_changed = FALSE;
         rc = deserialise_tree(tree, filename, FALSE);
     }
-    populate_treeview();
+
     return rc;
 }
 

@@ -696,6 +696,7 @@ update_drawing(void)
     xform_list.tail = NULL;
     gen_view_list_tree_volumes(&object_tree);
 #endif
+    populate_treeview();
 }
 
 // Mouse handlers
@@ -1293,6 +1294,9 @@ mouse_move(AUX_EVENTREC *event)
 
     // while here, store away the state of the shift key
     key_status = event->data[AUX_MOUSESTATUS];
+
+    // get rid of any highlights from the tree view
+    treeview_highlight = NULL;
 }
 
 
@@ -1538,10 +1542,10 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
             hMenu = GetSubMenu(GetMenu(auxGetHWND()), 0);
             hMenu = GetSubMenu(hMenu, 9);
             insert_filename_to_MRU(hMenu, curr_filename);
-            populate_treeview();
             xform_list.head = NULL;
             xform_list.tail = NULL;
             gen_view_list_tree_volumes(&object_tree);
+            populate_treeview();
         }
 
         hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_LOFTYCAD));

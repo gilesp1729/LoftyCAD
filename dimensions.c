@@ -236,7 +236,8 @@ update_dims(Object *obj, char *buf)
 }
 
 // Get the dims into a string, if they are available for an object.
-void
+// Otherwise return a blank string (not NULL) so it can be used in a printf.
+char *
 get_dims_string(Object *obj, char buf[64])
 {
     char buf2[64];
@@ -247,6 +248,7 @@ get_dims_string(Object *obj, char buf[64])
     Volume *v;
     double angle;
 
+    buf[0] = '\0';
     switch (obj->type)
     {
     case OBJ_EDGE:
@@ -323,6 +325,8 @@ get_dims_string(Object *obj, char buf[64])
 
         break;
     }
+
+    return buf;
 }
 
 // Show the dimensions of an existing object, and optionally accept changes to them. 
