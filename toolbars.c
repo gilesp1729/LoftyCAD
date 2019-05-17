@@ -50,7 +50,6 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     switch (msg)
     {
     case WM_INITDIALOG:
-        LoadAndDisplayIcon(hWnd, IDI_POINT, IDB_POINT, IDS_POINT);
         LoadAndDisplayIcon(hWnd, IDI_EDGE, IDB_EDGE, IDS_EDGE);
         LoadAndDisplayIcon(hWnd, IDI_RECT, IDB_RECT, IDS_RECT);
         LoadAndDisplayIcon(hWnd, IDI_CIRCLE, IDB_CIRCLE, IDS_CIRCLE);
@@ -60,6 +59,9 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         LoadAndDisplayIcon(hWnd, IDI_BEZIER_EDGE, IDB_BEZIER_EDGE, IDS_BEZIER_EDGE);
         LoadAndDisplayIcon(hWnd, IDI_ARC_EDGE, IDB_ARC_EDGE, IDS_ARC_EDGE);
         LoadAndDisplayIcon(hWnd, IDI_EXTRUDE, IDB_EXTRUDE, IDS_EXTRUDE);
+        LoadAndDisplayIcon(hWnd, IDI_SCALE, IDB_SCALE, IDS_SCALE);
+        LoadAndDisplayIcon(hWnd, IDI_ROTATE, IDB_ROTATE, IDS_ROTATE);
+
         LoadAndDisplayIcon(hWnd, IDI_TOP, IDB_XY, IDS_XY);
         LoadAndDisplayIcon(hWnd, IDI_FRONT, IDB_YZ, IDS_YZ);
         LoadAndDisplayIcon(hWnd, IDI_LEFT, IDB_XZ, IDS_XZ);
@@ -75,9 +77,11 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         EnableWindow(GetDlgItem(hWnd, IDB_ARC_EDGE), !view_rendered);
         EnableWindow(GetDlgItem(hWnd, IDB_BEZIER_EDGE), !view_rendered);
         EnableWindow(GetDlgItem(hWnd, IDB_EXTRUDE), !view_rendered);
-
-        // For now grey out unimplemented ones
-        EnableWindow(GetDlgItem(hWnd, IDB_POINT), FALSE);
+        EnableWindow(GetDlgItem(hWnd, IDB_SCALE), !view_rendered);
+        EnableWindow(GetDlgItem(hWnd, IDB_ROTATE), !view_rendered);
+        EnableWindow(GetDlgItem(hWnd, IDB_CONST_EDGE), !view_rendered);
+        EnableWindow(GetDlgItem(hWnd, IDB_CONST_RECT), !view_rendered);
+        EnableWindow(GetDlgItem(hWnd, IDB_CONST_CIRCLE), !view_rendered);
         break;
 
     case WM_COMMAND:
@@ -114,6 +118,14 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
             case IDB_EXTRUDE:
                 change_state(STATE_STARTING_EXTRUDE);
+                break;
+
+            case IDB_SCALE:
+                change_state(STATE_STARTING_SCALE);
+                break;
+
+            case IDB_ROTATE:
+                change_state(STATE_STARTING_ROTATE);
                 break;
 
             case IDB_XY:
@@ -200,6 +212,8 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 EnableWindow(GetDlgItem(hWndToolbar, IDB_ARC_EDGE), !view_rendered);
                 EnableWindow(GetDlgItem(hWndToolbar, IDB_BEZIER_EDGE), !view_rendered);
                 EnableWindow(GetDlgItem(hWndToolbar, IDB_EXTRUDE), !view_rendered);
+                EnableWindow(GetDlgItem(hWndToolbar, IDB_SCALE), !view_rendered);
+                EnableWindow(GetDlgItem(hWndToolbar, IDB_ROTATE), !view_rendered);
                 EnableWindow(GetDlgItem(hWndToolbar, IDB_CONST_EDGE), !view_rendered);
                 EnableWindow(GetDlgItem(hWndToolbar, IDB_CONST_RECT), !view_rendered);
                 EnableWindow(GetDlgItem(hWndToolbar, IDB_CONST_CIRCLE), !view_rendered);

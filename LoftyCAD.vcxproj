@@ -157,9 +157,12 @@
     <Image Include="icon-extrude.ico" />
     <Image Include="icon-point.ico" />
     <Image Include="icon-rect.ico" />
+    <Image Include="icon-rotate.ico" />
+    <Image Include="icon-scale.ico" />
     <Image Include="icon-xy.ico" />
     <Image Include="icon1.ico" />
     <Image Include="icon2.ico" />
+    <Image Include="icon3.ico" />
     <Image Include="LoftyCAD.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

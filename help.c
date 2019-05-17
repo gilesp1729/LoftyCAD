@@ -5,6 +5,7 @@
 #include <CommDlg.h>
 #include <stdio.h>
 
+// This is indexed by the app state (LoftyCAD.h)
 char *state_key[] =
 {
     "Exploring",
@@ -17,13 +18,17 @@ char *state_key[] =
     "Drawing_Edge",
     "Drawing_Edge",
     "Drawing_Extrude",
+    "Drawing_Scale",
+    "Drawing_Rotate",
 
     "Drawing_Edge",
     "Drawing_Face",
     "Drawing_Face",
     "Drawing_Edge",
     "Drawing_Edge",
-    "Drawing_Extrude"
+    "Drawing_Extrude",
+    "Drawing_Scale",
+    "Drawing_Rotate"
 };
 
 HWND init_help_window(void)

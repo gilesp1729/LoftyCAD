@@ -234,5 +234,14 @@
     <Image Include="cube-top32.ico">
       <Filter>Resource Files</Filter>
     </Image>
+    <Image Include="icon3.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="icon-scale.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="icon-rotate.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
   </ItemGroup>
 </Project>

@@ -762,6 +762,8 @@ left_down(AUX_EVENTREC *event)
     case STATE_STARTING_BEZIER:
     case STATE_STARTING_ARC:
     case STATE_STARTING_EXTRUDE:
+    case STATE_STARTING_SCALE:
+    case STATE_STARTING_ROTATE:
         // We can't always determine plane in which the new edge will be drawn.
         // This only works with a mouse move within a face, and we will often have
         // started on an edge or snapped to a point. 
@@ -801,6 +803,7 @@ left_down(AUX_EVENTREC *event)
                     picked_plane = &((Face *)raw_picked_obj)->normal;
                     intersect_ray_plane(left_mouseX, left_mouseY, picked_plane, &picked_point);
                     snap_to_grid(picked_plane, &picked_point);
+                    picked_obj = raw_picked_obj;
                 }
                 break;
 
@@ -839,6 +842,8 @@ left_down(AUX_EVENTREC *event)
     case STATE_DRAWING_ARC:
     case STATE_DRAWING_BEZIER:
     case STATE_DRAWING_EXTRUDE:
+    case STATE_DRAWING_SCALE:
+    case STATE_DRAWING_ROTATE:
         ASSERT(FALSE, "Mouse down in drawing state");
         break;
     }
@@ -1029,6 +1034,8 @@ left_up(AUX_EVENTREC *event)
         break;
 
     case STATE_DRAWING_EXTRUDE:
+    case STATE_DRAWING_SCALE:
+    case STATE_DRAWING_ROTATE:
         ReleaseCapture();
         left_mouse = FALSE;
         change_state(STATE_NONE);
@@ -1042,6 +1049,8 @@ left_up(AUX_EVENTREC *event)
     case STATE_STARTING_ARC:
     case STATE_STARTING_BEZIER:
     case STATE_STARTING_EXTRUDE:
+    case STATE_STARTING_SCALE:
+    case STATE_STARTING_ROTATE:
         ASSERT(FALSE, "Mouse up in starting state");
         curr_obj = NULL;
         ReleaseCapture();

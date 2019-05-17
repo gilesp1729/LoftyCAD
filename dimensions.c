@@ -287,7 +287,10 @@ get_dims_string(Object *obj, char buf[64])
             {
             case FACE_RECT:
                 // use view list here, then it works for drawing rects
+                // protect against NULL view list (transitory)
                 p0 = (Point *)f->view_list.head;
+                if (p0 == NULL)
+                    break;
                 p1 = (Point *)p0->hdr.next;
                 p2 = (Point *)p1->hdr.next;
                 sprintf_s(buf, 64, "%s,%s mm",
