@@ -83,6 +83,12 @@ Plane *picked_plane = NULL;
 // The plane through the centre of an object's bbox, parallel to the facing plane.
 Plane centre_facing_plane;
 
+// Dominant direction for a scaling operation
+SCALED scaled_dirn;
+
+// Total angle accumulator for a rotation operation
+float total_angle;
+
 // Standard planes
 Plane plane_XY = { 0, };
 Plane plane_XZ = { 0, };
@@ -706,6 +712,9 @@ update_drawing(void)
 void CALLBACK
 left_down(AUX_EVENTREC *event)
 {
+    Point d1;
+    Volume *vol = NULL;
+
     // If rendered, don't do anything here except orbit.
     if (view_rendered)
     {
@@ -875,14 +884,63 @@ left_down(AUX_EVENTREC *event)
         case OBJ_GROUP:  
         case OBJ_VOLUME:
             // Note group and volume have box immediately following header (mandatory)
+            vol = (Volume *)picked_obj;
             centre_facing_plane = *facing_plane;
-            centre_facing_plane.refpt.x = ((Volume *)picked_obj)->bbox.xc;
-            centre_facing_plane.refpt.y = ((Volume *)picked_obj)->bbox.yc;
-            centre_facing_plane.refpt.z = ((Volume *)picked_obj)->bbox.zc;
+            centre_facing_plane.refpt.x = vol->bbox.xc;
+            centre_facing_plane.refpt.y = vol->bbox.yc;
+            centre_facing_plane.refpt.z = vol->bbox.zc;
             intersect_ray_plane(left_mouseX, left_mouseY, &centre_facing_plane, &picked_point);
             break;
         }
 
+        // For scaling,determine the dominant direction (it doesn't change during the
+        // scaling operation). Drop out if we have coincident points or we don't have
+        // the right sort of parent.
+        if (vol == NULL || nz(length(&picked_point, &centre_facing_plane.refpt)))
+        {
+            ReleaseCapture();
+            left_mouse = FALSE;
+            change_state(STATE_NONE);
+            trackball_MouseDown(event);
+            break;
+        }
+
+        // Initialise some stuff used by both scaling and rotation
+        switch (facing_index)
+        {
+        case PLANE_XY:
+        case PLANE_MINUS_XY:
+            total_angle = vol->xform != NULL ? vol->xform->rz : 0;
+            d1.x = fabsf(picked_point.x - centre_facing_plane.refpt.x);
+            d1.y = fabsf(picked_point.y - centre_facing_plane.refpt.y);
+            if (d1.x > d1.y)
+                scaled_dirn = DIRN_X;
+            else
+                scaled_dirn = DIRN_Y;
+            break;
+
+        case PLANE_XZ:
+        case PLANE_MINUS_XZ:
+            total_angle = vol->xform != NULL ? vol->xform->ry : 0;
+            d1.x = fabsf(picked_point.x - centre_facing_plane.refpt.x);
+            d1.z = fabsf(picked_point.z - centre_facing_plane.refpt.z);
+            if (d1.x > d1.z)
+                scaled_dirn = DIRN_X;
+            else
+                scaled_dirn = DIRN_Z;
+            break;
+
+        case PLANE_YZ:
+        case PLANE_MINUS_YZ:
+            total_angle = vol->xform != NULL ? vol->xform->rx : 0;
+            d1.y = fabsf(picked_point.y - centre_facing_plane.refpt.y);
+            d1.z = fabsf(picked_point.z - centre_facing_plane.refpt.z);
+            if (d1.y > d1.z)
+                scaled_dirn = DIRN_Y;
+            else
+                scaled_dirn = DIRN_Z;
+            break;
+        }
 
         // Move into the corresponding drawing state
         change_state(app_state + STATE_DRAWING_OFFSET);

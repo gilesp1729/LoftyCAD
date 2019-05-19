@@ -15,6 +15,23 @@ static unsigned int curr_drawn_no = 0;
 // List of transforms to be applied to point coordinates
 ListHead xform_list = { NULL, NULL };
 
+// Cleanup an angle (in degrees) to [-180, 180] and optionally snap it to a multiple
+// of 45 degrees.
+float
+cleanup_angle_and_snap(float angle, BOOL snap_to_45)
+{
+    while (angle > 180)
+        angle -= 360;
+    while (angle < -180)
+        angle += 360;
+    if (snap_to_45)
+        angle = roundf(angle / 45) * 45;
+    else if (snapping_to_angle)
+        angle = roundf(angle / angle_snap) * angle_snap;
+
+    return angle;
+}
+
 // Some standard colors sent to GL.
 void
 color(OBJECT obj_type, BOOL construction, BOOL selected, BOOL highlighted, BOOL locked)
@@ -490,12 +507,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                 case STATE_MOVING:
                     // Move the selection, or an object, by a delta in XYZ within the facing plane
                     intersect_ray_plane(pt.x, pt.y, facing_plane, &new_point);
-                    if (key_status & AUX_SHIFT)  // TODO - this doesn't work, see below
-                        snap_to_angle(picked_plane, &picked_point, &new_point, 45);
-                    else if (snapping_to_angle)  // TODO - this doesn't work when moving an edge on a rect. Need some special cases
-                        snap_to_angle(picked_plane, &picked_point, &new_point, angle_snap);
                     snap_to_grid(facing_plane, &new_point);
-
                     parent = find_top_level_parent(&object_tree, picked_obj);
 
                     // moving a single object (or group) under the cursor
@@ -1161,7 +1173,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                     if (picked_obj != NULL && (picked_obj->type == OBJ_VOLUME || picked_obj->type == OBJ_GROUP))
                     {
                         Transform *xform;
-                        SCALED scaled;
+                        SCALED scaled = scaled_dirn;
 
                         intersect_ray_plane(pt.x, pt.y, &centre_facing_plane, &new_point);
                         xform = ((Volume *)picked_obj)->xform;  // works for groups too, as the struct layout is the same
@@ -1177,52 +1189,39 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         d1.x = 0;  // shhh compiler
                         d1.y = 0;
                         d1.z = 0;  
-                        scaled = 0;
                         switch (facing_index)
                         {
                         case PLANE_XY:
                         case PLANE_MINUS_XY:
-                            d1.x = picked_point.x - centre_facing_plane.refpt.x;
-                            d1.y = picked_point.y - centre_facing_plane.refpt.y;
+                            d1.x = fabsf(picked_point.x - centre_facing_plane.refpt.x);
+                            d1.y = fabsf(picked_point.y - centre_facing_plane.refpt.y);
                             if (key_status & AUX_SHIFT)
                                 scaled = DIRN_X | DIRN_Y;
-                            else if (fabsf(d1.x) > fabsf(d1.y))
-                                scaled = DIRN_X;
-                            else
-                                scaled = DIRN_Y;
                             break;
 
                         case PLANE_XZ:
                         case PLANE_MINUS_XZ:
-                            d1.x = picked_point.x - centre_facing_plane.refpt.x;
-                            d1.z = picked_point.z - centre_facing_plane.refpt.z;
+                            d1.x = fabsf(picked_point.x - centre_facing_plane.refpt.x);
+                            d1.z = fabsf(picked_point.z - centre_facing_plane.refpt.z);
                             if (key_status & AUX_SHIFT)
                                 scaled = DIRN_X | DIRN_Z;
-                            else if (fabsf(d1.x) > fabsf(d1.z))
-                                scaled = DIRN_X;
-                            else
-                                scaled = DIRN_Z;
                             break;
 
                         case PLANE_YZ:
                         case PLANE_MINUS_YZ:
-                            d1.y = picked_point.y - centre_facing_plane.refpt.y;
-                            d1.z = picked_point.z - centre_facing_plane.refpt.z;
+                            d1.y = fabsf(picked_point.y - centre_facing_plane.refpt.y);
+                            d1.z = fabsf(picked_point.z - centre_facing_plane.refpt.z);
                             if (key_status & AUX_SHIFT)
                                 scaled = DIRN_Y | DIRN_Z;
-                            else if (fabsf(d1.y) > fabsf(d1.z))
-                                scaled = DIRN_Y;
-                            else
-                                scaled = DIRN_Z;
                             break;
                         }
 
-                        if (scaled & DIRN_X)
-                            xform->sx *= (new_point.x - centre_facing_plane.refpt.x) / d1.x;
-                        if (scaled & DIRN_Y)
-                            xform->sy *= (new_point.y - centre_facing_plane.refpt.y) / d1.y;
-                        if (scaled & DIRN_Z)
-                            xform->sz *= (new_point.z - centre_facing_plane.refpt.z) / d1.z;
+                        if ((scaled & DIRN_X) && !nz(d1.x))
+                            xform->sx *= fabsf(new_point.x - centre_facing_plane.refpt.x) / d1.x;
+                        if ((scaled & DIRN_Y) && !nz(d1.y))
+                            xform->sy *= fabsf(new_point.y - centre_facing_plane.refpt.y) / d1.y;
+                        if ((scaled & DIRN_Z) && !nz(d1.z))
+                            xform->sz *= fabsf(new_point.z - centre_facing_plane.refpt.z) / d1.z;
 
                         picked_point = new_point;
                         xform->enable_scale = TRUE;
@@ -1240,7 +1239,6 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
 
                         intersect_ray_plane(pt.x, pt.y, &centre_facing_plane, &new_point);
                         da = RADF * angle3(&picked_point, &centre_facing_plane.refpt, &new_point, &centre_facing_plane);
-                        // TODO - trap coincident points and prevent bad angles creeping in. Also stop large multiples of +/- 360 deg
                         xform = ((Volume *)picked_obj)->xform;  // works for groups too, as the struct layout is the same
                         if (xform == NULL)
                         {
@@ -1253,22 +1251,28 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         switch (facing_index)       // this matches the centre facing plane
                         {
                         case PLANE_XY:
-                            xform->rz += da;
+                            total_angle += da;
+                            xform->rz = cleanup_angle_and_snap(total_angle, key_status & AUX_SHIFT);
                             break;
                         case PLANE_MINUS_XY:
-                            xform->rz -= da;
+                            total_angle -= da;
+                            xform->rz = cleanup_angle_and_snap(total_angle, key_status & AUX_SHIFT);
                             break;
                         case PLANE_XZ:
-                            xform->ry += da;
+                            total_angle += da;
+                            xform->ry = cleanup_angle_and_snap(total_angle, key_status & AUX_SHIFT);
                             break;
                         case PLANE_MINUS_XZ:
-                            xform->ry -= da;
+                            total_angle -= da;
+                            xform->ry = cleanup_angle_and_snap(total_angle, key_status & AUX_SHIFT);
                             break;
                         case PLANE_YZ:
-                            xform->rx += da;
+                            total_angle += da;
+                            xform->rx = cleanup_angle_and_snap(total_angle, key_status & AUX_SHIFT);
                             break;
                         case PLANE_MINUS_YZ:
-                            xform->rx -= da;
+                            total_angle -= da;
+                            xform->rx = cleanup_angle_and_snap(total_angle, key_status & AUX_SHIFT);
                             break;
                         }
 
