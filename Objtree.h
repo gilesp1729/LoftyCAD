@@ -256,8 +256,9 @@ typedef struct Transform
 typedef struct Volume
 {
     struct Object   hdr;            // Header
-    struct Bbox     bbox;           // Bounding box for the volume in 3D, based on untransformed points
+    struct Bbox     bbox;           // Bounding box for the volume in 3D, based on untransformed points.
     struct Transform *xform;        // Transform to be applied to volume
+                                    // NOTE THE ABOVE MUST FOLLOW immediately after header
     float           extrude_height; // Extrude height. If negative, it's a hole (face normals face inwards)
     struct Point    ***point_bucket;  // Bucket structure of Points whose coordinates are copied from 
                                     // child faces' view lists. Allow sharing points when importing
@@ -272,14 +273,15 @@ typedef struct Volume
 typedef struct Group
 {
     struct Object   hdr;            // Header
+    struct Bbox     bbox;           // Bounding box for the group in 3D, based on bboxes of volumes in the group
+    struct Transform *xform;        // Transform to be applied to group
+                                    // NOTE THE ABOVE MUST FOLLOW immediately after header
     char            title[256];     // A name for the group
     Mesh            *mesh;          // Mesh for the complete group
     BOOL            mesh_valid;     // If TRUE, the mesh is up to date (but not necessarily complete)
     BOOL            mesh_merged;    // If TRUE, the mesh has been merged to its parent group mesh.
     BOOL            mesh_complete;  // If TRUE, all volumes have been completely merged to this mesh.
                                     // (otherwise, some will need to be added separately to the output)
-    struct Bbox     bbox;           // Bounding box for the group in 3D, based on bboxes of volumes in the group
-    struct Transform *xform;        // Transform to be applied to group
     struct ListHead obj_list;       // Doubly linked list of objects making up the group
 } Group;
 

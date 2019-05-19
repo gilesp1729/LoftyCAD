@@ -853,17 +853,8 @@ transform_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             if (xform == NULL)
             {
                 xform = xform_new();
-                switch (obj->type)
-                {
-                case OBJ_VOLUME:
-                    ((Volume *)obj)->xform = xform;
-                    box = &((Volume *)obj)->bbox;
-                    break;
-                case OBJ_GROUP:
-                    ((Group *)obj)->xform = xform;
-                    box = &((Group *)obj)->bbox;
-                    break;
-                }
+                ((Volume *)obj)->xform = xform;     // Groups have same structure so safe to do this
+                box = &((Volume *)obj)->bbox;
                 xform->xc = box->xc;
                 xform->yc = box->yc;
                 xform->zc = box->zc;

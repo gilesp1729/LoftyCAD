@@ -52,6 +52,13 @@ typedef enum
     BLEND_ALPHA                 // Alpha blending (note: may be errors, as objects are NOT sorted front-to-back)
 } BlendMode;
 
+typedef enum
+{
+    DIRN_X = 1,                 // Scale in X, Y or Z. Bit field to allow combinations.
+    DIRN_Y = 2,
+    DIRN_Z = 4
+} SCALED;
+
 // Externs
 extern HINSTANCE hInst;
 
@@ -95,6 +102,7 @@ extern Point last_point;
 extern Plane *picked_plane;
 extern Plane *facing_plane;
 extern PLANE facing_index;
+extern Plane centre_facing_plane;
 
 extern char curr_filename[];
 extern float grid_snap;

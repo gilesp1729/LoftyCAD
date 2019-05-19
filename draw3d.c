@@ -1158,12 +1158,124 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                     break;
 
                 case STATE_DRAWING_SCALE:
+                    if (picked_obj != NULL && (picked_obj->type == OBJ_VOLUME || picked_obj->type == OBJ_GROUP))
+                    {
+                        Transform *xform;
+                        SCALED scaled;
+
+                        intersect_ray_plane(pt.x, pt.y, &centre_facing_plane, &new_point);
+                        xform = ((Volume *)picked_obj)->xform;  // works for groups too, as the struct layout is the same
+                        if (xform == NULL)
+                        {
+                            ((Volume *)picked_obj)->xform = xform = xform_new();
+                            xform->xc = centre_facing_plane.refpt.x;
+                            xform->yc = centre_facing_plane.refpt.y;
+                            xform->zc = centre_facing_plane.refpt.z;
+                        }
+
+                        // Find dominant direction in plane, or do both if SHIFT key down
+                        d1.x = 0;  // shhh compiler
+                        d1.y = 0;
+                        d1.z = 0;  
+                        scaled = 0;
+                        switch (facing_index)
+                        {
+                        case PLANE_XY:
+                        case PLANE_MINUS_XY:
+                            d1.x = picked_point.x - centre_facing_plane.refpt.x;
+                            d1.y = picked_point.y - centre_facing_plane.refpt.y;
+                            if (key_status & AUX_SHIFT)
+                                scaled = DIRN_X | DIRN_Y;
+                            else if (fabsf(d1.x) > fabsf(d1.y))
+                                scaled = DIRN_X;
+                            else
+                                scaled = DIRN_Y;
+                            break;
+
+                        case PLANE_XZ:
+                        case PLANE_MINUS_XZ:
+                            d1.x = picked_point.x - centre_facing_plane.refpt.x;
+                            d1.z = picked_point.z - centre_facing_plane.refpt.z;
+                            if (key_status & AUX_SHIFT)
+                                scaled = DIRN_X | DIRN_Z;
+                            else if (fabsf(d1.x) > fabsf(d1.z))
+                                scaled = DIRN_X;
+                            else
+                                scaled = DIRN_Z;
+                            break;
+
+                        case PLANE_YZ:
+                        case PLANE_MINUS_YZ:
+                            d1.y = picked_point.y - centre_facing_plane.refpt.y;
+                            d1.z = picked_point.z - centre_facing_plane.refpt.z;
+                            if (key_status & AUX_SHIFT)
+                                scaled = DIRN_Y | DIRN_Z;
+                            else if (fabsf(d1.y) > fabsf(d1.z))
+                                scaled = DIRN_Y;
+                            else
+                                scaled = DIRN_Z;
+                            break;
+                        }
+
+                        if (scaled & DIRN_X)
+                            xform->sx *= (new_point.x - centre_facing_plane.refpt.x) / d1.x;
+                        if (scaled & DIRN_Y)
+                            xform->sy *= (new_point.y - centre_facing_plane.refpt.y) / d1.y;
+                        if (scaled & DIRN_Z)
+                            xform->sz *= (new_point.z - centre_facing_plane.refpt.z) / d1.z;
+
+                        picked_point = new_point;
+                        xform->enable_scale = TRUE;
+                        evaluate_transform(xform);
+                        invalidate_all_view_lists(picked_obj, picked_obj, 0, 0, 0);
+                    }
+
+                    break;
+
                 case STATE_DRAWING_ROTATE:
                     if (picked_obj != NULL && (picked_obj->type == OBJ_VOLUME || picked_obj->type == OBJ_GROUP))
                     {
+                        float da;
+                        Transform *xform;
 
+                        intersect_ray_plane(pt.x, pt.y, &centre_facing_plane, &new_point);
+                        da = RADF * angle3(&picked_point, &centre_facing_plane.refpt, &new_point, &centre_facing_plane);
+                        // TODO - trap coincident points and prevent bad angles creeping in. Also stop large multiples of +/- 360 deg
+                        xform = ((Volume *)picked_obj)->xform;  // works for groups too, as the struct layout is the same
+                        if (xform == NULL)
+                        {
+                            ((Volume *)picked_obj)->xform = xform = xform_new();
+                            xform->xc = centre_facing_plane.refpt.x;
+                            xform->yc = centre_facing_plane.refpt.y;
+                            xform->zc = centre_facing_plane.refpt.z;
+                        }
 
+                        switch (facing_index)       // this matches the centre facing plane
+                        {
+                        case PLANE_XY:
+                            xform->rz += da;
+                            break;
+                        case PLANE_MINUS_XY:
+                            xform->rz -= da;
+                            break;
+                        case PLANE_XZ:
+                            xform->ry += da;
+                            break;
+                        case PLANE_MINUS_XZ:
+                            xform->ry -= da;
+                            break;
+                        case PLANE_YZ:
+                            xform->rx += da;
+                            break;
+                        case PLANE_MINUS_YZ:
+                            xform->rx -= da;
+                            break;
+                        }
 
+                        picked_point = new_point;
+                        xform->enable_rotation = TRUE;
+                        evaluate_transform(xform);
+                        invalidate_all_view_lists(picked_obj, picked_obj, 0, 0, 0);
                     }
 
                     break;

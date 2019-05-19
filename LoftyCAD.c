@@ -80,6 +80,9 @@ Point last_point;
 // The plane that picked_obj lies in; or else the facing plane if there is none.
 Plane *picked_plane = NULL;
 
+// The plane through the centre of an object's bbox, parallel to the facing plane.
+Plane centre_facing_plane;
+
 // Standard planes
 Plane plane_XY = { 0, };
 Plane plane_XZ = { 0, };
@@ -762,8 +765,6 @@ left_down(AUX_EVENTREC *event)
     case STATE_STARTING_BEZIER:
     case STATE_STARTING_ARC:
     case STATE_STARTING_EXTRUDE:
-    case STATE_STARTING_SCALE:
-    case STATE_STARTING_ROTATE:
         // We can't always determine plane in which the new edge will be drawn.
         // This only works with a mouse move within a face, and we will often have
         // started on an edge or snapped to a point. 
@@ -835,6 +836,57 @@ left_down(AUX_EVENTREC *event)
         // Don't add the object yet until we have moved the mouse, as a click will
         // need to be handled harmlessly and silently.
         curr_obj = NULL;
+        break;
+
+    case STATE_STARTING_SCALE:
+    case STATE_STARTING_ROTATE:
+        // Determine the facing plane through the centroid of the object.
+        // This is used as picked_plane. Project the mouse down position
+        // back to this plane and use that as picked_point. If the object is 
+        // not a volume or group, we want the parent.
+        SetCapture(auxGetHWND());
+
+        // Remember the initial mouse click so we can test for gross movement later
+        left_mouseX = event->data[AUX_MOUSEX];
+        left_mouseY = event->data[AUX_MOUSEY];
+        left_mouse = TRUE;
+        key_status = event->data[AUX_MOUSESTATUS];
+
+        if (picked_obj == NULL)
+        {
+            ReleaseCapture();
+            left_mouse = FALSE;
+            change_state(STATE_NONE);
+            trackball_MouseDown(event);
+            break;
+        }
+
+        // Find the object (or its parent) 
+        switch (picked_obj->type)
+        {
+        case OBJ_FACE:
+        case OBJ_EDGE:
+        case OBJ_POINT:
+            // Find the parent
+            picked_obj = find_top_level_parent(&object_tree, picked_obj);
+            if (picked_obj->type < OBJ_VOLUME)
+                break;
+            // fall through
+        case OBJ_GROUP:  
+        case OBJ_VOLUME:
+            // Note group and volume have box immediately following header (mandatory)
+            centre_facing_plane = *facing_plane;
+            centre_facing_plane.refpt.x = ((Volume *)picked_obj)->bbox.xc;
+            centre_facing_plane.refpt.y = ((Volume *)picked_obj)->bbox.yc;
+            centre_facing_plane.refpt.z = ((Volume *)picked_obj)->bbox.zc;
+            intersect_ray_plane(left_mouseX, left_mouseY, &centre_facing_plane, &picked_point);
+            break;
+        }
+
+
+        // Move into the corresponding drawing state
+        change_state(app_state + STATE_DRAWING_OFFSET);
+
         break;
 
     case STATE_DRAWING_RECT:
