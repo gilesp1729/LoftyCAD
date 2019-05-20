@@ -174,6 +174,8 @@
     <None Include="face1.cur" />
     <None Include="face2.cur" />
     <None Include="face3.cur" />
+    <None Include="resize1.cur" />
+    <None Include="resize2.cur" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
