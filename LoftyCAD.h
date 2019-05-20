@@ -41,6 +41,8 @@ typedef enum STATE
     STATE_DRAWING_SCALE,
     STATE_DRAWING_ROTATE,
 
+    STATE_MAX,                  // Must be the highest numbered
+
     // The offset between members of the above two sets of possible states.
     STATE_DRAWING_OFFSET = STATE_DRAWING_EDGE - STATE_STARTING_EDGE
 } STATE;
@@ -193,6 +195,7 @@ HWND init_help_window(void);
 void display_help(char *key);
 void display_help_state(STATE state);
 void change_state(STATE new_state);
+void display_cursor(STATE new_state);
 
 BOOL is_selected_direct(Object *obj, Object **prev_in_list);
 BOOL is_selected_parent(Object *obj);

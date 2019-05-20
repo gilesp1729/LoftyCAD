@@ -72,6 +72,10 @@ Command(int message, int wParam, int lParam)
 
     switch (message)
     {
+    case WM_SETCURSOR:
+        display_cursor(app_state);
+        return TRUE;
+
     case WM_COMMAND:
         switch (LOWORD(wParam))
         {

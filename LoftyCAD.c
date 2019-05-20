@@ -1419,15 +1419,6 @@ mouse_move(AUX_EVENTREC *event)
 }
 
 
-// Change app state, displaying any help for the new state
-void
-change_state(STATE new_state)
-{
-    app_state = new_state;
-    display_help_state(app_state);
-}
-
-
 // Preferences dialog.
 int WINAPI
 prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)

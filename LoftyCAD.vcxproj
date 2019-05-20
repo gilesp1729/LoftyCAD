@@ -165,6 +165,16 @@
     <Image Include="icon3.ico" />
     <Image Include="LoftyCAD.ico" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="cur00001.cur" />
+    <None Include="cursor1.cur" />
+    <None Include="edge1.cur" />
+    <None Include="edge2.cur" />
+    <None Include="edge3.cur" />
+    <None Include="face1.cur" />
+    <None Include="face2.cur" />
+    <None Include="face3.cur" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

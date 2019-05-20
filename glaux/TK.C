@@ -1098,6 +1098,17 @@ PIXELFORMATDESCRIPTOR pfd;
             }
          return (0);
 
+      case WM_SETCURSOR:
+          if (HIWORD(lParam) == 0)
+          {
+              // A menu is displayed. Use the default arrow cursor.
+              SetCursor(LoadCursor(NULL, IDC_ARROW));
+              return FALSE;
+          }
+          if (CommandFunc)
+              return (*CommandFunc)(message, wParam, lParam);
+          return TRUE;
+
       case WM_MOVE:
          windInfo.x = LOWORD(lParam);
          windInfo.y = HIWORD(lParam);

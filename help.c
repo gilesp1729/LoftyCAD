@@ -5,8 +5,8 @@
 #include <CommDlg.h>
 #include <stdio.h>
 
-// This is indexed by the app state (LoftyCAD.h)
-char *state_key[] =
+// These are indexed by the app state (LoftyCAD.h)
+char *state_key[STATE_MAX] =
 {
     "Exploring",
     "Moving",
@@ -31,9 +31,40 @@ char *state_key[] =
     "Drawing_Rotate"
 };
 
+struct
+{
+    HINSTANCE   instance;
+    LPSTR       idc;
+    HCURSOR     cursor;
+} cursors[STATE_MAX] =
+{
+    { NULL, IDC_ARROW, NULL },
+    { NULL, IDC_ARROW, NULL },
+    { NULL, IDC_ARROW, NULL },
+
+    { (HINSTANCE)1, MAKEINTRESOURCE(IDC_EDGE1), NULL },
+    { (HINSTANCE)1, MAKEINTRESOURCE(IDC_FACE1), NULL },
+    { (HINSTANCE)1, MAKEINTRESOURCE(IDC_FACE2), NULL },
+    { (HINSTANCE)1, MAKEINTRESOURCE(IDC_EDGE3), NULL },
+    { (HINSTANCE)1, MAKEINTRESOURCE(IDC_EDGE2), NULL },
+    { (HINSTANCE)1, MAKEINTRESOURCE(IDC_FACE3), NULL },
+    { NULL, IDC_SIZEALL, NULL },
+    { NULL, IDC_ARROW, NULL },
+
+    { (HINSTANCE)1, MAKEINTRESOURCE(IDC_EDGE1), NULL },
+    { (HINSTANCE)1, MAKEINTRESOURCE(IDC_FACE1), NULL },
+    { (HINSTANCE)1, MAKEINTRESOURCE(IDC_FACE2), NULL },
+    { (HINSTANCE)1, MAKEINTRESOURCE(IDC_EDGE3), NULL },
+    { (HINSTANCE)1, MAKEINTRESOURCE(IDC_EDGE2), NULL },
+    { (HINSTANCE)1, MAKEINTRESOURCE(IDC_FACE3), NULL },
+    { NULL, IDC_SIZEALL, NULL },
+    { NULL, IDC_ARROW, NULL }
+};
+
 HWND init_help_window(void)
 {
     HWND hWnd;
+    int i;
 
     OleInitialize(NULL);
     hWnd = CreateDialog
@@ -47,6 +78,14 @@ HWND init_help_window(void)
     SetWindowPos(hWnd, HWND_NOTOPMOST, wWidth, wHeight / 2, 0, 0, SWP_NOSIZE);
     if (view_help)
         ShowWindow(hWnd, SW_SHOW);
+
+    // Load the cursors (both homemade and system-supplied ones)
+    for (i = 0; i < STATE_MAX; i++)
+    {
+        if (cursors[i].instance != NULL)
+            cursors[i].instance = hInst;
+        cursors[i].cursor = LoadCursor(cursors[i].instance, (LPCTSTR)cursors[i].idc);
+    }
 
     return hWnd;
 }
@@ -72,6 +111,21 @@ void
 display_help_state(STATE state)
 {
     display_help(state_key[app_state]);
+}
+
+// Change app state, displaying any help for the new state
+void
+change_state(STATE new_state)
+{
+    app_state = new_state;
+    display_help_state(app_state);
+}
+
+// Display the cursor for the new state
+void
+display_cursor(STATE new_state)
+{
+    SetCursor(cursors[new_state].cursor);
 }
 
 // Wndproc for help dialog. Comments from the original code (see htmlbrowser.[ch])
