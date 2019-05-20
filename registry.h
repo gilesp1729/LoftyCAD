@@ -6,7 +6,7 @@
 void load_MRU_to_menu(HMENU hMenu);
 void insert_filename_to_MRU(HMENU hMenu, char *filename);
 BOOL get_filename_from_MRU(int id, char *filename);
-void remove_filename_from_MRU(HMENU hMenu, char *filename);
+void remove_filename_from_MRU(HMENU hMenu, int id);
 
 #define ID_MRU_BASE 60000
 #define ID_MRU_FILE1 60001

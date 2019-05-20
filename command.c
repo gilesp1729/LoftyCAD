@@ -559,7 +559,10 @@ Command(int message, int wParam, int lParam)
 
                 if (!deserialise_tree(&object_tree, new_filename, FALSE))
                 {
-                    MessageBox(auxGetHWND(), "File not found", new_filename, MB_OK | MB_ICONWARNING);
+                    MessageBox(auxGetHWND(), "File not found. Removing from recently opened list.", new_filename, MB_OK | MB_ICONWARNING);
+                    hMenu = GetSubMenu(GetMenu(auxGetHWND()), 0);
+                    hMenu = GetSubMenu(hMenu, 9);
+                    remove_filename_from_MRU(hMenu, LOWORD(wParam) - ID_MRU_BASE);
                 }
                 else
                 {

@@ -23,29 +23,29 @@ load_MRU_to_menu(HMENU hMenu)
     if (RegQueryValueEx(hkey, "File1", 0, NULL, str, &len) == ERROR_SUCCESS)
     {
         strcpy_s(file1, VALEN, "&1 ");
-        strcat_s(file1, VALEN, str);
-        AppendMenu(hMenu, MF_BYPOSITION, ID_MRU_FILE1, file1);
+        strncat_s(file1, VALEN, str,  len);
+        AppendMenu(hMenu, 0, ID_MRU_FILE1, file1);
     }
     len = VALEN;
     if (RegQueryValueEx(hkey, "File2", 0, NULL, str, &len) == ERROR_SUCCESS)
     {
         strcpy_s(file2, VALEN, "&2 ");
-        strcat_s(file2, VALEN, str);
-        AppendMenu(hMenu, MF_BYPOSITION, ID_MRU_FILE2, file2);
+        strncat_s(file2, VALEN, str, len);
+        AppendMenu(hMenu, 0, ID_MRU_FILE2, file2);
     }
     len = VALEN;
     if (RegQueryValueEx(hkey, "File3", 0, NULL, str, &len) == ERROR_SUCCESS)
     {
         strcpy_s(file3, VALEN, "&3 ");
-        strcat_s(file3, VALEN, str);
-        AppendMenu(hMenu, MF_BYPOSITION, ID_MRU_FILE3, file3);
+        strncat_s(file3, VALEN, str, len);
+        AppendMenu(hMenu, 0, ID_MRU_FILE3, file3);
     }
     len = VALEN;
     if (RegQueryValueEx(hkey, "File4", 0, NULL, str, &len) == ERROR_SUCCESS)
     {
         strcpy_s(file4, VALEN, "&4 ");
-        strcat_s(file4, VALEN, str);
-        AppendMenu(hMenu, MF_BYPOSITION, ID_MRU_FILE4, file4);
+        strncat_s(file4, VALEN, str, len);
+        AppendMenu(hMenu, 0, ID_MRU_FILE4, file4);
     }
 
     RegCloseKey(hkey);
@@ -110,7 +110,7 @@ insert_filename_to_MRU(HMENU hMenu, char *filename)
         RegSetKeyValue(hkey, NULL, "File1", REG_SZ, filename, strlen(filename) + 1);
         strcpy_s(file1, VALEN, "&1 ");
         strcat_s(file1, VALEN, filename);
-        AppendMenu(hMenu, MF_BYPOSITION, ID_MRU_FILE1, file1);
+        AppendMenu(hMenu, 0, ID_MRU_FILE1, file1);
         return;
     }
 
@@ -126,7 +126,7 @@ insert_filename_to_MRU(HMENU hMenu, char *filename)
         RegSetKeyValue(hkey, NULL, "File2", REG_SZ, filename, strlen(filename) + 1);
         strcpy_s(file2, VALEN, "&2 ");
         strcat_s(file2, VALEN, filename);
-        AppendMenu(hMenu, MF_BYPOSITION, ID_MRU_FILE2, file2);
+        AppendMenu(hMenu, 0, ID_MRU_FILE2, file2);
         return;
     }
 
@@ -141,7 +141,7 @@ insert_filename_to_MRU(HMENU hMenu, char *filename)
         RegSetKeyValue(hkey, NULL, "File3", REG_SZ, filename, strlen(filename) + 1);
         strcpy_s(file3, VALEN, "&3 ");
         strcat_s(file3, VALEN, filename);
-        AppendMenu(hMenu, MF_BYPOSITION, ID_MRU_FILE3, file3);
+        AppendMenu(hMenu, 0, ID_MRU_FILE3, file3);
         return;
     }
 
@@ -163,7 +163,7 @@ insert_filename_to_MRU(HMENU hMenu, char *filename)
         RegSetKeyValue(hkey, NULL, "File4", REG_SZ, filename, strlen(filename) + 1);
         strcpy_s(file4, VALEN, "&4 ");
         strcat_s(file4, VALEN, filename);
-        AppendMenu(hMenu, MF_BYPOSITION, ID_MRU_FILE4, file4);
+        AppendMenu(hMenu, 0, ID_MRU_FILE4, file4);
     }
 
     RegCloseKey(hkey);
@@ -192,3 +192,21 @@ get_filename_from_MRU(int id, char *filename)
     return FALSE;
 }
 
+// Remove a file from the MRU list
+void
+remove_filename_from_MRU(HMENU hMenu, int id)
+{
+    HKEY hkey;
+    char *keyval[] = { "File1", "File2", "File3", "File4" };
+
+    RegCreateKeyEx(HKEY_CURRENT_USER, "Software\\LoftyCAD\\MRUList", 0, NULL, 0, KEY_ALL_ACCESS, NULL, &hkey, NULL);
+    RegDeleteKeyValue(hkey, NULL, keyval[id-1]);
+
+    // Just clear and reload the lot. It's easier than a conditional shuffle-up.
+    DeleteMenu(hMenu, 4, MF_BYPOSITION);
+    DeleteMenu(hMenu, 3, MF_BYPOSITION);
+    DeleteMenu(hMenu, 2, MF_BYPOSITION);
+    DeleteMenu(hMenu, 1, MF_BYPOSITION);
+    RegCloseKey(hkey);
+    load_MRU_to_menu(hMenu);
+}
