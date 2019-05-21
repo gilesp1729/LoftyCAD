@@ -54,6 +54,7 @@ void snap_to_grid(Plane *plane, Point *point);
 void snap_to_scale(float *length);
 char *display_rounded(char *buf, float val);
 void snap_2d_angle(float x0, float y0, float *x1, float *y1, int angle_tol);
+float cleanup_angle_and_snap(float angle, BOOL snap_to_45);
 void snap_to_angle(Plane *plane, Point *p0, Point *p1, int angle_tol);
 BOOL centre_3pt_circle(Point *p1, Point *p2, Point *p3, Plane *pl, Point *centre, BOOL *clockwise);
 BOOL centre_2pt_tangent_circle(Point *p1, Point *p2, Point *p, Plane *pl, Point *centre, BOOL *clockwise);

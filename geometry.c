@@ -312,6 +312,23 @@ snap_to_grid(Plane *plane, Point *point)
     }
 }
 
+// Cleanup an angle (in degrees) to [-180, 180] and optionally snap it to a multiple
+// of 45 degrees.
+float
+cleanup_angle_and_snap(float angle, BOOL snap_to_45)
+{
+    while (angle > 180)
+        angle -= 360;
+    while (angle < -180)
+        angle += 360;
+    if (snap_to_45)
+        angle = roundf(angle / 45) * 45;
+    else if (snapping_to_angle)
+        angle = roundf(angle / angle_snap) * angle_snap;
+
+    return angle;
+}
+
 // Snap p0-p1 to an angle snap tolerance. p1 may be moved.
 // p1 must be snapped to the grid after calling this.
 void

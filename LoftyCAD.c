@@ -85,6 +85,7 @@ Plane centre_facing_plane;
 
 // Dominant direction for a scaling operation
 SCALED scaled_dirn;
+SCALED scaled;
 
 // Total angle accumulator for a rotation operation
 float total_angle;

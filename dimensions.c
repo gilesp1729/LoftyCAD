@@ -44,12 +44,20 @@ has_dims(Object *obj)
 
     case OBJ_VOLUME:
         v = (Volume *)obj;
+        if (app_state == STATE_STARTING_SCALE || app_state == STATE_DRAWING_SCALE)
+            return TRUE;
+        if (app_state == STATE_STARTING_ROTATE || app_state == STATE_DRAWING_ROTATE)
+            return TRUE;
         if (((Face *)v->faces.tail)->type == FACE_CIRCLE)    // Cylinders only for now
             return TRUE;
         else
             return FALSE;
 
     case OBJ_GROUP:
+        if (app_state == STATE_STARTING_SCALE || app_state == STATE_DRAWING_SCALE)
+            return TRUE;
+        if (app_state == STATE_STARTING_ROTATE || app_state == STATE_DRAWING_ROTATE)
+            return TRUE;
         return FALSE;
     }
 
@@ -308,7 +316,45 @@ get_dims_string(Object *obj, char buf[64])
 
     case OBJ_VOLUME:
         v = (Volume *)obj;
-        if (((Face *)v->faces.tail)->type == FACE_CIRCLE)    // Cylinders only for now
+        if (app_state == STATE_STARTING_SCALE || app_state == STATE_DRAWING_SCALE)
+        {
+            if (v->xform != NULL)
+            {
+                switch (scaled)
+                {
+                case DIRN_X:
+                    sprintf_s(buf, 64, "%sx", display_rounded(buf, v->xform->sx));
+                    break;
+                case DIRN_Y:
+                    sprintf_s(buf, 64, "%sy", display_rounded(buf, v->xform->sy));
+                    break;
+                case DIRN_Z:
+                    sprintf_s(buf, 64, "%sz", display_rounded(buf, v->xform->sz));
+                    break;
+                case DIRN_X | DIRN_Y:
+                    sprintf_s(buf, 64, "%s,%sxy",
+                              display_rounded(buf, v->xform->sx),
+                              display_rounded(buf2, v->xform->sy));
+                    break;
+                case DIRN_X | DIRN_Z:
+                    sprintf_s(buf, 64, "%s,%sxz",
+                              display_rounded(buf, v->xform->sx),
+                              display_rounded(buf2, v->xform->sz));
+                    break;
+                case DIRN_Y | DIRN_Z:
+                    sprintf_s(buf, 64, "%s,%syz",
+                              display_rounded(buf, v->xform->sy),
+                              display_rounded(buf2, v->xform->sz));
+                    break;
+                }
+            }
+        }
+        else if (app_state == STATE_STARTING_ROTATE || app_state == STATE_DRAWING_ROTATE)
+        {
+            sprintf_s(buf, 64, "%sdeg", 
+                      display_rounded(buf, cleanup_angle_and_snap(total_angle, key_status & AUX_SHIFT)));
+        }
+        else if (((Face *)v->faces.tail)->type == FACE_CIRCLE)    // Cylinders only for now
         {
             c1 = (Face *)v->faces.tail;
             c2 = (Face *)c1->hdr.prev;
@@ -362,6 +408,7 @@ void
 show_dims_on(Object *obj, PRESENTATION pres, LOCK parent_lock)
 {
     HDC hdc = auxGetHDC();
+    Volume *v;
     Face *f;
     Edge *e;
     Point *p0, *p1, *p2;
@@ -391,8 +438,6 @@ show_dims_on(Object *obj, PRESENTATION pres, LOCK parent_lock)
             (e->endpoints[0]->y + e->endpoints[1]->y) / 2,
             (e->endpoints[0]->z + e->endpoints[1]->z) / 2
         );
-        glListBase(1000);
-        glCallLists(strlen(buf), GL_UNSIGNED_BYTE, buf);
         break;
 
     case OBJ_FACE:
@@ -438,11 +483,18 @@ show_dims_on(Object *obj, PRESENTATION pres, LOCK parent_lock)
                 );
             break;
         }
+        break;
 
-        glListBase(1000);
-        glCallLists(strlen(buf), GL_UNSIGNED_BYTE, buf);
+    case OBJ_VOLUME:
+    case OBJ_GROUP:
+        v = (Volume *)obj;
+        color(OBJ_EDGE, FALSE, FALSE, FALSE, locked);
+        glRasterPos3f(v->bbox.xc, v->bbox.yc, v->bbox.zc);
         break;
     }
+
+    glListBase(1000);
+    glCallLists(strlen(buf), GL_UNSIGNED_BYTE, buf);
 }
 
 

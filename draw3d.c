@@ -15,23 +15,6 @@ static unsigned int curr_drawn_no = 0;
 // List of transforms to be applied to point coordinates
 ListHead xform_list = { NULL, NULL };
 
-// Cleanup an angle (in degrees) to [-180, 180] and optionally snap it to a multiple
-// of 45 degrees.
-float
-cleanup_angle_and_snap(float angle, BOOL snap_to_45)
-{
-    while (angle > 180)
-        angle -= 360;
-    while (angle < -180)
-        angle += 360;
-    if (snap_to_45)
-        angle = roundf(angle / 45) * 45;
-    else if (snapping_to_angle)
-        angle = roundf(angle / angle_snap) * angle_snap;
-
-    return angle;
-}
-
 // Some standard colors sent to GL.
 void
 color(OBJECT obj_type, BOOL construction, BOOL selected, BOOL highlighted, BOOL locked)
@@ -447,6 +430,9 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                 treeview_highlight = NULL;
             else
                 highlight_obj = treeview_highlight;
+
+            // stop stale scaling directions from showing on hover
+            scaled = 0;
         }
         else if (left_mouse && app_state != STATE_DRAGGING_SELECT)
         {
@@ -1173,7 +1159,6 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                     if (picked_obj != NULL && (picked_obj->type == OBJ_VOLUME || picked_obj->type == OBJ_GROUP))
                     {
                         Transform *xform;
-                        SCALED scaled = scaled_dirn;
 
                         intersect_ray_plane(pt.x, pt.y, &centre_facing_plane, &new_point);
                         xform = ((Volume *)picked_obj)->xform;  // works for groups too, as the struct layout is the same
@@ -1189,6 +1174,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         d1.x = 0;  // shhh compiler
                         d1.y = 0;
                         d1.z = 0;  
+                        scaled = scaled_dirn;
                         switch (facing_index)
                         {
                         case PLANE_XY:
@@ -1223,6 +1209,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         if ((scaled & DIRN_Z) && !nz(d1.z))
                             xform->sz *= fabsf(new_point.z - centre_facing_plane.refpt.z) / d1.z;
 
+                        curr_obj = picked_obj;  // for highlighting
                         picked_point = new_point;
                         xform->enable_scale = TRUE;
                         evaluate_transform(xform);
@@ -1276,6 +1263,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                             break;
                         }
 
+                        curr_obj = picked_obj;  // for highlighting
                         picked_point = new_point;
                         xform->enable_rotation = TRUE;
                         evaluate_transform(xform);
