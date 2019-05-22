@@ -423,7 +423,10 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
             {
                 edge = edge_new(EDGE_STRAIGHT);
                 if (strcmp(tok, "STRAIGHT(C)") == 0)
+                {
                     edge->type |= EDGE_CONSTRUCTION;
+                    ((Object *)edge)->show_dims = TRUE;
+                }
                 if (strcmp(tok, "STRAIGHT(D)") == 0)
                     ((Object *)edge)->show_dims = TRUE;
                 tok = strtok_s(NULL, " \t\n", &nexttok);
@@ -439,7 +442,10 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
             {
                 edge = edge_new(EDGE_ARC);
                 if (strcmp(tok, "ARC(C)") == 0)
+                {
                     edge->type |= EDGE_CONSTRUCTION;
+                    ((Object *)edge)->show_dims = TRUE;
+                }
                 if (strcmp(tok, "ARC(D)") == 0)
                     ((Object *)edge)->show_dims = TRUE;
                 tok = strtok_s(NULL, " \t\n", &nexttok);
@@ -560,6 +566,7 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
             else if (strcmp(tok, "CIRCLE(C)") == 0)
             {
                 type = FACE_CIRCLE | FACE_CONSTRUCTION;
+                dims = TRUE;
             }
             else if (strcmp(tok, "CIRCLE(D)") == 0)
             {
