@@ -9,19 +9,20 @@ In particular, it will:
 - Retain the identity of 3D shapes, do not merge irreversibly with others
 - Not allow silly extrusions
 - Produce a single triangle mesh from merged objects, CSG fashion
-- NEVER produce non-manifold triangle meshes requiring repairs
+- Not produce non-manifold triangle meshes requiring repairs (OK, some apps complain, but I've never seen on fail to slice)
 - Write STL files directly
 
 # Interface
 - Sketch-up-like (draw a 2D face followed by extrusion)
 - Allows rects, polygons, circles, arcs, beziers and the extruded right prisms from them
-- Volume-edge-face hierarchy
+- Volume-face-edge-point hierarchy with controlled locking
+- Group objects and transform (scale and rotate)
 - Show dimensions when selected and when drawing/moving/scaling
 - Allow dimensions to snap points and also sensible other places (perp to lines, etc)
 - Allow units 0.1mm, mm, etc. and snapping tolerances to distance and angle
 
 # Files handled
-- Export triangle meshes STL, DAE?, 3DS?
+- Export triangle meshes as STL
 - Import STL, GTS, OFF, and some other features (progressively)
 - Always output full normals
 
@@ -31,7 +32,7 @@ In particular, it will:
 - Lofting (a nod to the original Lofty, which is LoftyCAD's spiritual ancestor)
 
 # Installing LoftyCAD from the prebuilt installer
-Unzip the zip in the Installer directory, to any directory on the Windows system (c:\Program Files (x86) is the standard place for 32-bit programs). The install.bat file will do this, register the file associations, and create a desktop link.
+Unzip the zip in the Installer directory, to any directory on the Windows system (c:\Program Files (x86) is the standard place for 32-bit programs). The install.bat file will do this (run as administrator!), register the file associations, and create a desktop link.
 
 # Building LoftyCAD
 LoftyCAD uses the CGAL computational geometry library to merge and intersect triangle meshes.
