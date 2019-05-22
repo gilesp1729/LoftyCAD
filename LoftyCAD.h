@@ -14,6 +14,10 @@
 #include "registry.h"
 #include "triangulate.h"
 
+
+// Version
+#define LOFTYCAD_VERSION "1.1"
+
 // States the app can be in.
 typedef enum STATE
 {

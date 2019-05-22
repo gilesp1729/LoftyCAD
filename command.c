@@ -12,8 +12,11 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
     switch (message)
     {
     case WM_INITDIALOG:
-        strcpy_s(buf, 64, "Build ");
+        strcpy_s(buf, 64, "Version ");
+        strcat_s(buf, 64, LOFTYCAD_VERSION);
+        strcat_s(buf, 64, " (Build ");
         strcat_s(buf, 64, __DATE__);
+        strcat_s(buf, 64, ")");
         SendDlgItemMessage(hDlg, IDC_STATIC_BUILD, WM_SETTEXT, 0, (LPARAM)buf);
         return (INT_PTR)TRUE;
 
