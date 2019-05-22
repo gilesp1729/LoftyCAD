@@ -1380,12 +1380,11 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
     {
         Object *parent = find_parent_object(&object_tree, curr_obj, FALSE);
 
+        build_parent_xform_list(curr_obj, parent, &xform_list);
         pres = DRAW_HIGHLIGHT | DRAW_WITH_DIMENSIONS;
         if (app_state >= STATE_STARTING_EDGE)
             pres |= DRAW_HIGHLIGHT_LOCKED;
-        xform_list.head = NULL;
-        xform_list.tail = NULL;
-        draw_object(curr_obj, pres, parent != NULL ? parent->lock : LOCK_NONE);     // TODO XFORM - transform faces belonging to vol/group
+        draw_object(curr_obj, pres, parent != NULL ? parent->lock : LOCK_NONE);
     }
 
     if (highlight_obj != NULL)
