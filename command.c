@@ -640,6 +640,14 @@ Command(int message, int wParam, int lParam)
             // Link the objects in the clipboard to the object tree. Do this by making a 
             // copy of them, as we might want to paste the same thing multiple times.
             // Each successive copy will go in at an increasing offset in the facing plane.
+            // Don't offset if pasting from an old obj tree into a new one (at least the first time)
+            if (saved_list.head != NULL)
+            {
+                clip_xoffset = 0;
+                clip_yoffset = 0;
+                clip_zoffset = 0;
+            }
+
             for (obj = clipboard.head; obj != NULL; obj = obj->next)
             {
                 Object * new_obj = copy_obj(obj->prev, clip_xoffset, clip_yoffset, clip_zoffset);
