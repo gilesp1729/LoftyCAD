@@ -239,6 +239,7 @@ Init(void)
     static float modulate[] = { GL_MODULATE };
     static float repeat[] = { GL_REPEAT };
     static float nearest[] = { GL_NEAREST };
+    // HFONT hFont;
 
     glClearColor(1.0, 1.0, 1.0, 1.0);
 
@@ -260,8 +261,14 @@ Init(void)
     glBlendFunc(GL_ZERO, GL_SRC_COLOR);     // multiply blending. 
     glEnable(GL_BLEND);
 
-    // For text annotations, horizontal characters start at 1000
+    // For text annotations, horizontal characters start at 1000, outlines at 2000
     wglUseFontBitmaps(auxGetHDC(), 0, 256, 1000);
+#if 0
+    hFont = CreateFont(48, 0, 0, 0, FW_DONTCARE, FALSE, TRUE, FALSE, DEFAULT_CHARSET, OUT_TT_ONLY_PRECIS,
+                       CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, VARIABLE_PITCH, TEXT("Arial"));
+    SelectObject(auxGetHDC(), hFont);
+    wglUseFontOutlines(auxGetHDC(), 0, 256, 2000, 0, 0, WGL_FONT_POLYGONS, NULL);
+#endif
 
     plane_XY.C = 1.0;           // set up planes
     plane_XZ.B = 1.0;
