@@ -628,6 +628,7 @@ contextmenu(Object *picked_obj, POINT pt)
         if (group != NULL)
         {
             link_group((Object *)group, &object_tree);
+            clear_selection(&selection);
             group_changed = TRUE;
         }
         break;
@@ -637,6 +638,7 @@ contextmenu(Object *picked_obj, POINT pt)
         if (face != NULL)
         {
             link_group((Object *)face, &object_tree);
+            clear_selection(&selection);
             group_changed = TRUE;
         }
         break;

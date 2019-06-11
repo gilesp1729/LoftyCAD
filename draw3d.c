@@ -1369,7 +1369,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
         if (obj->prev != curr_obj && obj->prev != highlight_obj)
         {
             pres = DRAW_SELECTED | DRAW_WITH_DIMENSIONS;
-            draw_object(obj->prev, pres, parent->lock);
+            draw_object(obj->prev, pres, parent != NULL ? parent->lock : LOCK_NONE);
         }
     }
 
