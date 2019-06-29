@@ -1155,6 +1155,37 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
 
                     break;
 
+                case STATE_DRAWING_TEXT:
+                    if (picked_plane == NULL)
+                        assign_picked_plane(pt);
+                    if (picked_plane == NULL)
+                        break;
+
+                    // Proceed as for drawing an edge, so user gets feedback about text direction.
+                    intersect_ray_plane(pt.x, pt.y, picked_plane, &new_point);
+                    if (key_status & AUX_SHIFT)
+                        snap_to_angle(picked_plane, &picked_point, &new_point, 45);
+                    else if (snapping_to_angle)
+                        snap_to_angle(picked_plane, &picked_point, &new_point, angle_snap);
+                    snap_to_grid(picked_plane, &new_point);
+
+                    // If first move, create a construction edge here.
+                    if (curr_obj == NULL)
+                    {
+                        curr_obj = (Object *)edge_new(EDGE_STRAIGHT | EDGE_CONSTRUCTION);
+                        e = (Edge *)curr_obj;
+                        e->endpoints[0] = point_newp(&picked_point);
+                        e->endpoints[1] = point_newp(&new_point);
+                    }
+                    else
+                    {
+                        e = (Edge *)curr_obj;
+                        e->endpoints[1]->x = new_point.x;
+                        e->endpoints[1]->y = new_point.y;
+                        e->endpoints[1]->z = new_point.z;
+                    }
+                    break;
+
                 case STATE_DRAWING_SCALE:
                     if (picked_obj != NULL && (picked_obj->type == OBJ_VOLUME || picked_obj->type == OBJ_GROUP))
                     {

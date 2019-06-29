@@ -223,6 +223,7 @@ Command(int message, int wParam, int lParam)
             EnableWindow(GetDlgItem(hWndToolbar, IDB_ARC_EDGE), !view_rendered);
             EnableWindow(GetDlgItem(hWndToolbar, IDB_BEZIER_EDGE), !view_rendered);
             EnableWindow(GetDlgItem(hWndToolbar, IDB_EXTRUDE), !view_rendered);
+            EnableWindow(GetDlgItem(hWndToolbar, IDB_TEXT), !view_rendered);
             EnableWindow(GetDlgItem(hWndToolbar, IDB_CONST_EDGE), !view_rendered);
             EnableWindow(GetDlgItem(hWndToolbar, IDB_CONST_RECT), !view_rendered);
             EnableWindow(GetDlgItem(hWndToolbar, IDB_CONST_CIRCLE), !view_rendered);

@@ -243,6 +243,12 @@
     <Image Include="icon-rotate.ico">
       <Filter>Resource Files</Filter>
     </Image>
+    <Image Include="rotate1.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="icon-text.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <None Include="cursor1.cur">
@@ -273,6 +279,9 @@
       <Filter>Resource Files</Filter>
     </None>
     <None Include="resize2.cur">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="face4.cur">
       <Filter>Resource Files</Filter>
     </None>
   </ItemGroup>

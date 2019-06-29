@@ -159,11 +159,13 @@
     <Image Include="icon-rect.ico" />
     <Image Include="icon-rotate.ico" />
     <Image Include="icon-scale.ico" />
+    <Image Include="icon-text.ico" />
     <Image Include="icon-xy.ico" />
     <Image Include="icon1.ico" />
     <Image Include="icon2.ico" />
     <Image Include="icon3.ico" />
     <Image Include="LoftyCAD.ico" />
+    <Image Include="rotate1.ico" />
   </ItemGroup>
   <ItemGroup>
     <None Include="cur00001.cur" />
@@ -174,6 +176,7 @@
     <None Include="face1.cur" />
     <None Include="face2.cur" />
     <None Include="face3.cur" />
+    <None Include="face4.cur" />
     <None Include="resize1.cur" />
     <None Include="resize2.cur" />
   </ItemGroup>

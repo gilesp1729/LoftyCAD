@@ -59,6 +59,7 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         LoadAndDisplayIcon(hWnd, IDI_BEZIER_EDGE, IDB_BEZIER_EDGE, IDS_BEZIER_EDGE);
         LoadAndDisplayIcon(hWnd, IDI_ARC_EDGE, IDB_ARC_EDGE, IDS_ARC_EDGE);
         LoadAndDisplayIcon(hWnd, IDI_EXTRUDE, IDB_EXTRUDE, IDS_EXTRUDE);
+        LoadAndDisplayIcon(hWnd, IDI_TEXT, IDB_TEXT, IDS_TEXT);
         LoadAndDisplayIcon(hWnd, IDI_SCALE, IDB_SCALE, IDS_SCALE);
         LoadAndDisplayIcon(hWnd, IDI_ROTATE, IDB_ROTATE, IDS_ROTATE);
 
@@ -77,6 +78,7 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         EnableWindow(GetDlgItem(hWnd, IDB_ARC_EDGE), !view_rendered);
         EnableWindow(GetDlgItem(hWnd, IDB_BEZIER_EDGE), !view_rendered);
         EnableWindow(GetDlgItem(hWnd, IDB_EXTRUDE), !view_rendered);
+        EnableWindow(GetDlgItem(hWnd, IDB_TEXT), !view_rendered);
         EnableWindow(GetDlgItem(hWnd, IDB_SCALE), !view_rendered);
         EnableWindow(GetDlgItem(hWnd, IDB_ROTATE), !view_rendered);
         EnableWindow(GetDlgItem(hWnd, IDB_CONST_EDGE), !view_rendered);
@@ -118,6 +120,10 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
             case IDB_EXTRUDE:
                 change_state(STATE_STARTING_EXTRUDE);
+                break;
+
+            case IDB_TEXT:
+                change_state(STATE_STARTING_TEXT);
                 break;
 
             case IDB_SCALE:
@@ -212,6 +218,7 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 EnableWindow(GetDlgItem(hWndToolbar, IDB_ARC_EDGE), !view_rendered);
                 EnableWindow(GetDlgItem(hWndToolbar, IDB_BEZIER_EDGE), !view_rendered);
                 EnableWindow(GetDlgItem(hWndToolbar, IDB_EXTRUDE), !view_rendered);
+                EnableWindow(GetDlgItem(hWndToolbar, IDB_TEXT), !view_rendered);
                 EnableWindow(GetDlgItem(hWndToolbar, IDB_SCALE), !view_rendered);
                 EnableWindow(GetDlgItem(hWndToolbar, IDB_ROTATE), !view_rendered);
                 EnableWindow(GetDlgItem(hWndToolbar, IDB_CONST_EDGE), !view_rendered);
