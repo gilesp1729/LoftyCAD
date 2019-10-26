@@ -3,7 +3,7 @@
 #ifndef __TRI_H__
 #define __TRI_H__
 
-// View list point is valid coordinate
+// View list point is valid coordinate for continuing a contour
 #define VALID_VP(v) ((v) != NULL && (v)->flags != FLAG_NEW_FACET)
 
 

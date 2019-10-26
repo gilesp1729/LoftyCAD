@@ -180,6 +180,12 @@ gen_view_list_surface(Face *face)
             gluTessBeginContour(clip_tess);
             while (VALID_VP(v))
             {
+                if (v->flags == FLAG_NEW_CONTOUR)
+                {
+                    gluTessEndContour(clip_tess);
+                    gluTessBeginContour(clip_tess);
+                }
+
                 tess_vertex(clip_tess, v);
 
                 // Skip coincident points for robustness (don't create zero-area triangles)

@@ -462,7 +462,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
             // position to check for gross movement.
             if (pt.x != left_mouseX || pt.y != left_mouseY)
             {
-                Point   new_point, p1, p3;
+                Point   p1, p3;
                 Point   *p00, *p01, *p02, *p03;
                 Point d1, d3, dn, da;
                 Edge *e;

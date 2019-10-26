@@ -131,6 +131,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="text.c" />
     <ClCompile Include="toolbars.c" />
     <ClCompile Include="Trackbal.c" />
     <ClCompile Include="treeview.c" />

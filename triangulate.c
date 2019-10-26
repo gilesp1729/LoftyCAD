@@ -454,14 +454,21 @@ gen_view_list_face(Face *face)
             {
                 last_point = e->endpoints[1];
             }
+            else if (last_point == e->endpoints[1])
+            {
+                last_point = e->endpoints[0];
+            }
             else
             {
-                ASSERT(last_point == e->endpoints[1], "Point order messed up");
-                if (last_point != e->endpoints[1])
-                {
-                    DebugBreak();
-                }
-                last_point = e->endpoints[0];
+                // Starting a new contour in a list of edges (always with point [0] )
+                p = point_newp(e->endpoints[0]);
+                p->flags = FLAG_NEW_CONTOUR;
+                p->hdr.ID = 0;
+                objid--;
+                if (face->vol != NULL)
+                    expand_bbox(&face->vol->bbox, p);
+                link_tail((Object *)p, list);
+                last_point = e->endpoints[1];
             }
 
             p = point_newp(last_point);
@@ -1013,6 +1020,12 @@ face_shade(GLUtesselator *tess, Face *face, BOOL selected, BOOL highlighted, BOO
         gluTessBeginContour(tess);
         while (VALID_VP(v))
         {
+            if (v->flags == FLAG_NEW_CONTOUR)
+            {
+                gluTessEndContour(tess);
+                gluTessBeginContour(tess);
+            }
+
             tess_vertex(tess, v);
 
             // Skip coincident points for robustness (don't create zero-area triangles)

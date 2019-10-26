@@ -25,6 +25,14 @@
         &&  \
         fabsf((p1)->z - (p2)->z) < tol  \
     )
+#define near_pt_xyz(p1, x1, y1, z1, tol) \
+    (   \
+        fabsf((p1)->x - (x1)) < tol  \
+        &&  \
+        fabsf((p1)->y - (y1)) < tol  \
+        &&  \
+        fabsf((p1)->z - (z1)) < tol  \
+    )
 
 void ray_from_eye(GLint x, GLint y, Plane *line);
 BOOL intersect_ray_plane(GLint x, GLint y, Plane *picked_plane, Point *new_point);

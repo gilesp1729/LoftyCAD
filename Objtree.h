@@ -52,15 +52,14 @@ typedef enum
     LOCK_VOLUME = OBJ_VOLUME       // The whole volume is locked; nothing can be selected or changed
 } LOCK;
 
-// Point flags
+// Point flags (only to be used on points in view lists, as they are not shared)
 typedef enum
 {
     FLAG_NONE = 0,                  // Nothing special
     FLAG_NEW_FACET,                 // The point begins a new facet (e.g. of a cylinder face).
                                     // In this case only, the XYZ of the point is not a point,
                                     // but a new facet normal. The real points follow.
-    FLAG_NEW_EXT_CONTOUR,           // The point begins a new exterior boundary contour
-    FLAG_NEW_INT_CONTOUR            // The point begins a new interior contour (a hole)
+    FLAG_NEW_CONTOUR                // The point begins a new boundary contour
 } PFLAG;
 
 // Header for any type of object.

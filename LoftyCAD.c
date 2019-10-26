@@ -67,9 +67,10 @@ BOOL drawing_changed = FALSE;
 Object *curr_obj = NULL;
 
 // The object that was picked when an action, such as drawing, was first
-// started. Also the point where the pick occurred (in (x,y,z) coordinates)
+// started. Also the point where the pick occurred (in (x,y,z) coordinates) and where it was dragged to.
 Object *picked_obj = NULL;
 Point picked_point;
+Point new_point;
 
 // When picked_obj is a volume or group due to locking, this is the underlying face.
 Object *raw_picked_obj = NULL;
@@ -1134,7 +1135,7 @@ left_up(AUX_EVENTREC *event)
         {
             link_group(curr_obj, &object_tree);
 
-            // Set its lock to EDGES for rect/circle faces, but no lock for edges (we will
+            // Set its lock to EDGES for closed (rect/circle) faces, but no lock for edges (we will
             // very likely need to move the points soon)
             //if (!construction)
             {
@@ -1153,7 +1154,24 @@ left_up(AUX_EVENTREC *event)
         hide_hint();
         break;
 
-    case STATE_DRAWING_TEXT:     // temporarily, until something is put here. curr_obj will leak.
+    case STATE_DRAWING_TEXT:
+        curr_obj = text_face("Hello");     // TEMP put text between pick/new pts on picked plane
+
+        if (curr_obj != NULL)
+        {
+            link_group(curr_obj, &object_tree);
+            curr_obj->lock = LOCK_EDGES;
+            update_drawing();
+            curr_obj = NULL;
+        }
+
+        ReleaseCapture();
+        left_mouse = FALSE;
+        change_state(STATE_NONE);
+        construction = FALSE;
+        hide_hint();
+        break;
+
     case STATE_DRAWING_EXTRUDE:
     case STATE_DRAWING_SCALE:
     case STATE_DRAWING_ROTATE:
