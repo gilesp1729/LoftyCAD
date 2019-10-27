@@ -151,6 +151,16 @@ serialise_obj(Object *obj, FILE *f)
             n += fprintf_s(f, "%d ", face->edges[i]->hdr.ID);
         }
         fprintf_s(f, "\n");
+        if (face->n_contours != 0)
+        {
+            fprintf_s(f, "CONTOUR %d ", obj->ID);
+            for (i = 0; i < face->n_contours; i++)  // TODO: Handle lines longer than 1024 (approx. 80 contours)
+                fprintf_s(f, "%d %d %d ", 
+                    face->contours[i].edge_index, 
+                    face->contours[i].ip_index, 
+                    face->contours[i].n_edges);
+            fprintf_s(f, "\n");
+        }
         break;
 
     case OBJ_VOLUME:
@@ -644,6 +654,34 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
                 link_tail_group((Object *)face, tree);
             else if (IS_GROUP(object[stack[stkptr - 1]]))
                 link_tail_group((Object *)face, (Group *)object[stack[stkptr - 1]]);
+        }
+        else if (strcmp(tok, "CONTOUR") == 0)
+        {
+            Face *face;
+            int maxc;
+
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            id = atoi(tok) + id_offset;
+            face = (Face *)object[id];
+            maxc = 16;
+            face->contours = calloc(maxc, sizeof(Contour));
+            while (TRUE)
+            {
+                tok = strtok_s(NULL, " \t\n", &nexttok);
+                if (tok == NULL)
+                    break;
+                face->contours[face->n_contours].edge_index = atoi(tok);
+                tok = strtok_s(NULL, " \t\n", &nexttok);
+                face->contours[face->n_contours].ip_index = atoi(tok);
+                tok = strtok_s(NULL, " \t\n", &nexttok);
+                face->contours[face->n_contours].n_edges = atoi(tok);
+                face->n_contours++;
+                if (face->n_contours == maxc)
+                {
+                    maxc <<= 1;
+                    face->contours = realloc(face->contours, maxc * sizeof(Contour));
+                }
+            }
         }
         else if (strcmp(tok, "VOLUME") == 0)
         {

@@ -12,7 +12,7 @@ text_face(char *string)
     GLfloat textbuf[2048];
     GLdouble modelMatrix[16], projMatrix[16];
     GLint viewport[4];
-    int i, bufsize, n_edges, new_edges;
+    int i, bufsize, n_edges, new_edges, maxc;
     Face *f;
     Edge *e;
     Point *last_point = NULL, *first_point = NULL;
@@ -53,16 +53,31 @@ text_face(char *string)
 
     // Make edges out of the line segments in the buffer, and put them into a face.
     // Since TT expresses line segments clockwise, build each contour backwards.
+    // Assume there will be more than one contour, and allocate a contour array.
     f = face_new(FACE_FLAT, *picked_plane);
+    maxc = 16;
+    f->contours = calloc(maxc, sizeof(Contour));
+    f->n_contours = 0;
+
     for (i = 0, n_edges = 0; i < bufsize; i++)
     {
         GLfloat tok = textbuf[i];
         GLdouble p[3];
 
         // Starting a new contour:
-        // If we have a previous contour in the list, reverse it out into the face's edge array
+        // If we have a previous contour in the list, reverse it out into the face's edge array.
         if (tok == GL_LINE_RESET_TOKEN && n_edges != 0)
         {
+            f->contours[f->n_contours].edge_index = f->n_edges;
+            f->contours[f->n_contours].ip_index = 0;
+            f->contours[f->n_contours].n_edges = n_edges;
+            f->n_contours++;
+            if (f->n_contours == maxc)
+            {
+                maxc <<= 1;
+                f->contours = realloc(f->contours, maxc * sizeof(Contour));
+            }
+
             new_edges = n_edges + f->n_edges;
             if (new_edges >= f->max_edges)
             {
@@ -73,6 +88,7 @@ text_face(char *string)
             for (e = (Edge *)edge_list.head; e != NULL; e = (Edge *)e->hdr.next)
                 f->edges[f->n_edges++] = e;
             ASSERT(f->n_edges == new_edges, "Edge count mismatch");
+
             n_edges = 0;
             edge_list.head = NULL;
             edge_list.tail = NULL;
@@ -125,9 +141,22 @@ text_face(char *string)
         i += 6;
     }
 
-    // Empty out the last contour
+    // Empty out the last contour. Don't bother creating a contour structure if it's the only one.
     if (n_edges != 0)
     {
+        if (f->n_contours != 0)
+        {
+            f->contours[f->n_contours].edge_index = f->n_edges;
+            f->contours[f->n_contours].ip_index = 0;
+            f->contours[f->n_contours].n_edges = n_edges;
+            f->n_contours++;
+            if (f->n_contours == maxc)
+            {
+                maxc <<= 1;
+                f->contours = realloc(f->contours, maxc * sizeof(Contour));
+            }
+        }
+
         new_edges = n_edges + f->n_edges;
         if (new_edges >= f->max_edges)
         {
@@ -141,6 +170,13 @@ text_face(char *string)
     }
 
     f->initial_point = f->edges[0]->endpoints[0];
+
+    // If we haven't used the contour struct, we can throw it away.
+    if (f->n_contours == 0)
+    {
+        free(f->contours);
+        f->contours = NULL;
+    }
 
     return f;
 }

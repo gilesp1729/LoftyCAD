@@ -178,7 +178,16 @@ typedef struct BezierEdge
     struct Point    *ctrlpoints[2]; // Two control points
 } BezierEdge;
 
-// Face bounded by edges (in a list)
+// Contour in a multi-contour face. This information is used when reversing and extruding faces.
+// If it isn't present, the face's edges array, initial point and n_edges define the only contour.
+typedef struct Contour
+{
+    int             edge_index;     // Index into main edges array of the starting edge
+    int             ip_index;       // Whether the contour's initial point is endpoint[0] or [1] on the starting edge
+    int             n_edges;        // Number of edges in this contour
+} Contour;
+
+// Face bounded by edges, in one or more contours.
 typedef struct Face
 {
     struct Object   hdr;            // Header
@@ -192,6 +201,10 @@ typedef struct Face
     struct Point    *initial_point; // Point in the first edge that the face starts from. Used to allow
                                     // view lists to be built up independent of the order of points
                                     // in any edge.
+    struct Contour  *contours;      // Growable array of Contour structures, representing starting edges
+                                    // of contours in multi-contour faces (e.g. those coming from fonts).
+                                    // May be NULL, in which case there is only one contour.
+    int             n_contours;     // Number of contours in the above array (0 if array is empty)
     struct ListHead view_list;      // List(s) of XYZ coordinates of GL points to be rendered as line loop(s)
                                     // (for the edges) and polygon(s) (for the face). Point flags indicate
                                     // the presence of multiple facets. Regenerated whenever

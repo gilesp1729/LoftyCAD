@@ -1155,7 +1155,7 @@ left_up(AUX_EVENTREC *event)
         break;
 
     case STATE_DRAWING_TEXT:
-        curr_obj = text_face("TW");     // TEMP put text between pick/new pts on picked plane
+        curr_obj = text_face("A");     // TEMP put text between pick/new pts on picked plane
 
         if (curr_obj != NULL)
         {
