@@ -19,6 +19,7 @@ text_face(char *string)
     ListHead edge_list = { NULL, NULL };
     double matrix[16];
     float scale;
+    BOOL closed = FALSE;
 
     // make some display lists in the desired font and size
     hFont = CreateFont(24, 0, 0, 0, FW_DONTCARE, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_TT_ONLY_PRECIS,
@@ -76,6 +77,12 @@ text_face(char *string)
             edge_list.head = NULL;
             edge_list.tail = NULL;
         }
+        else if (tok == GL_LINE_TOKEN && closed)
+        {
+            // We have already closed this contour. Skip any zero-length crap at the end.
+            i += 6;
+            continue;
+        }
 
         // Start of new edge. Put it at the head of a list.
         e = edge_new(EDGE_STRAIGHT);
@@ -89,6 +96,7 @@ text_face(char *string)
             gluUnProject(textbuf[i + 1], textbuf[i + 2], textbuf[i + 3], modelMatrix, projMatrix, viewport, &p[0], &p[1], &p[2]);
             e->endpoints[1] = point_new(p[0], p[1], p[2]);
             first_point = e->endpoints[1];
+            closed = FALSE;
         }
         else if (tok == GL_LINE_TOKEN)
         {
@@ -104,10 +112,15 @@ text_face(char *string)
         gluUnProject(textbuf[i + 4], textbuf[i + 5], textbuf[i + 6], modelMatrix, projMatrix, viewport, &p[0], &p[1], &p[2]);
         
         // Join back to start if we have arrived there (provided we have been somewhere in the meantime)
-        if (near_pt_xyz(first_point, p[0], p[1], p[2], SMALL_COORD) && tok == GL_LINE_TOKEN)
+        if (near_pt_xyz(first_point, p[0], p[1], p[2], SMALL_COORD * 5) && tok == GL_LINE_TOKEN)
+        {
             e->endpoints[0] = first_point;
+            closed = TRUE;
+        }
         else
+        {
             e->endpoints[0] = point_new(p[0], p[1], p[2]);
+        }
         last_point = e->endpoints[0];
         i += 6;
     }

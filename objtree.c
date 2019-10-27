@@ -355,6 +355,14 @@ copy_obj(Object *obj, float xoffset, float yoffset, float zoffset)
         new_obj = (Object *)new_face;
         new_obj->lock = obj->lock;
 
+        // Realloc the edge array if we need a big one
+        if (face->n_edges >= new_face->max_edges)
+        {
+            new_face->max_edges = face->max_edges;
+            new_face->edges = realloc(new_face->edges, new_face->max_edges * sizeof(Edge *));
+        }
+        new_face->n_edges = face->n_edges;
+
         // Copy the edges
         for (i = 0; i < face->n_edges; i++)
         {
@@ -362,8 +370,6 @@ copy_obj(Object *obj, float xoffset, float yoffset, float zoffset)
             new_edge = (Edge *)copy_obj((Object *)edge, xoffset, yoffset, zoffset);
             new_face->edges[i] = new_edge;
         }
-        new_face->n_edges = face->n_edges;
-        new_face->max_edges = face->max_edges;
 
         // Set the initial point corresponding to the original
         edge = face->edges[0];
