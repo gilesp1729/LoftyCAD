@@ -140,7 +140,7 @@ Face *face_new(FACE face_type, Plane norm)
         break;
 
     default:  // general and flat faces may have many edges
-        face->max_edges = 16;
+        face->max_edges = 64;
         break;
     }
 
@@ -363,6 +363,15 @@ copy_obj(Object *obj, float xoffset, float yoffset, float zoffset)
         }
         new_face->n_edges = face->n_edges;
 
+        // Alloc and copy any contour array. Don't worry about the power of 2 thing as it will
+        // not be extended again.
+        if (face->n_contours != 0)
+        {
+            new_face->n_contours = face->n_contours;
+            new_face->contours = calloc(new_face->n_contours, sizeof(Contour));
+            memcpy(new_face->contours, face->contours, face->n_contours * sizeof(Contour));
+        }
+
         // Copy the edges
         for (i = 0; i < face->n_edges; i++)
         {
@@ -441,7 +450,7 @@ Face
     Edge *edge;
     ArcEdge *ae, *nae;
     Point *last_point;
-    int i, idx;
+    int i, idx, c;
     //char buf[256];
 
     // Swap the normal around
@@ -457,57 +466,85 @@ Face
     clone->extruded = TRUE;
     face->extruded = TRUE;
 
-    // Set the initial point. 
-    last_point = face->initial_point;
-
-    // Copy the edges, reversing the order
-    for (i = 0; i < face->n_edges; i++)
+    // If the face does not have a contour array, create one here for the face and its clone.
+    // The extrusion code needs to use it later, and it makes everything simpler here as well.
+    if (face->contours == NULL)
     {
-        e = (Object *)face->edges[i];
-        ne = copy_obj(e, 0, 0, 0);
-        if (i == 0)
-            idx = 0;
+        face->contours = calloc(1, sizeof(Contour));
+        face->n_contours = 1;
+        face->contours[0].edge_index = 0;
+        if (face->initial_point == face->edges[0]->endpoints[0])
+            face->contours[0].ip_index = 0;
         else
-            idx = face->n_edges - i;
-        clone->edges[idx] = (Edge *)ne;
+            face->contours[0].ip_index = 1;
+        face->contours[0].n_edges = face->n_edges;
+    }
 
-        // Follow the chain of points from e->initial_point
-        edge = (Edge *)e;
-        if (last_point == edge->endpoints[0])
-        {
-            idx = 1;
-        }
-        else
-        {
-            ASSERT(last_point == edge->endpoints[1], "Cloned edges don't join up");
-            idx = 0;
-        }
-        last_point = edge->endpoints[idx];
-        if (i == 0)
-            clone->initial_point = ((Edge *)ne)->endpoints[idx];
+    // Copy the contour array to the clone. Its IP's will be swapped later.
+    clone->n_contours = face->n_contours;
+    clone->contours = calloc(clone->n_contours, sizeof(Contour));
+    memcpy(clone->contours, face->contours, face->n_contours * sizeof(Contour));
 
-        switch (face->edges[i]->type)
-        {
-        case EDGE_ARC: 
-            ae = (ArcEdge *)e;
-            nae = (ArcEdge *)ne;
+    // Clone and reverse each contour separately
+    for (c = 0; c < face->n_contours; c++)
+    {
+        int ei = face->contours[c].edge_index;
 
-            // Reverse the arc
-            nae->clockwise = !ae->clockwise;
-            nae->normal.A = -ae->normal.A;
-            nae->normal.B = -ae->normal.B;
-            nae->normal.C = -ae->normal.C;
-            // fall through
-        case EDGE_BEZIER:
-            // Since the arc/bezier and its clone now belong to extruded faces,
-            // fix their stepsize
-            ((Edge *)ne)->stepsize = ((Edge *)e)->stepsize;
-            ((Edge *)ne)->nsteps = ((Edge *)e)->nsteps;
-            ((Edge *)e)->stepping = TRUE;
-            ((Edge *)ne)->stepping = TRUE;
-            break;
+        // Set the initial point for the contour. 
+        last_point = face->edges[ei]->endpoints[face->contours[c].ip_index];
+
+        // Copy the edges, reversing the order
+        for (i = 0; i < face->contours[c].n_edges; i++)
+        {
+            e = (Object *)face->edges[ei + i];
+            ne = copy_obj(e, 0, 0, 0);
+            if (i == 0)
+                idx = 0;
+            else
+                idx = face->contours[c].n_edges - i;
+            clone->edges[ei + idx] = (Edge *)ne;
+
+            // Follow the chain of points from e->initial_point
+            edge = (Edge *)e;
+            if (last_point == edge->endpoints[0])
+            {
+                idx = 1;
+            }
+            else
+            {
+                ASSERT(last_point == edge->endpoints[1], "Cloned edges don't join up");
+                idx = 0;
+            }
+            last_point = edge->endpoints[idx];
+            if (i == 0)
+                clone->contours[c].ip_index = idx;
+                //clone->initial_point = ((Edge *)ne)->endpoints[idx];
+
+            switch (face->edges[ei + i]->type)
+            {
+            case EDGE_ARC:
+                ae = (ArcEdge *)e;
+                nae = (ArcEdge *)ne;
+
+                // Reverse the arc
+                nae->clockwise = !ae->clockwise;
+                nae->normal.A = -ae->normal.A;
+                nae->normal.B = -ae->normal.B;
+                nae->normal.C = -ae->normal.C;
+                // fall through
+            case EDGE_BEZIER:
+                // Since the arc/bezier and its clone now belong to extruded faces,
+                // fix their stepsize
+                ((Edge *)ne)->stepsize = ((Edge *)e)->stepsize;
+                ((Edge *)ne)->nsteps = ((Edge *)e)->nsteps;
+                ((Edge *)e)->stepping = TRUE;
+                ((Edge *)ne)->stepping = TRUE;
+                break;
+            }
         }
     }
+    
+    clone->initial_point = clone->edges[clone->contours[0].edge_index]->endpoints[clone->contours[0].ip_index];
 
 #ifdef DEBUG_REVERSE_RECT_FACE
     sprintf_s(buf, 256, "Clone %d IP %d\r\n", clone->hdr.ID, clone->initial_point->hdr.ID);
@@ -830,6 +867,8 @@ purge_obj(Object *obj)
             purge_obj((Object *)face->edges[i]);
         free(face->edges);
         free(face->view_list2D);
+        if (face->contours != NULL)
+            free(face->contours);
         free(obj);
         break;
 

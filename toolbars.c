@@ -123,6 +123,7 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 break;
 
             case IDB_TEXT:
+                // TODO choose font and input string here
                 change_state(STATE_STARTING_TEXT);
                 break;
 
