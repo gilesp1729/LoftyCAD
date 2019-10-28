@@ -1001,7 +1001,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         // See if we need to create a volume first, otherwise just move the face
                         if (face->vol == NULL)
                         {
-                            int i;
+                            int i, c;
                             Face *opposite, *side;
                             Edge *e, *o, *ne;
                             Point *eip, *oip;
@@ -1025,70 +1025,80 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                                 link((Object *)opposite, &vol->faces);
                                 opposite->vol = vol;
 
-                                // Create faces that link the picked face to its clone
-                                // Take care to traverse the opposite edges backwards
-                                eip = face->initial_point;
-                                oip = opposite->initial_point;
-                                o = opposite->edges[0];
-                                if (oip == o->endpoints[0])
-                                    oip = o->endpoints[1];
-                                else
-                                    oip = o->endpoints[0];
-
-                                for (i = 0; i < face->n_edges; i++)
+                                // After cloning, both the face and its clone have contour arrays.
+                                // The edge indexes and edge counts of each contour will line up.
+                                for (c = 0; c < face->n_contours; c++)
                                 {
-                                    FACE side_type;
+                                    int ei = face->contours[c].edge_index;
 
-                                    e = face->edges[i];
-                                    if (i == 0)
-                                        o = opposite->edges[0];
-                                    else
-                                        o = opposite->edges[face->n_edges - i];
-
-                                    side_type = FACE_RECT;
-                                    if (e->type == EDGE_ARC || e->type == EDGE_BEZIER)
-                                        side_type = FACE_CYLINDRICAL;
-                                    ASSERT(e->type == o->type, "Opposite edge types don't match");
-                                    side = face_new(side_type, norm);   // Any old norm will do, its (ABC) will come with the view list
-                                    side->normal.refpt = *eip;          // but we need to set a valid ref point
-                                    side->initial_point = eip;
-                                    side->vol = vol;
-
-                                    ne = edge_new(EDGE_STRAIGHT);
-                                    ne->endpoints[0] = eip;
-                                    ne->endpoints[1] = oip;
-                                    side->edges[0] = ne;
-                                    side->edges[1] = o;
-
-                                    // Move to the next pair of points
-                                    if (eip == e->endpoints[0])
-                                    {
-                                        eip = e->endpoints[1];
-                                    }
-                                    else
-                                    {
-                                        ASSERT(eip == e->endpoints[1], "Edges don't join up");
-                                        eip = e->endpoints[0];
-                                    }
-
+                                    // Create faces that link the picked face to its clone
+                                    // Take care to traverse the opposite edges backwards
+                                    // Start with the initial points of the countours
+                                    //eip = face->initial_point;
+                                    eip = face->edges[ei]->endpoints[face->contours[c].ip_index];
+                                    //oip = opposite->initial_point;
+                                    oip = opposite->edges[ei]->endpoints[opposite->contours[c].ip_index];
+                                    o = opposite->edges[ei];
                                     if (oip == o->endpoints[0])
-                                    {
                                         oip = o->endpoints[1];
-                                    }
                                     else
-                                    {
-                                        ASSERT(oip == o->endpoints[1], "Edges don't join up");
                                         oip = o->endpoints[0];
+
+                                    for (i = 0; i < face->contours[c].n_edges; i++)
+                                    {
+                                        FACE side_type;
+
+                                        e = face->edges[ei + i];
+                                        if (i == 0)
+                                            o = opposite->edges[ei];
+                                        else
+                                            o = opposite->edges[ei + face->contours[c].n_edges - i];
+
+                                        side_type = FACE_RECT;
+                                        if (e->type == EDGE_ARC || e->type == EDGE_BEZIER)
+                                            side_type = FACE_CYLINDRICAL;
+                                        ASSERT(e->type == o->type, "Opposite edge types don't match");
+                                        side = face_new(side_type, norm);   // Any old norm will do, its (ABC) will come with the view list
+                                        side->normal.refpt = *eip;          // but we need to set a valid ref point
+                                        side->initial_point = eip;
+                                        side->vol = vol;
+
+                                        ne = edge_new(EDGE_STRAIGHT);
+                                        ne->endpoints[0] = eip;
+                                        ne->endpoints[1] = oip;
+                                        side->edges[0] = ne;
+                                        side->edges[1] = o;
+
+                                        // Move to the next pair of points
+                                        if (eip == e->endpoints[0])
+                                        {
+                                            eip = e->endpoints[1];
+                                        }
+                                        else
+                                        {
+                                            ASSERT(eip == e->endpoints[1], "Edges don't join up");
+                                            eip = e->endpoints[0];
+                                        }
+
+                                        if (oip == o->endpoints[0])
+                                        {
+                                            oip = o->endpoints[1];
+                                        }
+                                        else
+                                        {
+                                            ASSERT(oip == o->endpoints[1], "Edges don't join up");
+                                            oip = o->endpoints[0];
+                                        }
+
+                                        ne = edge_new(EDGE_STRAIGHT);
+                                        ne->endpoints[0] = oip;
+                                        ne->endpoints[1] = eip;
+                                        side->edges[2] = ne;
+                                        side->edges[3] = e;
+                                        side->n_edges = 4;
+
+                                        link((Object *)side, &vol->faces);
                                     }
-
-                                    ne = edge_new(EDGE_STRAIGHT);
-                                    ne->endpoints[0] = oip;
-                                    ne->endpoints[1] = eip;
-                                    side->edges[2] = ne;
-                                    side->edges[3] = e;
-                                    side->n_edges = 4;
-
-                                    link((Object *)side, &vol->faces);
                                 }
                                 break;
                             }

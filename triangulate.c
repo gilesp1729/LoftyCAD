@@ -398,7 +398,7 @@ gen_view_list_vol(Volume *vol)
 void
 gen_view_list_face(Face *face)
 {
-    int i;
+    int i, c;
     Edge *e;
     Point *last_point;
     Point *p, *v;
@@ -440,6 +440,7 @@ gen_view_list_face(Face *face)
     Log(buf);
 #endif
     last_point = face->initial_point;
+    c = 0;
 
     for (i = 0; i < face->n_edges; i++)
     {
@@ -460,15 +461,21 @@ gen_view_list_face(Face *face)
             }
             else
             {
-                // Starting a new contour in a list of edges (always with point [0] )
-                p = point_newp(e->endpoints[0]);
+                // Starting a new contour in a list of edges (look at next contour array to see which point starts)
+                int idx = 0;
+                
+                c++;
+                if (c < face->n_contours)
+                    idx = face->contours[c].ip_index;
+
+                p = point_newp(e->endpoints[idx]);
                 p->flags = FLAG_NEW_CONTOUR;
                 p->hdr.ID = 0;
                 objid--;
                 if (face->vol != NULL)
                     expand_bbox(&face->vol->bbox, p);
                 link_tail((Object *)p, list);
-                last_point = e->endpoints[1];
+                last_point = e->endpoints[1 - idx];
             }
 
             p = point_newp(last_point);
