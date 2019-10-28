@@ -15,6 +15,7 @@ In particular, it will:
 # Interface
 - Sketch-up-like (draw a 2D face followed by extrusion)
 - Allows rects, polygons, circles, arcs, beziers and the extruded right prisms from them
+- Allows extrusion of text and fonts
 - Volume-face-edge-point hierarchy with controlled locking
 - Group objects and transform (scale and rotate)
 - Show dimensions when selected and when drawing/moving/scaling

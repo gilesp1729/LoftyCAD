@@ -16,7 +16,7 @@
 
 
 // Version
-#define LOFTYCAD_VERSION "1.1"
+#define LOFTYCAD_VERSION "1.2"
 
 // States the app can be in.
 typedef enum STATE
