@@ -1179,21 +1179,9 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         snap_to_angle(picked_plane, &picked_point, &new_point, angle_snap);
                     snap_to_grid(picked_plane, &new_point);
 
-                    // If first move, create a construction edge here.
-                    if (curr_obj == NULL)
-                    {
-                        curr_obj = (Object *)edge_new(EDGE_STRAIGHT | EDGE_CONSTRUCTION);
-                        e = (Edge *)curr_obj;
-                        e->endpoints[0] = point_newp(&picked_point);
-                        e->endpoints[1] = point_newp(&new_point);
-                    }
-                    else
-                    {
-                        e = (Edge *)curr_obj;
-                        e->endpoints[1]->x = new_point.x;
-                        e->endpoints[1]->y = new_point.y;
-                        e->endpoints[1]->z = new_point.z;
-                    }
+                    if (curr_obj != NULL)
+                        purge_obj(curr_obj);
+                    curr_obj = text_face("Hello");     // TEMP put text between pick/new pts on picked plane
                     break;
 
                 case STATE_DRAWING_SCALE:

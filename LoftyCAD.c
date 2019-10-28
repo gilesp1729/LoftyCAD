@@ -1130,37 +1130,20 @@ left_up(AUX_EVENTREC *event)
     case STATE_DRAWING_CIRCLE:
     case STATE_DRAWING_BEZIER:
     case STATE_DRAWING_ARC:
+    case STATE_DRAWING_TEXT:
         // add new object to the object tree
         if (curr_obj != NULL)
         {
             link_group(curr_obj, &object_tree);
 
-            // Set its lock to EDGES for closed (rect/circle) faces, but no lock for edges (we will
+            // Set its lock to EDGES for closed (rect/circle/text) faces, but no lock for edges (we will
             // very likely need to move the points soon)
             //if (!construction)
             {
                 curr_obj->lock =
-                    (app_state == STATE_DRAWING_RECT || app_state == STATE_DRAWING_CIRCLE) ? LOCK_EDGES : LOCK_NONE;
+                    (app_state == STATE_DRAWING_RECT || app_state == STATE_DRAWING_CIRCLE || app_state == STATE_DRAWING_TEXT) ? LOCK_EDGES : LOCK_NONE;
             }
 
-            update_drawing();
-            curr_obj = NULL;
-        }
-
-        ReleaseCapture();
-        left_mouse = FALSE;
-        change_state(STATE_NONE);
-        construction = FALSE;
-        hide_hint();
-        break;
-
-    case STATE_DRAWING_TEXT:
-        curr_obj = text_face("Hello");     // TEMP put text between pick/new pts on picked plane
-
-        if (curr_obj != NULL)
-        {
-            link_group(curr_obj, &object_tree);
-            curr_obj->lock = LOCK_EDGES;
             update_drawing();
             curr_obj = NULL;
         }

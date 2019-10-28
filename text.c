@@ -43,8 +43,12 @@ text_face(char *string)
     glCallLists(lstrlen(string), GL_UNSIGNED_BYTE, string);
 
     glPopMatrix();
-    bufsize = glRenderMode(GL_RENDER);  // TODO if not facing, bufsize = 0 and it crashes
+    bufsize = glRenderMode(GL_RENDER); 
     SelectObject(auxGetHDC(), hFontOld);
+    DeleteObject(hFont);
+    //glDeleteLists(2000, 256);
+    if (bufsize == 0)
+        return NULL;
 
     // get matrices
     glGetDoublev(GL_MODELVIEW_MATRIX, modelMatrix);
