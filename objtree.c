@@ -813,7 +813,7 @@ build_parent_xform_list(Object *obj, Object *parent, ListHead *xform_list)
 
 // Purge an object. Points are put in the free list.
 void
-purge_obj(Object *obj)
+purge_obj_top(Object *obj, OBJECT top_type)
 {
     int i;
     Edge *e;
@@ -841,30 +841,33 @@ purge_obj(Object *obj)
 
     case OBJ_EDGE:
         e = (Edge *)obj;
-        purge_obj((Object *)e->endpoints[0]);
-        purge_obj((Object *)e->endpoints[1]);
+        purge_obj_top((Object *)e->endpoints[0], top_type);
+        purge_obj_top((Object *)e->endpoints[1], top_type);
         type = ((Edge *)obj)->type & ~EDGE_CONSTRUCTION;
         switch (type)
         {
         case EDGE_ARC:
             ae = (ArcEdge *)obj;
-            purge_obj((Object *)ae->centre);
+            purge_obj_top((Object *)ae->centre, top_type);
+            free_view_list_edge(e);
             break;
 
         case EDGE_BEZIER:
             be = (BezierEdge *)obj;
-            purge_obj((Object *)be->ctrlpoints[0]);
-            purge_obj((Object *)be->ctrlpoints[1]);
+            purge_obj_top((Object *)be->ctrlpoints[0], top_type);
+            purge_obj_top((Object *)be->ctrlpoints[1], top_type);
+            free_view_list_edge(e);
             break;
         }
-        //free(obj);     // Don't do this!! The edge may be shared. TODO - Use a ref count, if we could be bothered.
+        if (top_type <= OBJ_FACE)       // If this edge is not part of a volume, we can safely delete it
+            free(obj);
         break;
 
     case OBJ_FACE:
         face = (Face *)obj;
         free_view_list_face(face);
         for (i = 0; i < face->n_edges; i++)
-            purge_obj((Object *)face->edges[i]);
+            purge_obj_top((Object *)face->edges[i], top_type);
         free(face->edges);
         free(face->view_list2D);
         if (face->contours != NULL)
@@ -877,7 +880,7 @@ purge_obj(Object *obj)
         for (face = (Face *)vol->faces.head; face != NULL; face = next_face)
         {
             next_face = (Face *)face->hdr.next;
-            purge_obj((Object *)face);
+            purge_obj_top((Object *)face, top_type);
         }
         free_bucket(vol->point_bucket);
         if (vol->xform != NULL)
@@ -890,7 +893,7 @@ purge_obj(Object *obj)
         for (o = group->obj_list.head; o != NULL; o = next_obj)
         {
             next_obj = o->next;
-            purge_obj(o);
+            purge_obj(o);       // purge these objects played by themselves (not belonging to a top-level object)
         }
         if (group->mesh != NULL)
             mesh_destroy(group->mesh);
@@ -899,6 +902,13 @@ purge_obj(Object *obj)
         free(obj);
         break;
     }
+}
+
+void
+purge_obj(Object *obj)
+{
+    // Pass the type of the top-level object being purged.
+    purge_obj_top(obj, obj->type);
 }
 
 // Purge a tree, freeing everything in it, except for Points, which are
