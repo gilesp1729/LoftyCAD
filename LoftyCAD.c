@@ -84,6 +84,9 @@ Plane *picked_plane = NULL;
 // The plane through the centre of an object's bbox, parallel to the facing plane.
 Plane centre_facing_plane;
 
+// The current text structure, either a new one about to be assigned to a face, or on a face being edited.
+Text *curr_text;
+
 // Dominant direction for a scaling operation
 SCALED scaled_dirn;
 SCALED scaled;

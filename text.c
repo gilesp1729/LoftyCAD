@@ -6,7 +6,7 @@
 
 // Make a face out of text.
 Face *
-text_face(char *string)
+text_face(Text *text)
 {
     HFONT hFont, hFontOld;
     GLfloat textbuf[2048];
@@ -21,15 +21,17 @@ text_face(char *string)
     float scale;
     BOOL closed = FALSE;
 
-    // make some display lists in the desired font and size
-    hFont = CreateFont(24, 0, 0, 0, FW_DONTCARE, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_TT_ONLY_PRECIS,
+    // Map picked_point to origin, new_point to X axis, and attempt to scale the font.
+    look_at_centre_d(picked_point, new_point, *picked_plane, matrix);
+    scale = length(&picked_point, &new_point) / strlen(text->string);
+    if (nz(scale))
+        return NULL;
+
+    // Make some display lists in the desired font and size
+    hFont = CreateFont(12, 0, 0, 0, FW_DONTCARE, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_TT_ONLY_PRECIS,
                        CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, VARIABLE_PITCH, TEXT("Arial"));
     hFontOld = SelectObject(auxGetHDC(), hFont);
     wglUseFontOutlines(auxGetHDC(), 0, 256, 2000, 0, 0, WGL_FONT_LINES, NULL);
-
-    // Map picked_point to origin, new_point to X axis, and attempt to scale the font.
-    look_at_centre_d(picked_point, new_point, *picked_plane, matrix);
-    scale = length(&picked_point, &new_point) / strlen(string);
 
     // Draw text as line segments
     glFeedbackBuffer(2048, GL_3D, textbuf);
@@ -40,14 +42,14 @@ text_face(char *string)
 
     // draw the text
     glListBase(2000);
-    glCallLists(lstrlen(string), GL_UNSIGNED_BYTE, string);
+    glCallLists(strlen(text->string), GL_UNSIGNED_BYTE, text->string);
 
     glPopMatrix();
     bufsize = glRenderMode(GL_RENDER); 
     SelectObject(auxGetHDC(), hFontOld);
     DeleteObject(hFont);
     //glDeleteLists(2000, 256);
-    if (bufsize == 0)
+    if (bufsize <= 0)
         return NULL;
 
     // get matrices
@@ -62,6 +64,12 @@ text_face(char *string)
     maxc = 16;
     f->contours = calloc(maxc, sizeof(Contour));
     f->n_contours = 0;
+
+    // Store the text structure with the face. Make a copy and store the position points.
+    f->text = calloc(1, sizeof(Text));
+    memcpy(f->text, text, sizeof(Text));
+    f->text->origin = picked_point;
+    f->text->endpt = new_point;
 
     for (i = 0, n_edges = 0; i < bufsize; i++)
     {

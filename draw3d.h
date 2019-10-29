@@ -16,6 +16,6 @@ typedef enum
 
 void color(OBJECT obj_type, BOOL construction, BOOL selected, BOOL highlighted, BOOL locked);
 void draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock);
-Face *text_face(char *string);
+Face *text_face(Text *text);
 
 #endif // __DRAW3D_H__

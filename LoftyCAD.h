@@ -112,6 +112,7 @@ extern Plane *picked_plane;
 extern Plane *facing_plane;
 extern PLANE facing_index;
 extern Plane centre_facing_plane;
+extern Text *curr_text;
 extern SCALED scaled_dirn;
 extern SCALED scaled;
 extern float total_angle;

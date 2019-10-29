@@ -41,11 +41,37 @@ LoadAndDisplayIcon(HWND hWnd, int icon, int button, int toolstring)
     SendMessage(hwndTT, TTM_ADDTOOL, 0, (LPARAM)(LPTOOLINFO)&ti);
 }
 
+// Hook proc for the ChooseFont dialog.
+int WINAPI
+font_hook(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    static Text *text;
+
+    switch (msg)
+    {
+    case WM_INITDIALOG:
+        text = (Text *)((CHOOSEFONT *)lParam)->lCustData;
+        SetDlgItemText(hWnd, IDC_FONT_STRING, text->string);
+        break;
+
+    case WM_COMMAND:
+        switch (LOWORD(wParam))
+        {
+        case IDOK:
+            GetDlgItemText(hWnd, IDC_FONT_STRING, text->string, 80);
+            break;
+        }
+
+    }
+    return 0;
+}
+
 // Window proc for the toolbar dialog box.
 int WINAPI
 toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     HMENU hMenu;
+    CHOOSEFONT cf;
 
     switch (msg)
     {
@@ -123,7 +149,24 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 break;
 
             case IDB_TEXT:
-                // TODO choose font and input string here
+                curr_text = calloc(1, sizeof(Text));
+                // Choose font and input string here
+                memset(&cf, 0, sizeof(CHOOSEFONT));
+                cf.lStructSize = sizeof(CHOOSEFONT);
+                cf.Flags = CF_NOSIZESEL | CF_TTONLY | CF_ENABLETEMPLATE | CF_ENABLEHOOK;
+                cf.lpTemplateName = MAKEINTRESOURCE(1543);
+                cf.lpfnHook = font_hook;
+                cf.lCustData = (LPARAM)curr_text;
+#if 1
+                if (!ChooseFont(&cf))
+                {
+                    free(curr_text);
+                    break;
+                }
+#else
+                strcpy_s(curr_text->string, 80, "AB");
+#endif
+
                 change_state(STATE_STARTING_TEXT);
                 break;
 

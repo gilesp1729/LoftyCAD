@@ -872,6 +872,8 @@ purge_obj_top(Object *obj, OBJECT top_type)
         free(face->view_list2D);
         if (face->contours != NULL)
             free(face->contours);
+        if (face->text != NULL)
+            free(face->text);
         free(obj);
         break;
 

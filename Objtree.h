@@ -187,6 +187,18 @@ typedef struct Contour
     int             n_edges;        // Number of edges in this contour
 } Contour;
 
+// This structure is used for text, to allow it to be edited/regenerated while it
+// is still a face at top level (not being extruded into a volume yet)
+typedef struct Text
+{
+    char string[80];                // Text string
+    char font[80];                  // Font name
+    BOOL bold;                      // TRUE if bold
+    BOOL italic;                    // TRUE if italic
+    Point origin;                   // Copy of picked_point where the text began
+    Point endpt;                    // Copy of new_point where the text was dragged out
+} Text;
+
 // Face bounded by edges, in one or more contours.
 typedef struct Face
 {
@@ -205,6 +217,7 @@ typedef struct Face
                                     // of contours in multi-contour faces (e.g. those coming from fonts).
                                     // May be NULL, in which case there is only one contour.
     int             n_contours;     // Number of contours in the above array (0 if array is empty)
+    Text            *text;          // If the face is text, its string, font etc. are here.
     struct ListHead view_list;      // List(s) of XYZ coordinates of GL points to be rendered as line loop(s)
                                     // (for the edges) and polygon(s) (for the face). Point flags indicate
                                     // the presence of multiple facets. Regenerated whenever

@@ -1181,7 +1181,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
 
                     if (curr_obj != NULL)
                         purge_obj(curr_obj);
-                    curr_obj = (Object *)text_face("Hello");     // TEMP put text between pick/new pts on picked plane
+                    curr_obj = (Object *)text_face(curr_text);
                     break;
 
                 case STATE_DRAWING_SCALE:
