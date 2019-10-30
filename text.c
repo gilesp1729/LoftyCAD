@@ -25,16 +25,18 @@ text_face(Text *text)
     BOOL closed = FALSE;
 
     // Map picked_point to origin, new_point to X axis, and attempt to scale the font.
-    look_at_centre_d(picked_point, new_point, *picked_plane, matrix);
+    look_at_centre_d(curr_text->origin, curr_text->endpt, curr_text->plane, matrix);
 
     // Scale given that most fonts are proportional (2 *)
-    scale = 2 * length(&picked_point, &new_point) / strlen(text->string);
+    scale = 2 * length(&curr_text->origin, &curr_text->endpt) / strlen(text->string);
     if (nz(scale))
         return NULL;
 
     // Make some display lists in the desired font and size
-    hFont = CreateFont(12, 0, 0, 0, FW_DONTCARE, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_TT_ONLY_PRECIS,
-                       CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, VARIABLE_PITCH, TEXT("Arial"));
+    hFont = CreateFont(12, 0, 0, 0, 
+                       text->bold ? FW_BOLD : FW_NORMAL, text->italic, 
+                       FALSE, FALSE, DEFAULT_CHARSET, OUT_TT_ONLY_PRECIS,
+                       CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, VARIABLE_PITCH, text->font);
     hFontOld = SelectObject(auxGetHDC(), hFont);
     wglUseFontOutlines(auxGetHDC(), 0, 256, 2000, 0, 0, WGL_FONT_LINES, NULL);
 
@@ -72,11 +74,9 @@ text_face(Text *text)
     f->contours = calloc(maxc, sizeof(Contour));
     f->n_contours = 0;
 
-    // Store the text structure with the face. Make a copy and store the position points.
+    // Copy and store the text structure with the face. 
     f->text = calloc(1, sizeof(Text));
     memcpy(f->text, text, sizeof(Text));
-    f->text->origin = picked_point;
-    f->text->endpt = new_point;
 
     for (i = 0, n_edges = 0; i < bufsize; i++)
     {
@@ -151,6 +151,7 @@ text_face(Text *text)
         {
             e->endpoints[0] = first_point;
             closed = TRUE;
+            first_point = NULL;
         }
         else
         {

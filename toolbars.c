@@ -46,11 +46,13 @@ int WINAPI
 font_hook(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     static Text *text;
+    static CHOOSEFONT *cf;
 
     switch (msg)
     {
     case WM_INITDIALOG:
-        text = (Text *)((CHOOSEFONT *)lParam)->lCustData;
+        cf = (CHOOSEFONT *)lParam;
+        text = (Text *)cf->lCustData;
         SetDlgItemText(hWnd, IDC_FONT_STRING, text->string);
         break;
 
@@ -72,6 +74,7 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     HMENU hMenu;
     CHOOSEFONT cf;
+    LOGFONT lf;
 
     switch (msg)
     {
@@ -153,19 +156,22 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 // Choose font and input string here
                 memset(&cf, 0, sizeof(CHOOSEFONT));
                 cf.lStructSize = sizeof(CHOOSEFONT);
-                cf.Flags = CF_NOSIZESEL | CF_TTONLY | CF_ENABLETEMPLATE | CF_ENABLEHOOK;
+                cf.Flags = CF_NOSIZESEL | CF_TTONLY | CF_ENABLETEMPLATE | CF_ENABLEHOOK | CF_INITTOLOGFONTSTRUCT;
                 cf.lpTemplateName = MAKEINTRESOURCE(1543);
                 cf.lpfnHook = font_hook;
                 cf.lCustData = (LPARAM)curr_text;
-#if 1
+                memset(&lf, 0, sizeof(LOGFONT));
+                cf.lpLogFont = &lf;
                 if (!ChooseFont(&cf))
                 {
                     free(curr_text);
                     break;
                 }
-#else
-                strcpy_s(curr_text->string, 80, "AB");
-#endif
+
+                curr_text->bold = lf.lfWeight > FW_NORMAL;
+                curr_text->italic = lf.lfItalic;
+                strcpy_s(curr_text->font, 80, lf.lfFaceName);
+                // TODO check string and valid font here
 
                 change_state(STATE_STARTING_TEXT);
                 break;

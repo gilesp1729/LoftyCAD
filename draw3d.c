@@ -1181,6 +1181,9 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
 
                     if (curr_obj != NULL)
                         purge_obj(curr_obj);
+                    curr_text->origin = picked_point;
+                    curr_text->endpt = new_point;
+                    curr_text->plane = *picked_plane;
                     curr_obj = (Object *)text_face(curr_text);
                     break;
 

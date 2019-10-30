@@ -197,6 +197,7 @@ typedef struct Text
     BOOL italic;                    // TRUE if italic
     Point origin;                   // Copy of picked_point where the text began
     Point endpt;                    // Copy of new_point where the text was dragged out
+    Plane plane;                    // Copy of plane text lies in
 } Text;
 
 // Face bounded by edges, in one or more contours.
