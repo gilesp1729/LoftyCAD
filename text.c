@@ -4,12 +4,15 @@
 
 // Routines for drawing text.
 
+// 1MB buffer
+#define TEXTBUFSIZE     (1024 * 1024)
+GLfloat *textbuf = NULL;
+
 // Make a face out of text.
 Face *
 text_face(Text *text)
 {
     HFONT hFont, hFontOld;
-    GLfloat textbuf[2048];
     GLdouble modelMatrix[16], projMatrix[16];
     GLint viewport[4];
     int i, bufsize, n_edges, new_edges, maxc;
@@ -23,7 +26,9 @@ text_face(Text *text)
 
     // Map picked_point to origin, new_point to X axis, and attempt to scale the font.
     look_at_centre_d(picked_point, new_point, *picked_plane, matrix);
-    scale = length(&picked_point, &new_point) / strlen(text->string);
+
+    // Scale given that most fonts are proportional (2 *)
+    scale = 2 * length(&picked_point, &new_point) / strlen(text->string);
     if (nz(scale))
         return NULL;
 
@@ -34,7 +39,9 @@ text_face(Text *text)
     wglUseFontOutlines(auxGetHDC(), 0, 256, 2000, 0, 0, WGL_FONT_LINES, NULL);
 
     // Draw text as line segments
-    glFeedbackBuffer(2048, GL_3D, textbuf);
+    if (textbuf == NULL)
+        textbuf = malloc(TEXTBUFSIZE * sizeof(GLfloat));
+    glFeedbackBuffer(TEXTBUFSIZE, GL_3D, textbuf);
     glRenderMode(GL_FEEDBACK);
     glPushMatrix();
     glMultMatrixd(matrix);
