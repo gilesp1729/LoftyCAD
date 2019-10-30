@@ -192,7 +192,7 @@ typedef struct Contour
 typedef struct Text
 {
     char string[80];                // Text string
-    char font[80];                  // Font name
+    char font[32];                  // Font name
     BOOL bold;                      // TRUE if bold
     BOOL italic;                    // TRUE if italic
     Point origin;                   // Copy of picked_point where the text began

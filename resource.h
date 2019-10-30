@@ -120,7 +120,6 @@
 #define IDC_APPLY                       1027
 #define IDC_REMOVE                      1028
 #define IDC_TITLE                       1029
-#define IDC_EDIT1                       1030
 #define IDC_FONT_STRING                 1030
 #define ID_FILE_NEW                     32774
 #define ID_FILE_OPEN                    32775
@@ -215,6 +214,7 @@
 #define ID_GROUPING_SAVEGROUP           32879
 #define ID_OBJ_SAVEGROUP                32880
 #define ID_HELP_DRAWINGTEXT             32881
+#define ID_OBJ_EDITTEXT                 32882
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -223,7 +223,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        162
-#define _APS_NEXT_COMMAND_VALUE         32882
+#define _APS_NEXT_COMMAND_VALUE         32883
 #define _APS_NEXT_CONTROL_VALUE         1031
 #define _APS_NEXT_SYMED_VALUE           110
 #endif

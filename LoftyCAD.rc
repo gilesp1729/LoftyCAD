@@ -320,6 +320,7 @@ BEGIN
         MENUITEM SEPARATOR
         MENUITEM "Always show dimensions",      ID_OBJ_ALWAYSSHOWDIMS
         MENUITEM "Enter dimensions...",         ID_OBJ_ENTERDIMENSIONS
+        MENUITEM "Edit text...",                ID_OBJ_EDITTEXT
         MENUITEM SEPARATOR
         MENUITEM "Chamfer corner",              ID_OBJ_CHAMFERCORNER
         MENUITEM "Round corner",                ID_OBJ_ROUNDCORNER

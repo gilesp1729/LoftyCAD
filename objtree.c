@@ -260,6 +260,12 @@ clear_move_copy_flags(Object *obj)
         }
         for (p = (Point *)face->view_list.head; p != NULL; p = (Point *)p->hdr.next)
             clear_move_copy_flags((Object *)p);
+        if (face->text != NULL)             // and the text positions
+        {
+            clear_move_copy_flags((Object *)&face->text->origin);
+            clear_move_copy_flags((Object *)&face->text->endpt);
+        }
+
         obj->copied_to = NULL;
         break;
 
@@ -622,6 +628,11 @@ move_obj(Object *obj, float xoffset, float yoffset, float zoffset)
         face->normal.refpt.x += xoffset;    // don't forget to move the normal refpt too
         face->normal.refpt.y += yoffset;
         face->normal.refpt.z += zoffset;
+        if (face->text != NULL)             // and the text positions
+        {
+            move_obj((Object *)&face->text->origin, xoffset, yoffset, zoffset);
+            move_obj((Object *)&face->text->endpt, xoffset, yoffset, zoffset);
+        }
         face->view_valid = FALSE;
         break;
 

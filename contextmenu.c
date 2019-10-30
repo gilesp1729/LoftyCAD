@@ -414,7 +414,7 @@ contextmenu(Object *picked_obj, POINT pt)
     int rc;
     Object *parent, *sel_obj, *o, *o_next;
     char buf[128];
-    LOCK old_parent_lock;
+    LOCK old_parent_lock, lock;
     BOOL group_changed = FALSE;
     BOOL dims_changed = FALSE;
     BOOL sel_changed = FALSE;
@@ -425,6 +425,8 @@ contextmenu(Object *picked_obj, POINT pt)
     Point *p, *nextp;
     int i;
     OPENFILENAME ofn;
+    CHOOSEFONT cf;
+    LOGFONT lf;
     char group_filename[256];
 
     // Display the object ID at the top of the menu
@@ -507,6 +509,10 @@ contextmenu(Object *picked_obj, POINT pt)
     {
         CheckMenuItem(hMenu, ID_OBJ_ALWAYSSHOWDIMS, picked_obj->show_dims ? MF_CHECKED : MF_UNCHECKED);
     }
+
+    // Text editing only for faces that are at top level and retain the text info
+    EnableMenuItem(hMenu, ID_OBJ_EDITTEXT,
+                   (picked_obj->type == OBJ_FACE && ((Face *)picked_obj)->text != NULL) ? MF_ENABLED : MF_GRAYED);
 
     // Rounding and chamfering depend on whether the object picked is a point or a face.
     // The parent has to be at least a face (checked above)
@@ -769,6 +775,41 @@ contextmenu(Object *picked_obj, POINT pt)
             DialogBoxParam(hInst, MAKEINTRESOURCE(IDD_TRANSFORM), auxGetHWND(), transform_dialog, (LPARAM)picked_obj);
         if (xform_changed)
             invalidate_all_view_lists(parent, picked_obj, 0, 0, 0);
+        break;
+
+    case ID_OBJ_EDITTEXT:
+        face = (Face *)picked_obj;
+        curr_text = face->text;
+        if (curr_text == NULL)
+            break;
+
+        // Put up choosefont and preload, delete old face and replace at same point(s)
+        memset(&cf, 0, sizeof(CHOOSEFONT));
+        cf.lStructSize = sizeof(CHOOSEFONT);
+        cf.Flags = CF_NOSIZESEL | CF_TTONLY | CF_ENABLETEMPLATE | CF_ENABLEHOOK | CF_INITTOLOGFONTSTRUCT;
+        cf.lpTemplateName = MAKEINTRESOURCE(1543);
+        cf.lpfnHook = font_hook;
+        cf.lCustData = (LPARAM)curr_text;
+        memset(&lf, 0, sizeof(LOGFONT));
+        lf.lfWeight = curr_text->bold ? FW_BOLD : FW_NORMAL;
+        lf.lfItalic = curr_text->italic;
+        strcpy_s(lf.lfFaceName, 32, curr_text->font);
+        cf.lpLogFont = &lf;
+        if (!ChooseFont(&cf))
+            break;
+
+        curr_text->bold = lf.lfWeight > FW_NORMAL;
+        curr_text->italic = lf.lfItalic;
+        strcpy_s(curr_text->font, 32, lf.lfFaceName);
+        face->text = NULL;   // stop it being deleted
+        lock = face->hdr.lock;
+        delink_group((Object *)face, &object_tree);
+        purge_obj((Object *)face);
+
+        // Replace the face with a new one, having the same lock state
+        face = text_face(curr_text);
+        face->hdr.lock = lock;
+        link_group((Object *)face, &object_tree);
         break;
     }
 

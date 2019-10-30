@@ -221,6 +221,7 @@ void contextmenu(Object *picked_obj, POINT pt);
 int CALLBACK Command(int message, int wParam, int lParam);
 int WINAPI help_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 int WINAPI debug_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+int WINAPI font_hook(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 int WINAPI toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 int WINAPI dimensions_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 int WINAPI prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);

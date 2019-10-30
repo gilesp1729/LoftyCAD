@@ -281,6 +281,9 @@ Init(void)
     plane_mXZ.B = -1.0;
     plane_mYZ.A = -1.0;
 
+    picked_point.hdr.type = OBJ_POINT;
+    new_point.hdr.type = OBJ_POINT;
+
     glEnable(GL_CULL_FACE);    // don't show back facing faces
 
     object_tree.hdr.type = OBJ_GROUP;  // set up object tree group

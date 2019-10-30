@@ -1007,10 +1007,16 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                             Point *eip, *oip;
                             Volume *vol;
 
+                            // Put face into the volume's face list, and remove any text structure attached.
                             delink_group((Object *)face, &object_tree);
                             vol = vol_new();
                             link((Object *)face, &vol->faces);
                             face->vol = vol;
+                            if (face->text != NULL)
+                            {
+                                free(face->text);
+                                face->text = NULL;
+                            }
                             face->view_valid = FALSE;
 
                             switch (face->type)

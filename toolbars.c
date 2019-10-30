@@ -170,7 +170,7 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
                 curr_text->bold = lf.lfWeight > FW_NORMAL;
                 curr_text->italic = lf.lfItalic;
-                strcpy_s(curr_text->font, 80, lf.lfFaceName);
+                strcpy_s(curr_text->font, 32, lf.lfFaceName);
                 // TODO check string and valid font here
 
                 change_state(STATE_STARTING_TEXT);
