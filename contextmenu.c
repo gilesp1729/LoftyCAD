@@ -810,6 +810,7 @@ contextmenu(Object *picked_obj, POINT pt)
         face = text_face(curr_text);
         face->hdr.lock = lock;
         link_group((Object *)face, &object_tree);
+        inserted = TRUE;
         break;
     }
 

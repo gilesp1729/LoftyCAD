@@ -57,7 +57,6 @@ text_face(Text *text)
     bufsize = glRenderMode(GL_RENDER); 
     SelectObject(auxGetHDC(), hFontOld);
     DeleteObject(hFont);
-    //glDeleteLists(2000, 256);
     if (bufsize <= 0)
         return NULL;
 
@@ -69,7 +68,7 @@ text_face(Text *text)
     // Make edges out of the line segments in the buffer, and put them into a face.
     // Since TT expresses line segments clockwise, build each contour backwards.
     // Assume there will be more than one contour, and allocate a contour array.
-    f = face_new(FACE_FLAT, *picked_plane);
+    f = face_new(FACE_FLAT, curr_text->plane);
     maxc = 16;
     f->contours = calloc(maxc, sizeof(Contour));
     f->n_contours = 0;

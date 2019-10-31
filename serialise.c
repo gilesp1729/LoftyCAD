@@ -161,6 +161,18 @@ serialise_obj(Object *obj, FILE *f)
                     face->contours[i].n_edges);
             fprintf_s(f, "\n");
         }
+        if (face->text != NULL)
+        {
+            Text *text = face->text;
+            fprintf_s(f, "TEXT %d %f %f %f %f %f %f %f %f %f %s\n",
+                      obj->ID,
+                      text->origin.x, text->origin.y, text->origin.z,
+                      text->endpt.x, text->endpt.y, text->endpt.z,
+                      text->plane.A, text->plane.B, text->plane.C,
+                      text->string);
+            fprintf_s(f, "FONT %d %d %d %s\n",
+                      obj->ID, text->bold, text->italic, text->font);
+        }
         break;
 
     case OBJ_VOLUME:
@@ -682,6 +694,56 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
                     face->contours = realloc(face->contours, maxc * sizeof(Contour));
                 }
             }
+        }
+        else if (strcmp(tok, "TEXT") == 0)
+        {
+            Face *face;
+        
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            id = atoi(tok) + id_offset;
+            face = (Face *)object[id];
+            if (face->text == NULL)
+                face->text = calloc(1, sizeof(Text));
+
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            face->text->origin.x = (float)atof(tok);
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            face->text->origin.y = (float)atof(tok);
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            face->text->origin.z = (float)atof(tok);
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            face->text->endpt.x = (float)atof(tok);
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            face->text->endpt.y = (float)atof(tok);
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            face->text->endpt.z = (float)atof(tok);
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            face->text->plane.A = (float)atof(tok);
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            face->text->plane.B = (float)atof(tok);
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            face->text->plane.C = (float)atof(tok);
+            tok = strtok_s(NULL, "\n", &nexttok);  // rest of line till \n
+            if (tok != NULL)
+                strcpy_s(face->text->string, 80, tok);
+        }
+        else if (strcmp(tok, "FONT") == 0)
+        {
+            Face *face;
+
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            id = atoi(tok) + id_offset;
+            face = (Face *)object[id];
+            if (face->text == NULL)
+                face->text = calloc(1, sizeof(Text));
+
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            face->text->bold = atoi(tok);
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            face->text->italic = atoi(tok);
+            tok = strtok_s(NULL, "\n", &nexttok);  // rest of line till \n
+            if (tok != NULL)
+                strcpy_s(face->text->font, 32, tok);
         }
         else if (strcmp(tok, "VOLUME") == 0)
         {

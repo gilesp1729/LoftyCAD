@@ -630,8 +630,12 @@ move_obj(Object *obj, float xoffset, float yoffset, float zoffset)
         face->normal.refpt.z += zoffset;
         if (face->text != NULL)             // and the text positions
         {
-            move_obj((Object *)&face->text->origin, xoffset, yoffset, zoffset);
-            move_obj((Object *)&face->text->endpt, xoffset, yoffset, zoffset);
+            face->text->origin.x += xoffset;
+            face->text->origin.y += yoffset;
+            face->text->origin.z += zoffset;
+            face->text->endpt.x += xoffset;
+            face->text->endpt.y += yoffset;
+            face->text->endpt.z += zoffset;
         }
         face->view_valid = FALSE;
         break;
