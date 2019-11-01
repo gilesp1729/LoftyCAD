@@ -704,6 +704,8 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
             face = (Face *)object[id];
             if (face->text == NULL)
                 face->text = calloc(1, sizeof(Text));
+            face->text->origin.hdr.type = OBJ_POINT;
+            face->text->endpt.hdr.type = OBJ_POINT;
 
             tok = strtok_s(NULL, " \t\n", &nexttok);
             face->text->origin.x = (float)atof(tok);

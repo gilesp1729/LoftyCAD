@@ -304,6 +304,12 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             for (i = 0; i < face->n_edges; i++)
                 draw_object((Object *)face->edges[i], (pres & ~DRAW_WITH_DIMENSIONS), parent_lock);
         }
+        if (face->text != NULL)
+        {
+            // Draw the origin and endpoint so it can be picked and moved (unless face is locked at face level)
+            draw_object((Object *)&face->text->origin, pres, parent_lock < LOCK_FACES ? LOCK_NONE : parent_lock);
+            draw_object((Object *)&face->text->endpt, pres, parent_lock < LOCK_FACES ? LOCK_NONE : parent_lock);
+        }
         break;
 
     case OBJ_VOLUME:
@@ -513,6 +519,25 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                             new_point.z - last_point.z
                             );
                         clear_move_copy_flags(picked_obj);
+
+                        // If the point is in a text struct, special case here to regenerate the text.
+                        if (picked_obj->type == OBJ_POINT && parent->type == OBJ_FACE && ((Face *)parent)->text != NULL)
+                        {
+                            Face *face = (Face *)parent;
+                            int lock;
+
+                            curr_text = face->text;
+                            face->text = NULL;   // stop it being deleted
+                            lock = face->hdr.lock;
+                            delink_group((Object *)face, &object_tree);
+                            purge_obj((Object *)face);
+
+                            // Replace the face with a new one, having the same lock state
+                            face = text_face(curr_text);
+                            face->hdr.lock = lock;
+                            link_group((Object *)face, &object_tree);
+                            parent = (Object *)face;
+                        }
 
                         // If we have moved some part of another object containing view lists:
                         // Invalidate them, as any of them may have changed.
@@ -1186,7 +1211,10 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                     snap_to_grid(picked_plane, &new_point);
 
                     if (curr_obj != NULL)
+                    {
+                        ((Face *)curr_obj)->text = NULL;   // stop it being deleted
                         purge_obj(curr_obj);
+                    }
                     curr_text->origin = picked_point;
                     curr_text->endpt = new_point;
                     curr_text->plane = *picked_plane;

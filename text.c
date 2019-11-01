@@ -73,9 +73,10 @@ text_face(Text *text)
     f->contours = calloc(maxc, sizeof(Contour));
     f->n_contours = 0;
 
-    // Copy and store the text structure with the face. 
-    f->text = calloc(1, sizeof(Text));
-    memcpy(f->text, text, sizeof(Text));
+    // Store the text structure with the face. 
+    //f->text = calloc(1, sizeof(Text));
+    //memcpy(f->text, text, sizeof(Text));
+    f->text = text;
 
     for (i = 0, n_edges = 0; i < bufsize; i++)
     {
@@ -146,6 +147,7 @@ text_face(Text *text)
         gluUnProject(textbuf[i + 4], textbuf[i + 5], textbuf[i + 6], modelMatrix, projMatrix, viewport, &p[0], &p[1], &p[2]);
         
         // Join back to start if we have arrived there (provided we have been somewhere in the meantime)
+        // TODO investigate why first_point is ocasionally NULL for some fonts
         if (near_pt_xyz(first_point, p[0], p[1], p[2], SMALL_COORD * 5) && tok == GL_LINE_TOKEN)
         {
             e->endpoints[0] = first_point;

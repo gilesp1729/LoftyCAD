@@ -720,6 +720,13 @@ find_obj(Object *parent, Object *obj)
             if (find_obj((Object *)edge, obj))
                 return TRUE;
         }
+        if (face->text != NULL)
+        {
+            if ((Object *)&face->text->origin == obj)
+                return TRUE;
+            if ((Object *)&face->text->endpt == obj)
+                return TRUE;
+        }
         break;
 
     case OBJ_VOLUME:
