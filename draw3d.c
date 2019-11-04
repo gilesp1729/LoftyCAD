@@ -534,6 +534,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
 
                             // Replace the face with a new one, having the same lock state
                             face = text_face(curr_text);
+                            // TODo what happens if face comes back NULL?
                             face->hdr.lock = lock;
                             link_group((Object *)face, &object_tree);
                             parent = (Object *)face;

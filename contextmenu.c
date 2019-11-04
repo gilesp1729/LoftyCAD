@@ -808,6 +808,8 @@ contextmenu(Object *picked_obj, POINT pt)
 
         // Replace the face with a new one, having the same lock state
         face = text_face(curr_text);
+        if (face == NULL)
+            break;
         face->hdr.lock = lock;
         link_group((Object *)face, &object_tree);
         inserted = TRUE;
