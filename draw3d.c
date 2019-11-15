@@ -521,7 +521,17 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         clear_move_copy_flags(picked_obj);
 
                         // If the point is in a text struct, special case here to regenerate the text.
-                        if (picked_obj->type == OBJ_POINT && parent->type == OBJ_FACE && ((Face *)parent)->text != NULL)
+                        // Only if position has actually changed
+                        if 
+                        (
+                            picked_obj->type == OBJ_POINT 
+                            && 
+                            parent->type == OBJ_FACE 
+                            && 
+                            ((Face *)parent)->text != NULL
+                            &&
+                            !near_pt(&new_point, &last_point, SMALL_COORD)
+                        )
                         {
                             Face *face = (Face *)parent;
                             int lock;
