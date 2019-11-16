@@ -8,15 +8,14 @@
 #define TEXTBUFSIZE     (1024 * 1024)
 GLfloat *textbuf = NULL;
 
-// Make a face out of text.
+// Make a new face out of text, or update an existing text face with new text/font/positions.
 Face *
-text_face(Text *text)
+text_face(Text *text, Face *f)
 {
     HFONT hFont, hFontOld;
     GLdouble modelMatrix[16], projMatrix[16];
     GLint viewport[4];
     int i, bufsize, n_edges, new_edges, maxc;
-    Face *f;
     Edge *e;
     Point *last_point = NULL, *first_point = NULL;
     ListHead edge_list = { NULL, NULL };
@@ -25,12 +24,12 @@ text_face(Text *text)
     BOOL closed = FALSE;
 
     // Map picked_point to origin, new_point to X axis, and attempt to scale the font.
-    look_at_centre_d(curr_text->origin, curr_text->endpt, curr_text->plane, matrix);
+    look_at_centre_d(text->origin, text->endpt, text->plane, matrix);
 
     // Scale given that most fonts are proportional (2 *)
-    scale = 2 * length(&curr_text->origin, &curr_text->endpt) / strlen(text->string);
+    scale = 2 * length(&text->origin, &text->endpt) / strlen(text->string);
     if (nz(scale))
-        return NULL;
+        return f;           // return face untouched
 
     // Make some display lists in the desired font and size
     hFont = CreateFont(12, 0, 0, 0, 
@@ -58,26 +57,42 @@ text_face(Text *text)
     SelectObject(auxGetHDC(), hFontOld);
     DeleteObject(hFont);
     if (bufsize <= 0)
-        return NULL;
+        return f;           // return face untouched
 
     // get matrices
     glGetDoublev(GL_MODELVIEW_MATRIX, modelMatrix);
     glGetDoublev(GL_PROJECTION_MATRIX, projMatrix);
     glGetIntegerv(GL_VIEWPORT, viewport);
 
-    // Make edges out of the line segments in the buffer, and put them into a face.
+    // Make edges out of the line segments in the buffer, and put them into an existing
+    // face, or a new face.
+    if (f == NULL)
+    {
+        f = face_new(FACE_FLAT, curr_text->plane);
+        maxc = 16;
+        f->contours = calloc(maxc, sizeof(Contour));
+        f->n_contours = 0;
+
+        // Store the text structure with the face. 
+        f->text = text;
+    }
+    else
+    {
+        // Clear out the edges in the old face. The new ones may take up more space and have
+        // different numbers of contours. Assume the text struct is already in the face.
+        maxc = 16;
+        while (f->n_contours >= maxc)
+            maxc <<= 1;
+        f->n_contours = 0;
+
+        // Clear out the edges
+        free_view_list_face(f);
+        for (i = 0; i < f->n_edges; i++)
+            purge_obj_top((Object *)f->edges[i], OBJ_FACE);
+        f->n_edges = 0;
+    }
+
     // Since TT expresses line segments clockwise, build each contour backwards.
-    // Assume there will be more than one contour, and allocate a contour array.
-    f = face_new(FACE_FLAT, curr_text->plane);
-    maxc = 16;
-    f->contours = calloc(maxc, sizeof(Contour));
-    f->n_contours = 0;
-
-    // Store the text structure with the face. 
-    //f->text = calloc(1, sizeof(Text));
-    //memcpy(f->text, text, sizeof(Text));
-    f->text = text;
-
     for (i = 0, n_edges = 0; i < bufsize; i++)
     {
         GLfloat tok = textbuf[i];

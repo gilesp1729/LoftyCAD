@@ -534,20 +534,10 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         )
                         {
                             Face *face = (Face *)parent;
-                            int lock;
-
-                            curr_text = face->text;
-                            face->text = NULL;   // stop it being deleted
-                            lock = face->hdr.lock;
-                            delink_group((Object *)face, &object_tree);
-                            purge_obj((Object *)face);
 
                             // Replace the face with a new one, having the same lock state
-                            face = text_face(curr_text);
+                            face = text_face(face->text, face);
                             // TODo what happens if face comes back NULL?
-                            face->hdr.lock = lock;
-                            link_group((Object *)face, &object_tree);
-                            parent = (Object *)face;
                         }
 
                         // If we have moved some part of another object containing view lists:
@@ -1221,15 +1211,10 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         snap_to_angle(picked_plane, &picked_point, &new_point, angle_snap);
                     snap_to_grid(picked_plane, &new_point);
 
-                    if (curr_obj != NULL)
-                    {
-                        ((Face *)curr_obj)->text = NULL;   // stop it being deleted
-                        purge_obj(curr_obj);
-                    }
                     curr_text->origin = picked_point;
                     curr_text->endpt = new_point;
                     curr_text->plane = *picked_plane;
-                    curr_obj = (Object *)text_face(curr_text);
+                    curr_obj = (Object *)text_face(curr_text, (Face *)curr_obj);
                     break;
 
                 case STATE_DRAWING_SCALE:

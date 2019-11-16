@@ -414,7 +414,7 @@ contextmenu(Object *picked_obj, POINT pt)
     int rc;
     Object *parent, *sel_obj, *o, *o_next;
     char buf[128];
-    LOCK old_parent_lock, lock;
+    LOCK old_parent_lock;
     BOOL group_changed = FALSE;
     BOOL dims_changed = FALSE;
     BOOL sel_changed = FALSE;
@@ -801,17 +801,11 @@ contextmenu(Object *picked_obj, POINT pt)
         curr_text->bold = lf.lfWeight > FW_NORMAL;
         curr_text->italic = lf.lfItalic;
         strcpy_s(curr_text->font, 32, lf.lfFaceName);
-        face->text = NULL;   // stop it being deleted
-        lock = face->hdr.lock;
-        delink_group((Object *)face, &object_tree);
-        purge_obj((Object *)face);
 
         // Replace the face with a new one, having the same lock state
-        face = text_face(curr_text);
+        face = text_face(curr_text, face);
         if (face == NULL)
             break;
-        face->hdr.lock = lock;
-        link_group((Object *)face, &object_tree);
         inserted = TRUE;
         break;
     }
