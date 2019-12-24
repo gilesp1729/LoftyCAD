@@ -10,11 +10,74 @@ extern char *locktypes[];
 extern char *edgetypes[];
 extern char *facetypes[];
 
+// Indexed by enum OPERATION
+char *op_string[OP_MAX] = { "U", "^", "-", " " };
+
 // Object being highlighted by mouse over in treeview
 Object *treeview_highlight;
 
 // Limit of children, to stop ridiculously large expansions
 #define TREEVIEW_LIMIT     2000
+
+// Descriptive string for an object, to be used in the treeview, and elsewhere there is a
+// need to echo out an object's description.
+char *obj_description(Object *obj, char *descr, int descr_len)
+{
+    char buf[64], buf2[64], buf3[64];
+    Point *p;
+    Face *face;
+    Edge *edge;
+    Volume *vol;
+    Group *grp;
+
+    switch (obj->type)
+    {
+    case OBJ_POINT:
+        p = (Point *)obj;
+        sprintf_s(descr, descr_len, "Point %d (%s,%s,%s)",
+                  obj->ID,
+                  display_rounded(buf, p->x),
+                  display_rounded(buf2, p->y),
+                  display_rounded(buf3, p->z)
+                  );
+        break;
+
+    case OBJ_EDGE:
+        edge = (Edge *)obj;
+        sprintf_s(descr, descr_len, "Edge %d %s%s %s",
+                  obj->ID,
+                  edgetypes[edge->type & ~EDGE_CONSTRUCTION],
+                  (edge->type & EDGE_CONSTRUCTION) ? "(C)" : "",
+                  get_dims_string(obj, buf)
+                  );
+        break;
+
+    case OBJ_FACE:
+        face = (Face *)obj;
+        sprintf_s(descr, descr_len, "Face %d %s%s %s",
+                  obj->ID,
+                  facetypes[face->type & ~FACE_CONSTRUCTION],
+                  (face->type & FACE_CONSTRUCTION) ? "(C)" : "",
+                  get_dims_string(obj, buf)
+                  );
+        break;
+
+    case OBJ_VOLUME:
+        vol = (Volume *)obj;
+        sprintf_s(descr, descr_len, "%s Volume %d %s", op_string[vol->op], obj->ID, get_dims_string(obj, buf));
+        break;
+
+    case OBJ_GROUP:
+        grp = (Group *)obj;
+        if (grp->title[0] == '\0')
+            sprintf_s(descr, descr_len, "%s Group %d", op_string[grp->op], obj->ID);
+        else
+            sprintf_s(descr, descr_len, "%s Group %d: %s", op_string[grp->op], obj->ID, grp->title);
+        break;
+    }
+
+    return descr;
+}
 
 // Populate a treeview item for the components of an object.
 void
@@ -23,9 +86,7 @@ populate_treeview_object(Object *obj, Object *parent, HTREEITEM hItem)
     TVINSERTSTRUCT tvins;
     TVITEM tvi;
     char descr[64];
-    char buf[64], buf2[64], buf3[64];
     int i;
-    Point *p;
     Face *face;
     Edge *edge;
     Object *o;
@@ -33,14 +94,7 @@ populate_treeview_object(Object *obj, Object *parent, HTREEITEM hItem)
     switch (obj->type)
     {
     case OBJ_POINT:
-        p = (Point *)obj;
-        sprintf_s(descr, 64, "Point %d (%s,%s,%s)", 
-                  obj->ID, 
-                  display_rounded(buf, p->x),
-                  display_rounded(buf2, p->y),
-                  display_rounded(buf3, p->z)
-                  );
-        tvi.pszText = descr;
+        tvi.pszText = obj_description(obj, descr, 64);
         tvi.cchTextMax = strlen(tvi.pszText);
         tvi.lParam = (LPARAM)obj;
         tvi.mask = TVIF_TEXT | TVIF_PARAM;
@@ -58,13 +112,7 @@ populate_treeview_object(Object *obj, Object *parent, HTREEITEM hItem)
 
     case OBJ_EDGE:
         edge = (Edge *)obj;
-        sprintf_s(descr, 64, "Edge %d %s%s %s",
-                  obj->ID,
-                  edgetypes[edge->type & ~EDGE_CONSTRUCTION],
-                  (edge->type & EDGE_CONSTRUCTION) ? "(C)" : "",
-                  get_dims_string(obj, buf)
-                  );
-        tvi.pszText = descr;
+        tvi.pszText = obj_description(obj, descr, 64);
         tvi.cchTextMax = strlen(tvi.pszText);
         tvi.lParam = (LPARAM)obj;
         tvi.mask = TVIF_TEXT | TVIF_PARAM;
@@ -87,13 +135,7 @@ populate_treeview_object(Object *obj, Object *parent, HTREEITEM hItem)
 
     case OBJ_FACE:
         face = (Face *)obj;
-        sprintf_s(descr, 64, "Face %d %s%s %s", 
-                  obj->ID, 
-                  facetypes[face->type & ~FACE_CONSTRUCTION],
-                  (face->type & FACE_CONSTRUCTION) ? "(C)" : "",
-                  get_dims_string(obj, buf)
-                  );
-        tvi.pszText = descr;
+        tvi.pszText = obj_description(obj, descr, 64);
         tvi.cchTextMax = strlen(tvi.pszText);
         tvi.lParam = (LPARAM)obj;
         tvi.mask = TVIF_TEXT | TVIF_PARAM;
@@ -115,8 +157,7 @@ populate_treeview_object(Object *obj, Object *parent, HTREEITEM hItem)
         break;
 
     case OBJ_VOLUME:
-        sprintf_s(descr, 64, "Volume %d %s", obj->ID, get_dims_string(obj, buf));
-        tvi.pszText = descr;
+        tvi.pszText = obj_description(obj, descr, 64);
         tvi.cchTextMax = strlen(tvi.pszText);
         tvi.lParam = (LPARAM)obj;
         tvi.mask = TVIF_TEXT | TVIF_PARAM;
@@ -170,12 +211,7 @@ populate_treeview_tree(Group *tree, HTREEITEM hItem)
     {
         if (obj->type == OBJ_GROUP)
         {
-            Group *grp = (Group *)obj;
-            if (grp->title[0] == '\0')
-                sprintf_s(descr, 128, "Group %d", obj->ID);
-            else
-                sprintf_s(descr, 128, "Group %d: %s", obj->ID, grp->title);
-            tvi.pszText = descr;
+            tvi.pszText = obj_description(obj, descr, 128);
             tvi.cchTextMax = strlen(tvi.pszText);
             tvi.lParam = (LPARAM)obj;
             tvi.mask = TVIF_TEXT | TVIF_PARAM;

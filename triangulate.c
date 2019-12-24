@@ -283,7 +283,6 @@ gen_view_list_tree_surfaces(Group *tree, Group *parent_tree)
 
             vol->mesh_valid = TRUE;
 
-
             if (!parent_tree->mesh_valid)
             {
                 // First one: copy vol->mesh into tree->mesh
@@ -293,8 +292,7 @@ gen_view_list_tree_surfaces(Group *tree, Group *parent_tree)
             }
             else
             {
-                sprintf_s(buf, 32, "Union %d", n++);
-                show_hint_at(pt, buf, FALSE);
+                show_hint_at(pt, obj_description(obj, buf, 32), FALSE);
                 process_messages();
 
                 // Merge volume mesh to tree mesh
@@ -331,8 +329,7 @@ gen_view_list_tree_surfaces(Group *tree, Group *parent_tree)
             if (vol->extrude_height >= 0)
                 break;
 
-            sprintf_s(buf, 32, "Intersection %d", n++);
-            show_hint_at(pt, buf, FALSE);
+            show_hint_at(pt, obj_description(obj, buf, 32), FALSE);
             process_messages();
 
             // Intersect volume mesh to tree mesh

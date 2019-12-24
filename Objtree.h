@@ -52,6 +52,16 @@ typedef enum
     LOCK_VOLUME = OBJ_VOLUME       // The whole volume is locked; nothing can be selected or changed
 } LOCK;
 
+// Operation to use when rendering a volume or group.
+typedef enum
+{
+    OP_UNION,                       // Object is unioned with its containing (parent) tree. Default for solids.
+    OP_INTERSECTION,                // Object is intersected with parent tree. Default for negative volumes (holes)
+    OP_DIFFERENCE,                  // Object is subtracted from its parent tree.
+    OP_NONE,                        // (groups only) Group contents are rendered into the parent tree directly.
+    OP_MAX                          // must be last + 1
+} OPERATION;
+
 // Point flags (only to be used on points in view lists, as they are not shared)
 typedef enum
 {
@@ -284,6 +294,7 @@ typedef struct Volume
     struct Object   hdr;            // Header
     struct Bbox     bbox;           // Bounding box for the volume in 3D, based on untransformed points.
     struct Transform *xform;        // Transform to be applied to volume
+    OPERATION       op;             // Operation to use when combining volume with tree
                                     // NOTE THE ABOVE MUST FOLLOW immediately after header
     float           extrude_height; // Extrude height. If negative, it's a hole (face normals face inwards)
     struct Point    ***point_bucket;  // Bucket structure of Points whose coordinates are copied from 
@@ -301,6 +312,7 @@ typedef struct Group
     struct Object   hdr;            // Header
     struct Bbox     bbox;           // Bounding box for the group in 3D, based on bboxes of volumes in the group
     struct Transform *xform;        // Transform to be applied to group
+    OPERATION       op;             // Operation to use when combining group with tree
                                     // NOTE THE ABOVE MUST FOLLOW immediately after header
     char            title[256];     // A name for the group
     Mesh            *mesh;          // Mesh for the complete group

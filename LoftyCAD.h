@@ -211,6 +211,7 @@ BOOL is_selected_parent(Object *obj);
 BOOL remove_from_selection(Object *obj);
 void clear_selection(ListHead *sel_list);
 
+char *obj_description(Object *obj, char *descr, int descr_len);
 void populate_treeview(void);
 void CALLBACK right_click(AUX_EVENTREC *event);
 void CALLBACK check_file_changed(HWND hWnd);

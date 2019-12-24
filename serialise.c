@@ -794,6 +794,9 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
             vol->extrude_height = 
                 -distance_point_plane(&last_face->normal, &((Face *)last_face->hdr.prev)->normal.refpt);
 
+            // Default operation code if not specified
+            vol->op = vol->extrude_height < 0 ? OP_INTERSECTION : OP_UNION;
+
             ASSERT(stkptr > 0 && id == stack[stkptr - 1], "Badly formed volume record");
             stkptr--;
             if (stkptr == 0)
@@ -810,6 +813,7 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
             ASSERT(stkptr > 0 && id == stack[stkptr - 1], "Badly formed group");
             ASSERT(object[id]->type == OBJ_GROUP, "ENDGROUP is not a group");
             object[id]->lock = lock;
+            ((Group *)object[id])->op = OP_NONE;    // default for groups
             stkptr--;
             if (stkptr == 0)
                 link_tail_group(object[id], tree);
