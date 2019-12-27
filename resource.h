@@ -215,6 +215,15 @@
 #define ID_OBJ_SAVEGROUP                32880
 #define ID_HELP_DRAWINGTEXT             32881
 #define ID_OBJ_EDITTEXT                 32882
+#define ID_OBJ_RENDERINGOPERATION       32883
+#define ID_RENDERINGOPERATION_UNION     32884
+#define ID_OPERATION_UNION              32885
+#define ID_RENDERINGOPERATION_INTERSECTION 32886
+#define ID_RENDERINGOPERATION_DIFFERENCE 32887
+#define ID_RENDERINGOPERATION_          32888
+#define ID_OPERATION_INTERSECTION       32889
+#define ID_OPERATION_DIFFERENCE         32890
+#define ID_OPERATION_NONE               32891
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -223,7 +232,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        162
-#define _APS_NEXT_COMMAND_VALUE         32883
+#define _APS_NEXT_COMMAND_VALUE         32892
 #define _APS_NEXT_CONTROL_VALUE         1031
 #define _APS_NEXT_SYMED_VALUE           110
 #endif

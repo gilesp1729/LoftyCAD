@@ -27,6 +27,7 @@ void free_view_list_edge(Edge *edge);
 BOOL gen_view_list_vol(Volume *vol);
 BOOL gen_view_list_tree_volumes(Group *tree);
 void gen_view_list_tree_surfaces(Group *tree, Group *parent_tree);
+BOOL mesh_merge_op(OPERATION op, Mesh *mesh1, Mesh *mesh2);
 
 // Clip a view list (clipviewlist.c)
 void init_clip_tess(void);
@@ -40,6 +41,7 @@ void mesh_add_vertex(Mesh *mesh, float x, float y, float z, Vertex_index *vi);
 void mesh_add_face(Mesh *mesh, Vertex_index *v1, Vertex_index *v2, Vertex_index *v3, Face_index *fi);
 BOOL mesh_union(Mesh *mesh1, Mesh *mesh2);
 BOOL mesh_intersection(Mesh *mesh1, Mesh *mesh2);
+BOOL mesh_difference(Mesh *mesh1, Mesh *mesh2);
 
 typedef void(*FaceCoordCB)(void *arg, float x[3], float y[3], float z[3]);
 typedef void(*FaceVertexCB)(void *arg, int nv, Vertex_index *vi);

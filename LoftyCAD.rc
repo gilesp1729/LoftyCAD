@@ -300,6 +300,14 @@ BEGIN
     BEGIN
         MENUITEM "Object type",                 ID_OBJ_OBJECTTYPE, INACTIVE
         MENUITEM "Select parent volume",        ID_OBJ_SELECTPARENTVOLUME
+        MENUITEM SEPARATOR
+        POPUP "Rendering Operation"
+        BEGIN
+            MENUITEM "Union",                       ID_OPERATION_UNION
+            MENUITEM "Intersection",                ID_OPERATION_INTERSECTION
+            MENUITEM "Difference",                  ID_OPERATION_DIFFERENCE
+            MENUITEM "(none)",                      ID_OPERATION_NONE
+        END
         POPUP "Locking"
         BEGIN
             MENUITEM "Volume",                      ID_LOCKING_VOLUME

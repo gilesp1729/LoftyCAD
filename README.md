@@ -7,8 +7,7 @@ It is open-source, actively maintained, and free to all.
 Simple to use like Sketchup, but with some improvements:
 In particular, it will:
 - Retain the identity of 3D shapes, do not merge irreversibly with others
-- Not allow silly extrusions
-- Produce a single triangle mesh from merged objects, CSG fashion
+- Produce a single triangle mesh from merged objects, using CSG operations (union, intersection, difference)
 - Not produce non-manifold triangle meshes requiring repairs (OK, some apps complain, but I've never seen on fail to slice)
 - Write STL files directly
 

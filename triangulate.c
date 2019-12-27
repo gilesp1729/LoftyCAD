@@ -242,34 +242,42 @@ gen_view_list_tree_volumes(Group *tree)
     return rc;
 }
 
-// Generate mesh for entire tree (a group or the object tree)
+BOOL
+mesh_merge_op(OPERATION op, Mesh *mesh1, Mesh *mesh2)
+{
+    switch (op)
+    {
+    case OP_UNION:
+    default:
+        return mesh_union(mesh1, mesh2);
+    case OP_INTERSECTION:
+        return mesh_intersection(mesh1, mesh2);
+    case OP_DIFFERENCE:
+        return mesh_difference(mesh1, mesh2);
+    }
+}
+
+// Generate mesh for a class of operations for a group tree (or the object tree)
 void
-gen_view_list_tree_surfaces(Group *tree, Group *parent_tree)
+gen_view_list_tree_surfaces_op(OPERATION op, Group *tree, Group *parent_tree)
 {
     Object *obj;
     Face *f;
     Volume *vol;
     Group *group;
-    POINT pt = {wWidth / 2, wHeight / 2};
+    POINT pt = { wWidth / 2, wHeight / 2 };
     char buf[32];
-    int n = 0;
 
-    // If the parent tree is up to date, we have nothing to do. (but don't do this
-    // check if recursing)
-    if (tree == parent_tree && parent_tree->mesh_valid)
-        return;
-
-    parent_tree->mesh_complete = TRUE;
-
-    // All solid volumes, and groups, get unioned into the parent group mesh.
     for (obj = tree->obj_list.head; obj != NULL; obj = obj->next)
     {
         switch (obj->type)
         {
         case OBJ_VOLUME:
             vol = (Volume *)obj;
+            if (vol->op != op)
+                break;
 
-            // update the triangle mesh for the volume (all volumes)
+            // update the triangle mesh for the volume
             if (vol->xform != NULL)
                 link_tail((Object *)vol->xform, &xform_list);
             for (f = (Face *)vol->faces.head; f != NULL; f = (Face *)f->hdr.next)
@@ -277,12 +285,7 @@ gen_view_list_tree_surfaces(Group *tree, Group *parent_tree)
             if (vol->xform != NULL)
                 delink((Object *)vol->xform, &xform_list);
 
-            // Make sure it is solid first
-            if (vol->extrude_height < 0)
-                break;
-
             vol->mesh_valid = TRUE;
-
             if (!parent_tree->mesh_valid)
             {
                 // First one: copy vol->mesh into tree->mesh
@@ -296,7 +299,7 @@ gen_view_list_tree_surfaces(Group *tree, Group *parent_tree)
                 process_messages();
 
                 // Merge volume mesh to tree mesh
-                vol->mesh_merged = mesh_union(vol->mesh, parent_tree->mesh);
+                vol->mesh_merged = mesh_merge_op(op, parent_tree->mesh, vol->mesh);
                 if (!vol->mesh_merged)
                     parent_tree->mesh_complete = FALSE;
             }
@@ -306,38 +309,56 @@ gen_view_list_tree_surfaces(Group *tree, Group *parent_tree)
             group = (Group *)obj;
             if (group->xform != NULL)
                 link_tail((Object *)group->xform, &xform_list);
-            gen_view_list_tree_surfaces(group, parent_tree);
+            if (group->op == OP_NONE)
+            {
+                // Render contents of group as if in the parent
+                gen_view_list_tree_surfaces_op(op, group, parent_tree);
+            }
+            else
+            {
+                // Render group and merge it with parent using group op
+                gen_view_list_tree_surfaces(group, group);
+                group->mesh_valid = TRUE;
+                if (!parent_tree->mesh_valid)
+                {
+                    // First one: copy vol->mesh into tree->mesh
+                    parent_tree->mesh = mesh_copy(group->mesh);
+                    parent_tree->mesh_valid = TRUE;
+                    group->mesh_merged = TRUE;
+                }
+                else
+                {
+                    show_hint_at(pt, obj_description(obj, buf, 32), FALSE);
+                    process_messages();
+
+                    // Merge group mesh to tree mesh
+                    group->mesh_merged = mesh_merge_op(op, parent_tree->mesh, group->mesh);
+                    if (!group->mesh_merged)
+                        parent_tree->mesh_complete = FALSE;
+                }
+            }
             if (group->xform != NULL)
                 delink((Object *)group->xform, &xform_list);
             break;
         }
     }
+}
 
-    // Then all the holes (negative volumes) get intersected with the parent group mesh.
-    // No groups here, only volumes. Make sure there is something to intersect with.
-    if (!parent_tree->mesh_valid)
+// Generate mesh for entire tree (a group or the object tree)
+void
+gen_view_list_tree_surfaces(Group *tree, Group *parent_tree)
+{
+    // If the parent tree is up to date, we have nothing to do. (but don't do this
+    // check if recursing)
+    if (tree == parent_tree && parent_tree->mesh_valid)
         return;
 
-    for (obj = tree->obj_list.head; obj != NULL; obj = obj->next)
-    {
-        switch (obj->type)
-        {
-        case OBJ_VOLUME:
-            vol = (Volume *)obj;
+    parent_tree->mesh_complete = TRUE;
 
-            // Make sure it is a hole
-            if (vol->extrude_height >= 0)
-                break;
-
-            show_hint_at(pt, obj_description(obj, buf, 32), FALSE);
-            process_messages();
-
-            // Intersect volume mesh to tree mesh
-            vol->mesh_merged = mesh_intersection(vol->mesh, parent_tree->mesh);
-            if (!vol->mesh_merged)
-                parent_tree->mesh_complete = FALSE;
-        }
-    }
+    // precedence order: unions, then differences, then intersections
+    gen_view_list_tree_surfaces_op(OP_UNION, tree, parent_tree);
+    gen_view_list_tree_surfaces_op(OP_DIFFERENCE, tree, parent_tree);
+    gen_view_list_tree_surfaces_op(OP_INTERSECTION, tree, parent_tree);
     hide_hint();
 }
 

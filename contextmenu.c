@@ -420,6 +420,8 @@ contextmenu(Object *picked_obj, POINT pt)
     BOOL sel_changed = FALSE;
     BOOL xform_changed = FALSE;
     BOOL inserted = FALSE;
+    BOOL hole;
+    OPERATION op, old_op;
     Group *group;
     Face *face;
     Point *p, *nextp;
@@ -456,6 +458,10 @@ contextmenu(Object *picked_obj, POINT pt)
     switch (parent->type)
     {
     case OBJ_EDGE:
+        EnableMenuItem(hMenu, ID_OPERATION_UNION, MF_GRAYED);
+        EnableMenuItem(hMenu, ID_OPERATION_INTERSECTION, MF_GRAYED);
+        EnableMenuItem(hMenu, ID_OPERATION_DIFFERENCE, MF_GRAYED);
+        EnableMenuItem(hMenu, ID_OPERATION_NONE, MF_GRAYED);
         EnableMenuItem(hMenu, ID_LOCKING_FACES, MF_GRAYED);
         EnableMenuItem(hMenu, ID_LOCKING_VOLUME, MF_GRAYED);
         EnableMenuItem(hMenu, ID_OBJ_SELECTPARENTVOLUME, MF_GRAYED);
@@ -467,6 +473,10 @@ contextmenu(Object *picked_obj, POINT pt)
         break;
 
     case OBJ_FACE:
+        EnableMenuItem(hMenu, ID_OPERATION_UNION, MF_GRAYED);
+        EnableMenuItem(hMenu, ID_OPERATION_INTERSECTION, MF_GRAYED);
+        EnableMenuItem(hMenu, ID_OPERATION_DIFFERENCE, MF_GRAYED);
+        EnableMenuItem(hMenu, ID_OPERATION_NONE, MF_GRAYED);
         EnableMenuItem(hMenu, ID_LOCKING_VOLUME, MF_GRAYED);
         EnableMenuItem(hMenu, ID_OBJ_SELECTPARENTVOLUME, MF_GRAYED);
         EnableMenuItem(hMenu, ID_OBJ_GROUPEDGES, MF_GRAYED);
@@ -476,6 +486,10 @@ contextmenu(Object *picked_obj, POINT pt)
         break;
 
     case OBJ_VOLUME:
+        hole = ((Volume *)picked_obj)->extrude_height < 0;
+        EnableMenuItem(hMenu, ID_OPERATION_UNION, hole ? MF_GRAYED : MF_ENABLED);
+        EnableMenuItem(hMenu, ID_OPERATION_DIFFERENCE, hole ? MF_GRAYED : MF_ENABLED);
+        EnableMenuItem(hMenu, ID_OPERATION_NONE, MF_GRAYED);
         EnableMenuItem(hMenu, ID_OBJ_GROUPEDGES, MF_GRAYED);
         EnableMenuItem(hMenu, ID_OBJ_UNGROUP, MF_GRAYED);
         EnableMenuItem(hMenu, ID_OBJ_SAVEGROUP, MF_GRAYED);
@@ -526,13 +540,38 @@ contextmenu(Object *picked_obj, POINT pt)
         break;
     }
 
-    // We can only do transforms on a volume or a group.
+    // We can only do transforms, and render operations, on a volume or a group.
+    op = OP_MAX;
     switch (picked_obj->type)
     {
+    default:
     case OBJ_POINT:
     case OBJ_EDGE:
     case OBJ_FACE:
         EnableMenuItem(hMenu, ID_OBJ_TRANSFORM, MF_GRAYED);
+        break;
+    case OBJ_VOLUME:
+        op = ((Volume *)picked_obj)->op;
+        break;
+    case OBJ_GROUP:
+        op = ((Group *)picked_obj)->op;
+        break;
+    }
+
+    old_op = op;
+    switch (op)
+    {
+    case OP_UNION:
+        CheckMenuItem(hMenu, ID_OPERATION_UNION, MF_CHECKED);
+        break;
+    case OP_INTERSECTION:
+        CheckMenuItem(hMenu, ID_OPERATION_INTERSECTION, MF_CHECKED);
+        break;
+    case OP_DIFFERENCE:
+        CheckMenuItem(hMenu, ID_OPERATION_DIFFERENCE, MF_CHECKED);
+        break;
+    case OP_NONE:
+        CheckMenuItem(hMenu, ID_OPERATION_NONE, MF_CHECKED);
         break;
     }
 
@@ -603,6 +642,19 @@ contextmenu(Object *picked_obj, POINT pt)
         parent->lock = LOCK_VOLUME;
         if (parent->lock == picked_obj->type)
             remove_from_selection(picked_obj);
+        break;
+
+    case ID_OPERATION_UNION:
+        op = OP_UNION;
+        break;
+    case ID_OPERATION_INTERSECTION:
+        op = OP_INTERSECTION;
+        break;
+    case ID_OPERATION_DIFFERENCE:
+        op = OP_DIFFERENCE;
+        break;
+    case ID_OPERATION_NONE:
+        op = OP_NONE;
         break;
 
     case ID_OBJ_SELECTPARENTVOLUME:
@@ -810,7 +862,22 @@ contextmenu(Object *picked_obj, POINT pt)
         break;
     }
 
-    if (parent->lock != old_parent_lock || group_changed || dims_changed || sel_changed || xform_changed || inserted)
+    if (op != old_op)
+    {
+        switch (picked_obj->type)
+        {
+        case OBJ_VOLUME:
+            ((Volume *)picked_obj)->op = op;
+            break;
+        case OBJ_GROUP:
+            ((Group *)picked_obj)->op = op;
+            break;
+        }
+
+        invalidate_all_view_lists(parent, picked_obj, 0, 0, 0);
+    }
+
+    if (parent->lock != old_parent_lock || op != old_op || group_changed || dims_changed || sel_changed || xform_changed || inserted)
     {
         // we have changed the drawing - write an undo checkpoint
         update_drawing();
