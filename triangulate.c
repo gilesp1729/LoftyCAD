@@ -316,6 +316,9 @@ gen_view_list_tree_surfaces_op(OPERATION op, Group *tree, Group *parent_tree)
             }
             else
             {
+                if (group->op != op)
+                    break;
+
                 // Render group and merge it with parent using group op
                 gen_view_list_tree_surfaces(group, group);
                 group->mesh_valid = TRUE;
