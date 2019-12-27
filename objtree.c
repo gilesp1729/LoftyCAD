@@ -162,6 +162,7 @@ Volume *vol_new(void)
 
     vol->hdr.type = OBJ_VOLUME;
     vol->hdr.ID = objid++;
+    vol->op = OP_UNION;
     clear_bbox(&vol->bbox);
     vol->point_bucket = init_buckets();
 
@@ -175,6 +176,7 @@ Group *group_new(void)
     grp->hdr.type = OBJ_GROUP;
     grp->hdr.ID = objid++;
     grp->hdr.lock = LOCK_FACES;
+    grp->op = OP_NONE;
     clear_bbox(&grp->bbox);
     return grp;
 }
