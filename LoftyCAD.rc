@@ -117,6 +117,7 @@ BEGIN
         MENUITEM "Drawing Text",                ID_HELP_DRAWINGTEXT
         MENUITEM "Extruding",                   ID_HELP_EXTRUDING
         MENUITEM "Locking and Grouping",        ID_HELP_LOCKINGANDGROUPING
+        MENUITEM "CSG Operations",              ID_HELP_CSGOPERATIONS
         MENUITEM "Import and Export",           ID_HELP_IMPORTANDEXPORT
         MENUITEM SEPARATOR
         MENUITEM "&About LoftyCAD...",          IDM_ABOUT

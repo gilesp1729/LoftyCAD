@@ -771,6 +771,17 @@ Command(int message, int wParam, int lParam)
             display_help("Locking_Grouping");
             break;
 
+        case ID_HELP_CSGOPERATIONS:
+            if (!view_help)
+            {
+                ShowWindow(hWndHelp, SW_SHOW);
+                view_help = TRUE;
+                hMenu = GetSubMenu(GetMenu(auxGetHWND()), 3);
+                CheckMenuItem(hMenu, ID_VIEW_HELP, MF_CHECKED);
+            }
+            display_help("CSG_Operations");
+            break;
+
         case ID_HELP_IMPORTANDEXPORT:
             if (!view_help)
             {
