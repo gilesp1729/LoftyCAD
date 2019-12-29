@@ -1189,6 +1189,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
 
                             face->vol->extrude_height = 
                                 -distance_point_plane(&face->normal, &opposite->normal.refpt);
+                            face->vol->op = face->vol->extrude_height < 0 ? OP_INTERSECTION : OP_UNION;
                         }
 
                         // Invalidate all the view lists for the volume, as any of them may have changed
