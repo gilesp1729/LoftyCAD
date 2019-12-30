@@ -152,6 +152,7 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 break;
 
             case IDB_TEXT:
+                display_help_state(STATE_STARTING_TEXT);    // get the prompt up
                 curr_text = calloc(1, sizeof(Text));
                 // Choose font and input string here
                 memset(&cf, 0, sizeof(CHOOSEFONT));
