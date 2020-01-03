@@ -6,7 +6,7 @@
 #define MAXLINE 1024
 
 // Version of output file
-double file_version = 0.2;
+double file_version = 0.3;
 
 // A constantly incrementing ID. 
 // Should not need to worry about it overflowing 32-bits (4G objects!)
@@ -25,6 +25,7 @@ char *objname[] = { "(none)", "POINT", "EDGE", "FACE", "VOLUME", "ENDGROUP" };
 char *locktypes[] = { "N", "P", "E", "F", "V" };
 char *edgetypes[] = { "STRAIGHT", "ARC", "BEZIER" };
 char *facetypes[] = { "RECT", "CIRCLE", "FLAT", "CYLINDRICAL", "GENERAL" };
+char *optypes[] = { "UNION", "INTER", "DIFF", "NONE" };
 
 // Serialise an object. Children go out before their parents, in general.
 void
@@ -177,6 +178,7 @@ serialise_obj(Object *obj, FILE *f)
 
     case OBJ_VOLUME:
         vol = (Volume *)obj;
+        fprintf_s(f, "%s ", optypes[vol->op]);
         for (face = (Face *)vol->faces.head; face != NULL; face = (Face *)face->hdr.next)
         {
             if (n >= MAXLINE - 10)
@@ -205,8 +207,10 @@ serialise_obj(Object *obj, FILE *f)
         break;
 
     case OBJ_GROUP:
-        fprintf_s(f, "\n");
         group = (Group *)obj;
+        if (group->op != OP_NONE)
+            fprintf_s(f, "%s ", optypes[group->op]);
+        fprintf_s(f, "\n");
         if (group->xform != NULL)
         {
             Transform *xform = group->xform;
@@ -290,7 +294,7 @@ check_and_grow(unsigned int id, Object ***object, unsigned int *objsize)
     }
 }
 
-// Find a lock type from its letter.
+// Find a lock type or an operation type from its first letter.
 LOCK
 locktype_of(char *tok)
 {
@@ -303,6 +307,20 @@ locktype_of(char *tok)
     }
 
     return 0;
+}
+
+OPERATION
+optype_of(char *tok)
+{
+    int i;
+
+    for (i = 0; i < OP_MAX; i++)
+    {
+        if (tok[0] == optypes[i][0])
+            return i;
+    }
+
+    return OP_MAX;
 }
 
 
@@ -762,6 +780,7 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
             vol->hdr.ID = id;
             vol->hdr.lock = lock;
             object[id] = (Object *)vol;
+            vol->op = OP_MAX;
 
             // Read the list of faces that make up the volume.
             while (TRUE)
@@ -777,6 +796,12 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
                     if (fgets(buf, MAXLINE, f) == NULL)
                         break;
                     tok = strtok_s(buf, " \t\n", &nexttok);
+                }
+
+                if (isalpha(tok[0]))    // handle operator before any face ID's
+                {
+                    vol->op = optype_of(tok);
+                    tok = strtok_s(NULL, " \t\n", &nexttok);
                 }
 
                 fid = atoi(tok) + id_offset;
@@ -795,7 +820,10 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
                 -distance_point_plane(&last_face->normal, &((Face *)last_face->hdr.prev)->normal.refpt);
 
             // Default operation code if not specified
-            vol->op = vol->extrude_height < 0 ? OP_INTERSECTION : OP_UNION;
+            // TODO handle default-extruded and explicitly set ops differently
+            // TODO store extruded flag on faces explicitly?
+            if (vol->op == OP_MAX)
+                vol->op = vol->extrude_height < 0 ? OP_INTERSECTION : OP_UNION;
 
             ASSERT(stkptr > 0 && id == stack[stkptr - 1], "Badly formed volume record");
             stkptr--;
@@ -810,10 +838,16 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
             id = atoi(tok) + id_offset;
             tok = strtok_s(NULL, " \t\n", &nexttok);
             lock = locktype_of(tok);
+
             ASSERT(stkptr > 0 && id == stack[stkptr - 1], "Badly formed group");
             ASSERT(object[id]->type == OBJ_GROUP, "ENDGROUP is not a group");
             object[id]->lock = lock;
-            ((Group *)object[id])->op = OP_NONE;    // default for groups
+            grp = (Group *)object[id];
+            grp->op = OP_NONE;    // default for groups
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            if (tok != NULL && isalpha(tok[0]))    // handle operator if present
+                grp->op = optype_of(tok);
+
             stkptr--;
             if (stkptr == 0)
                 link_tail_group(object[id], tree);
