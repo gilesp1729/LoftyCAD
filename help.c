@@ -5,6 +5,9 @@
 #include <CommDlg.h>
 #include <stdio.h>
 
+// Directory containing help pages
+char help_dir[256];
+
 // These are indexed by the app state (LoftyCAD.h)
 char *state_key[STATE_MAX] =
 {
@@ -69,6 +72,7 @@ HWND init_help_window(void)
 {
     HWND hWnd;
     int i;
+    char *slosh;
 
     OleInitialize(NULL);
     hWnd = CreateDialog
@@ -91,6 +95,18 @@ HWND init_help_window(void)
         cursors[i].cursor = LoadCursor(cursors[i].instance, (LPCTSTR)cursors[i].idc);
     }
 
+    // Find the directory containing the help files
+    GetModuleFileName(NULL, help_dir, 256);
+    slosh = strrchr(help_dir, '\\');
+    if (slosh != NULL)
+        *slosh = '\0';
+
+    // If we're running from a Debug directory, go up one level
+    if (_stricmp(slosh - 6, "\\Debug") == 0)
+        *(slosh - 6) = '\0';
+
+    strcat_s(help_dir, 256, "\\html\\");
+
     return hWnd;
 }
 
@@ -99,13 +115,8 @@ void
 display_help(char *key)
 {
     char fname[256]; 
-    char *slosh;
 
-    GetModuleFileName(NULL, fname, 256);
-    slosh = strrchr(fname, '\\');
-    if (slosh != NULL)
-        *slosh = '\0';
-    strcat_s(fname, 256, "\\html\\");
+    strcpy_s(fname, 256, help_dir);
     strcat_s(fname, 256, key);
     strcat_s(fname, 256, ".htm");
     DisplayHTMLPage(hWndHelp, fname);
