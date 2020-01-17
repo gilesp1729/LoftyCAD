@@ -14,4 +14,5 @@ extern unsigned char WindowCount;
 long EmbedBrowserObject(HWND hwnd);
 long DisplayHTMLPage(HWND hwnd, LPTSTR webPageName);
 long DisplayHTMLStr(HWND hwnd, LPCTSTR string);
+void SetBrowserSize(HWND hwnd, int width, int height);
 void UnEmbedBrowserObject(HWND hwnd);

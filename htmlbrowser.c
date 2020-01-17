@@ -1068,8 +1068,13 @@ long EmbedBrowserObject(HWND hwnd)
 
             // Let's call several functions in the IWebBrowser2 object to position the browser display area
             // in our window. The functions we call are put_Left(), put_Top(), put_Width(), and put_Height().
-            // Note that we reference the IWebBrowser2 object's VTable to get pointers to those functions. And
+            // Note that we reference the IWebBrowser2 object's VTable to get pointers to those functions. 
             // also note that the first arg we pass to each is the pointer to the IWebBrowser2 object.
+
+            // Make sure it's set to be resizable
+            // TODO: none of these calls work. Why?
+            webBrowser2->lpVtbl->put_Resizable(webBrowser2, 1);
+
             webBrowser2->lpVtbl->put_Left(webBrowser2, 0);
             webBrowser2->lpVtbl->put_Top(webBrowser2, 0);
             webBrowser2->lpVtbl->put_Width(webBrowser2, rect.right);
@@ -1093,3 +1098,28 @@ long EmbedBrowserObject(HWND hwnd)
     return(-2);
 }
 
+// Set the size of the browser in the window when the window gets resized.
+// TODO: This doesn't seem to work at all. Why?
+void SetBrowserSize(HWND hwnd, int width, int height)
+{
+    IWebBrowser2	*webBrowser2;
+    IOleObject		*browserObject;
+
+    // Retrieve the browser object's pointer we stored in our window's GWL_USERDATA when
+    // we initially attached the browser object to this window.
+    browserObject = *((IOleObject **)GetWindowLong(hwnd, GWL_USERDATA));
+
+    // We want to get the base address (ie, a pointer) to the IWebBrowser2 object embedded within the browser
+    // object, so we can call some of the functions in the former's table.
+    if (!browserObject->lpVtbl->QueryInterface(browserObject, &IID_IWebBrowser2, (void**)&webBrowser2))
+    {
+        // Set width and height
+        webBrowser2->lpVtbl->put_Left(webBrowser2, 0);
+        webBrowser2->lpVtbl->put_Top(webBrowser2, 0);
+        webBrowser2->lpVtbl->put_Width(webBrowser2, width);
+        webBrowser2->lpVtbl->put_Height(webBrowser2, height);
+
+        // Release it
+        webBrowser2->lpVtbl->Release(webBrowser2);
+    }
+}

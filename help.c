@@ -180,11 +180,15 @@ help_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
         CheckMenuItem(hMenu, ID_VIEW_HELP, view_help ? MF_CHECKED : MF_UNCHECKED);
         break;
-    }
 
-    // NOTE: If you want to resize the area that the browser object occupies when you
-    // resize the window, then handle WM_SIZE and use the IWebBrowser2's put_Width()
-    // and put_Height() to give it the new dimensions.
+        // NOTE: If you want to resize the area that the browser object occupies when you
+        // resize the window, then handle WM_SIZE and use the IWebBrowser2's put_Width()
+        // and put_Height() to give it the new dimensions.
+        // TODO: This doesn't seem to work at all. Why?
+    case WM_SIZE:
+        SetBrowserSize(hWnd, LOWORD(lParam), HIWORD(lParam));
+        break;
+    }
 
     return 0;
 }
