@@ -43,6 +43,7 @@ extern "C"
     int // no BOOL here
         mesh_union(Mesh *mesh1, Mesh *mesh2)
     {
+        // Create new (or reference existing) property maps
         Exact_point_map mesh1_exact_points =
             mesh1->add_property_map<vertex_descriptor, EK::Point_3>("e:exact_point").first;
         Exact_point_computed mesh1_exact_points_computed =
@@ -56,10 +57,32 @@ extern "C"
         Coref_point_map mesh1_pm(mesh1_exact_points, mesh1_exact_points_computed, *mesh1);
         Coref_point_map mesh2_pm(mesh2_exact_points, mesh2_exact_points_computed, *mesh2);
 
+        std::pair<Mesh::Property_map<Mesh::Face_index, int>, bool>
+            m1_id = mesh1->add_property_map<Mesh::Face_index, int>("f:id", -1);
+        Mesh::Property_map<Mesh::Face_index, int> mesh1_id = m1_id.first;
+        bool mesh1_id_created = m1_id.second;
+
+        // First time the ID map is created, set it to the material index
+        if (mesh1_id_created)
+        {}
+
+        std::pair<Mesh::Property_map<Mesh::Face_index, int>, bool>
+            m2_id = mesh2->add_property_map<Mesh::Face_index, int>("f:id", -1);
+        Mesh::Property_map<Mesh::Face_index, int> mesh2_id = m2_id.first;
+        bool mesh2_id_created = m2_id.second;
+
+        if (mesh2_id_created)
+        {
+        }
+
+        Visitor visitor;
+        visitor.properties[mesh1] = mesh1_id;
+        visitor.properties[mesh2] = mesh2_id;
+
         return (PMP::corefine_and_compute_union(*mesh1,
             *mesh2,
             *mesh1,
-            params::vertex_point_map(mesh1_pm),
+            params::vertex_point_map(mesh1_pm).visitor(visitor),
             params::vertex_point_map(mesh2_pm),
             params::vertex_point_map(mesh1_pm)));
     }

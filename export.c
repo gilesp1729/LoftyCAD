@@ -129,7 +129,7 @@ export_object_tree(Group *tree, char *filename, int file_index)
         fopen_s(&off, filename, "wt");
         if (off == NULL)
             return;
-        fprintf_s(off, "OFF\n", tree->title);
+        fprintf_s(off, "OFF\n");
 
         ASSERT(tree->mesh != NULL, "Tree mesh NULL");
         ASSERT(tree->mesh_valid, "Tree mesh not valid");

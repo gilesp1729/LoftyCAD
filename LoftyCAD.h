@@ -16,7 +16,8 @@
 
 
 // Version
-#define LOFTYCAD_VERSION "1.2"
+#define LOFTYCAD_VERSION "1.3"
+#define LOFTYCAD_BRANCH "(Material Girl)"
 
 // States the app can be in.
 typedef enum STATE

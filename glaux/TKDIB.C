@@ -168,7 +168,7 @@ TK_RGBImageRec *tkDIBImageLoadAW(char *fileName, BOOL bUnicode)
     BITMAPFILEHEADER *pbmf;         // Ptr to file header
     BITMAPINFOHEADER UNALIGNED *pbmihFile;
     BITMAPCOREHEADER UNALIGNED *pbmchFile; // Ptr to file's core header (if it exists)
-    PVOID            pvBitsFile;    // Ptr to bitmap bits in file
+    PVOID            pvBitsFile = NULL;    // Ptr to bitmap bits in file
     PBYTE            pjBitsRGB;     // Ptr to 24BPP RGB image in DIB section
     PBYTE            pjTKBits = (PBYTE) NULL;   // Ptr to final TK image bits
     PBYTE            pjSrc;         // Ptr to image file used for conversion

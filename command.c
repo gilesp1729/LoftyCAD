@@ -16,7 +16,8 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
         strcat_s(buf, 64, LOFTYCAD_VERSION);
         strcat_s(buf, 64, " (Build ");
         strcat_s(buf, 64, __DATE__);
-        strcat_s(buf, 64, ")");
+        strcat_s(buf, 64, ") ");
+        strcat_s(buf, 64, LOFTYCAD_BRANCH);
         SendDlgItemMessage(hDlg, IDC_STATIC_BUILD, WM_SETTEXT, 0, (LPARAM)buf);
         return (INT_PTR)TRUE;
 
