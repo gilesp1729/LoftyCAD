@@ -40,6 +40,7 @@ serialise_obj(Object *obj, FILE *f)
     Volume *vol;
     Group *group;
     Object *o;
+    BOOL mat_written[MAX_MATERIAL] = { 0, };
 
     // check for object already saved
     if (obj->save_count == save_count)
@@ -203,6 +204,25 @@ serialise_obj(Object *obj, FILE *f)
                       xform->enable_rotation,
                       xform->rx, xform->ry, xform->rz
                       );
+        }
+        if (vol->material != 0)
+        {
+            if (mat_written[vol->material])
+            {
+                fprintf_s(f, "MATERIAL %d %d\n",
+                    vol->material,
+                    obj->ID);
+            }
+            else
+            {
+                fprintf_s(f, "MATERIAL %d %d %f %f %f\n",
+                    vol->material,
+                    obj->ID,
+                    materials[vol->material].r,
+                    materials[vol->material].g,
+                    materials[vol->material].b);
+                mat_written[vol->material] = TRUE;
+            }
         }
         break;
 
@@ -895,6 +915,30 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
             xform->rz = (float)atof(tok);
             evaluate_transform(xform);
         }
+        else if (strcmp(tok, "MATERIAL") == 0)
+        {
+            Volume* vol;
+            int mat;
+
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            mat = atoi(tok);
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            id = atoi(tok) + id_offset;
+            ASSERT(object[id]->type == OBJ_VOLUME, "Material must be on volume");
+            vol = (Volume *)object[id];
+            vol->material = mat;
+            if (!materials[mat].valid)
+            {
+                tok = strtok_s(NULL, " \t\n", &nexttok);
+                ASSERT(tok != NULL, "New material must have colours, etc");
+                materials[mat].r = (float)atof(tok);
+                tok = strtok_s(NULL, " \t\n", &nexttok);
+                materials[mat].g = (float)atof(tok);
+                tok = strtok_s(NULL, " \t\n", &nexttok);
+                materials[mat].b = (float)atof(tok);
+                materials[mat].valid = TRUE;
+            }
+        }
         else if (strcmp(tok, "SELECTION") == 0)
         {
             clear_selection(&selection);
@@ -958,7 +1002,7 @@ read_checkpoint(Group *tree, char *filename, int generation)
 {
     char basename[256], check[256], tmpdir[256];
     int baselen;
-    BOOL rc;
+    BOOL rc = FALSE;
     char *pdot;
 
     clear_selection(&selection);

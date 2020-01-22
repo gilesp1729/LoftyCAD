@@ -395,7 +395,7 @@ gen_view_list_vol(Volume *vol)
     // create a new mesh
     if (vol->mesh != NULL)
         mesh_destroy(vol->mesh);
-    vol->mesh = mesh_new();
+    vol->mesh = mesh_new(vol->material);
 
     // generate view lists for all the faces
     for (f = (Face *)vol->faces.head; f != NULL; f = (Face *)f->hdr.next)

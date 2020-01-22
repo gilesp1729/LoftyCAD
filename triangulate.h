@@ -34,7 +34,7 @@ void init_clip_tess(void);
 void gen_view_list_surface(Face *face);
 
 // Mesh functions, and interface to CGAL (mesh.cpp)
-Mesh *mesh_new(void);
+Mesh *mesh_new(int material);
 Mesh *mesh_copy(Mesh *from);
 void mesh_destroy(Mesh *mesh);
 void mesh_add_vertex(Mesh *mesh, float x, float y, float z, Vertex_index *vi);
@@ -43,12 +43,14 @@ BOOL mesh_union(Mesh *mesh1, Mesh *mesh2);
 BOOL mesh_intersection(Mesh *mesh1, Mesh *mesh2);
 BOOL mesh_difference(Mesh *mesh1, Mesh *mesh2);
 
-typedef void(*FaceCoordCB)(void *arg, float x[3], float y[3], float z[3]);
+typedef void(*FaceCoordCB)(void* arg, float x[3], float y[3], float z[3]);
+typedef void(*FaceCoordMaterialCB)(void* arg, int mat, float x[3], float y[3], float z[3]);
 typedef void(*FaceVertexCB)(void *arg, int nv, Vertex_index *vi);
 typedef void(*VertexCB)(void *arg, Vertex_index *v, float x, float y, float z);
 void mesh_foreach_vertex(Mesh *mesh, VertexCB callback, void *callback_arg);
 void mesh_foreach_face_vertices(Mesh *mesh, FaceVertexCB callback, void *callback_arg);
-void mesh_foreach_face_coords(Mesh *mesh, FaceCoordCB callback, void *callback_arg);
+void mesh_foreach_face_coords(Mesh* mesh, FaceCoordCB callback, void* callback_arg);
+void mesh_foreach_face_coords_mat(Mesh* mesh, FaceCoordMaterialCB callback, void* callback_arg);
 int mesh_num_vertices(Mesh *mesh);
 int mesh_num_faces(Mesh *mesh);
 

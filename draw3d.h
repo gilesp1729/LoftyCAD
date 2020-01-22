@@ -14,6 +14,7 @@ typedef enum
     DRAW_WITH_DIMENSIONS = 16
 } PRESENTATION;
 
+void SetMaterial(int mat);
 void color(OBJECT obj_type, BOOL construction, BOOL selected, BOOL highlighted, BOOL locked);
 void draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock);
 Face *text_face(Text *text, Face *f);

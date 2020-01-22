@@ -15,6 +15,44 @@ static unsigned int curr_drawn_no = 0;
 // List of transforms to be applied to point coordinates
 ListHead xform_list = { NULL, NULL };
 
+// Material array
+Material materials[MAX_MATERIAL];
+
+// Set material and lighting up for the rendered view
+void
+SetMaterial(int mat)
+{
+    static float front_mat_shininess[] = { 30.0f };
+    static float front_mat_specular[] = { 0.2f, 0.2f, 0.2f, 1.0f };
+    static float front_mat_diffuse[] = { 0.5f, 0.28f, 0.38f, 1.0f };
+
+    static float back_mat_shininess[] = { 50.0f };
+    static float back_mat_specular[] = { 0.5f, 0.5f, 0.2f, 1.0f };
+    static float back_mat_diffuse[] = { 1.0f, 1.0f, 0.2f, 1.0f };
+
+    static float ambient[] = { 0.1f, 0.1f, 0.1f, 1.0f };
+    static float lmodel_ambient[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+
+    static int curr_mat = 0;
+
+    if (mat == 0)
+    {
+        glMaterialfv(GL_FRONT, GL_SHININESS, front_mat_shininess);
+        glMaterialfv(GL_FRONT, GL_SPECULAR, front_mat_specular);
+        glMaterialfv(GL_FRONT, GL_DIFFUSE, front_mat_diffuse);
+        glMaterialfv(GL_BACK, GL_SHININESS, back_mat_shininess);
+        glMaterialfv(GL_BACK, GL_SPECULAR, back_mat_specular);
+        glMaterialfv(GL_BACK, GL_DIFFUSE, back_mat_diffuse);
+        glLightfv(GL_LIGHT0, GL_AMBIENT, ambient);
+        glLightModelfv(GL_LIGHT_MODEL_AMBIENT, lmodel_ambient);
+        curr_mat = 0;
+    }
+    else if (mat != curr_mat)
+    {
+        // TODO!
+    }
+}
+
 // Some standard colors sent to GL.
 void
 color(OBJECT obj_type, BOOL construction, BOOL selected, BOOL highlighted, BOOL locked)
@@ -73,13 +111,14 @@ color(OBJECT obj_type, BOOL construction, BOOL selected, BOOL highlighted, BOOL 
     glColor4f(r, g, b, a);
 }
 
-// Draw a single mesh triangle with normal.
+// Draw a single mesh triangle with normal and material index.
 void
-draw_triangle(void *arg, float x[3], float y[3], float z[3])
+draw_triangle(void *arg, int mat, float x[3], float y[3], float z[3])
 {
     int i;
     float A, B, C, length;
 
+    SetMaterial(mat);
     glBegin(GL_POLYGON);
     cross(x[1] - x[0], y[1] - y[0], z[1] - z[0], x[2] - x[0], y[2] - y[0], z[2] - z[0], &A, &B, &C);
     length = (float)sqrt(A * A + B * B + C * C);
@@ -317,9 +356,10 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         if (view_rendered)
         {
             // Draw from the triangulated mesh for the volume.
+            // TODO: is this ever reached? The object tree group should have drawn it.
             ASSERT(vol->mesh_valid, "Mesh is not up to date");
             color(OBJ_FACE, FALSE, selected, highlighted, FALSE);
-            mesh_foreach_face_coords(vol->mesh, draw_triangle, NULL);
+            mesh_foreach_face_coords_mat(vol->mesh, draw_triangle, NULL);
         }
         else        
         {
@@ -341,7 +381,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         {
             // The object tree is a group, but it is never merged.
             if (group->mesh != NULL && group->mesh_valid && !group->mesh_merged)
-                mesh_foreach_face_coords(group->mesh, draw_triangle, NULL);
+                mesh_foreach_face_coords_mat(group->mesh, draw_triangle, NULL);
 
             if (!group->mesh_complete)
             {

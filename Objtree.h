@@ -72,6 +72,13 @@ typedef enum
     FLAG_NEW_CONTOUR                // The point begins a new boundary contour
 } PFLAG;
 
+// Material structure.
+typedef struct Material
+{
+    BOOL            valid;          // TRUE if the material hs been set.
+    float           r, g, b;        // Colors in [0.0, 1.0] for diffuse and ambient lighting
+} Material;
+
 // Header for any type of object.
 typedef struct Object
 {
@@ -296,6 +303,7 @@ typedef struct Volume
     struct Transform *xform;        // Transform to be applied to volume
     OPERATION       op;             // Operation to use when combining volume with tree
                                     // NOTE THE ABOVE MUST FOLLOW immediately after header
+    int             material;       // Material index (0 is the default)
     float           extrude_height; // Extrude height. If negative, it's a hole (face normals face inwards)
     struct Point    ***point_bucket;  // Bucket structure of Points whose coordinates are copied from 
                                     // child faces' view lists. Allow sharing points when importing

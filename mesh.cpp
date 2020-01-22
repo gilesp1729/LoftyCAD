@@ -1,7 +1,8 @@
 // C interface to a little bit of CGAL's polygon mesh processing library.
 
 #include "mesh.h"
-typedef void(*FaceCoordCB)(void *arg, float x[3], float y[3], float z[3]);
+typedef void(*FaceCoordCB)(void* arg, float x[3], float y[3], float z[3]);
+typedef void(*FaceCoordMaterialCB)(void* arg, int mat_index, float x[3], float y[3], float z[3]);
 typedef void(*FaceVertexCB)(void *arg, int nv, Vertex_index *vi);
 typedef void(*VertexCB)(void *arg, Vertex_index *v, float x, float y, float z);
 
@@ -13,10 +14,13 @@ extern "C"
         delete mesh;
     }
 
+    // Create a mesh and add its material as a property to faces.
     Mesh *
-        mesh_new(void)
+        mesh_new(int material)
     {
         Mesh *mesh = new Mesh;
+        Mesh::Property_map<Mesh::Face_index, int> mesh_id =
+            mesh->add_property_map<Mesh::Face_index, int>("f:id", material).first;
         return mesh;
     }
 
@@ -57,23 +61,10 @@ extern "C"
         Coref_point_map mesh1_pm(mesh1_exact_points, mesh1_exact_points_computed, *mesh1);
         Coref_point_map mesh2_pm(mesh2_exact_points, mesh2_exact_points_computed, *mesh2);
 
-        std::pair<Mesh::Property_map<Mesh::Face_index, int>, bool>
-            m1_id = mesh1->add_property_map<Mesh::Face_index, int>("f:id", -1);
-        Mesh::Property_map<Mesh::Face_index, int> mesh1_id = m1_id.first;
-        bool mesh1_id_created = m1_id.second;
-
-        // First time the ID map is created, set it to the material index
-        if (mesh1_id_created)
-        {}
-
-        std::pair<Mesh::Property_map<Mesh::Face_index, int>, bool>
-            m2_id = mesh2->add_property_map<Mesh::Face_index, int>("f:id", -1);
-        Mesh::Property_map<Mesh::Face_index, int> mesh2_id = m2_id.first;
-        bool mesh2_id_created = m2_id.second;
-
-        if (mesh2_id_created)
-        {
-        }
+        Mesh::Property_map<Mesh::Face_index, int> mesh1_id =
+            mesh1->add_property_map<Mesh::Face_index, int>("f:id", 0).first;
+        Mesh::Property_map<Mesh::Face_index, int> mesh2_id =
+            mesh2->add_property_map<Mesh::Face_index, int>("f:id", 0).first;
 
         Visitor visitor;
         visitor.properties[mesh1] = mesh1_id;
@@ -179,6 +170,30 @@ extern "C"
                 i++;
             }
             (*callback)(callback_arg, x, y, z);
+        }
+    }
+
+    void
+        mesh_foreach_face_coords_mat(Mesh* mesh, FaceCoordMaterialCB callback, void* callback_arg)
+    {
+        float x[3], y[3], z[3];
+        int i;
+        int mat;
+        Mesh::Property_map<Mesh::Face_index, int> mesh_id =
+            mesh->add_property_map<Mesh::Face_index, int>("f:id", 0).first;
+
+        BOOST_FOREACH(Face_index f, mesh->faces())
+        {
+            i = 0;
+            BOOST_FOREACH(Vertex_index v, CGAL::vertices_around_face(mesh->halfedge(f), *mesh))
+            {
+                x[i] = mesh->point(v).x();
+                y[i] = mesh->point(v).y();
+                z[i] = mesh->point(v).z();
+                i++;
+            }
+            mat = mesh_id[f];
+            (*callback)(callback_arg, mat, x, y, z);
         }
     }
 

@@ -155,6 +155,9 @@ extern int n_buckets;
 
 extern BlendMode view_blend;
 
+#define MAX_MATERIAL 32
+extern Material materials[MAX_MATERIAL];
+
 
 // Debug stuff
 

@@ -187,49 +187,6 @@ int n_buckets = 40;
 
 BlendMode view_blend = BLEND_MULTIPLY;
 
-// Set material and lighting up
-void
-SetMaterial(bBlack)
-{
-    static float front_mat_shininess[] = { 30.0f };
-    static float front_mat_specular[] = { 0.2f, 0.2f, 0.2f, 1.0f };
-    static float front_mat_diffuse[] = { 0.5f, 0.28f, 0.38f, 1.0f };
-
-    static float back_mat_shininess[] = { 50.0f };
-    static float back_mat_specular[] = { 0.5f, 0.5f, 0.2f, 1.0f };
-    static float back_mat_diffuse[] = { 1.0f, 1.0f, 0.2f, 1.0f };
-
-    static float black_mat_shininess[] = { 0.0f };
-    static float black_mat_specular[] = { 0.0f, 0.0f, 0.0f, 0.0f };
-    static float black_mat_diffuse[] = { 0.0f, 0.0f, 0.0f, 0.0f };
-
-    static float ambient[] = { 0.1f, 0.1f, 0.1f, 1.0f };
-    static float no_ambient[] = { 0.0f, 0.0f, 0.0f, 0.0f };
-    static float lmodel_ambient[] = { 1.0f, 1.0f, 1.0f, 1.0f };
-    static float lmodel_no_ambient[] = { 0.0f, 0.0f, 0.0f, 0.0f };
-
-    if (!bBlack) {
-        glMaterialfv(GL_FRONT, GL_SHININESS, front_mat_shininess);
-        glMaterialfv(GL_FRONT, GL_SPECULAR, front_mat_specular);
-        glMaterialfv(GL_FRONT, GL_DIFFUSE, front_mat_diffuse);
-        glMaterialfv(GL_BACK, GL_SHININESS, back_mat_shininess);
-        glMaterialfv(GL_BACK, GL_SPECULAR, back_mat_specular);
-        glMaterialfv(GL_BACK, GL_DIFFUSE, back_mat_diffuse);
-        glLightfv(GL_LIGHT0, GL_AMBIENT, ambient);
-        glLightModelfv(GL_LIGHT_MODEL_AMBIENT, lmodel_ambient);
-    }
-    else {
-        glMaterialfv(GL_FRONT, GL_SHININESS, black_mat_shininess);
-        glMaterialfv(GL_FRONT, GL_SPECULAR, black_mat_specular);
-        glMaterialfv(GL_FRONT, GL_DIFFUSE, black_mat_diffuse);
-        glMaterialfv(GL_BACK, GL_SHININESS, black_mat_shininess);
-        glMaterialfv(GL_BACK, GL_SPECULAR, black_mat_specular);
-        glMaterialfv(GL_BACK, GL_DIFFUSE, black_mat_diffuse);
-        glLightfv(GL_LIGHT0, GL_AMBIENT, no_ambient);
-        glLightModelfv(GL_LIGHT_MODEL_AMBIENT, lmodel_no_ambient);
-    }
-}
-
 void
 Init(void)
 {
@@ -258,7 +215,7 @@ Init(void)
     glEnable(GL_LIGHTING);
     glEnable(GL_LIGHT0);
 
-    SetMaterial(FALSE);
+    SetMaterial(0);
 
     // Enable alpha blending, so we can have transparency
     //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);      // alpha blending
@@ -403,7 +360,7 @@ Pick(GLint x_pick, GLint y_pick, BOOL force_pick)
         char *obj_prefix[] = { "N", "P", "E", "F", "V", "G" };
 #endif
         GLuint min_depth = 0xFFFFFFFF;
-        GLuint depth;
+        GLuint depth = 0xFFFFFFFF;
 
         for (i = 0; i < num_hits; i++)
         {
