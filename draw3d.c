@@ -23,33 +23,51 @@ void
 SetMaterial(int mat)
 {
     static float front_mat_shininess[] = { 30.0f };
-    static float front_mat_specular[] = { 0.2f, 0.2f, 0.2f, 1.0f };
+    static float front_mat_ambient[] = { 0.2f, 0.2f, 0.2f, 1.0f };
     static float front_mat_diffuse[] = { 0.5f, 0.28f, 0.38f, 1.0f };
+    static float front_mat_specular[] = { 0.5f, 0.5f, 0.5f, 1.0f };
 
     static float back_mat_shininess[] = { 50.0f };
-    static float back_mat_specular[] = { 0.5f, 0.5f, 0.2f, 1.0f };
+    static float back_mat_ambient[] = { 0.2f, 0.2f, 0.2f, 1.0f };
     static float back_mat_diffuse[] = { 1.0f, 1.0f, 0.2f, 1.0f };
+    static float back_mat_specular[] = { 0.5f, 0.5f, 0.2f, 1.0f };
 
-    static float ambient[] = { 0.1f, 0.1f, 0.1f, 1.0f };
-    static float lmodel_ambient[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+    static int curr_mat = -1;
 
-    static int curr_mat = 0;
-
-    if (mat == 0)
+    if (mat != curr_mat)
     {
-        glMaterialfv(GL_FRONT, GL_SHININESS, front_mat_shininess);
-        glMaterialfv(GL_FRONT, GL_SPECULAR, front_mat_specular);
-        glMaterialfv(GL_FRONT, GL_DIFFUSE, front_mat_diffuse);
-        glMaterialfv(GL_BACK, GL_SHININESS, back_mat_shininess);
-        glMaterialfv(GL_BACK, GL_SPECULAR, back_mat_specular);
-        glMaterialfv(GL_BACK, GL_DIFFUSE, back_mat_diffuse);
-        glLightfv(GL_LIGHT0, GL_AMBIENT, ambient);
-        glLightModelfv(GL_LIGHT_MODEL_AMBIENT, lmodel_ambient);
-        curr_mat = 0;
-    }
-    else if (mat != curr_mat)
-    {
-        // TODO!
+        if (mat == 0)
+        {
+            glMaterialfv(GL_FRONT, GL_SHININESS, front_mat_shininess);
+            glMaterialfv(GL_FRONT, GL_AMBIENT, front_mat_ambient);
+            glMaterialfv(GL_FRONT, GL_DIFFUSE, front_mat_diffuse);
+            glMaterialfv(GL_FRONT, GL_SPECULAR, front_mat_specular);
+
+            glMaterialfv(GL_BACK, GL_SHININESS, back_mat_shininess);
+            glMaterialfv(GL_BACK, GL_AMBIENT, back_mat_ambient);
+            glMaterialfv(GL_BACK, GL_DIFFUSE, back_mat_diffuse);
+            glMaterialfv(GL_BACK, GL_SPECULAR, back_mat_specular);
+        }
+        else
+        {
+            float col[4];
+
+            col[3] = 1.0f;
+
+            // Multiply material color by amb/diff separately
+            col[0] = materials[mat].color[0] * front_mat_ambient[0] * 2.0f;
+            col[1] = materials[mat].color[1] * front_mat_ambient[1] * 2.0f;
+            col[2] = materials[mat].color[2] * front_mat_ambient[2] * 2.0f;
+            glMaterialfv(GL_FRONT, GL_AMBIENT, col);
+
+            col[0] = materials[mat].color[0] * front_mat_diffuse[0] * 2.0f;
+            col[1] = materials[mat].color[1] * front_mat_diffuse[1] * 2.0f;
+            col[2] = materials[mat].color[2] * front_mat_diffuse[2] * 2.0f;
+            glMaterialfv(GL_FRONT, GL_DIFFUSE, col);
+
+            glMaterialf(GL_FRONT, GL_SHININESS, materials[mat].shiny);
+        }
+        curr_mat = mat;
     }
 }
 
@@ -1596,6 +1614,8 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
     
     if (!picking)
     {
+        SetMaterial(0);
+
         // Draw axes XYZ in RGB. 
         glPushName(0);
         glBegin(GL_LINES);

@@ -196,10 +196,6 @@ Init(void)
     static float position[] = { 90.0f, 90.0f, 150.0f, 0.0f };
     static float lmodel_ambient[] = { 1.0f, 1.0f, 1.0f, 1.0f };
     static float lmodel_twoside[] = { GL_TRUE };
-    static float decal[] = { GL_DECAL };
-    static float modulate[] = { GL_MODULATE };
-    static float repeat[] = { GL_REPEAT };
-    static float nearest[] = { GL_NEAREST };
     // HFONT hFont;
 
     glClearColor(1.0, 1.0, 1.0, 1.0);
