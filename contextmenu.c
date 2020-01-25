@@ -419,6 +419,7 @@ contextmenu(Object *picked_obj, POINT pt)
     BOOL dims_changed = FALSE;
     BOOL sel_changed = FALSE;
     BOOL xform_changed = FALSE;
+    BOOL material_changed = FALSE;
     BOOL inserted = FALSE;
     BOOL hole;
     OPERATION op, old_op;
@@ -596,6 +597,11 @@ contextmenu(Object *picked_obj, POINT pt)
         break;
     }
 
+    if (picked_obj->type == OBJ_VOLUME)
+        load_materials(GetSubMenu(hMenu, 3), FALSE, ((Volume*)picked_obj)->material);
+    else
+        EnableMenuItem(hMenu, ID_MATERIALS_NEW, MF_GRAYED);
+
     display_help("Context menu");
 
     // Display and track the menu
@@ -682,20 +688,20 @@ contextmenu(Object *picked_obj, POINT pt)
         break;
 
     case ID_OBJ_GROUPEDGES:
-        group = group_connected_edges((Edge *)picked_obj);
+        group = group_connected_edges((Edge*)picked_obj);
         if (group != NULL)
         {
-            link_group((Object *)group, &object_tree);
+            link_group((Object*)group, &object_tree);
             clear_selection(&selection);
             group_changed = TRUE;
         }
         break;
 
     case ID_OBJ_MAKEFACE:
-        face = make_face((Group *)picked_obj);
+        face = make_face((Group*)picked_obj);
         if (face != NULL)
         {
-            link_group((Object *)face, &object_tree);
+            link_group((Object*)face, &object_tree);
             clear_selection(&selection);
             group_changed = TRUE;
         }
@@ -703,7 +709,7 @@ contextmenu(Object *picked_obj, POINT pt)
 
     case ID_OBJ_GROUPSELECTED:
         group = group_new();
-        link_group((Object *)group, &object_tree);
+        link_group((Object*)group, &object_tree);
         for (sel_obj = selection.head; sel_obj != NULL; sel_obj = sel_obj->next)
         {
             // TODO - bug here if a component is selected. You should onnly ever be able to 
@@ -716,7 +722,7 @@ contextmenu(Object *picked_obj, POINT pt)
         break;
 
     case ID_OBJ_UNGROUP:
-        group = (Group *)picked_obj;
+        group = (Group*)picked_obj;
         delink_group(picked_obj, &object_tree);
         for (o = group->obj_list.head; o != NULL; o = o_next)
         {
@@ -742,7 +748,7 @@ contextmenu(Object *picked_obj, POINT pt)
         ofn.Flags = OFN_EXPLORER | OFN_OVERWRITEPROMPT;
         if (GetSaveFileName(&ofn))
         {
-            group = (Group *)picked_obj;
+            group = (Group*)picked_obj;
             serialise_tree(group, group_filename);
         }
 
@@ -754,13 +760,13 @@ contextmenu(Object *picked_obj, POINT pt)
         switch (picked_obj->type)
         {
         case OBJ_POINT:
-            face = (Face *)parent;
-            insert_chamfer_round((Point *)picked_obj, face, chamfer_rad, EDGE_STRAIGHT, FALSE);
+            face = (Face*)parent;
+            insert_chamfer_round((Point*)picked_obj, face, chamfer_rad, EDGE_STRAIGHT, FALSE);
             face->type = FACE_FLAT;
             face->view_valid = FALSE;
             break;
         case OBJ_FACE:
-            face = (Face *)picked_obj;
+            face = (Face*)picked_obj;
             p = face->initial_point;
             for (i = 0; i < face->n_edges - 1; i++)
             {
@@ -788,13 +794,13 @@ contextmenu(Object *picked_obj, POINT pt)
         switch (picked_obj->type)
         {
         case OBJ_POINT:
-            face = (Face *)parent;
-            insert_chamfer_round((Point *)picked_obj, face, round_rad, EDGE_ARC, FALSE);
+            face = (Face*)parent;
+            insert_chamfer_round((Point*)picked_obj, face, round_rad, EDGE_ARC, FALSE);
             face->type = FACE_FLAT;
             face->view_valid = FALSE;
             break;
         case OBJ_FACE:
-            face = (Face *)picked_obj;
+            face = (Face*)picked_obj;
 
             // TODO - find shortest edge and ensure round radius <= (shortest_len / 2 + tol)
             // to avoid distorting the face
@@ -823,14 +829,14 @@ contextmenu(Object *picked_obj, POINT pt)
         break;
 
     case ID_OBJ_TRANSFORM:
-        xform_changed = 
+        xform_changed =
             DialogBoxParam(hInst, MAKEINTRESOURCE(IDD_TRANSFORM), auxGetHWND(), transform_dialog, (LPARAM)picked_obj);
         if (xform_changed)
             invalidate_all_view_lists(parent, picked_obj, 0, 0, 0);
         break;
 
     case ID_OBJ_EDITTEXT:
-        face = (Face *)picked_obj;
+        face = (Face*)picked_obj;
         curr_text = face->text;
         if (curr_text == NULL)
             break;
@@ -860,6 +866,29 @@ contextmenu(Object *picked_obj, POINT pt)
             break;
         inserted = TRUE;
         break;
+
+    case ID_MATERIALS_NEW:
+        // Dialog box to edit or add a material, then return the one selected
+        // i = DialogBox(hInst, IDD_MATERIAL, auxGetHWND(), materials_dialog);
+
+
+        material_changed = TRUE;
+        break;
+
+        // test here for a possibly variable number of ID_MATERIALS_BASE + n (for n in [0,MAX_MATERIAL])
+    default:
+        if (rc < ID_MATERIAL_BASE || rc >= ID_MATERIAL_BASE + MAX_MATERIAL)
+            break;
+
+        hMenu = GetSubMenu(hMenu, 3);
+
+        // Find which material index this menu item corresponds to. This number is at the
+        // front of the menu string.
+        GetMenuString(hMenu, rc, buf, 64, 0);
+        i = atoi(buf);
+        ((Volume*)picked_obj)->material = i;
+        material_changed = TRUE;
+        break;
     }
 
     if (op != old_op)
@@ -877,7 +906,10 @@ contextmenu(Object *picked_obj, POINT pt)
         invalidate_all_view_lists(parent, picked_obj, 0, 0, 0);
     }
 
-    if (parent->lock != old_parent_lock || op != old_op || group_changed || dims_changed || sel_changed || xform_changed || inserted)
+    if (material_changed)
+        invalidate_all_view_lists(parent, picked_obj, 0, 0, 0);
+
+    if (parent->lock != old_parent_lock || op != old_op || group_changed || dims_changed || sel_changed || xform_changed || inserted || material_changed)
     {
         // we have changed the drawing - write an undo checkpoint
         update_drawing();

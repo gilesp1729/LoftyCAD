@@ -211,6 +211,8 @@ Init(void)
     glEnable(GL_LIGHTING);
     glEnable(GL_LIGHT0);
 
+    materials[0].valid = TRUE;
+    strcpy_s(materials[0].name, 64, "(default)");
     SetMaterial(0);
 
     // Enable alpha blending, so we can have transparency

@@ -82,6 +82,11 @@ BEGIN
         MENUITEM "&Tools",                      ID_VIEW_TOOLS
         MENUITEM "Context &Help",               ID_VIEW_HELP
         MENUITEM "Object Tree",                 ID_VIEW_TREE
+        POPUP "Materials"
+        BEGIN
+            MENUITEM "New/Edit...",                 ID_MATERIALS_NEW
+            MENUITEM SEPARATOR
+        END
         MENUITEM SEPARATOR
         MENUITEM "Construction Edges",          ID_VIEW_CONSTRUCTIONEDGES
         MENUITEM "&Rendered View",              ID_VIEW_RENDEREDVIEW
@@ -155,15 +160,15 @@ END
 // Dialog
 //
 
-IDD_ABOUTBOX DIALOGEX 0, 0, 267, 86
+IDD_ABOUTBOX DIALOGEX 0, 0, 291, 103
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "About LoftyCAD"
 FONT 8, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
     ICON            IDI_LOFTYCAD,IDC_STATIC,14,14,20,20
-    LTEXT           "LoftyCAD",IDC_STATIC,48,14,212,8,SS_NOPREFIX
-    LTEXT           "Copyright (C) 2018-2019, under GPL\ngilesp1729",IDC_STATIC,47,36,129,24
-    DEFPUSHBUTTON   "OK",IDOK,210,65,50,14,WS_GROUP
+    LTEXT           "LoftyCAD",IDC_STATIC,47,14,212,8,SS_NOPREFIX
+    LTEXT           "Copyright (C) 2018-2020, under GPL\ngilesp1729\n\nCGAL, Computational Geometry Algorithms Library, https://www.cgal.org",IDC_STATIC,47,36,223,41
+    DEFPUSHBUTTON   "OK",IDOK,234,82,50,14,WS_GROUP
     LTEXT           "Build",IDC_STATIC_BUILD,47,25,203,8
 END
 
@@ -179,9 +184,9 @@ BEGIN
     IDD_ABOUTBOX, DIALOG
     BEGIN
         LEFTMARGIN, 7
-        RIGHTMARGIN, 260
+        RIGHTMARGIN, 284
         TOPMARGIN, 7
-        BOTTOMMARGIN, 79
+        BOTTOMMARGIN, 96
     END
 END
 #endif    // APSTUDIO_INVOKED
@@ -322,6 +327,11 @@ BEGIN
         MENUITEM "Object type",                 ID_OBJ_OBJECTTYPE, INACTIVE
         MENUITEM "Select parent volume",        ID_OBJ_SELECTPARENTVOLUME
         MENUITEM SEPARATOR
+        POPUP "Material"
+        BEGIN
+            MENUITEM "New/Edit...",                 ID_MATERIALS_NEW
+            MENUITEM SEPARATOR
+        END
         POPUP "Rendering Operation"
         BEGIN
             MENUITEM "Union",                       ID_OPERATION_UNION

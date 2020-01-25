@@ -76,8 +76,10 @@ typedef enum
 typedef struct Material
 {
     BOOL            valid;          // TRUE if the material hs been set.
+    BOOL            hidden;         // TRUE if NOT showing this material (default=0 is to show)
     float           color[3];       // Colors in [0.0, 1.0] for diffuse and ambient lighting
     float           shiny;          // Shininess in [1,50]
+    char            name[64];       // Descriptive name
 } Material;
 
 // Header for any type of object.

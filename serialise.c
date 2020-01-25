@@ -215,13 +215,14 @@ serialise_obj(Object *obj, FILE *f)
             }
             else
             {
-                fprintf_s(f, "MATERIAL %d %d %f %f %f %f\n",
+                fprintf_s(f, "MATERIAL %d %d %f %f %f %f %s\n",
                     vol->material,
                     obj->ID,
                     materials[vol->material].color[0],
                     materials[vol->material].color[1],
                     materials[vol->material].color[2],
-                    materials[vol->material].shiny);
+                    materials[vol->material].shiny,
+                    materials[vol->material].name);
                 mat_written[vol->material] = TRUE;
             }
         }
@@ -939,6 +940,9 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
                 materials[mat].color[2] = (float)atof(tok);
                 tok = strtok_s(NULL, " \t\n", &nexttok);
                 materials[mat].shiny = (float)atof(tok);
+                tok = strtok_s(NULL, "\n", &nexttok);  // rest of line till \n
+                if (tok != NULL)
+                    strcpy_s(materials[mat].name, 64, tok);
                 materials[mat].valid = TRUE;
             }
         }

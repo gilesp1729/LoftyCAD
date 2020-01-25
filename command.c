@@ -56,6 +56,31 @@ check_file_changed(HWND hWnd)
     DestroyWindow(hWnd);
 }
 
+// Load material names up to menu, with all non-hidden materials checked, or a single
+// selected one checked.
+void
+load_materials(HMENU hMenu, BOOL show_all_checks, int which_check)
+{
+    int i;
+
+    for (i = 0; i < MAX_MATERIAL; i++)
+        DeleteMenu(hMenu, 2, MF_BYPOSITION);  // clear them all out (leave the first slot for New..)
+
+    for (i = 0; i < MAX_MATERIAL; i++)
+    {
+        char mat_string[64];
+
+        if (!materials[i].valid)
+            continue;
+        sprintf_s(mat_string, 64, "%d %s", i, materials[i].name);
+        AppendMenu(hMenu, 0, ID_MATERIAL_BASE + i, mat_string);
+        if (show_all_checks)
+            CheckMenuItem(hMenu, ID_MATERIAL_BASE + i, materials[i].hidden ? MF_UNCHECKED : MF_CHECKED);
+    }
+    if (!show_all_checks)
+        CheckMenuItem(hMenu, ID_MATERIAL_BASE + which_check, MF_CHECKED);
+}
+
 // Process WM_COMMAND, INITMENUPOPUP and the like, from TK window proc
 int CALLBACK
 Command(int message, int wParam, int lParam)
@@ -66,6 +91,8 @@ Command(int message, int wParam, int lParam)
     char new_filename[256];
     Object *obj;
     char *pdot;
+    char buf[64];
+    int i;
 
     // Check for micro moves
     if (micro_moved)
@@ -793,16 +820,50 @@ Command(int message, int wParam, int lParam)
             }
             display_help("Import_Export");
             break;
+
+        case ID_MATERIALS_NEW:
+            // Dialog box to edit or add a material
+         //   if (DialogBox(hInst, IDD_MATERIAL, auxGetHWND(), materials_dialog) >= 0)
+         //       update_drawing();
+            break;
+
+            // test here for a possibly variable number of ID_MATERIALS_BASE + n (for n in [0,MAX_MATERIAL])
+            // don't use LOWORD as it's bigger than 65k
+        default:
+            if (wParam < ID_MATERIAL_BASE || wParam >= ID_MATERIAL_BASE + MAX_MATERIAL)
+                break;
+
+            hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
+            hMenu = GetSubMenu(hMenu, 3);
+
+            // Find which material index this menu item corresponds to. This number is at the
+            // front of the menu string.
+            GetMenuString(hMenu, wParam, buf, 64, 0);
+            i = atoi(buf);
+            if (materials[i].hidden)
+            {
+                materials[i].hidden = FALSE;
+                CheckMenuItem(hMenu, wParam, MF_CHECKED);
+            }
+            else
+            {
+                materials[i].hidden = TRUE;
+                CheckMenuItem(hMenu, wParam, MF_UNCHECKED);
+            }
+            // update_drawing(); // Does not modify file, but I do want it to update display..
+            break;
         }
         break;
 
     case WM_INITMENUPOPUP:
         if ((HMENU)wParam == GetSubMenu(GetMenu(auxGetHWND()), 0))
         {
+            // File menu
             EnableMenuItem((HMENU)wParam, ID_FILE_SAVE, drawing_changed ? MF_ENABLED : MF_GRAYED);
         }
         else if ((HMENU)wParam == GetSubMenu(GetMenu(auxGetHWND()), 1))
         {
+            // Edit menu
             EnableMenuItem((HMENU)wParam, ID_EDIT_UNDO, generation > 0 ? MF_ENABLED : MF_GRAYED);
             EnableMenuItem((HMENU)wParam, ID_EDIT_REDO, generation < latest_generation ? MF_ENABLED : MF_GRAYED);
             EnableMenuItem((HMENU)wParam, ID_EDIT_CUT, selection.head != NULL ? MF_ENABLED : MF_GRAYED);
@@ -811,10 +872,15 @@ Command(int message, int wParam, int lParam)
         }
         else if ((HMENU)wParam == GetSubMenu(GetMenu(auxGetHWND()), 2))
         {
+            // View menu
             EnableMenuItem((HMENU)wParam, ID_VIEW_CONSTRUCTIONEDGES, view_rendered ? MF_GRAYED : MF_ENABLED);
+
+            hMenu = GetSubMenu((HMENU)wParam, 3);   // Materials pop-out
+            load_materials(hMenu, TRUE, 0);         // display materials menu with all check marks
         }
 
         break;
+
     }
     return 0;
 }
