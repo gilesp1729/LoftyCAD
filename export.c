@@ -2,9 +2,9 @@
 #include "LoftyCAD.h"
 #include <stdio.h>
 
-// globals for STL/OFF file writing
-// File to export STL/OFF to (global so callbacks can see it)
-FILE *stl, *off;
+// globals for STL/AMF/OFF file writing
+// File to export STL/AMF/OFF to (global so callbacks can see it)
+FILE *stl, *off, *amf, *amfv;
 
 // number of triangles exported
 int num_exported_tri;
@@ -62,6 +62,27 @@ export_triangle_off(void *arg, int nv, Vertex_index *vi)
     fprintf_s(off, "\n");
 }
 
+// Write a vertex out to an AMF file
+void
+export_vertex_amf(void* arg, Vertex_index* v, float x, float y, float z)
+{
+    fprintf_s(amf, "        <vertex><coordinates><x>%f</x><y>%f</y><z>%f</z></coordinates></vertex>\n", x, y, z);
+    reindex[*(int*)v] = num_exported_vertices++;
+}
+
+// Write a single mesh triangle out to an AMF file (actually, to the AMF temp volume file)
+void
+export_triangle_amf(void* arg, int nv, Vertex_index* vi)
+{
+    int* ivi = (int*)vi;
+    int i;
+
+    fprintf_s(amfv, "        <triangle>");
+    for (i = 0; i < nv; i++)
+        fprintf_s(amfv, "<v%d>%d</v%d>", i+1, reindex[ivi[i]], i+1);
+    fprintf_s(amfv, "</triangle>\n");
+}
+
 // Render an un-merged volume or group to triangles and export it to an STL file
 void
 export_unmerged_object_stl(Object *obj)
@@ -84,12 +105,15 @@ export_unmerged_object_stl(Object *obj)
     }
 }
 
-// export every volume to STL (index=1) or OFF (index = 2)
+// export every volume to various kinds of files
 void
 export_object_tree(Group *tree, char *filename, int file_index)
 {
     Object *obj;
-    char buf[64];
+    char buf[64], tmpdir[256], basename[256], tmp[256];
+    char* dot;
+    int i, k, baselen;
+    int candidates[MAX_MATERIAL];
 
     switch (file_index)
     {
@@ -125,7 +149,166 @@ export_object_tree(Group *tree, char *filename, int file_index)
         fclose(stl);
         break;
 
-    case 2: // export to an OFF File
+    case 2: // export each visible material to separate STL files
+        // build a list of all the non-hidden material indices
+        for (i = k = 0; i < MAX_MATERIAL; i++)
+        {
+            if (materials[i].valid && !materials[i].hidden)
+                candidates[k++] = i;
+        }
+
+        // Remove ".STL" and append the material number to the base filename
+        dot = strrchr(filename, '.');
+        *dot = '\0';
+
+        // for each one of these, hide all the others, generate the surface and export it
+        for (i = 0; i < k; i++)
+        {
+            char name[256];
+            int j;
+
+            for (j = 0; j < k; j++)
+                materials[candidates[j]].hidden = TRUE;
+            materials[candidates[i]].hidden = FALSE;
+
+            xform_list.head = NULL;
+            xform_list.tail = NULL;
+            if (object_tree.mesh != NULL)
+                mesh_destroy(object_tree.mesh);
+            object_tree.mesh = NULL;
+            object_tree.mesh_valid = FALSE;
+            gen_view_list_tree_surfaces(&object_tree, &object_tree);
+
+            sprintf_s(name, 256, "%s_%d.STL", filename, candidates[i]);
+            export_object_tree(&object_tree, name, 1);
+        }
+
+        // reinstate all the non-hidden materials and mark the surface mesh for regeneration
+        for (i = 0; i < k; i++)
+            materials[candidates[i]].hidden = FALSE;
+
+        if (object_tree.mesh != NULL)
+            mesh_destroy(object_tree.mesh);
+        object_tree.mesh = NULL;
+        object_tree.mesh_valid = FALSE;
+        break;
+
+    case 3: // export to an AMF file
+        fopen_s(&amf, filename, "wt");
+        if (amf == NULL)
+            return;
+
+        // make a temp filename for the AMF volumes
+        dot = strrchr(filename, '\\');
+        if (dot != NULL)
+            strcpy_s(basename, 256, dot + 1);          // cut off any directory in file
+        else
+            strcpy_s(basename, 256, filename);
+        baselen = strlen(basename);
+        if (baselen > 4 && (dot = strrchr(basename, '.')) != NULL)
+            *dot = '\0';                               // cut off ".amf" 
+        GetTempPath(256, tmpdir);
+        sprintf_s(tmp, 256, "%s%s.amfv", tmpdir, basename);
+        fopen_s(&amfv, tmp, "wt");
+        if (amfv == NULL)
+            return;
+
+        // put out the header
+        num_exported_tri = 0;
+        num_exported_vertices = 0;
+        fprintf_s(amf, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n");
+        fprintf_s(amf, "<amf unit=\"mm\" version=\"1.1\">\n");
+        fprintf_s(amf, "  <object id=\"1\">\n");
+        fprintf_s(amf, "  <metadata type=\"slic3r.extruder\">0</metadata>\n");
+        fprintf_s(amf, "    <mesh>\n");
+        fprintf_s(amf, "      <vertices>\n");
+
+        // Node renumbering array (assumes full mesh is built beforehand..)
+        reindex = (int*)calloc(mesh_num_vertices(tree->mesh), sizeof(int));
+
+        // build a list of all the non-hidden material indices
+        for (i = k = 0; i < MAX_MATERIAL; i++)
+        {
+            if (materials[i].valid && !materials[i].hidden)
+                candidates[k++] = i;
+        }
+
+        // for each one of these, hide all the others, generate the surface and export it
+        for (i = 0; i < k; i++)
+        {
+            int j;
+
+            for (j = 0; j < k; j++)
+                materials[candidates[j]].hidden = TRUE;
+            materials[candidates[i]].hidden = FALSE;
+
+            xform_list.head = NULL;
+            xform_list.tail = NULL;
+            if (object_tree.mesh != NULL)
+                mesh_destroy(object_tree.mesh);
+            object_tree.mesh = NULL;
+            object_tree.mesh_valid = FALSE;
+            gen_view_list_tree_surfaces(&object_tree, &object_tree);
+
+            // vertices for the mesh for this material
+            mesh_foreach_vertex(tree->mesh, export_vertex_amf, NULL);
+
+            // AMF volume for this material (write it to a temp file and append it at the end)
+            if (candidates[i] != 0)
+                fprintf_s(amfv, "      <volume materialid=\"%d\">\n", candidates[i]);
+            else
+                fprintf_s(amfv, "      <volume>\n");
+            fprintf_s(amfv, "        <metadata type=\"slic3r.extruder\">%d</metadata>\n", candidates[i]);
+            mesh_foreach_face_vertices(tree->mesh, export_triangle_amf, NULL);
+            fprintf_s(amfv, "      </volume>\n");
+        }
+
+        free(reindex);
+        fprintf_s(amf, "      </vertices>\n");
+
+        // Append the temp file to the AMF file and write the trailer
+        fclose(amfv);
+        fopen_s(&amfv, tmp, "rt");
+        while (1)
+        {
+            fgets(basename, 256, amfv);
+            if (feof(amfv))
+                break;
+
+            fputs(basename, amf);
+        }
+
+        fprintf_s(amf, "    </mesh>\n");
+        fprintf_s(amf, "  </object>\n");
+
+        // write the materials (leave out material 0)
+        for (i = 1; i < k; i++)
+        {
+            fprintf(amf, "  <material id=\"%d\">\n", candidates[i]);
+            fprintf(amf, "    <metadata type=\"name\">%s</metadata>\n", materials[candidates[i]].name);
+            fprintf(amf, "    <color><r>%f</r><g>%f</g><b>%f</b></color>\n",
+                materials[candidates[i]].color[0],
+                materials[candidates[i]].color[1],
+                materials[candidates[i]].color[2]);
+            fprintf(amf, "  </material>\n");
+        }
+
+        fprintf_s(amf, "</amf>\n");
+        fclose(amf);
+        fclose(amfv);
+        DeleteFile(tmp);
+
+        // reinstate all the non-hidden materials and mark the surface mesh for regeneration
+        for (i = 0; i < k; i++)
+            materials[candidates[i]].hidden = FALSE;
+
+        if (object_tree.mesh != NULL)
+            mesh_destroy(object_tree.mesh);
+        object_tree.mesh = NULL;
+        object_tree.mesh_valid = FALSE;
+        break;
+
+    case 4: // export to an OFF File
         fopen_s(&off, filename, "wt");
         if (off == NULL)
             return;

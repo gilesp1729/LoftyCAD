@@ -276,6 +276,8 @@ gen_view_list_tree_surfaces_op(OPERATION op, Group *tree, Group *parent_tree)
             vol = (Volume *)obj;
             if (vol->op != op)
                 break;
+            if (materials[vol->material].hidden)
+                break;
 
             // update the triangle mesh for the volume
             if (vol->xform != NULL)

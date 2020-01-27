@@ -485,6 +485,8 @@ Command(int message, int wParam, int lParam)
             ofn.hwndOwner = auxGetHWND();
             ofn.lpstrFilter =
                 "STL Meshes (*.STL)\0*.STL\0"
+                "STL Meshes for each material (*_1.STL)\0*.STL\0"
+                "AMF Files (*.AMF)\0*.AMF\0"
                 "Geomview Object File Format Files (*.OFF)\0*.OFF\0"
                 "All Files\0*.*\0\0";
             ofn.nFilterIndex = 1;
@@ -514,6 +516,7 @@ Command(int message, int wParam, int lParam)
             ofn.lpstrFilter = 
                 "LoftyCAD Files (*.LCD)\0*.LCD\0"
                 "STL Meshes (*.STL)\0*.STL\0"
+                "AMF Files (*.AMF)\0*.AMF\0"
                 "Geomview Object File Format Files (*.OFF)\0*.OFF\0"
 #if 0
                 "GNU Triangulated Surface Files (*.GTS)\0*.GTS\0"
@@ -539,6 +542,9 @@ Command(int message, int wParam, int lParam)
                     rc = read_stl_to_group(group, new_filename);
                     break;
                 case 3:
+                    //rc = read_amf_to_group(group, new_filename);
+                    break;
+                case 4:
                     rc = read_off_to_group(group, new_filename);
                     break;
 #if 0
@@ -823,8 +829,7 @@ Command(int message, int wParam, int lParam)
 
         case ID_MATERIALS_NEW:
             // Dialog box to edit or add a material
-         //   if (DialogBox(hInst, IDD_MATERIAL, auxGetHWND(), materials_dialog) >= 0)
-         //       update_drawing();
+         //   DialogBox(hInst, IDD_MATERIAL, auxGetHWND(), materials_dialog);
             break;
 
             // test here for a possibly variable number of ID_MATERIALS_BASE + n (for n in [0,MAX_MATERIAL])
@@ -850,7 +855,15 @@ Command(int message, int wParam, int lParam)
                 materials[i].hidden = TRUE;
                 CheckMenuItem(hMenu, wParam, MF_UNCHECKED);
             }
-            // update_drawing(); // Does not modify file, but I do want it to update display..
+
+            // regenerate surface mesh, in case we're viewing rendered
+            xform_list.head = NULL;
+            xform_list.tail = NULL;
+            if (object_tree.mesh != NULL)
+                mesh_destroy(object_tree.mesh);
+            object_tree.mesh = NULL;
+            object_tree.mesh_valid = FALSE;
+            gen_view_list_tree_surfaces(&object_tree, &object_tree);
             break;
         }
         break;

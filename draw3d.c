@@ -350,10 +350,13 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         if ((face->type & FACE_CONSTRUCTION) && !view_constr)
             return;
 
-        glPushName((GLuint)obj);
-        gen_view_list_face(face);
-        face_shade(rtess, face, selected, highlighted, locked);
-        glPopName();
+        if (!materials[face->vol->material].hidden)
+        {
+            glPushName((GLuint)obj);
+            gen_view_list_face(face);
+            face_shade(rtess, face, selected, highlighted, locked);
+            glPopName();
+        }
 
         // Don't pass draw with dims down to sub-components, to minimise clutter
         if (draw_components && !top_level_only)
