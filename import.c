@@ -4,6 +4,9 @@
 #include <CommDlg.h>
 #include <stdio.h>
 
+// Globals for readers (shared by several routines)
+char buf[512];
+
 // Import other types of files. Only triangle meshes are supported at the moment. 
 // They are assumed to contain one contiguous body, which will become a volume
 // with lots of triangular faces.
@@ -73,7 +76,6 @@ BOOL
 read_stl_to_group(Group *group, char *filename)
 {
     FILE *f;
-    char buf[512];
     char *tok;
     char *nexttok = NULL;
     int i;
@@ -278,7 +280,6 @@ BOOL
 read_gts_to_group(Group *group, char *filename)
 {
     FILE *f;
-    char buf[512];
     char *tok;
     char *nexttok = NULL;
     int i, npoints, nedges, nfaces;
@@ -390,7 +391,6 @@ BOOL
 read_off_to_group(Group *group, char *filename)
 {
     FILE *f;
-    char buf[512];
     char *tok;
     char *nexttok = NULL;
     int i, npoints, nedges, nfaces;
@@ -489,5 +489,152 @@ error:
     return FALSE;
 }
 
+// AMF globals
+float scale;
+char* tok;
+char* nexttok = NULL;
+
+// AMF file readers to deal with XML prolixity.
+
+// Read next token from file to tok. Return FALSE on eof.
+BOOL
+next_token(FILE* f)
+{
+    if (tok != NULL)
+        tok = strtok_s(NULL, " >\n", &nexttok);
+    while (tok == NULL)
+    {
+        if (fgets(buf, 512, f) == NULL)
+            return FALSE;
+        tok = strtok_s(buf, " >\n", &nexttok);
+    }
+}
+
+// Read till a given string (delimited by spaces or '>') is encountered, skipping white space and newlines.
+// Return FALSE if string is never found.
+BOOL
+read_till(char *string, FILE* f)
+{
+    while (1)
+    {
+        if (!next_token(f))
+            return FALSE;
+        if (strcmp(tok, string) == 0)
+            return TRUE;
+    }
+}
+
+// Read one vertex. Return FALSE if there are none left (</vertices> trailer is read)
+BOOL
+read_amf_vertex(Group* group, FILE* f)
+{
+    float x, y, z;
+
+    if (!next_token(f))
+        return FALSE;
+    if (strcmp(tok, "</vertices") == 0)
+        return FALSE;
+
+    read_till("<coordinates", f);
+    read_till("<x", f);
+    tok = strtok_s(NULL, "<", &nexttok);
+    x = atof(tok);
+    read_till("<y", f);
+    tok = strtok_s(NULL, "<", &nexttok);
+    y = atof(tok);
+    read_till("<z", f);
+    tok = strtok_s(NULL, "<", &nexttok);
+    z = atof(tok);
+    read_till("</vertex", f);
+    return TRUE;
+}
+
+// Read a vertices list. Return FALSE on error/eof.
+BOOL
+read_amf_vertices(Group* group, FILE* f)
+{
+    // skip till we read vertices header
+    if (!read_till("<vertices", f))
+        return FALSE;
+
+    // read each vertex until end of vertices encountered
+    while (read_amf_vertex(group, f))
+        ;
+    return TRUE;
+}
+
+// Read a volume. Return FALSE if there are none left (</mesh > trailer is read)
+BOOL
+read_amf_volume(Group* group, FILE* f)
+{
 
 
+    return TRUE;
+}
+
+// Read an object section. Return FALSE on error/eof.
+BOOL
+read_amf_object(Group* group, FILE* f)
+{
+    // skip metadata and object headers
+    if (!read_till("<object", f))
+        return FALSE;
+
+    // read vertices
+    if (!read_amf_vertices(group, f))
+        return FALSE;
+
+    // read volumes until end of object encountered
+    while (read_amf_volume(group, f))
+        ;
+    return TRUE;
+}
+
+// Read a material. Return FALSE if there are none left (</amf> trailer is read, and that's your lot)
+BOOL
+read_amf_material(Group* group, FILE* f)
+{
+
+
+
+
+    return TRUE;
+}
+
+// Read an AMF file to a group
+BOOL
+read_amf_to_group(Group* group, char* filename)
+{
+    FILE *f;
+    
+    scale = 1.0f;
+    nexttok = NULL;
+    fopen_s(&f, filename, "rt");
+    if (f == NULL)
+        return FALSE;
+
+    // read unit from AMF header
+    tok = NULL;
+    if (!read_till("<amf", f))
+        goto eof_error;
+
+    // look for unit="inch" or unit="millimeter" or "mm" (the default)
+    tok = strtok_s(NULL, " ", &nexttok);
+    if (strcmp(tok, "unit=\"inch\"") == 0)
+        scale = 25.4f;
+
+    // read object description
+    if (!read_amf_object(group, f))
+        goto eof_error;
+
+    // read materials until trailer encountered
+    while (read_amf_material(group, f))
+        ;
+
+    fclose(f);
+    return TRUE;
+
+eof_error:
+    fclose(f);
+    return FALSE;
+}

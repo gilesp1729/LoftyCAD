@@ -65,7 +65,8 @@ void export_object_tree(Group *tree, char *filename, int file_index);
 // Import from STL and various formats (import.c)
 BOOL read_stl_to_group(Group *group, char *filename);
 //BOOL read_gts_to_group(Group *group, char *filename);
-BOOL read_off_to_group(Group *group, char *filename);
+BOOL read_amf_to_group(Group* group, char* filename);
+BOOL read_off_to_group(Group* group, char* filename);
 
 extern GLUtesselator *rtess;
 extern ListHead xform_list;

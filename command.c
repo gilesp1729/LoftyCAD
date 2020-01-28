@@ -542,7 +542,7 @@ Command(int message, int wParam, int lParam)
                     rc = read_stl_to_group(group, new_filename);
                     break;
                 case 3:
-                    //rc = read_amf_to_group(group, new_filename);
+                    rc = read_amf_to_group(group, new_filename);
                     break;
                 case 4:
                     rc = read_off_to_group(group, new_filename);
