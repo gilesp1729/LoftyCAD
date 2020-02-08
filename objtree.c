@@ -140,7 +140,7 @@ Face *face_new(FACE face_type, Plane norm)
         break;
 
     default:  // general and flat faces may have many edges
-        face->max_edges = 64;
+        face->max_edges = 16;
         break;
     }
 
@@ -149,8 +149,8 @@ Face *face_new(FACE face_type, Plane norm)
     // Allocate the 2D view list array
     if (IS_FLAT(face))
     {
-        face->n_alloc2D = 512;
-        face->view_list2D = malloc(face->n_alloc2D * sizeof(Point2D));
+        face->n_alloc2D = 16;
+        face->view_list2D = malloc(face->n_alloc2D * sizeof(Point2D));  
     }
 
     return face;

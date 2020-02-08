@@ -493,6 +493,11 @@ error:
 float scale;
 char* tok;
 char* nexttok = NULL;
+int npoints, npoints_alloced;
+Point** points;
+int mat;
+Volume* vol;
+Plane dummy = { 0, };
 
 // AMF file readers to deal with XML prolixity.
 
@@ -508,6 +513,7 @@ next_token(FILE* f)
             return FALSE;
         tok = strtok_s(buf, " >\n", &nexttok);
     }
+    return TRUE;
 }
 
 // Read till a given string (delimited by spaces or '>') is encountered, skipping white space and newlines.
@@ -537,6 +543,7 @@ read_amf_vertex(Group* group, FILE* f)
 
     read_till("<coordinates", f);
     read_till("<x", f);
+
     tok = strtok_s(NULL, "<", &nexttok);
     x = atof(tok);
     read_till("<y", f);
@@ -546,6 +553,14 @@ read_amf_vertex(Group* group, FILE* f)
     tok = strtok_s(NULL, "<", &nexttok);
     z = atof(tok);
     read_till("</vertex", f);
+
+    if (npoints >= npoints_alloced)
+    {
+        npoints_alloced *= 2;
+        points = realloc(points, npoints_alloced * sizeof(Point*));
+    }
+    points[npoints++] = point_new(x, y, z);
+
     return TRUE;
 }
 
@@ -557,9 +572,63 @@ read_amf_vertices(Group* group, FILE* f)
     if (!read_till("<vertices", f))
         return FALSE;
 
+    npoints = 0;
+    npoints_alloced = 64;   // start with a small power of 2
+    points = malloc(npoints_alloced * sizeof(Point*));     // point array
+
     // read each vertex until end of vertices encountered
     while (read_amf_vertex(group, f))
         ;
+    return TRUE;
+}
+
+// Read a triangle. Return FALSE if there are none left (</volume> is read)
+BOOL
+read_amf_triangle(Group* group, FILE* f)
+{
+    int p1, p2, p3;
+    Face* tf;
+
+    if (!next_token(f))
+        return FALSE;
+    if (strcmp(tok, "</volume") == 0)
+        return FALSE;
+    if (!read_till("<v1", f))
+        return FALSE;
+    if (!next_token(f))
+        return FALSE;
+
+    p1 = atoi(tok);
+    if (!read_till("<v2", f))
+        return FALSE;
+    if (!next_token(f))
+        return FALSE;
+    p2 = atoi(tok);
+    if (!read_till("<v3", f))
+        return FALSE;
+    if (!next_token(f))
+        return FALSE;
+    p3 = atoi(tok);
+
+    read_till("</triangle", f);
+
+    tf = face_new(FACE_FLAT, dummy);
+    tf->edges[0] = find_edge(points[p1], points[p2]);
+    tf->edges[1] = find_edge(points[p2], points[p3]);
+    tf->edges[2] = find_edge(points[p3], points[p1]);
+    tf->n_edges = 3;
+    if
+        (
+            tf->edges[0]->endpoints[1] == tf->edges[1]->endpoints[0]
+            ||
+            tf->edges[0]->endpoints[1] == tf->edges[1]->endpoints[1]
+            )
+        tf->initial_point = tf->edges[0]->endpoints[0];
+    else
+        tf->initial_point = tf->edges[0]->endpoints[1];
+
+    tf->vol = vol;
+    link((Object*)tf, &vol->faces);
     return TRUE;
 }
 
@@ -567,7 +636,27 @@ read_amf_vertices(Group* group, FILE* f)
 BOOL
 read_amf_volume(Group* group, FILE* f)
 {
+    mat = 0;
+    if (!next_token(f))
+        return FALSE;
+    if (strcmp(tok, "</mesh") == 0)
+        return FALSE;
+    else if (strcmp(tok, "<volume") == 0)
+    {
+        tok = strtok_s(NULL, " =\"\n", &nexttok);
+        if (tok != NULL && strcmp(tok, "materialid") == 0)
+        {
+            tok = strtok_s(NULL, "\"", &nexttok);
+            mat = 0; // TEMP UNTIL.. atoi(tok);
+        }
+    }
 
+    vol = vol_new();
+
+    // read each triangle until end of volume encountered
+    while (read_amf_triangle(group, f))
+        ;
+    link_group((Object*)vol, group);
 
     return TRUE;
 }
@@ -587,6 +676,9 @@ read_amf_object(Group* group, FILE* f)
     // read volumes until end of object encountered
     while (read_amf_volume(group, f))
         ;
+
+    free(points);
+
     return TRUE;
 }
 
@@ -594,7 +686,7 @@ read_amf_object(Group* group, FILE* f)
 BOOL
 read_amf_material(Group* group, FILE* f)
 {
-
+    return FALSE;  // TEMP
 
 
 
