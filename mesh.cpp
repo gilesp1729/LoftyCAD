@@ -4,7 +4,8 @@
 typedef void(*FaceCoordCB)(void* arg, float x[3], float y[3], float z[3]);
 typedef void(*FaceCoordMaterialCB)(void* arg, int mat_index, float x[3], float y[3], float z[3]);
 typedef void(*FaceVertexCB)(void *arg, int nv, Vertex_index *vi);
-typedef void(*VertexCB)(void *arg, Vertex_index *v, float x, float y, float z);
+typedef void(*VertexCB)(void* arg, Vertex_index* v, float x, float y, float z);
+typedef void(*VertexCB_D)(void* arg, Vertex_index* v, double x, double y, double z);
 
 extern "C"
 {
@@ -70,10 +71,21 @@ extern "C"
         visitor.properties[mesh1] = mesh1_id;
         visitor.properties[mesh2] = mesh2_id;
 
+#ifdef CHECK_EVERYTHING
+        if (PMP::does_self_intersect(*mesh1))
+            return NULL;
+        if (!PMP::does_bound_a_volume(*mesh1))
+            return NULL;
+        if (PMP::does_self_intersect(*mesh2))
+            return NULL;
+        if (!PMP::does_bound_a_volume(*mesh2))
+            return NULL;
+#endif
+
         return (PMP::corefine_and_compute_union(*mesh1,
             *mesh2,
             *mesh1,
-            params::vertex_point_map(mesh1_pm).visitor(visitor),
+            params::vertex_point_map(mesh1_pm).visitor(visitor).throw_on_self_intersection(true),
             params::vertex_point_map(mesh2_pm),
             params::vertex_point_map(mesh1_pm)));
     }
@@ -127,7 +139,16 @@ extern "C"
     }
 
     void
-        mesh_foreach_vertex(Mesh *mesh, VertexCB callback, void *callback_arg)
+        mesh_foreach_vertex(Mesh* mesh, VertexCB callback, void* callback_arg)
+    {
+        BOOST_FOREACH(Vertex_index v, mesh->vertices())
+        {
+            (*callback)(callback_arg, &v, mesh->point(v).x(), mesh->point(v).y(), mesh->point(v).z());
+        }
+    }
+
+    void
+        mesh_foreach_vertex_d(Mesh* mesh, VertexCB_D callback, void* callback_arg)
     {
         BOOST_FOREACH(Vertex_index v, mesh->vertices())
         {

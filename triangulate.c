@@ -788,6 +788,14 @@ gen_view_list_arc(ArcEdge *ae)
     objid--;
     link_tail((Object *)p, &edge->view_list);
 
+#ifdef CHECK_ZERO_LENGTH
+    for (p = (Point*)edge->view_list.head; p->hdr.next != NULL; p = (Point*)p->hdr.next)
+    {
+        float len = length_squared(p, (Point*)p->hdr.next);
+        ASSERT(len > SMALL_COORD, "Possible zero length edge in arc VL");
+    }
+#endif
+
     edge->view_valid = TRUE;
 }
 

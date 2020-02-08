@@ -350,7 +350,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         if ((face->type & FACE_CONSTRUCTION) && !view_constr)
             return;
 
-        if (!materials[face->vol->material].hidden)
+        if (face->vol == NULL || !materials[face->vol->material].hidden)
         {
             glPushName((GLuint)obj);
             gen_view_list_face(face);

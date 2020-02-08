@@ -43,17 +43,24 @@ export_triangle_stl(void *arg, float x[3], float y[3], float z[3])
 
 // Write a vertex out to an OFF file, counting is zero-based position along the way
 void
-export_vertex_off(void *arg, Vertex_index *v, float x, float y, float z)
+export_vertex_off(void* arg, Vertex_index* v, float x, float y, float z)
 {
     fprintf_s(off, "%f %f %f\n", x, y, z);
-    reindex[*(int *)v] = num_exported_vertices++;
+    reindex[*(int*)v] = num_exported_vertices++;
+}
+
+void
+export_vertex_off_d(void* arg, Vertex_index* v, double x, double y, double z)
+{
+    fprintf_s(off, "%.15f %.15f %.15f\n", x, y, z);
+    reindex[*(int*)v] = num_exported_vertices++;
 }
 
 // Write a single mesh triangle out to an OFF file
 void
-export_triangle_off(void *arg, int nv, Vertex_index *vi)
+export_triangle_off(void* arg, int nv, Vertex_index* vi)
 {
-    int *ivi = (int *)vi;
+    int* ivi = (int*)vi;
     int i;
 
     fprintf_s(off, "%d", nv);
@@ -328,7 +335,8 @@ export_object_tree(Group *tree, char *filename, int file_index)
             fprintf_s(off, "%d %d %d\n", n_vertices, n_faces, 0);
             reindex = (int *)calloc(n_vertices, sizeof(int));
 
-            mesh_foreach_vertex(tree->mesh, export_vertex_off, NULL);
+            //mesh_foreach_vertex(tree->mesh, export_vertex_off, NULL);
+            mesh_foreach_vertex_d(tree->mesh, export_vertex_off_d, NULL);
             mesh_foreach_face_vertices(tree->mesh, export_triangle_off, NULL);
 
             free(reindex);

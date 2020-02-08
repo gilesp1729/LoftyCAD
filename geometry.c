@@ -241,6 +241,16 @@ length_squared(Point *p0, Point *p1)
     return (x1 - x0)*(x1 - x0) + (y1 - y0)*(y1 - y0) + (z1 - z0)*(z1 - z0);
 }
 
+// Area of a triangle
+float
+area_triangle(Point *a, Point *b, Point *c)
+{
+    Point cp;
+
+    cross(b->x - a->x, b->y - a->y, b->z - a->z, c->x - a->x, c->y - a->y, c->z - a->z, &cp.x, &cp.y, &cp.z);
+    return 0.5f * sqrtf(cp.x * cp.x + cp.y * cp.y + cp.z * cp.z);
+}
+
 // Normal of a 3D polygon expressed as a list of Points
 void
 polygon_normal(Point *list, Plane *norm)

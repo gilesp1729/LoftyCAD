@@ -30,6 +30,10 @@ clip_tess_write(void * polygon_data)
     Point *np;
     int i;
 
+#ifdef CHECK_ZERO_AREA
+    ASSERT(area_triangle(&clip_tess_points[0], &clip_tess_points[1], &clip_tess_points[2]) > SMALL_COORD, "Zero area triangle!!");
+#endif
+
     // If the points have not been seen before, search the point bucket for uses
     // from prevous faces in the volume. If all else fails, make new mesh vertices for them.
     for (i = 0; i < 3; i++)
