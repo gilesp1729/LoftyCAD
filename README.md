@@ -8,8 +8,8 @@ Simple to use like Sketchup, but with some improvements:
 In particular, it will:
 - Retain the identity of 3D shapes, do not merge irreversibly with others
 - Produce a single triangle mesh from merged objects, using CSG operations (union, intersection, difference)
-- Not produce non-manifold triangle meshes requiring repairs (OK, some apps complain, but I've never seen on fail to slice)
-- Write STL files directly
+- Not produce non-manifold triangle meshes requiring repairs (OK, some apps complain, but I've never seen one fail to slice)
+- Write STL and other triangle mesh files directly
 
 # Interface
 - Sketch-up-like (draw a 2D face followed by extrusion)
@@ -23,12 +23,11 @@ In particular, it will:
 - Allow multiple materials (currently developing on Material Girl branch)
 
 # Files handled
-- Export triangle meshes as STL, OFF, AMF
-- Import STL, OFF, and others to groups containing meshes as volumes
+- Export triangle meshes as STL, AMF, OBJ, OFF
+- Import STL, AMF, OBJ, OFF to groups containing meshes as volumes
 - Always output full normals
 
 # Stretch goals
-- Import/export AMF, OBJ/MTL formats with multi-material support
 - Editing faces by breaking edges and adding points
 - Bezier surfaces (compound curves)
 - Lofting (a nod to the original Lofty, which is LoftyCAD's spiritual ancestor)
@@ -51,5 +50,5 @@ Build CGAL 4.12 from its build instructions, noting that:
 - This branch requires CGAL 5.0 and VS2019.
 - CGAL 5.0 is a header-only library and requires no build steps (other than cmake to make all the .slns and vsprojs)
 - This branch is the live development branch and will become the master in due course.
-- A possible bug found in CGAL 5.0 is under investigation. (an issue has been raised with CGAL)
+- A possible bug found in CGAL 5.0 is under investigation. (an issue has been raised with CGAL) This affects rendering to triangle meshes and is something of a show-stopper.
 

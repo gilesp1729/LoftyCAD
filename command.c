@@ -487,6 +487,7 @@ Command(int message, int wParam, int lParam)
                 "STL Meshes (*.STL)\0*.STL\0"
                 "STL Meshes for each material (*_1.STL)\0*.STL\0"
                 "AMF Files (*.AMF)\0*.AMF\0"
+                "OBJ Files (*.OBJ)\0*.OBJ\0"
                 "Geomview Object File Format Files (*.OFF)\0*.OFF\0"
                 "All Files\0*.*\0\0";
             ofn.nFilterIndex = 1;
@@ -517,10 +518,8 @@ Command(int message, int wParam, int lParam)
                 "LoftyCAD Files (*.LCD)\0*.LCD\0"
                 "STL Meshes (*.STL)\0*.STL\0"
                 "AMF Files (*.AMF)\0*.AMF\0"
+                "OBJ Files (*.OBJ)\0*.OBJ\0"
                 "Geomview Object File Format Files (*.OFF)\0*.OFF\0"
-#if 0
-                "GNU Triangulated Surface Files (*.GTS)\0*.GTS\0"
-#endif
                 "All Files\0*.*\0\0";
             ofn.nFilterIndex = 1;
             ofn.lpstrDefExt = "lcd";
@@ -545,13 +544,11 @@ Command(int message, int wParam, int lParam)
                     rc = read_amf_to_group(group, new_filename);
                     break;
                 case 4:
+                    rc = read_obj_to_group(group, new_filename);
+                    break;
+                case 5:
                     rc = read_off_to_group(group, new_filename);
                     break;
-#if 0
-                case 4:
-                    rc = read_gts_to_group(group, new_filename);
-                    break;
-#endif
                 }
                 if (rc)
                 {

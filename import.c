@@ -386,6 +386,13 @@ error:
 }
 #endif // 0
 
+// Read a Wavefront OBJ file
+BOOL
+read_obj_to_group(Group* group, char* filename)
+{
+    return FALSE;   // TEMP
+}
+
 // Read a Geomview (OOGL) OFF file
 BOOL
 read_off_to_group(Group *group, char *filename)

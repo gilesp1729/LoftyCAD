@@ -2,9 +2,9 @@
 #include "LoftyCAD.h"
 #include <stdio.h>
 
-// globals for STL/AMF/OFF file writing
-// File to export STL/AMF/OFF to (global so callbacks can see it)
-FILE *stl, *off, *amf, *amfv;
+// globals for STL/AMF/OBJ/OFF file writing
+// File to export STL/AMF/OBJ/OFF to (global so callbacks can see it)
+FILE *stl, *off, *amf, *amfv, *objf, *objv, *mtl;
 
 // number of triangles exported
 int num_exported_tri;
@@ -88,6 +88,27 @@ export_triangle_amf(void* arg, int nv, Vertex_index* vi)
     for (i = 0; i < nv; i++)
         fprintf_s(amfv, "<v%d>%d</v%d>", i+1, reindex[ivi[i]], i+1);
     fprintf_s(amfv, "</triangle>\n");
+}
+
+// Write a vertex out to an OBJ file
+void
+export_vertex_obj(void* arg, Vertex_index* v, float x, float y, float z)
+{
+    fprintf_s(objf, "v %f %f %f\n", x, y, z);
+    reindex[*(int*)v] = num_exported_vertices++;
+}
+
+// Write a single mesh triangle out to an OBJ file (actually, to the OBJ temp volume file)
+void
+export_triangle_obj(void* arg, int nv, Vertex_index* vi)
+{
+    int* ivi = (int*)vi;
+    int i;
+
+    fprintf_s(objv, "f ");
+    for (i = 0; i < nv; i++)
+        fprintf_s(objv, "%d ", reindex[ivi[i]] + 1);  // vertices start from 1
+    fprintf_s(objv, "\n");
 }
 
 // Render an un-merged volume or group to triangles and export it to an STL file
@@ -257,6 +278,9 @@ export_object_tree(Group *tree, char *filename, int file_index)
             object_tree.mesh_valid = FALSE;
             gen_view_list_tree_surfaces(&object_tree, &object_tree);
 
+            if (!object_tree.mesh_valid)    // nothing for this material
+                continue;
+
             // vertices for the mesh for this material
             mesh_foreach_vertex(tree->mesh, export_vertex_amf, NULL);
 
@@ -315,7 +339,128 @@ export_object_tree(Group *tree, char *filename, int file_index)
         object_tree.mesh_valid = FALSE;
         break;
 
-    case 4: // export to an OFF File
+    case 4: // export to an OBJ file
+        fopen_s(&objf, filename, "wt");
+        if (objf == NULL)
+            return;
+
+        // make a temp filename for the OBJ volumes
+        dot = strrchr(filename, '\\');
+        if (dot != NULL)
+            strcpy_s(basename, 256, dot + 1);          // cut off any directory in file
+        else
+            strcpy_s(basename, 256, filename);
+        baselen = strlen(basename);
+        if (baselen > 4 && (dot = strrchr(basename, '.')) != NULL)
+            *dot = '\0';                               // cut off ".obj" 
+        GetTempPath(256, tmpdir);
+        sprintf_s(tmp, 256, "%s%s.objv", tmpdir, basename);
+        fopen_s(&objv, tmp, "wt");
+        if (objv == NULL)
+            return;
+
+        // put out the header
+        num_exported_tri = 0;
+        num_exported_vertices = 0;
+        fprintf_s(objf, "# Exported by LoftyCAD\n");
+
+        // material library file, if there are materials
+
+
+        fprintf_s(objf, "o obj_0\n");
+
+        // Node renumbering array (assumes full mesh is built beforehand..)
+        reindex = (int*)calloc(mesh_num_vertices(tree->mesh), sizeof(int));
+
+        // build a list of all the non-hidden material indices
+        for (i = k = 0; i < MAX_MATERIAL; i++)
+        {
+            if (materials[i].valid && !materials[i].hidden)
+                candidates[k++] = i;
+        }
+
+        // for each one of these, hide all the others, generate the surface and export it
+        for (i = 0; i < k; i++)
+        {
+            int j;
+
+            for (j = 0; j < k; j++)
+                materials[candidates[j]].hidden = TRUE;
+            materials[candidates[i]].hidden = FALSE;
+
+            xform_list.head = NULL;
+            xform_list.tail = NULL;
+            if (object_tree.mesh != NULL)
+                mesh_destroy(object_tree.mesh);
+            object_tree.mesh = NULL;
+            object_tree.mesh_valid = FALSE;
+            gen_view_list_tree_surfaces(&object_tree, &object_tree);
+
+            if (!object_tree.mesh_valid)    // nothing for this material
+                continue;
+
+            // vertices for the mesh for this material
+            mesh_foreach_vertex(tree->mesh, export_vertex_obj, NULL);
+
+            // OBJ volume for this material (write it to a temp file and append it at the end)
+            if (candidates[i] != 0)
+                fprintf_s(objv, "usemtl %s\n", materials[candidates[i]].name);
+            mesh_foreach_face_vertices(tree->mesh, export_triangle_obj, NULL);
+        }
+
+        free(reindex);
+
+        // Append the temp file to the OBJ file
+        fclose(objv);
+        fopen_s(&objv, tmp, "rt");
+        while (1)
+        {
+            fgets(basename, 256, objv);
+            if (feof(objv))
+                break;
+
+            fputs(basename, objf);
+        }
+
+        fclose(objf);
+        fclose(objv);
+        DeleteFile(tmp);
+
+        if (k == 1)
+            break;          // no materials other than the default (0)
+
+        // write the materials to the corresponding MTL file (leave out material 0)
+        strcpy_s(basename, 256, filename);
+        baselen = strlen(basename);
+        if (baselen > 4 && (dot = strrchr(basename, '.')) != NULL)
+            *dot = '\0';                               // cut off ".obj" 
+        sprintf_s(tmp, 256, "%s.mtl", basename);
+        fopen_s(&mtl, tmp, "wt");
+        if (mtl == NULL)
+            return;
+
+        for (i = 1; i < k; i++)
+        {
+            fprintf(mtl, "newmtl %s\n", materials[candidates[i]].name);
+            fprintf(mtl, "Kd %f %f %f\n",
+                materials[candidates[i]].color[0],
+                materials[candidates[i]].color[1],
+                materials[candidates[i]].color[2]);
+        }
+
+        fclose(mtl);
+
+        // reinstate all the non-hidden materials and mark the surface mesh for regeneration
+        for (i = 0; i < k; i++)
+            materials[candidates[i]].hidden = FALSE;
+
+        if (object_tree.mesh != NULL)
+            mesh_destroy(object_tree.mesh);
+        object_tree.mesh = NULL;
+        object_tree.mesh_valid = FALSE;
+        break;
+
+    case 5: // export to an OFF File
         fopen_s(&off, filename, "wt");
         if (off == NULL)
             return;
