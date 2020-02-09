@@ -364,14 +364,6 @@ export_object_tree(Group *tree, char *filename, int file_index)
         num_exported_vertices = 0;
         fprintf_s(objf, "# Exported by LoftyCAD\n");
 
-        // material library file, if there are materials
-
-
-        fprintf_s(objf, "o obj_0\n");
-
-        // Node renumbering array (assumes full mesh is built beforehand..)
-        reindex = (int*)calloc(mesh_num_vertices(tree->mesh), sizeof(int));
-
         // build a list of all the non-hidden material indices
         for (i = k = 0; i < MAX_MATERIAL; i++)
         {
@@ -379,7 +371,30 @@ export_object_tree(Group *tree, char *filename, int file_index)
                 candidates[k++] = i;
         }
 
-        // for each one of these, hide all the others, generate the surface and export it
+        // material library file, if there are materials
+        if (k > 1)
+        {
+            char mtlname[256];
+
+            strcpy_s(basename, 256, filename);
+            baselen = strlen(basename);
+            if (baselen > 4 && (dot = strrchr(basename, '.')) != NULL)
+                *dot = '\0';                               // cut off ".obj" 
+            sprintf_s(mtlname, 256, "%s.mtl", basename);
+            fopen_s(&mtl, mtlname, "wt");
+            if (mtl == NULL)
+                return;
+
+            dot = strrchr(mtlname, '\\');
+            if (dot != NULL)
+                fprintf(objf, "mtllib %s\n", dot + 1);      // cut off directory
+        }
+        fprintf_s(objf, "o obj_0\n");
+
+        // Node renumbering array (assumes full mesh is built beforehand..)
+        reindex = (int*)calloc(mesh_num_vertices(tree->mesh), sizeof(int));
+
+        // for each material index, hide all the others, generate the surface and export it
         for (i = 0; i < k; i++)
         {
             int j;
@@ -430,15 +445,6 @@ export_object_tree(Group *tree, char *filename, int file_index)
             break;          // no materials other than the default (0)
 
         // write the materials to the corresponding MTL file (leave out material 0)
-        strcpy_s(basename, 256, filename);
-        baselen = strlen(basename);
-        if (baselen > 4 && (dot = strrchr(basename, '.')) != NULL)
-            *dot = '\0';                               // cut off ".obj" 
-        sprintf_s(tmp, 256, "%s.mtl", basename);
-        fopen_s(&mtl, tmp, "wt");
-        if (mtl == NULL)
-            return;
-
         for (i = 1; i < k; i++)
         {
             fprintf(mtl, "newmtl %s\n", materials[candidates[i]].name);
