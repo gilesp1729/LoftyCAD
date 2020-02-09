@@ -390,7 +390,112 @@ error:
 BOOL
 read_obj_to_group(Group* group, char* filename)
 {
-    return FALSE;   // TEMP
+    FILE* f;
+    char* tok;
+    char* nexttok = NULL;
+    int npoints, npoints_alloced;
+    Point** points;
+    Volume* vol;
+
+    fopen_s(&f, filename, "rt");
+    if (f == NULL)
+        return FALSE;
+
+    npoints = 0;
+    npoints_alloced = 64;   // start with a small power of 2
+    points = malloc(npoints_alloced * sizeof(Point*));     // point array
+
+    while (1)
+    {
+        if (fgets(buf, 512, f) == NULL)     // skip any comments and blank lines
+            goto error;
+        tok = strtok_s(buf, " \t\n", &nexttok);
+        if (tok == NULL)
+            continue;
+        if (tok[0] == 'f')                  // beginning of the faces
+            break;
+        if (tok[0] == 'v')             // read a vertex
+        {
+            Point* p = point_new(0, 0, 0);
+
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            p->x = (float)atof(tok);
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            p->y = (float)atof(tok);
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            p->z = (float)atof(tok);
+            if (npoints >= npoints_alloced)
+            {
+                npoints_alloced *= 2;
+                points = realloc(points, npoints_alloced * sizeof(Point*));
+            }
+            points[npoints++] = p;
+        }
+    }
+
+    vol = vol_new();
+    while (1)
+    {
+        Plane dummy = { 0, };
+        Face* tf = face_new(FACE_FLAT, dummy);
+        int p1, p2, p3;
+
+        // We already have 'f' on entry to this loop
+        tok = strtok_s(NULL, " \t\n", &nexttok);
+        p1 = atoi(tok) - 1;
+        tok = strtok_s(NULL, " \t\n", &nexttok);
+        p2 = atoi(tok) - 1;
+        tok = strtok_s(NULL, " \t\n", &nexttok);
+        p3 = atoi(tok) - 1;
+
+        if (p1 == p2 || p2 == p3 || p1 == p3)
+            ASSERT(FALSE, "Degenerate triangles");
+        if (near_pt(points[p1], points[p2], SMALL_COORD))
+            continue;
+        if (near_pt(points[p2], points[p3], SMALL_COORD))
+            continue;
+        if (near_pt(points[p3], points[p1], SMALL_COORD))
+            continue;
+        tf->edges[0] = find_edge(points[p1], points[p2]);
+        tf->edges[1] = find_edge(points[p2], points[p3]);
+        tf->edges[2] = find_edge(points[p3], points[p1]);
+        tf->n_edges = 3;
+        if
+            (
+                tf->edges[0]->endpoints[1] == tf->edges[1]->endpoints[0]
+                ||
+                tf->edges[0]->endpoints[1] == tf->edges[1]->endpoints[1]
+                )
+            tf->initial_point = tf->edges[0]->endpoints[0];
+        else
+            tf->initial_point = tf->edges[0]->endpoints[1];
+
+        tf->vol = vol;
+        link((Object*)tf, &vol->faces);
+
+        // Read a new line
+        while (1)
+        {
+            if (fgets(buf, 512, f) == NULL)     // skip any comments and blank lines
+                goto eof;
+            tok = strtok_s(buf, " \t\n", &nexttok);
+            if (tok == NULL)
+                continue;
+            if (tok[0] == 'f')
+                break;
+        }
+    }
+
+eof:
+    link_group((Object*)vol, group);
+    fclose(f);
+    free(points);
+    return TRUE;
+
+error:
+    fclose(f);
+    free(points);
+    return FALSE;
 }
 
 // Read a Geomview (OOGL) OFF file
