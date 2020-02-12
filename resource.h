@@ -84,6 +84,7 @@
 #define IDC_SQUIGGLE                    160
 #define IDI_TEXT                        160
 #define IDC_EDGE1                       162
+#define IDD_MATERIALS                   162
 #define IDC_EDGE2                       163
 #define IDC_EDGE3                       164
 #define IDC_FACE                        165
@@ -121,6 +122,9 @@
 #define IDC_REMOVE                      1028
 #define IDC_TITLE                       1029
 #define IDC_FONT_STRING                 1030
+#define IDC_COMBO1                      1031
+#define IDC_COMBO_MATERIAL              1031
+#define IDC_STATIC_MAT_INDEX            1032
 #define ID_FILE_NEW                     32774
 #define ID_FILE_OPEN                    32775
 #define ID_FILE_SAVE                    32776
@@ -238,9 +242,9 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
-#define _APS_NEXT_RESOURCE_VALUE        162
+#define _APS_NEXT_RESOURCE_VALUE        163
 #define _APS_NEXT_COMMAND_VALUE         32899
-#define _APS_NEXT_CONTROL_VALUE         1031
+#define _APS_NEXT_CONTROL_VALUE         1033
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif

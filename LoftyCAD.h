@@ -236,4 +236,5 @@ int WINAPI dimensions_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 int WINAPI prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 int WINAPI treeview_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 int WINAPI transform_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+int WINAPI materials_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 

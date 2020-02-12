@@ -826,7 +826,7 @@ Command(int message, int wParam, int lParam)
 
         case ID_MATERIALS_NEW:
             // Dialog box to edit or add a material
-         //   DialogBox(hInst, IDD_MATERIAL, auxGetHWND(), materials_dialog);
+            DialogBoxParam(hInst, MAKEINTRESOURCE(IDD_MATERIALS), auxGetHWND(), materials_dialog, 0);
             break;
 
             // test here for a possibly variable number of ID_MATERIALS_BASE + n (for n in [0,MAX_MATERIAL])

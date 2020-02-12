@@ -869,10 +869,12 @@ contextmenu(Object *picked_obj, POINT pt)
 
     case ID_MATERIALS_NEW:
         // Dialog box to edit or add a material, then return the one selected
-        // i = DialogBox(hInst, IDD_MATERIAL, auxGetHWND(), materials_dialog);
-
-
-        material_changed = TRUE;
+        i = DialogBoxParam(hInst, MAKEINTRESOURCE(IDD_MATERIALS), auxGetHWND(), materials_dialog, (LPARAM)picked_obj);
+        if (i >= 0)
+        {
+            ((Volume*)picked_obj)->material = i;
+            material_changed = TRUE;
+        }
         break;
 
         // test here for a possibly variable number of ID_MATERIALS_BASE + n (for n in [0,MAX_MATERIAL])
@@ -1048,3 +1050,151 @@ transform_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
     return 0;
 }
+
+// Materials dialog procedure. Edit of add new materials, then return the index of
+// the material selected, or -1 if cancelled.
+int WINAPI
+materials_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    char buf[16];
+    char title[128];
+    static Object* obj;
+    int i, mat;
+
+    switch (msg)
+    {
+    case WM_INITDIALOG:
+        obj = (Object*)lParam;
+        ASSERT(obj == NULL || obj->type == OBJ_VOLUME, "This has to be a volume");
+
+        // Preload the combo with existing materials and select the current object's material
+        mat = (obj != NULL) ? ((Volume*)obj)->material : 0;
+
+        for (i = 0; i < MAX_MATERIAL; i++)
+        {
+            if (materials[i].valid)
+                SendDlgItemMessage(hWnd, IDC_COMBO_MATERIAL, CB_INSERTSTRING, i, (LPARAM)materials[i].name);
+        }
+        SendDlgItemMessage(hWnd, IDC_COMBO_MATERIAL, CB_SETCURSEL, mat, 0);
+        SetDlgItemInt(hWnd, IDC_STATIC_MAT_INDEX, mat, FALSE);
+        break;
+
+    case WM_COMMAND:
+        switch (LOWORD(wParam))
+        {
+        case IDOK:
+            mat = SendDlgItemMessage(hWnd, IDC_COMBO_MATERIAL, CB_GETCURSEL, 0, 0);
+            EndDialog(hWnd, mat);
+            break;
+
+        case IDCANCEL:
+            EndDialog(hWnd, -1);
+            break;
+        }
+
+        break;
+    }
+
+    return 0;
+}
+
+#if 0
+LRESULT CALLBACK prefs_dialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+{
+    int i;
+    static int view_index;
+    char buf[MAXSTR];
+    static BOOL text_changed;
+
+    switch (message)
+    {
+    case WM_INITDIALOG:
+        view_index = 0;
+        for (i = 0; i < n_views; i++)
+        {
+            ViewPrefs* vp = &view_prefs[i];
+
+            SendDlgItemMessage(hDlg, IDC_COMBO_VIEW, CB_INSERTSTRING, i, (LPARAM)vp->title);
+            if (prefs == vp)
+                view_index = i;
+        }
+        SendDlgItemMessage(hDlg, IDC_COMBO_VIEW, CB_SETCURSEL, view_index, 0);
+        SetDlgItemInt(hDlg, IDC_STATIC_VIEW_INDEX, view_index, FALSE);
+        load_prefs(hDlg, prefs);
+        text_changed = FALSE;
+        return 0;
+
+    case WM_COMMAND:
+        switch (LOWORD(wParam))
+        {
+        case IDOK:
+            save_prefs(hDlg, prefs);
+            // fall through
+        case IDCANCEL:
+            EndDialog(hDlg, LOWORD(wParam));
+            return 1;
+
+        case IDC_PREFS_DELETE:
+            if (n_views == 1)   // deleteing last view, just reset it all to defaults
+            {
+                view_index = 0;  // must be already 0
+                *prefs = default_prefs;
+                SendDlgItemMessage(hDlg, IDC_COMBO_VIEW, CB_RESETCONTENT, 0, 0);
+            }
+            else
+            {
+                SendDlgItemMessage(hDlg, IDC_COMBO_VIEW, CB_DELETESTRING, view_index, 0);
+                for (i = view_index + 1; i < n_views; i++)  // shuffle rest down
+                    view_prefs[i - 1] = view_prefs[i];
+                n_views--;
+                if (view_index == n_views)
+                {
+                    view_index--;
+                    prefs = &view_prefs[view_index];
+                }
+                SendDlgItemMessage(hDlg, IDC_COMBO_VIEW, CB_SETCURSEL, view_index, 0);
+            }
+            load_prefs(hDlg, prefs);
+            break;
+
+        case IDC_COMBO_VIEW:
+            switch (HIWORD(wParam))
+            {
+            case CBN_SELCHANGE:
+                save_prefs(hDlg, prefs);
+                view_index = SendDlgItemMessage(hDlg, IDC_COMBO_VIEW, CB_GETCURSEL, 0, 0);
+                SetDlgItemInt(hDlg, IDC_STATIC_VIEW_INDEX, view_index, FALSE);
+                prefs = &view_prefs[view_index];
+                load_prefs(hDlg, prefs);
+                break;
+
+            case CBN_EDITCHANGE:
+                text_changed = TRUE;
+                break;
+
+            case CBN_KILLFOCUS:
+                if (text_changed && n_views < MAX_PREFS - 1)
+                {
+                    text_changed = FALSE;
+                    SendDlgItemMessage(hDlg, IDC_COMBO_VIEW, WM_GETTEXT, MAXSTR, (LPARAM)buf);
+                    if (prefs->title[0] != '\0')  // just overwrite if file has no views in it, otherwise new
+                    {
+                        view_index = n_views;
+                        prefs = &view_prefs[n_views++];
+                        *prefs = default_prefs;
+                    }
+                    strcpy_s(prefs->title, MAXSTR, buf);
+                    SendDlgItemMessage(hDlg, IDC_COMBO_VIEW, CB_ADDSTRING, 0, (LPARAM)prefs->title);
+                    SetDlgItemInt(hDlg, IDC_STATIC_VIEW_INDEX, view_index, FALSE);
+                    load_prefs(hDlg, prefs);
+                }
+                break;
+            }
+            break;
+        }
+        break;
+    }
+    return 0;
+}
+
+#endif /* 0 */

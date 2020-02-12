@@ -390,7 +390,7 @@ error:
 BOOL
 read_obj_to_group(Group* group, char* filename)
 {
-    FILE* f;
+    FILE *f, *mtl;
     char* tok;
     char* nexttok = NULL;
     int npoints, npoints_alloced;
@@ -414,7 +414,19 @@ read_obj_to_group(Group* group, char* filename)
             continue;
         if (tok[0] == 'f')                  // beginning of the faces
             break;
-        if (tok[0] == 'v')             // read a vertex
+        if (strcmp(tok, "mtllib") == 0)     // material library filename
+        {
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            if (fopen_s(&mtl, tok, "rt"))
+            {
+                // add materials to the existing material collection (of any)
+                // TODO: Do we merge materials with the same names?
+
+
+
+            }
+        }
+        else if (tok[0] == 'v')             // read a vertex
         {
             Point* p = point_new(0, 0, 0);
 
