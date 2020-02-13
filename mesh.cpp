@@ -46,7 +46,7 @@ extern "C"
     }
 
 #define NON_INPLACE_ISSUE_4522
-// Non-in-place unions to work around CGAL issue #4522.
+// Non-in-place operations to work around CGAL issue #4522.
 #ifdef NON_INPLACE_ISSUE_4522
     int // no BOOL here
         mesh_union(Mesh **mesh1_ptr, Mesh *mesh2)
@@ -90,7 +90,117 @@ extern "C"
         rc = (PMP::corefine_and_compute_union(*mesh1,
             *mesh2,
             *out,
-            params::vertex_point_map(mesh1_pm).visitor(visitor).throw_on_self_intersection(true),
+            params::vertex_point_map(mesh1_pm).visitor(visitor),
+            params::vertex_point_map(mesh2_pm),
+            params::vertex_point_map(out_pm)));
+
+        if (rc)
+        {
+            delete mesh1;
+            *mesh1_ptr = out;
+        }
+
+        return rc;
+    }
+
+    int // no BOOL here
+        mesh_intersection(Mesh** mesh1_ptr, Mesh* mesh2)
+    {
+        Mesh* mesh1 = *mesh1_ptr;
+        Mesh* out = new Mesh;
+        bool rc;
+
+        // Create new (or reference existing) property maps
+        Exact_point_map mesh1_exact_points =
+            mesh1->add_property_map<vertex_descriptor, EK::Point_3>("e:exact_point").first;
+        Exact_point_computed mesh1_exact_points_computed =
+            mesh1->add_property_map<vertex_descriptor, bool>("e:exact_points_computed").first;
+
+        Exact_point_map mesh2_exact_points =
+            mesh2->add_property_map<vertex_descriptor, EK::Point_3>("e:exact_point").first;
+        Exact_point_computed mesh2_exact_points_computed =
+            mesh2->add_property_map<vertex_descriptor, bool>("e:exact_points_computed").first;
+
+        Exact_point_map out_exact_points =
+            out->add_property_map<vertex_descriptor, EK::Point_3>("e:exact_point").first;
+        Exact_point_computed out_exact_points_computed =
+            out->add_property_map<vertex_descriptor, bool>("e:exact_points_computed").first;
+
+        Coref_point_map mesh1_pm(mesh1_exact_points, mesh1_exact_points_computed, *mesh1);
+        Coref_point_map mesh2_pm(mesh2_exact_points, mesh2_exact_points_computed, *mesh2);
+        Coref_point_map out_pm(out_exact_points, out_exact_points_computed, *out);
+
+        Mesh::Property_map<Mesh::Face_index, int> mesh1_id =
+            mesh1->add_property_map<Mesh::Face_index, int>("f:id", 0).first;
+        Mesh::Property_map<Mesh::Face_index, int> mesh2_id =
+            mesh2->add_property_map<Mesh::Face_index, int>("f:id", 0).first;
+        Mesh::Property_map<Mesh::Face_index, int> out_id =
+            out->add_property_map<Mesh::Face_index, int>("f:id", 0).first;
+
+        Visitor visitor;
+        visitor.properties[mesh1] = mesh1_id;
+        visitor.properties[mesh2] = mesh2_id;
+        visitor.properties[out] = out_id;
+
+        rc = (PMP::corefine_and_compute_intersection(*mesh1,
+            *mesh2,
+            *out,
+            params::vertex_point_map(mesh1_pm).visitor(visitor),
+            params::vertex_point_map(mesh2_pm),
+            params::vertex_point_map(out_pm)));
+
+        if (rc)
+        {
+            delete mesh1;
+            *mesh1_ptr = out;
+        }
+
+        return rc;
+    }
+
+    int // no BOOL here
+        mesh_difference(Mesh** mesh1_ptr, Mesh* mesh2)
+    {
+        Mesh* mesh1 = *mesh1_ptr;
+        Mesh* out = new Mesh;
+        bool rc;
+
+        // Create new (or reference existing) property maps
+        Exact_point_map mesh1_exact_points =
+            mesh1->add_property_map<vertex_descriptor, EK::Point_3>("e:exact_point").first;
+        Exact_point_computed mesh1_exact_points_computed =
+            mesh1->add_property_map<vertex_descriptor, bool>("e:exact_points_computed").first;
+
+        Exact_point_map mesh2_exact_points =
+            mesh2->add_property_map<vertex_descriptor, EK::Point_3>("e:exact_point").first;
+        Exact_point_computed mesh2_exact_points_computed =
+            mesh2->add_property_map<vertex_descriptor, bool>("e:exact_points_computed").first;
+
+        Exact_point_map out_exact_points =
+            out->add_property_map<vertex_descriptor, EK::Point_3>("e:exact_point").first;
+        Exact_point_computed out_exact_points_computed =
+            out->add_property_map<vertex_descriptor, bool>("e:exact_points_computed").first;
+
+        Coref_point_map mesh1_pm(mesh1_exact_points, mesh1_exact_points_computed, *mesh1);
+        Coref_point_map mesh2_pm(mesh2_exact_points, mesh2_exact_points_computed, *mesh2);
+        Coref_point_map out_pm(out_exact_points, out_exact_points_computed, *out);
+
+        Mesh::Property_map<Mesh::Face_index, int> mesh1_id =
+            mesh1->add_property_map<Mesh::Face_index, int>("f:id", 0).first;
+        Mesh::Property_map<Mesh::Face_index, int> mesh2_id =
+            mesh2->add_property_map<Mesh::Face_index, int>("f:id", 0).first;
+        Mesh::Property_map<Mesh::Face_index, int> out_id =
+            out->add_property_map<Mesh::Face_index, int>("f:id", 0).first;
+
+        Visitor visitor;
+        visitor.properties[mesh1] = mesh1_id;
+        visitor.properties[mesh2] = mesh2_id;
+        visitor.properties[out] = out_id;
+
+        rc = (PMP::corefine_and_compute_difference(*mesh1,
+            *mesh2,
+            *out,
+            params::vertex_point_map(mesh1_pm).visitor(visitor),
             params::vertex_point_map(mesh2_pm),
             params::vertex_point_map(out_pm)));
 
@@ -134,12 +244,10 @@ extern "C"
         return (PMP::corefine_and_compute_union(*mesh1,
             *mesh2,
             *mesh1,
-            params::vertex_point_map(mesh1_pm).visitor(visitor).throw_on_self_intersection(true),
+            params::vertex_point_map(mesh1_pm).visitor(visitor),
             params::vertex_point_map(mesh2_pm),
             params::vertex_point_map(mesh1_pm)));
     }
-
-#endif
 
     int // no BOOL here
         mesh_intersection(Mesh **mesh1_ptr, Mesh *mesh2)
@@ -159,10 +267,19 @@ extern "C"
         Coref_point_map mesh1_pm(mesh1_exact_points, mesh1_exact_points_computed, *mesh1);
         Coref_point_map mesh2_pm(mesh2_exact_points, mesh2_exact_points_computed, *mesh2);
 
+        Mesh::Property_map<Mesh::Face_index, int> mesh1_id =
+            mesh1->add_property_map<Mesh::Face_index, int>("f:id", 0).first;
+        Mesh::Property_map<Mesh::Face_index, int> mesh2_id =
+            mesh2->add_property_map<Mesh::Face_index, int>("f:id", 0).first;
+
+        Visitor visitor;
+        visitor.properties[mesh1] = mesh1_id;
+        visitor.properties[mesh2] = mesh2_id;
+
         return (PMP::corefine_and_compute_intersection(*mesh1,
             *mesh2,
             *mesh1,
-            params::vertex_point_map(mesh1_pm),
+            params::vertex_point_map(mesh1_pm).visitor(visitor),
             params::vertex_point_map(mesh2_pm),
             params::vertex_point_map(mesh1_pm)));
     }
@@ -185,13 +302,24 @@ extern "C"
         Coref_point_map mesh1_pm(mesh1_exact_points, mesh1_exact_points_computed, *mesh1);
         Coref_point_map mesh2_pm(mesh2_exact_points, mesh2_exact_points_computed, *mesh2);
 
+        Mesh::Property_map<Mesh::Face_index, int> mesh1_id =
+            mesh1->add_property_map<Mesh::Face_index, int>("f:id", 0).first;
+        Mesh::Property_map<Mesh::Face_index, int> mesh2_id =
+            mesh2->add_property_map<Mesh::Face_index, int>("f:id", 0).first;
+
+        Visitor visitor;
+        visitor.properties[mesh1] = mesh1_id;
+        visitor.properties[mesh2] = mesh2_id;
+
         return (PMP::corefine_and_compute_difference(*mesh1,
             *mesh2,
             *mesh1,
-            params::vertex_point_map(mesh1_pm),
+            params::vertex_point_map(mesh1_pm).visitor(visitor),
             params::vertex_point_map(mesh2_pm),
             params::vertex_point_map(mesh1_pm)));
     }
+
+#endif // NON_INPLACE_ISSUE_4522
 
     void
         mesh_foreach_vertex(Mesh* mesh, VertexCB callback, void* callback_arg)
