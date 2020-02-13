@@ -50,5 +50,5 @@ Build CGAL 4.12 from its build instructions, noting that:
 - This branch requires CGAL 5.0 and VS2019.
 - CGAL 5.0 is a header-only library and requires no build steps (other than cmake to make all the .slns and vsprojs)
 - This branch is the live development branch and will become the master in due course.
-- A possible bug found in CGAL 5.0 is under investigation. (an issue has been raised with CGAL) This affects rendering to triangle meshes and is something of a show-stopper.
+- A bug was found in CGAL 5.0 (issue #4522 has been raised with CGAL). The workaround is to do non-in-place polygon mesh operations, which may affect rendering performance.
 

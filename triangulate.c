@@ -242,19 +242,27 @@ gen_view_list_tree_volumes(Group *tree)
     return rc;
 }
 
+// Mesh merge operations. The mesh1 pointer may change if CGAL is being called to do
+// separate (non-in-place) output as a workaround to CGAL issue #4522.
 BOOL
-mesh_merge_op(OPERATION op, Mesh *mesh1, Mesh *mesh2)
+mesh_merge_op(OPERATION op, Mesh **mesh1, Mesh *mesh2)
 {
+    BOOL rc;
+
     switch (op)
     {
     case OP_UNION:
     default:
-        return mesh_union(mesh1, mesh2);
+        rc = mesh_union(mesh1, mesh2);
+        break;
     case OP_INTERSECTION:
-        return mesh_intersection(mesh1, mesh2);
+        rc = mesh_intersection(mesh1, mesh2);
+        break;
     case OP_DIFFERENCE:
-        return mesh_difference(mesh1, mesh2);
+        rc = mesh_difference(mesh1, mesh2);
+        break;
     }
+    return rc;
 }
 
 // Generate mesh for a class of operations for a group tree (or the object tree)
@@ -301,7 +309,7 @@ gen_view_list_tree_surfaces_op(OPERATION op, Group *tree, Group *parent_tree)
                 process_messages();
 
                 // Merge volume mesh to tree mesh
-                vol->mesh_merged = mesh_merge_op(op, parent_tree->mesh, vol->mesh);
+                vol->mesh_merged = mesh_merge_op(op, &parent_tree->mesh, vol->mesh);
                 if (!vol->mesh_merged)
                     parent_tree->mesh_complete = FALSE;
             }

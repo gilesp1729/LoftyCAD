@@ -45,9 +45,69 @@ extern "C"
         *fi = mesh->add_face(*v1, *v2, *v3);
     }
 
+#define NON_INPLACE_ISSUE_4522
+// Non-in-place unions to work around CGAL issue #4522.
+#ifdef NON_INPLACE_ISSUE_4522
     int // no BOOL here
-        mesh_union(Mesh *mesh1, Mesh *mesh2)
+        mesh_union(Mesh **mesh1_ptr, Mesh *mesh2)
     {
+        Mesh* mesh1 = *mesh1_ptr;
+        Mesh *out = new Mesh;
+        bool rc;
+
+        // Create new (or reference existing) property maps
+        Exact_point_map mesh1_exact_points =
+            mesh1->add_property_map<vertex_descriptor, EK::Point_3>("e:exact_point").first;
+        Exact_point_computed mesh1_exact_points_computed =
+            mesh1->add_property_map<vertex_descriptor, bool>("e:exact_points_computed").first;
+
+        Exact_point_map mesh2_exact_points =
+            mesh2->add_property_map<vertex_descriptor, EK::Point_3>("e:exact_point").first;
+        Exact_point_computed mesh2_exact_points_computed =
+            mesh2->add_property_map<vertex_descriptor, bool>("e:exact_points_computed").first;
+
+        Exact_point_map out_exact_points =
+            out->add_property_map<vertex_descriptor, EK::Point_3>("e:exact_point").first;
+        Exact_point_computed out_exact_points_computed =
+            out->add_property_map<vertex_descriptor, bool>("e:exact_points_computed").first;
+
+        Coref_point_map mesh1_pm(mesh1_exact_points, mesh1_exact_points_computed, *mesh1);
+        Coref_point_map mesh2_pm(mesh2_exact_points, mesh2_exact_points_computed, *mesh2);
+        Coref_point_map out_pm(out_exact_points, out_exact_points_computed, *out);
+
+        Mesh::Property_map<Mesh::Face_index, int> mesh1_id =
+            mesh1->add_property_map<Mesh::Face_index, int>("f:id", 0).first;
+        Mesh::Property_map<Mesh::Face_index, int> mesh2_id =
+            mesh2->add_property_map<Mesh::Face_index, int>("f:id", 0).first;
+        Mesh::Property_map<Mesh::Face_index, int> out_id =
+            out->add_property_map<Mesh::Face_index, int>("f:id", 0).first;
+
+        Visitor visitor;
+        visitor.properties[mesh1] = mesh1_id;
+        visitor.properties[mesh2] = mesh2_id;
+        visitor.properties[out] = out_id;
+
+        rc = (PMP::corefine_and_compute_union(*mesh1,
+            *mesh2,
+            *out,
+            params::vertex_point_map(mesh1_pm).visitor(visitor).throw_on_self_intersection(true),
+            params::vertex_point_map(mesh2_pm),
+            params::vertex_point_map(out_pm)));
+
+        if (rc)
+        {
+            delete mesh1;
+            *mesh1_ptr = out;
+        }
+
+        return rc;
+    }
+#else // old in-place code, but with the ** pointer to maintain compatibility with caller
+    int // no BOOL here
+        mesh_union(Mesh** mesh1_ptr, Mesh* mesh2)
+    {
+        Mesh* mesh1 = *mesh1_ptr;
+
         // Create new (or reference existing) property maps
         Exact_point_map mesh1_exact_points =
             mesh1->add_property_map<vertex_descriptor, EK::Point_3>("e:exact_point").first;
@@ -71,17 +131,6 @@ extern "C"
         visitor.properties[mesh1] = mesh1_id;
         visitor.properties[mesh2] = mesh2_id;
 
-#ifdef CHECK_EVERYTHING
-        if (PMP::does_self_intersect(*mesh1))
-            return NULL;
-        if (!PMP::does_bound_a_volume(*mesh1))
-            return NULL;
-        if (PMP::does_self_intersect(*mesh2))
-            return NULL;
-        if (!PMP::does_bound_a_volume(*mesh2))
-            return NULL;
-#endif
-
         return (PMP::corefine_and_compute_union(*mesh1,
             *mesh2,
             *mesh1,
@@ -90,9 +139,13 @@ extern "C"
             params::vertex_point_map(mesh1_pm)));
     }
 
+#endif
+
     int // no BOOL here
-        mesh_intersection(Mesh *mesh1, Mesh *mesh2)
+        mesh_intersection(Mesh **mesh1_ptr, Mesh *mesh2)
     {
+        Mesh* mesh1 = *mesh1_ptr;
+
         Exact_point_map mesh1_exact_points =
             mesh1->add_property_map<vertex_descriptor, EK::Point_3>("e:exact_point").first;
         Exact_point_computed mesh1_exact_points_computed =
@@ -115,8 +168,10 @@ extern "C"
     }
 
     int // no BOOL here
-        mesh_difference(Mesh *mesh1, Mesh *mesh2)
+        mesh_difference(Mesh **mesh1_ptr, Mesh *mesh2)
     {
+        Mesh* mesh1 = *mesh1_ptr;
+
         Exact_point_map mesh1_exact_points =
             mesh1->add_property_map<vertex_descriptor, EK::Point_3>("e:exact_point").first;
         Exact_point_computed mesh1_exact_points_computed =

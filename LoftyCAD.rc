@@ -59,7 +59,7 @@ BEGIN
         MENUITEM SEPARATOR
         POPUP "Recent &files"
         BEGIN
-            MENUITEM "Recent files",                ID_RECENTFILES_RECENTFILES
+            MENUITEM "Recent files",                ID_RECENTFILES_RECENTFILES, INACTIVE
         END
         MENUITEM SEPARATOR
         MENUITEM "E&xit",                       IDM_EXIT

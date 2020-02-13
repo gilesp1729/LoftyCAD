@@ -409,6 +409,7 @@ Command(int message, int wParam, int lParam)
             clear_selection(&selection);
             purge_tree(&object_tree, clipboard.head != NULL, &saved_list);
             drawing_changed = FALSE;
+            view_rendered = FALSE;
             clean_checkpoints(curr_filename);
             curr_filename[0] = '\0';
             object_tree.title[0] = '\0';
@@ -591,6 +592,7 @@ Command(int message, int wParam, int lParam)
                 clear_selection(&selection);
                 purge_tree(&object_tree, clipboard.head != NULL, &saved_list);
                 drawing_changed = FALSE;
+                view_rendered = FALSE;
                 clean_checkpoints(curr_filename);
                 curr_filename[0] = '\0';
                 object_tree.title[0] = '\0';
