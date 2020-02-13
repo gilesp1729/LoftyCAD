@@ -622,6 +622,7 @@ Point** points;
 int mat;
 Volume* vol;
 Plane dummy = { 0, };
+int mat_offset;
 
 // AMF file readers to deal with XML prolixity.
 
@@ -721,7 +722,6 @@ read_amf_triangle(Group* group, FILE* f)
         return FALSE;
     if (!next_token(f))
         return FALSE;
-
     p1 = atoi(tok);
     if (!read_till("<v2", f))
         return FALSE;
@@ -771,11 +771,12 @@ read_amf_volume(Group* group, FILE* f)
         if (tok != NULL && strcmp(tok, "materialid") == 0)
         {
             tok = strtok_s(NULL, "\"", &nexttok);
-            mat = 0; // TEMP UNTIL.. atoi(tok);
+            mat = atoi(tok) + mat_offset;
         }
     }
 
     vol = vol_new();
+    vol->material = mat;
 
     // read each triangle until end of volume encountered
     while (read_amf_triangle(group, f))
@@ -801,8 +802,8 @@ read_amf_object(Group* group, FILE* f)
     while (read_amf_volume(group, f))
         ;
 
-    free(points);
-
+    // read the end of the object section so we're ready for materials
+    read_till("</object", f);
     return TRUE;
 }
 
@@ -810,14 +811,71 @@ read_amf_object(Group* group, FILE* f)
 BOOL
 read_amf_material(Group* group, FILE* f)
 {
-    return FALSE;  // TEMP
+    if (!next_token(f))
+        return FALSE;
+    if (strcmp(tok, "</amf") == 0)
+        return FALSE;
 
+    if (strcmp(tok, "<material") == 0)
+    {
+        tok = strtok_s(NULL, " =\"\n", &nexttok);
+        if (tok != NULL && strcmp(tok, "id") == 0)
+        {
+            tok = strtok_s(NULL, "\"", &nexttok);
+            mat = atoi(tok) + mat_offset;
+        }
+    }
 
+    while (1)
+    {
+        if (!next_token(f))
+            return FALSE;
+        if (strcmp(tok, "</material") == 0)
+            break;
+
+        if (strcmp(tok, "<metadata") == 0)
+        {
+            tok = strtok_s(NULL, ">\n", &nexttok);
+            if (tok != NULL && strcmp(tok, "type=\"name\"") == 0)
+            {
+                tok = strtok_s(NULL, "<", &nexttok);
+                strcpy_s(materials[mat].name, 64, tok);
+                next_token(f);              // swallow "/metadata>\n"
+            }
+            else
+                read_till("<metadata", f);  // it's some other kind of metadata
+        }
+        else if (strcmp(tok, "<color") == 0)
+        {
+            if (!read_till("<r", f))
+                return FALSE;
+            if (!next_token(f))
+                return FALSE;
+            materials[mat].color[0] = atof(tok);
+            if (!read_till("<g", f))
+                return FALSE;
+            if (!next_token(f))
+                return FALSE;
+            materials[mat].color[1] = atof(tok);
+            if (!read_till("<b", f))
+                return FALSE;
+            if (!next_token(f))
+                return FALSE;
+            materials[mat].color[2] = atof(tok);
+            
+            materials[mat].hidden = FALSE;
+            materials[mat].valid = TRUE;
+            materials[mat].shiny = 30;
+
+            read_till("</color", f);
+        }
+    }
 
     return TRUE;
 }
 
-// Read an AMF file to a group
+// Read an AMF file to a group. Currently only one object section is supported, and constellations
+// are not read.
 BOOL
 read_amf_to_group(Group* group, char* filename)
 {
@@ -828,6 +886,15 @@ read_amf_to_group(Group* group, char* filename)
     fopen_s(&f, filename, "rt");
     if (f == NULL)
         return FALSE;
+
+    // Find last valid existing material, and use that to offset material ID's in file.
+    // Material ID's in AMF are always numbered from 1 on (never 0)
+    mat_offset = 0;
+    for (mat = 0; mat < MAX_MATERIAL; mat++)
+    {
+        if (materials[mat].valid)
+            mat_offset = mat;
+    }
 
     // read unit from AMF header
     tok = NULL;
@@ -842,6 +909,8 @@ read_amf_to_group(Group* group, char* filename)
     // read object description
     if (!read_amf_object(group, f))
         goto eof_error;
+
+    free(points);
 
     // read materials until trailer encountered
     while (read_amf_material(group, f))
