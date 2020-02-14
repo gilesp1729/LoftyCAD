@@ -122,9 +122,14 @@
 #define IDC_REMOVE                      1028
 #define IDC_TITLE                       1029
 #define IDC_FONT_STRING                 1030
-#define IDC_COMBO1                      1031
 #define IDC_COMBO_MATERIAL              1031
 #define IDC_STATIC_MAT_INDEX            1032
+#define IDC_MATERIAL_NAME               1033
+#define IDC_MATRERIAL_RED               1034
+#define IDC_MATERIAL_RED                1034
+#define IDC_MATERIAL_GREEN              1035
+#define IDC_MATERIAL_BLUE               1036
+#define IDC_MATERIAL_SHINY              1037
 #define ID_FILE_NEW                     32774
 #define ID_FILE_OPEN                    32775
 #define ID_FILE_SAVE                    32776
@@ -244,7 +249,7 @@
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        163
 #define _APS_NEXT_COMMAND_VALUE         32899
-#define _APS_NEXT_CONTROL_VALUE         1033
+#define _APS_NEXT_CONTROL_VALUE         1038
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif

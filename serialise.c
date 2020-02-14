@@ -20,6 +20,9 @@ static unsigned int maxobjid = 0;
 // of shared objects.
 static unsigned int save_count = 1;
 
+// Marks whetther a material has been written out.
+static BOOL mat_written[MAX_MATERIAL] = { 0, };
+
 // names of things that make the serialised format a little easier to read
 char *objname[] = { "(none)", "POINT", "EDGE", "FACE", "VOLUME", "ENDGROUP" };
 char *locktypes[] = { "N", "P", "E", "F", "V" };
@@ -40,7 +43,6 @@ serialise_obj(Object *obj, FILE *f)
     Volume *vol;
     Group *group;
     Object *o;
-    BOOL mat_written[MAX_MATERIAL] = { 0, };
 
     // check for object already saved
     if (obj->save_count == save_count)
@@ -258,13 +260,34 @@ serialise_tree(Group *tree, char *filename)
 {
     FILE *f;
     Object *obj;
-    int n;
+    int i, n;
 
+    // Write header
     fopen_s(&f, filename, "wt");
     fprintf_s(f, "LOFTYCAD %.1f\n", file_version);
     fprintf_s(f, "TITLE %s\n", tree->title);
     fprintf_s(f, "SCALE %f %f %f %d %f\n", half_size, grid_snap, tolerance, angle_snap, round_rad);
 
+    // Write materials here, in case some are not used by any volumes. Mark them as written.
+    for (i = 0; i < MAX_MATERIAL; i++)
+        mat_written[i] = FALSE;
+    for (i = 1; i < MAX_MATERIAL; i++)      // don't write the default [0] material
+    {
+        if (materials[i].valid)
+        {
+            fprintf_s(f, "MATERIAL %d %d %f %f %f %f %s\n",
+                i,
+                0,
+                materials[i].color[0],
+                materials[i].color[1],
+                materials[i].color[2],
+                materials[i].shiny,
+                materials[i].name);
+            mat_written[i] = TRUE;
+        }
+    }
+
+    // Write object tree
     save_count++;
     for (obj = tree->obj_list.head; obj != NULL; obj = obj->next)
         serialise_obj(obj, f);
@@ -925,10 +948,14 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
             tok = strtok_s(NULL, " \t\n", &nexttok);
             mat = atoi(tok);
             tok = strtok_s(NULL, " \t\n", &nexttok);
-            id = atoi(tok) + id_offset;
-            ASSERT(object[id]->type == OBJ_VOLUME, "Material must be on volume");
-            vol = (Volume *)object[id];
-            vol->material = mat;
+            id = atoi(tok);
+            if (id != 0)            // if there's an ID, it must be a volume
+            {
+                id += id_offset;
+                ASSERT(object[id]->type == OBJ_VOLUME, "Material must be on volume");
+                vol = (Volume*)object[id];
+                vol->material = mat;
+            }
             if (!materials[mat].valid)
             {
                 tok = strtok_s(NULL, " \t\n", &nexttok);

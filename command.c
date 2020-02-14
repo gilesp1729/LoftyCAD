@@ -59,7 +59,7 @@ check_file_changed(HWND hWnd)
 // Load material names up to menu, with all non-hidden materials checked, or a single
 // selected one checked.
 void
-load_materials(HMENU hMenu, BOOL show_all_checks, int which_check)
+load_materials_menu(HMENU hMenu, BOOL show_all_checks, int which_check)
 {
     int i;
 
@@ -888,7 +888,7 @@ Command(int message, int wParam, int lParam)
             EnableMenuItem((HMENU)wParam, ID_VIEW_CONSTRUCTIONEDGES, view_rendered ? MF_GRAYED : MF_ENABLED);
 
             hMenu = GetSubMenu((HMENU)wParam, 3);   // Materials pop-out
-            load_materials(hMenu, TRUE, 0);         // display materials menu with all check marks
+            load_materials_menu(hMenu, TRUE, 0);         // display materials menu with all check marks
         }
 
         break;

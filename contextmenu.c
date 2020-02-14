@@ -598,7 +598,7 @@ contextmenu(Object *picked_obj, POINT pt)
     }
 
     if (picked_obj->type == OBJ_VOLUME)
-        load_materials(GetSubMenu(hMenu, 3), FALSE, ((Volume*)picked_obj)->material);
+        load_materials_menu(GetSubMenu(hMenu, 3), FALSE, ((Volume*)picked_obj)->material);
     else
         EnableMenuItem(hMenu, ID_MATERIALS_NEW, MF_GRAYED);
 
@@ -1051,15 +1051,57 @@ transform_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     return 0;
 }
 
+// Load and save material props to/from dialog.
+void
+load_material(HWND hDlg, int mat)
+{
+    char buf[16];
+
+    SetDlgItemText(hDlg, IDC_MATERIAL_NAME, materials[mat].name);
+    sprintf_s(buf, 16, "%.2f", materials[mat].color[0]);
+    SetDlgItemText(hDlg, IDC_MATERIAL_RED, buf);
+    sprintf_s(buf, 16, "%.2f", materials[mat].color[0]);
+    SetDlgItemText(hDlg, IDC_MATERIAL_GREEN, buf);
+    sprintf_s(buf, 16, "%.2f", materials[mat].color[0]);
+    SetDlgItemText(hDlg, IDC_MATERIAL_BLUE, buf);
+    sprintf_s(buf, 16, "%.0f", materials[mat].shiny);
+    SetDlgItemText(hDlg, IDC_MATERIAL_SHINY, buf);
+
+    // disable changes to default material
+    EnableWindow(GetDlgItem(hDlg, IDC_MATERIAL_NAME), mat > 0);
+    EnableWindow(GetDlgItem(hDlg, IDC_MATERIAL_RED), mat > 0);
+    EnableWindow(GetDlgItem(hDlg, IDC_MATERIAL_GREEN), mat > 0);
+    EnableWindow(GetDlgItem(hDlg, IDC_MATERIAL_BLUE), mat > 0);
+    EnableWindow(GetDlgItem(hDlg, IDC_MATERIAL_SHINY), mat > 0);
+}
+
+void
+save_material(HWND hDlg, int mat)
+{
+    char buf[16];
+
+    GetDlgItemText(hDlg, IDC_MATERIAL_NAME, materials[mat].name, 64);
+    GetDlgItemText(hDlg, IDC_MATERIAL_RED, buf, 16);
+    materials[mat].color[0] = atof(buf);
+    GetDlgItemText(hDlg, IDC_MATERIAL_GREEN, buf, 16);
+    materials[mat].color[1] = atof(buf);
+    GetDlgItemText(hDlg, IDC_MATERIAL_BLUE, buf, 16);
+    materials[mat].color[2] = atof(buf);
+    GetDlgItemText(hDlg, IDC_MATERIAL_SHINY, buf, 16);
+    materials[mat].shiny = atof(buf);
+}
+
 // Materials dialog procedure. Edit of add new materials, then return the index of
 // the material selected, or -1 if cancelled.
 int WINAPI
 materials_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-    char buf[16];
-    char title[128];
+    char buf[64];
     static Object* obj;
-    int i, mat;
+    int i, k;
+    static int mat_index[MAX_MATERIAL];
+    static int mat;
+    static BOOL text_changed;
 
     switch (msg)
     {
@@ -1070,31 +1112,79 @@ materials_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         // Preload the combo with existing materials and select the current object's material
         mat = (obj != NULL) ? ((Volume*)obj)->material : 0;
 
-        for (i = 0; i < MAX_MATERIAL; i++)
+        for (i = 0, k = 0; i < MAX_MATERIAL; i++)
         {
             if (materials[i].valid)
-                SendDlgItemMessage(hWnd, IDC_COMBO_MATERIAL, CB_INSERTSTRING, i, (LPARAM)materials[i].name);
+            {
+                mat_index[k] = i;
+                SendDlgItemMessage(hWnd, IDC_COMBO_MATERIAL, CB_INSERTSTRING, k, (LPARAM)materials[i].name);
+                if (i == mat)
+                    SendDlgItemMessage(hWnd, IDC_COMBO_MATERIAL, CB_SETCURSEL, k, 0);
+                k++;
+            }
         }
-        SendDlgItemMessage(hWnd, IDC_COMBO_MATERIAL, CB_SETCURSEL, mat, 0);
         SetDlgItemInt(hWnd, IDC_STATIC_MAT_INDEX, mat, FALSE);
+        load_material(hWnd, mat);
+        text_changed = FALSE;
         break;
 
     case WM_COMMAND:
         switch (LOWORD(wParam))
         {
         case IDOK:
-            mat = SendDlgItemMessage(hWnd, IDC_COMBO_MATERIAL, CB_GETCURSEL, 0, 0);
+            k = SendDlgItemMessage(hWnd, IDC_COMBO_MATERIAL, CB_GETCURSEL, 0, 0);
+            mat = mat_index[k];
+            save_material(hWnd, mat);
             EndDialog(hWnd, mat);
             break;
 
         case IDCANCEL:
             EndDialog(hWnd, -1);
             break;
-        }
 
+        case IDC_COMBO_MATERIAL:
+            switch (HIWORD(wParam))
+            {
+            case CBN_SELCHANGE:
+                save_material(hWnd, mat);
+                k = SendDlgItemMessage(hWnd, IDC_COMBO_MATERIAL, CB_GETCURSEL, 0, 0);
+                mat = mat_index[k];
+                SetDlgItemInt(hWnd, IDC_STATIC_MAT_INDEX, mat, FALSE);
+                load_material(hWnd, mat);
+                break;
+
+            case CBN_EDITCHANGE:
+                text_changed = TRUE;
+                break;
+
+            case CBN_KILLFOCUS:
+                if (text_changed)
+                {
+                    text_changed = FALSE;
+                    SendDlgItemMessage(hWnd, IDC_COMBO_MATERIAL, WM_GETTEXT, 64, (LPARAM)buf);
+                    for (i = 0; i < MAX_MATERIAL; i++)
+                    {
+                        if (materials[i].valid)
+                            mat = i;
+                    }
+                    mat++;
+                    if (mat < MAX_MATERIAL)
+                    {
+                        strcpy_s(materials[mat].name, 64, buf);
+                        k = SendDlgItemMessage(hWnd, IDC_COMBO_MATERIAL, CB_ADDSTRING, 0, (LPARAM)materials[mat].name);
+                        mat_index[k] = mat;
+                        materials[mat].hidden = FALSE;
+                        materials[mat].valid = TRUE;
+                        SetDlgItemInt(hWnd, IDC_STATIC_MAT_INDEX, mat, FALSE);
+                        load_material(hWnd, mat);
+                    }
+                }
+                break;
+            }
+            break;
+        }
         break;
     }
-
     return 0;
 }
 

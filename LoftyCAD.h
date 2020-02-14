@@ -224,7 +224,7 @@ void CALLBACK right_click(AUX_EVENTREC *event);
 void CALLBACK check_file_changed(HWND hWnd);
 void update_drawing(void);
 void contextmenu(Object *picked_obj, POINT pt);
-void load_materials(HMENU hMenu, BOOL show_all_checks, int which_check);
+void load_materials_menu(HMENU hMenu, BOOL show_all_checks, int which_check);
 
 // Forwards for window procedures and similar
 int CALLBACK Command(int message, int wParam, int lParam);
