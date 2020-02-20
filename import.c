@@ -390,12 +390,13 @@ error:
 BOOL
 read_obj_to_group(Group* group, char* filename)
 {
-    FILE *f, *mtl;
+    FILE *f;
     char* tok;
     char* nexttok = NULL;
     int npoints, npoints_alloced;
     Point** points;
     Volume* vol;
+    int mat, mat_offset;
 
     fopen_s(&f, filename, "rt");
     if (f == NULL)
@@ -416,14 +417,71 @@ read_obj_to_group(Group* group, char* filename)
             break;
         if (strcmp(tok, "mtllib") == 0)     // material library filename
         {
+            FILE* mtl;
+            char mtlfile[256];
+
+            // If the filename does not have a directory, assume it's alongside the .obj file
             tok = strtok_s(NULL, " \t\n", &nexttok);
-            if (fopen_s(&mtl, tok, "rt"))
+            if (strchr(tok, '\\') == NULL)
             {
-                // add materials to the existing material collection (of any)
-                // TODO: Do we merge materials with the same names?
+                char* slosh;
 
+                strcpy_s(mtlfile, 256, filename);
+                slosh = strrchr(mtlfile, '\\');
+                *(slosh + 1) = '\0';
+                strcat_s(mtlfile, 256, tok);
+            }
+            else
+            {
+                strcpy_s(mtlfile, 256, tok);
+            }
 
+            fopen_s(&mtl, mtlfile, "rt");
+            if (mtl != NULL);
+            {
+                char* nexttok2 = NULL;
 
+                // add materials to the existing material collection (if any)
+                mat_offset = 0;
+                for (mat = 0; mat < MAX_MATERIAL; mat++)
+                {
+                    if (materials[mat].valid)
+                        mat_offset = mat;
+                }
+                mat = mat_offset + 1;
+                while (1)
+                {
+                    if (fgets(buf, 512, mtl) == NULL)
+                        break;
+                    tok = strtok_s(buf, " \t\n", &nexttok2);
+                    if (strcmp(tok, "newmtl") == 0)
+                    {
+                        tok = strtok_s(NULL, "\n", &nexttok2);
+                        strcpy_s(materials[mat].name, 64, tok);
+                        while (1)
+                        {
+                            if (fgets(buf, 512, mtl) == NULL)
+                                break;
+                            tok = strtok_s(buf, " \t\n", &nexttok2);
+                            if (strcmp(tok, "Kd") == 0)
+                            {
+                                tok = strtok_s(NULL, " \t\n", &nexttok2);
+                                materials[mat].color[0] = atof(tok);
+                                tok = strtok_s(NULL, " \t\n", &nexttok2);
+                                materials[mat].color[1] = atof(tok);
+                                tok = strtok_s(NULL, " \t\n", &nexttok2);
+                                materials[mat].color[2] = atof(tok);
+
+                                materials[mat].hidden = FALSE;
+                                materials[mat].valid = TRUE;
+                                materials[mat].shiny = 30;
+                                mat++;
+                                break;
+                            }
+                        }
+                    }
+                }
+                fclose(mtl);
             }
         }
         else if (tok[0] == 'v')             // read a vertex

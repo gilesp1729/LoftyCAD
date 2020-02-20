@@ -377,7 +377,7 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
     char buf[MAXLINE];
     int stack[10], stkptr;
     int objsize = 1000;
-    int id_offset;
+    int id_offset, mat_offset, mat;
     double version = 0.1;
     Object **object;
     Group *grp;
@@ -391,15 +391,22 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
     object = (Object **)calloc(objsize, sizeof(Object *));
     stkptr = 0;
 
-    // If we're importing to a group, we need to avoid ID conflicts
+    // If we're importing to a group, we need to avoid ID conflicts on objects and materials
     if (importing)
     {
         id_offset = maxobjid + 1;
+        mat_offset = 0;
+        for (mat = 0; mat < MAX_MATERIAL; mat++)
+        {
+            if (materials[mat].valid)
+                mat_offset = mat;
+        }
     }
     else
     {
         maxobjid = 0;
         id_offset = 0;
+        mat_offset = 0;
     }
 
     // read the file line by line
@@ -943,10 +950,9 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
         else if (strcmp(tok, "MATERIAL") == 0)
         {
             Volume* vol;
-            int mat;
 
             tok = strtok_s(NULL, " \t\n", &nexttok);
-            mat = atoi(tok);
+            mat = atoi(tok) + mat_offset;
             tok = strtok_s(NULL, " \t\n", &nexttok);
             id = atoi(tok);
             if (id != 0)            // if there's an ID, it must be a volume

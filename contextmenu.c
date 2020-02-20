@@ -1060,9 +1060,9 @@ load_material(HWND hDlg, int mat)
     SetDlgItemText(hDlg, IDC_MATERIAL_NAME, materials[mat].name);
     sprintf_s(buf, 16, "%.2f", materials[mat].color[0]);
     SetDlgItemText(hDlg, IDC_MATERIAL_RED, buf);
-    sprintf_s(buf, 16, "%.2f", materials[mat].color[0]);
+    sprintf_s(buf, 16, "%.2f", materials[mat].color[1]);
     SetDlgItemText(hDlg, IDC_MATERIAL_GREEN, buf);
-    sprintf_s(buf, 16, "%.2f", materials[mat].color[0]);
+    sprintf_s(buf, 16, "%.2f", materials[mat].color[2]);
     SetDlgItemText(hDlg, IDC_MATERIAL_BLUE, buf);
     sprintf_s(buf, 16, "%.0f", materials[mat].shiny);
     SetDlgItemText(hDlg, IDC_MATERIAL_SHINY, buf);
