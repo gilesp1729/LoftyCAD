@@ -145,7 +145,7 @@ serialise_obj(Object *obj, FILE *f)
                   face->normal.A, face->normal.B, face->normal.C);
         for (i = 0; i < face->n_edges; i++)
         {
-            if (n >= MAXLINE - 10)          // not enough room for one more ID
+            if (n >= MAXLINE - 20)          // not enough room for one more ID
             {
                 if (i < face->n_edges - 1)
                     fprintf_s(f, "+");      // write continuation char if more to come
@@ -184,7 +184,7 @@ serialise_obj(Object *obj, FILE *f)
         fprintf_s(f, "%s ", optypes[vol->op]);
         for (face = (Face *)vol->faces.head; face != NULL; face = (Face *)face->hdr.next)
         {
-            if (n >= MAXLINE - 10)
+            if (n >= MAXLINE - 20)
             {
                 if (face->hdr.next != NULL)
                     fprintf_s(f, "+");
@@ -299,7 +299,7 @@ serialise_tree(Group *tree, char *filename)
         n = 10;
         for (obj = selection.head; obj != NULL; obj = obj->next)
         {
-            if (n >= MAXLINE - 10)
+            if (n >= MAXLINE - 20)
             {
                 if (obj->next != NULL)
                     fprintf_s(f, "+");
