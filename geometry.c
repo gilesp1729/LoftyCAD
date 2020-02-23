@@ -303,22 +303,22 @@ mat_mult_by_col_d(double *m, double *v, double *res)
 // Snap a point to the grid. It must lie in the given plane. If the plane is
 // not axis aligned, we can't snap anything (it would move out of plane)
 void
-snap_to_grid(Plane *plane, Point *point)
+snap_to_grid(Plane *plane, Point *point, BOOL inhibit_snapping)
 {
     if (nz(plane->A) && nz(plane->B))
     {
-        snap_to_scale(&point->x);
-        snap_to_scale(&point->y);
+        snap_to_scale(&point->x, inhibit_snapping);
+        snap_to_scale(&point->y, inhibit_snapping);
     }
     else if (nz(plane->B) && nz(plane->C))
     {
-        snap_to_scale(&point->y);
-        snap_to_scale(&point->z);
+        snap_to_scale(&point->y, inhibit_snapping);
+        snap_to_scale(&point->z, inhibit_snapping);
     }
     else if (nz(plane->A) && nz(plane->C))
     {
-        snap_to_scale(&point->x);
-        snap_to_scale(&point->z);
+        snap_to_scale(&point->x, inhibit_snapping);
+        snap_to_scale(&point->z, inhibit_snapping);
     }
 }
 
@@ -358,14 +358,15 @@ snap_to_angle(Plane *plane, Point *p0, Point *p1, int angle_tol)
     }
 }
 
-// Snap a length to the grid snapping distance.
+// Snap a length to the grid snapping distance, or to the smaller tolerance if snapping
+// is turned off (or temporarily inhibited)
 void
-snap_to_scale(float *length)
+snap_to_scale(float *length, BOOL inhibit_snapping)
 {
     float snap;
 
     // This assumes grid scale and tolerance are powers of 10.
-    if (snapping_to_grid)
+    if (snapping_to_grid && !inhibit_snapping)
         snap = grid_snap;
     else
         snap = tolerance;

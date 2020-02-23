@@ -733,7 +733,7 @@ left_down(AUX_EVENTREC *event)
 
             // Set the picked point on the facing plane for later subtraction
             intersect_ray_plane(left_mouseX, left_mouseY, facing_plane, &picked_point);
-            snap_to_grid(facing_plane, &picked_point);
+            snap_to_grid(facing_plane, &picked_point, FALSE);
             last_point = picked_point;
         }
         break;
@@ -765,7 +765,7 @@ left_down(AUX_EVENTREC *event)
             // Drawing on the standard axis.
             picked_plane = facing_plane;
             intersect_ray_plane(left_mouseX, left_mouseY, picked_plane, &picked_point);
-            snap_to_grid(picked_plane, &picked_point);
+            snap_to_grid(picked_plane, &picked_point, FALSE);
         }
         else
         {
@@ -783,7 +783,7 @@ left_down(AUX_EVENTREC *event)
                 {
                     picked_plane = &((Face *)raw_picked_obj)->normal;
                     intersect_ray_plane(left_mouseX, left_mouseY, picked_plane, &picked_point);
-                    snap_to_grid(picked_plane, &picked_point);
+                    snap_to_grid(picked_plane, &picked_point, FALSE);
                     picked_obj = raw_picked_obj;
                 }
                 break;
@@ -792,7 +792,7 @@ left_down(AUX_EVENTREC *event)
                 // We're on a face, so we can proceed.
                 picked_plane = &((Face *)picked_obj)->normal;
                 intersect_ray_plane(left_mouseX, left_mouseY, picked_plane, &picked_point);
-                snap_to_grid(picked_plane, &picked_point);
+                snap_to_grid(picked_plane, &picked_point, FALSE);
                 break;
 
             case OBJ_EDGE:

@@ -560,7 +560,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                 case STATE_MOVING:
                     // Move the selection, or an object, by a delta in XYZ within the facing plane
                     intersect_ray_plane(pt.x, pt.y, facing_plane, &new_point);
-                    snap_to_grid(facing_plane, &new_point);
+                    snap_to_grid(facing_plane, &new_point, key_status & AUX_CONTROL);
                     parent = find_top_level_parent(&object_tree, picked_obj);
 
                     // moving a single object (or group) under the cursor
@@ -656,7 +656,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         snap_to_angle(picked_plane, &picked_point, &new_point, 45);
                     else if (snapping_to_angle)
                         snap_to_angle(picked_plane, &picked_point, &new_point, angle_snap);
-                    snap_to_grid(picked_plane, &new_point);
+                    snap_to_grid(picked_plane, &new_point, key_status & AUX_CONTROL);
 
                     // If first move, create the edge here.
                     if (curr_obj == NULL)
@@ -683,7 +683,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
 
                     // Move the end point of the current edge
                     intersect_ray_plane(pt.x, pt.y, picked_plane, &new_point);
-                    snap_to_grid(picked_plane, &new_point);
+                    snap_to_grid(picked_plane, &new_point, key_status& AUX_CONTROL);
 
                     // If first move, create the edge here.
                     ae = (ArcEdge *)curr_obj;
@@ -756,7 +756,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
 
                     // Move the end point of the current edge
                     intersect_ray_plane(pt.x, pt.y, picked_plane, &new_point);
-                    snap_to_grid(picked_plane, &new_point);
+                    snap_to_grid(picked_plane, &new_point, key_status & AUX_CONTROL);
 
                     // If first move, create the edge here.
                     be = (BezierEdge *)curr_obj;
@@ -828,7 +828,11 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
 
                     // Move the opposite corner point
                     intersect_ray_plane(pt.x, pt.y, picked_plane, &new_point);
-                    snap_to_grid(picked_plane, &new_point);
+                    if (key_status & AUX_SHIFT)
+                        snap_to_angle(picked_plane, &picked_point, &new_point, 45);
+                    else if (snapping_to_angle)
+                        snap_to_angle(picked_plane, &picked_point, &new_point, angle_snap);
+                    snap_to_grid(picked_plane, &new_point, key_status& AUX_CONTROL);
 
                     // generate the other corners. The rect goes in the 
                     // order picked-p1-new-p3. 
@@ -1020,9 +1024,14 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                     if (picked_plane == NULL)
                         break;
 
-                    // Move the circumference point
+                    // Move the circumference point. Allow angle snapping so user can 
+                    // select sensible radius value if desired.
                     intersect_ray_plane(pt.x, pt.y, picked_plane, &new_point);
-                    snap_to_grid(picked_plane, &new_point);
+                    if (key_status & AUX_SHIFT)
+                        snap_to_angle(picked_plane, &picked_point, &new_point, 45);
+                    else if (snapping_to_angle)
+                        snap_to_angle(picked_plane, &picked_point, &new_point, angle_snap);
+                    snap_to_grid(picked_plane, &new_point, key_status& AUX_CONTROL);
 
                     // First move create an arc edge and a circle face
                     if (curr_obj == NULL)
@@ -1220,7 +1229,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                             face->normal.B,
                             face->normal.C
                             );
-                        snap_to_scale(&length);
+                        snap_to_scale(&length, key_status& AUX_CONTROL);
                         if (length != 0)
                         {
                             // Move the picked face by a delta in XYZ up its own normal
@@ -1273,7 +1282,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         snap_to_angle(picked_plane, &picked_point, &new_point, 45);
                     else if (snapping_to_angle)
                         snap_to_angle(picked_plane, &picked_point, &new_point, angle_snap);
-                    snap_to_grid(picked_plane, &new_point);
+                    snap_to_grid(picked_plane, &new_point, key_status& AUX_CONTROL);
 
                     curr_text->origin = picked_point;
                     curr_text->endpt = new_point;
