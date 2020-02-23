@@ -283,7 +283,7 @@ void APIENTRY auxReshapeFunc(AUXRESHAPEPROC);
 typedef void (CALLBACK* AUXIDLEPROC)(void);
 void APIENTRY auxIdleFunc(AUXIDLEPROC);
 
-typedef void (CALLBACK* AUXKEYPROC)(void);
+typedef void (CALLBACK* AUXKEYPROC)(int);
 void APIENTRY auxKeyFunc(int, AUXKEYPROC);
 
 typedef void (CALLBACK* AUXMOUSEPROC)(AUX_EVENTREC *);

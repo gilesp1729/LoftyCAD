@@ -52,7 +52,7 @@
 
 static struct {
     int keyField;
-    void (CALLBACK* KeyFunc)(void);
+    void (CALLBACK* KeyFunc)(int);
 } keyTable[200];
 
 static struct {
@@ -269,7 +269,7 @@ int i;
          {
 	      if (key == keyTable[i].keyField) 
             {
-		      (*keyTable[i].KeyFunc)();
+		      (*keyTable[i].KeyFunc)(status);
 		      flag |= GL_TRUE;
 	         }
 	      }

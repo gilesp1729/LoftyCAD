@@ -1251,12 +1251,12 @@ left_click(AUX_EVENTREC *event)
 
 // move the selection by a small amount
 void
-micro_move_selection(float x, float y)
+micro_move_selection(float x, float y, BOOL inhibit_snap)
 {
     float dx, dy, dz;
     Object *obj;
 
-    if (snapping_to_grid)
+    if (snapping_to_grid && !inhibit_snap)
     {
         x *= grid_snap;
         y *= grid_snap;
@@ -1324,27 +1324,27 @@ micro_move_selection(float x, float y)
 // where one unit is a multiple of grid snap, or of tolerance if snapping is
 // turmed off.
 void CALLBACK
-left_arrow_key(void)
+left_arrow_key(int status)
 {
-    micro_move_selection(-1, 0);
+    micro_move_selection(-1, 0, status & AUX_CONTROL);
 }
 
 void CALLBACK
-right_arrow_key(void)
+right_arrow_key(int status)
 {
-    micro_move_selection(1, 0);
+    micro_move_selection(1, 0, status & AUX_CONTROL);
 }
 
 void CALLBACK
-up_arrow_key(void)
+up_arrow_key(int status)
 {
-    micro_move_selection(0, 1);
+    micro_move_selection(0, 1, status & AUX_CONTROL);
 }
 
 void CALLBACK
-down_arrow_key(void)
+down_arrow_key(int status)
 {
-    micro_move_selection(0, -1);
+    micro_move_selection(0, -1, status & AUX_CONTROL);
 }
 
 void CALLBACK

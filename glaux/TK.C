@@ -1410,12 +1410,12 @@ PIXELFORMATDESCRIPTOR pfd;
             GLenum mask;
 
             mask = 0;
-            if (GetKeyState(VK_CONTROL)) 
+            if (GetKeyState(VK_CONTROL) & 0x80) 
                {
                mask |= TK_CONTROL;
                }
 
-            if (GetKeyState(VK_SHIFT)) 
+            if (GetKeyState(VK_SHIFT) & 0x80)
                {
                mask |= TK_SHIFT;
                }
@@ -1445,12 +1445,12 @@ PIXELFORMATDESCRIPTOR pfd;
             GLenum mask;
             mask = 0;
 
-            if (GetKeyState(VK_CONTROL)) 
+            if (GetKeyState(VK_CONTROL) & 0x80)
                {
                mask |= TK_CONTROL;
                }
 
-            if (GetKeyState(VK_SHIFT)) 
+            if (GetKeyState(VK_SHIFT) & 0x80)
                {
                mask |= TK_SHIFT;
                }
