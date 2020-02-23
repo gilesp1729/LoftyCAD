@@ -73,6 +73,7 @@ show_hint_at(POINT pt, char *buf, BOOL accept_input)
 
     SendDlgItemMessage(hWndDims, IDC_DIMENSIONS, WM_SETTEXT, 0, (LPARAM)buf);
     EnableWindow(GetDlgItem(hWndDims, IDOK), accept_input);
+    EnableWindow(GetDlgItem(hWndDims, IDCANCEL), accept_input);
     SendDlgItemMessage(hWndDims, IDC_DIMENSIONS, EM_SETREADONLY, !accept_input, 0);
     winpt.x = pt.x;
     winpt.y = pt.y;

@@ -1685,7 +1685,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
 
         glListBase(1000);
         glColor3f(0.4f, 0.4f, 0.4f);
-        glRasterPos2f((float)pt.x + 10, (float)vp[3] - pt.y);
+        glRasterPos2f((float)pt.x + 10, (float)vp[3] - pt.y - 12);
         switch (highlight_obj->type)
         {
         case OBJ_POINT:
