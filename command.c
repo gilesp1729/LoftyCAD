@@ -828,7 +828,8 @@ Command(int message, int wParam, int lParam)
 
         case ID_MATERIALS_NEW:
             // Dialog box to edit or add a material
-            DialogBoxParam(hInst, MAKEINTRESOURCE(IDD_MATERIALS), auxGetHWND(), materials_dialog, 0);
+            if (DialogBoxParam(hInst, MAKEINTRESOURCE(IDD_MATERIALS), auxGetHWND(), materials_dialog, 0) >= 0)
+                update_drawing();
             break;
 
             // test here for a possibly variable number of ID_MATERIALS_BASE + n (for n in [0,MAX_MATERIAL])
@@ -854,6 +855,8 @@ Command(int message, int wParam, int lParam)
                 materials[i].hidden = TRUE;
                 CheckMenuItem(hMenu, wParam, MF_UNCHECKED);
             }
+
+            update_drawing();
 
             // regenerate surface mesh, in case we're viewing rendered
             xform_list.head = NULL;

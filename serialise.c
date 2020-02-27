@@ -217,9 +217,10 @@ serialise_obj(Object *obj, FILE *f)
             }
             else
             {
-                fprintf_s(f, "MATERIAL %d %d %f %f %f %f %s\n",
+                fprintf_s(f, "MATERIAL %d %d %d %f %f %f %f %s\n",
                     vol->material,
                     obj->ID,
+                    materials[vol->material].hidden,
                     materials[vol->material].color[0],
                     materials[vol->material].color[1],
                     materials[vol->material].color[2],
@@ -275,9 +276,10 @@ serialise_tree(Group *tree, char *filename)
     {
         if (materials[i].valid)
         {
-            fprintf_s(f, "MATERIAL %d %d %f %f %f %f %s\n",
+            fprintf_s(f, "MATERIAL %d %d %d %f %f %f %f %s\n",
                 i,
                 0,
+                materials[i].hidden,
                 materials[i].color[0],
                 materials[i].color[1],
                 materials[i].color[2],
@@ -966,6 +968,8 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
             {
                 tok = strtok_s(NULL, " \t\n", &nexttok);
                 ASSERT(tok != NULL, "New material must have colours, etc");
+                materials[mat].hidden = atoi(tok);
+                tok = strtok_s(NULL, " \t\n", &nexttok);
                 materials[mat].color[0] = (float)atof(tok);
                 tok = strtok_s(NULL, " \t\n", &nexttok);
                 materials[mat].color[1] = (float)atof(tok);
