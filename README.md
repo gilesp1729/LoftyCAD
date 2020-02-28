@@ -44,11 +44,10 @@ Build CGAL 4.12 from its build instructions, noting that:
 - The prerequisites are cmake, Boost, GMP and MPFR. They are precompiled.
 - Qt and libQGLViewer are not required, nor are any of the examples or demos.
 - CGAL and Boost should be checked out to directories alongside LoftyCAD, and their environment variables set up accordingly. Make sure CGAL_DIR points to the CGAL install directory.
-- No further development will be done on this branch.
+# No further development will be done on the master branch.
 
 # Material Girl branch:
 - This branch requires CGAL 5.0 and VS2019.
 - CGAL 5.0 is a header-only library and requires no build steps (other than cmake to make all the .slns and vsprojs)
 - This branch is the live development branch and will become the master in due course.
-- A bug was found in CGAL 5.0 (issue #4522 has been raised with CGAL). The workaround is to do non-in-place polygon mesh operations, which may affect rendering performance.
-
+- A bug was found in CGAL 5.0 (issue #4522 raised with CGAL). The workaround is to do non-in-place polygon mesh operations, which may affect rendering performance. The bug was reported fixed in CGAL 5.0.2.
