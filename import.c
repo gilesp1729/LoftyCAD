@@ -386,6 +386,23 @@ error:
 }
 #endif // 0
 
+// Find a material in the list by name, and return its index, or zero if not found.
+int
+find_material(char* mat_name)
+{
+    int mat;
+
+    for (mat = 0; mat < MAX_MATERIAL; mat++)
+    {
+        if (materials[mat].valid)
+        {
+            if (strcmp(mat_name, materials[mat].name) == 0)
+                return mat;
+        }
+    }
+    return 0;
+}
+
 // Read a Wavefront OBJ file
 BOOL
 read_obj_to_group(Group* group, char* filename)
@@ -406,6 +423,7 @@ read_obj_to_group(Group* group, char* filename)
     npoints_alloced = 64;   // start with a small power of 2
     points = malloc(npoints_alloced * sizeof(Point*));     // point array
 
+    mat = 0;
     while (1)
     {
         if (fgets(buf, 512, f) == NULL)     // skip any comments and blank lines
@@ -413,6 +431,12 @@ read_obj_to_group(Group* group, char* filename)
         tok = strtok_s(buf, " \t\n", &nexttok);
         if (tok == NULL)
             continue;
+        if (strcmp(tok, "usemtl") == 0)     // set the material for the first volume
+        {
+            tok = strtok_s(NULL, "\n", &nexttok);
+            mat = find_material(tok);
+            continue;
+        }
         if (tok[0] == 'f')                  // beginning of the faces
             break;
         if (strcmp(tok, "mtllib") == 0)     // material library filename
@@ -454,6 +478,8 @@ read_obj_to_group(Group* group, char* filename)
                     if (fgets(buf, 512, mtl) == NULL)
                         break;
                     tok = strtok_s(buf, " \t\n", &nexttok2);
+                    if (tok == NULL)
+                        continue;
                     if (strcmp(tok, "newmtl") == 0)
                     {
                         tok = strtok_s(NULL, "\n", &nexttok2);
@@ -482,6 +508,7 @@ read_obj_to_group(Group* group, char* filename)
                     }
                 }
                 fclose(mtl);
+                mat = 0;
             }
         }
         else if (tok[0] == 'v')             // read a vertex
@@ -503,7 +530,9 @@ read_obj_to_group(Group* group, char* filename)
         }
     }
 
+    // Start the first volume
     vol = vol_new();
+    vol->material = mat;
     while (1)
     {
         Plane dummy = { 0, };
@@ -551,8 +580,19 @@ read_obj_to_group(Group* group, char* filename)
             tok = strtok_s(buf, " \t\n", &nexttok);
             if (tok == NULL)
                 continue;
+            if (strcmp(tok, "usemtl") == 0)     // set the material for subsequent volume
+            {
+                tok = strtok_s(NULL, "\n", &nexttok);
+                mat = find_material(tok);
+
+                // switch to new volume for new material
+                link_group((Object*)vol, group);
+                vol = vol_new();
+                vol->material = mat;
+                continue;
+            }
             if (tok[0] == 'f')
-                break;
+                break;                          // ready to read next face
         }
     }
 
