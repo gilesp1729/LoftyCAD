@@ -623,7 +623,6 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                                 new_point.y - last_point.y,
                                 new_point.z - last_point.z
                                 );
-                            clear_move_copy_flags(obj->prev);
 
                             parent = find_parent_object(&object_tree, obj->prev, FALSE);
                             invalidate_all_view_lists
@@ -635,6 +634,10 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                                 new_point.z - last_point.z
                                 );
                         }
+
+                        // clear the flags separately, to stop double-moving of shared points
+                        for (obj = selection.head; obj != NULL; obj = obj->next)
+                            clear_move_copy_flags(obj->prev);
                     }
 
                     last_point = new_point;

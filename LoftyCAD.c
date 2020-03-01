@@ -1311,12 +1311,16 @@ micro_move_selection(float x, float y, BOOL inhibit_snap)
         Object *parent;
 
         move_obj(obj->prev, dx, dy, dz);
-        clear_move_copy_flags(obj->prev);
 
         // Invalidate all the view lists for the volume, as any of them may have changed
         parent = find_parent_object(&object_tree, obj->prev, FALSE);
         invalidate_all_view_lists(parent, obj->prev, dx, dy, dz);
     }
+
+    // clear the flags separately, to stop double-moving of shared points
+    for (obj = selection.head; obj != NULL; obj = obj->next)
+        clear_move_copy_flags(obj->prev);
+
     micro_moved = TRUE;
 }
 
