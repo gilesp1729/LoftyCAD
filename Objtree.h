@@ -115,6 +115,8 @@ typedef struct Point
     float           z;
     BOOL            moved;          // When a point is moved, this is set TRUE. This stops shared
                                     // points from being moved twice.
+    float           decay;          // Decay factor for smooth moves.
+    float           cosine;         // Cosine of normals factor for smooth moves.
     unsigned int    drawn;          // Drawn number increments and stops shared points being drawn twice.
     PFLAG           flags;          // Flag to indicate start of facet or contour in view lists.
     Vertex_index    *vi;            // Index to CGAL mesh vertex (used when building meshes)
@@ -387,6 +389,8 @@ void free_bucket(Point ***bucket);
 // Copy and move object
 Object *copy_obj(Object *obj, float xoffset, float yoffset, float zoffset);
 void move_obj(Object *obj, float xoffset, float yoffset, float zoffset);
+void calc_halo_params(Face* face, ListHead *halo);
+void move_halo_around_face(Face* face, float xoffset, float yoffset, float zoffset);
 void clear_move_copy_flags(Object *obj);
 Face *clone_face_reverse(Face *face);
 

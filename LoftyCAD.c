@@ -121,6 +121,12 @@ BOOL view_rendered = FALSE;
 // TRUE to display construction edges
 BOOL view_constr = TRUE;
 
+// TRUE to display halo faces when highlighting
+BOOL view_halo = FALSE;
+
+// Halo radius
+float halo_rad = 50;
+
 // Current filename
 char curr_filename[256] = { 0, };
 

@@ -1082,13 +1082,13 @@ save_material(HWND hDlg, int mat)
 
     GetDlgItemText(hDlg, IDC_MATERIAL_NAME, materials[mat].name, 64);
     GetDlgItemText(hDlg, IDC_MATERIAL_RED, buf, 16);
-    materials[mat].color[0] = atof(buf);
+    materials[mat].color[0] = (float)atof(buf);
     GetDlgItemText(hDlg, IDC_MATERIAL_GREEN, buf, 16);
-    materials[mat].color[1] = atof(buf);
+    materials[mat].color[1] = (float)atof(buf);
     GetDlgItemText(hDlg, IDC_MATERIAL_BLUE, buf, 16);
-    materials[mat].color[2] = atof(buf);
+    materials[mat].color[2] = (float)atof(buf);
     GetDlgItemText(hDlg, IDC_MATERIAL_SHINY, buf, 16);
-    materials[mat].shiny = atof(buf);
+    materials[mat].shiny = (float)atof(buf);
 }
 
 // Materials dialog procedure. Edit of add new materials, then return the index of

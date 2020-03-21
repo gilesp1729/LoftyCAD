@@ -1033,7 +1033,7 @@ init_triangulator(void)
 
 // Shade in a face by triangulating its view list. The view list is assumed up to date.
 void
-face_shade(GLUtesselator *tess, Face *face, BOOL selected, BOOL highlighted, BOOL locked)
+face_shade(GLUtesselator *tess, Face *face, PRESENTATION pres, BOOL locked)
 {
     Point   *v, *vfirst;
     Plane norm;
@@ -1047,7 +1047,7 @@ face_shade(GLUtesselator *tess, Face *face, BOOL selected, BOOL highlighted, BOO
         Log(buf);
     }
 #endif       
-    color(OBJ_FACE, face->type & FACE_CONSTRUCTION, selected, highlighted, locked);
+    color(OBJ_FACE, face->type & FACE_CONSTRUCTION, pres, locked);
 
     // If there are no facets, just use the face normal
     norm = face->normal;

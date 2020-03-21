@@ -492,11 +492,11 @@ read_obj_to_group(Group* group, char* filename)
                             if (strcmp(tok, "Kd") == 0)
                             {
                                 tok = strtok_s(NULL, " \t\n", &nexttok2);
-                                materials[mat].color[0] = atof(tok);
+                                materials[mat].color[0] = (float)atof(tok);
                                 tok = strtok_s(NULL, " \t\n", &nexttok2);
-                                materials[mat].color[1] = atof(tok);
+                                materials[mat].color[1] = (float)atof(tok);
                                 tok = strtok_s(NULL, " \t\n", &nexttok2);
-                                materials[mat].color[2] = atof(tok);
+                                materials[mat].color[2] = (float)atof(tok);
 
                                 materials[mat].hidden = FALSE;
                                 materials[mat].valid = TRUE;
@@ -768,13 +768,13 @@ read_amf_vertex(Group* group, FILE* f)
     read_till("<x", f);
 
     tok = strtok_s(NULL, "<", &nexttok);
-    x = atof(tok);
+    x = (float)atof(tok);
     read_till("<y", f);
     tok = strtok_s(NULL, "<", &nexttok);
-    y = atof(tok);
+    y = (float)atof(tok);
     read_till("<z", f);
     tok = strtok_s(NULL, "<", &nexttok);
-    z = atof(tok);
+    z = (float)atof(tok);
     read_till("</vertex", f);
 
     if (npoints >= npoints_alloced)
@@ -949,17 +949,17 @@ read_amf_material(Group* group, FILE* f)
                 return FALSE;
             if (!next_token(f))
                 return FALSE;
-            materials[mat].color[0] = atof(tok);
+            materials[mat].color[0] = (float)atof(tok);
             if (!read_till("<g", f))
                 return FALSE;
             if (!next_token(f))
                 return FALSE;
-            materials[mat].color[1] = atof(tok);
+            materials[mat].color[1] = (float)atof(tok);
             if (!read_till("<b", f))
                 return FALSE;
             if (!next_token(f))
                 return FALSE;
-            materials[mat].color[2] = atof(tok);
+            materials[mat].color[2] = (float)atof(tok);
             
             materials[mat].hidden = FALSE;
             materials[mat].valid = TRUE;

@@ -670,6 +670,198 @@ move_obj(Object *obj, float xoffset, float yoffset, float zoffset)
     }
 }
 
+// Calculate the smoothed point radius decay.
+// - if outside the smooth radius, it's zero
+// - if inside, it's a gaussian based on 3 std devs = radius
+void
+smooth_decay(Point* p, Point* cent)
+{
+    float two_stds = 2 * halo_rad * halo_rad / 9;  // Temp 2 * (R/3)**2
+    float d2 = length_squared(p, cent);
+
+    if (p->decay > 0)       // only set this once
+        return;
+    if (d2 > halo_rad * halo_rad) // outside the radius
+        return;
+
+    p->decay = expf(-d2 / two_stds);
+}
+
+// Move a point by the smoothed offsets
+void
+move_smoothed_point(Point *p, float xoffset, float yoffset, float zoffset)
+{
+    float smooth = p->cosine * p->decay;
+
+    move_obj((Object *)p, xoffset * smooth, yoffset * smooth, zoffset * smooth);
+}
+
+// Calculate the movement factors for the points in a halo around a face.
+// The points are moved according to a gaussian decay of distance as well as the
+// difference of the normals of faces containing the points. The faces with 
+// nonzero movement (decay) factors are placed in a list.
+void
+calc_halo_params(Face* face, ListHead *halo)
+{
+    Volume* vol = face->vol;
+    Face* f;
+    Point cent;
+    ArcEdge* ae;
+    BezierEdge* be;
+    float cosine;
+    int i;
+
+    // The face must be part of a volume
+    if (vol == NULL)
+        return;
+
+    // Calculate the centroid of the central face (just do a quick simple average for now)
+    cent.x = cent.y = cent.z = 0;
+    for (i = 0; i < face->n_edges; i++)
+    {
+        Edge* e = face->edges[i];
+
+        cent.x += e->endpoints[0]->x;
+        cent.y += e->endpoints[0]->y;
+        cent.z += e->endpoints[0]->z;
+    }
+    cent.x /= face->n_edges;
+    cent.y /= face->n_edges;
+    cent.z /= face->n_edges;
+
+    // Clear the halo list, and set all points' decay factors to zero.
+    free_obj_list(halo);
+    for (f = (Face*)vol->faces.head; f != NULL; f = (Face*)f->hdr.next)
+    {
+        for (i = 0; i < f->n_edges; i++)
+        {
+            Edge* e = f->edges[i];
+
+            e->endpoints[0]->decay = 0;
+            e->endpoints[1]->decay = 0;
+            switch (e->type & ~EDGE_CONSTRUCTION)
+            {
+            case EDGE_ARC:
+                ae = (ArcEdge*)e;
+                ae->centre->decay = 0;
+                break;
+
+            case EDGE_BEZIER:
+                be = (BezierEdge*)e;
+                be->ctrlpoints[0]->decay = 0;
+                be->ctrlpoints[1]->decay = 0;
+                break;
+            }
+        }
+    }
+
+    // Go through the faces on the volume and find the largest cosine(diff of normals) for
+    // each unmoved point (the faces that share the point will have different normals). 
+    // While here, calculate the distance decay factor as well. 
+    for (f = (Face*)vol->faces.head; f != NULL; f = (Face*)f->hdr.next)
+    {
+        BOOL in_halo = FALSE;
+
+        if (f == face)
+            continue;   // don't touch the central face
+
+        cosine = pldot(&f->normal, &face->normal);
+        if (cosine > 1)
+            cosine = 1;
+        else if (cosine < 0)
+            cosine = 0;
+
+        for (i = 0; i < f->n_edges; i++)
+        {
+            Edge* e = f->edges[i];
+
+            // Accumulate the maximum cosine over points shared between edges/faces.
+            if (cosine > e->endpoints[0]->cosine)
+                e->endpoints[0]->cosine = cosine;
+            if (cosine > e->endpoints[1]->cosine)
+                e->endpoints[1]->cosine = cosine;
+
+            // Decay factor for each point is only set once
+            smooth_decay(e->endpoints[0], &cent);
+            smooth_decay(e->endpoints[1], &cent);
+            if (e->endpoints[0]->decay > 0 && cosine > 0)
+                in_halo = TRUE;
+            if (e->endpoints[1]->decay > 0 && cosine > 0)
+                in_halo = TRUE;
+
+            // Things like arc centre, Bezier control points etc. also get these set.
+            // TODO: not sure what to do about decay for these, they need to be kept in plane.
+            // For now just smile and do the dumb thing..
+            switch (e->type & ~EDGE_CONSTRUCTION)
+            {
+            case EDGE_ARC:
+                ae = (ArcEdge*)e;
+                if (cosine > ae->centre->cosine)
+                    ae->centre->cosine = cosine;
+                smooth_decay(ae->centre, &cent);
+                break;
+
+            case EDGE_BEZIER:
+                be = (BezierEdge*)e;
+                if (cosine > be->ctrlpoints[0]->cosine)
+                    be->ctrlpoints[0]->cosine = cosine;
+                if (cosine > be->ctrlpoints[1]->cosine)
+                    be->ctrlpoints[1]->cosine = cosine;
+                smooth_decay(be->ctrlpoints[0], &cent);
+                smooth_decay(be->ctrlpoints[1], &cent);
+                break;
+            }
+        }
+
+        if (in_halo)
+            link_single((Object *)f, halo);
+    }
+}
+
+// Move the halo around a face. The given face is assumed to 
+// already have been moved by (xoffset,yoffset,zoffset) and to have had its moved flags set.
+void
+move_halo_around_face(Face * face, float xoffset, float yoffset, float zoffset)
+{
+    Volume* vol = face->vol;
+    Face* f;
+    ArcEdge* ae;
+    BezierEdge* be;
+    int i;
+
+    // The face must be part of a volume
+    if (vol == NULL)
+        return;
+
+    // Apply the cosine and decay offsets to each point not already moved
+    for (f = (Face*)vol->faces.head; f != NULL; f = (Face*)f->hdr.next)
+    {
+        if (f == face)
+            continue;   // don't touch the central face
+
+        for (i = 0; i < f->n_edges; i++)
+        {
+            Edge* e = f->edges[i];
+
+            move_smoothed_point(e->endpoints[0], xoffset, yoffset, zoffset);
+            move_smoothed_point(e->endpoints[1], xoffset, yoffset, zoffset);
+            switch (e->type & ~EDGE_CONSTRUCTION)
+            {
+            case EDGE_ARC:
+                ae = (ArcEdge*)e;
+                move_smoothed_point(ae->centre, xoffset, yoffset, zoffset);
+                break;
+
+            case EDGE_BEZIER:
+                be = (BezierEdge*)e;
+                move_smoothed_point(be->ctrlpoints[0], xoffset, yoffset, zoffset);
+                move_smoothed_point(be->ctrlpoints[1], xoffset, yoffset, zoffset);
+                break;
+            }
+        }
+    }
+}
+
 // Find an object owned by another object; return TRUE if it is found.
 BOOL
 find_obj(Object *parent, Object *obj)

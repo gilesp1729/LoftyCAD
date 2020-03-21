@@ -93,6 +93,7 @@ extern BOOL view_tree;
 extern BOOL view_help;
 extern BOOL view_rendered;
 extern BOOL view_constr;
+extern BOOL view_halo;
 extern BOOL view_ortho;
 extern BOOL micro_moved;
 
@@ -117,6 +118,7 @@ extern Text *curr_text;
 extern SCALED scaled_dirn;
 extern SCALED scaled;
 extern float total_angle;
+extern float halo_rad;
 
 extern char curr_filename[];
 extern float grid_snap;

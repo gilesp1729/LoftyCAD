@@ -11,11 +11,12 @@ typedef enum
     DRAW_HIGHLIGHT = 2,
     DRAW_TOP_LEVEL_ONLY = 4,
     DRAW_HIGHLIGHT_LOCKED = 8,
-    DRAW_WITH_DIMENSIONS = 16
+    DRAW_HIGHLIGHT_HALO = 16,
+    DRAW_WITH_DIMENSIONS = 32
 } PRESENTATION;
 
 void SetMaterial(int mat);
-void color(OBJECT obj_type, BOOL construction, BOOL selected, BOOL highlighted, BOOL locked);
+void color(OBJECT obj_type, BOOL construction, PRESENTATION pres, BOOL locked);
 void draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock);
 Face *text_face(Text *text, Face *f);
 

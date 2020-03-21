@@ -60,7 +60,7 @@ int mesh_num_faces(Mesh *mesh);
 // Triangulate and render
 void init_triangulator(void);
 void tess_vertex(GLUtesselator *tess, Point *p);
-void face_shade(GLUtesselator *tess, Face *face, BOOL selected, BOOL highlighted, BOOL locked);
+void face_shade(GLUtesselator *tess, Face *face, PRESENTATION pres, BOOL locked);
 
 // Export to STL (export.c)
 void export_object_tree(Group *tree, char *filename, int file_index);

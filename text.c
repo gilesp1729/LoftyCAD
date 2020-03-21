@@ -144,7 +144,7 @@ text_face(Text *text, Face *f)
         {
             // New contour starts with this point
             gluUnProject(textbuf[i + 1], textbuf[i + 2], textbuf[i + 3], modelMatrix, projMatrix, viewport, &p[0], &p[1], &p[2]);
-            e->endpoints[1] = point_new(p[0], p[1], p[2]);
+            e->endpoints[1] = point_new((float)p[0], (float)p[1], (float)p[2]);
             first_point = e->endpoints[1];
             closed = FALSE;
         }
@@ -163,7 +163,7 @@ text_face(Text *text, Face *f)
         
         // Join back to start if we have arrived there (provided we have been somewhere in the meantime)
         // TODO investigate why first_point is ocasionally NULL for some fonts
-        if (near_pt_xyz(first_point, p[0], p[1], p[2], SMALL_COORD * 5) && tok == GL_LINE_TOKEN)
+        if (near_pt_xyz(first_point, (float)p[0], (float)p[1], (float)p[2], SMALL_COORD * 5) && tok == GL_LINE_TOKEN)
         {
             e->endpoints[0] = first_point;
             closed = TRUE;
@@ -171,7 +171,7 @@ text_face(Text *text, Face *f)
         }
         else
         {
-            e->endpoints[0] = point_new(p[0], p[1], p[2]);
+            e->endpoints[0] = point_new((float)p[0], (float)p[1], (float)p[2]);
         }
         last_point = e->endpoints[0];
         i += 6;

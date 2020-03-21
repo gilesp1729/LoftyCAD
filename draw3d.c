@@ -15,6 +15,9 @@ static unsigned int curr_drawn_no = 0;
 // List of transforms to be applied to point coordinates
 ListHead xform_list = { NULL, NULL };
 
+// The halo list. Initialise to NULL here so rogue pointers don't escape into free lists.
+ListHead halo = { NULL, NULL };
+
 // Material array
 Material materials[MAX_MATERIAL];
 
@@ -73,9 +76,16 @@ SetMaterial(int mat)
 
 // Some standard colors sent to GL.
 void
-color(OBJECT obj_type, BOOL construction, BOOL selected, BOOL highlighted, BOOL locked)
+color(OBJECT obj_type, BOOL construction, PRESENTATION pres, BOOL locked)
 {
     float r, g, b, a;
+
+    // This object is selected. Color it and all its components.
+    BOOL selected = pres & DRAW_SELECTED;
+    // This object is highlighted because the mouse is hovering on it.
+    BOOL highlighted = pres & DRAW_HIGHLIGHT;
+    // This object is highlighted because it is in the halo.
+    BOOL in_halo = pres & DRAW_HIGHLIGHT_HALO;
 
     switch (obj_type)
     {
@@ -122,6 +132,8 @@ color(OBJECT obj_type, BOOL construction, BOOL selected, BOOL highlighted, BOOL 
             r += 0.2f;
         if (highlighted)
             g += 0.2f;
+        if (in_halo)
+            g += 0.1f;
         if (highlighted && locked)
             r = g = b = 0.9f;
         break;
@@ -182,6 +194,8 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
     BOOL selected = pres & DRAW_SELECTED;
     // This object is highlighted because the mouse is hovering on it.
     BOOL highlighted = pres & DRAW_HIGHLIGHT;
+    // This object is highlighted because it is in the halo.
+    BOOL in_halo = pres & DRAW_HIGHLIGHT_HALO;
     // We're picking, so only draw the top level, not the components (to save select buffer space)
     BOOL top_level_only = pres & DRAW_TOP_LEVEL_ONLY;
     // We're drawing, so we want to see the snap targets even if they are locked. But only under the mouse.
@@ -209,7 +223,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             // Draw a square blob in the facing plane, so it's more easily seen
             glDisable(GL_CULL_FACE);
             glBegin(GL_POLYGON);
-            color(OBJ_POINT, FALSE, selected, highlighted, locked);
+            color(OBJ_POINT, FALSE, pres, locked);
             switch (facing_index)
             {
             case PLANE_XY:
@@ -256,7 +270,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
                     p->drawn = curr_drawn_no;
                 }
                 glBegin(GL_POINTS);
-                color(OBJ_POINT, FALSE, selected, highlighted, locked);
+                color(OBJ_POINT, FALSE, pres, locked);
                 glVertex3_trans(p->x, p->y, p->z);
                 glEnd();
             }
@@ -290,7 +304,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         {
         case EDGE_STRAIGHT:
             glBegin(GL_LINES);
-            color(OBJ_EDGE, edge->type & EDGE_CONSTRUCTION, selected, highlighted, locked);
+            color(OBJ_EDGE, edge->type & EDGE_CONSTRUCTION, pres, locked);
             glVertex3_trans(edge->endpoints[0]->x, edge->endpoints[0]->y, edge->endpoints[0]->z);
             glVertex3_trans(edge->endpoints[1]->x, edge->endpoints[1]->y, edge->endpoints[1]->z);
             glEnd();
@@ -306,7 +320,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             ae = (ArcEdge *)edge;
             gen_view_list_arc(ae);
             glBegin(GL_LINE_STRIP);
-            color(OBJ_EDGE, edge->type & EDGE_CONSTRUCTION, selected, highlighted, locked);
+            color(OBJ_EDGE, edge->type & EDGE_CONSTRUCTION, pres, locked);
             for (p = (Point *)edge->view_list.head; p != NULL; p = (Point *)p->hdr.next)
                 glVertex3_trans(p->x, p->y, p->z);
 
@@ -324,7 +338,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             be = (BezierEdge *)edge;
             gen_view_list_bez(be);
             glBegin(GL_LINE_STRIP);
-            color(OBJ_EDGE, edge->type & EDGE_CONSTRUCTION, selected, highlighted, locked);
+            color(OBJ_EDGE, edge->type & EDGE_CONSTRUCTION, pres, locked);
             for (p = (Point *)edge->view_list.head; p != NULL; p = (Point *)p->hdr.next)
                 glVertex3_trans(p->x, p->y, p->z);
 
@@ -354,7 +368,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         {
             glPushName((GLuint)obj);
             gen_view_list_face(face);
-            face_shade(rtess, face, selected, highlighted, locked);
+            face_shade(rtess, face, pres, locked);
             glPopName();
         }
 
@@ -379,7 +393,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             // Draw from the triangulated mesh for the volume.
             // TODO: is this ever reached? The object tree group should have drawn it.
             ASSERT(vol->mesh_valid, "Mesh is not up to date");
-            color(OBJ_FACE, FALSE, selected, highlighted, FALSE);
+            color(OBJ_FACE, FALSE, pres, FALSE);
             mesh_foreach_face_coords_mat(vol->mesh, draw_triangle, NULL);
         }
         else        
@@ -500,6 +514,19 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
 
             // stop stale scaling directions from showing on hover
             scaled = 0;
+
+            // Set up the halo if we are doing halo highlighting for smooth extrusions, etc.
+            if 
+            (
+                view_halo 
+                && 
+                highlight_obj != NULL 
+                && 
+                treeview_highlight == NULL 
+                && 
+                highlight_obj->type == OBJ_FACE
+            )
+                calc_halo_params((Face*)highlight_obj, &halo);
         }
         else if (left_mouse && app_state != STATE_DRAGGING_SELECT)
         {
@@ -1237,13 +1264,28 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         {
                             // Move the picked face by a delta in XYZ up its own normal
                             move_obj
-                                (
+                            (
                                 picked_obj,
                                 face->normal.A * length,
                                 face->normal.B * length,
                                 face->normal.C * length
+                            );
+
+                            if (view_halo)
+                            {
+                                move_halo_around_face
+                                (
+                                    face,
+                                    face->normal.A * length,
+                                    face->normal.B * length,
+                                    face->normal.C * length
                                 );
-                            clear_move_copy_flags(picked_obj);
+                                clear_move_copy_flags((Object*)face->vol); // need to do on whole volume if moving halo.
+                            }
+                            else
+                            {
+                                clear_move_copy_flags(picked_obj);
+                            }
                             picked_point = new_point;
                         }
 
@@ -1577,6 +1619,19 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                 glVertex3f(box.xmax, box.ymax, box.zmax);
                 glEnd();
                 glPopName();
+            }
+        }
+
+        // Draw halo faces, if any.
+        for (obj = halo.head; obj != NULL; obj = obj->next)
+        {
+            Object* parent = find_parent_object(&object_tree, obj->prev, FALSE);
+
+            build_parent_xform_list(obj->prev, parent, &xform_list);
+            if (obj->prev != curr_obj && obj->prev != highlight_obj)
+            {
+                pres = DRAW_HIGHLIGHT_HALO;
+                draw_object(obj->prev, pres, parent != NULL ? parent->lock : LOCK_NONE);
             }
         }
 
