@@ -1047,7 +1047,7 @@ face_shade(GLUtesselator *tess, Face *face, PRESENTATION pres, BOOL locked)
         Log(buf);
     }
 #endif       
-    color(OBJ_FACE, face->type & FACE_CONSTRUCTION, pres, locked);
+    color((Object *)face, face->type & FACE_CONSTRUCTION, pres, locked);
 
     // If there are no facets, just use the face normal
     norm = face->normal;

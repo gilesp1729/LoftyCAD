@@ -233,6 +233,7 @@ typedef struct Face
     Plane           normal;         // What plane is the face lying in (if flat) 
     struct Volume   *vol;           // What volume references (owns) this face
     BOOL            extruded;       // TRUE for the faces that were initially extruded to create a volume.
+    float           color_decay;    // Color attenuation factor for halo faces (derived from points)
     struct Point    *initial_point; // Point in the first edge that the face starts from. Used to allow
                                     // view lists to be built up independent of the order of points
                                     // in any edge.

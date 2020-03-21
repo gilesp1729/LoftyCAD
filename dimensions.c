@@ -432,7 +432,7 @@ show_dims_on(Object *obj, PRESENTATION pres, LOCK parent_lock)
         if ((e->type & EDGE_CONSTRUCTION) && !view_constr)
             return;
 
-        color(obj->type, e->type & EDGE_CONSTRUCTION, 0, locked);
+        color_as(OBJ_EDGE, 1.0f, e->type & EDGE_CONSTRUCTION, 0, locked);
         glRasterPos3f
         (
             (e->endpoints[0]->x + e->endpoints[1]->x) / 2,
@@ -447,7 +447,7 @@ show_dims_on(Object *obj, PRESENTATION pres, LOCK parent_lock)
             return;
 
         // color face dims in the edge color, so they can be easily read
-        color(OBJ_EDGE, f->type & FACE_CONSTRUCTION, 0, locked);
+        color_as(OBJ_EDGE, 1.0f, f->type & FACE_CONSTRUCTION, 0, locked);
 
         switch (f->type)
         {
@@ -489,7 +489,7 @@ show_dims_on(Object *obj, PRESENTATION pres, LOCK parent_lock)
     case OBJ_VOLUME:
     case OBJ_GROUP:
         v = (Volume *)obj;
-        color(OBJ_EDGE, FALSE, 0, locked);
+        color_as(OBJ_EDGE, 1.0f, FALSE, 0, locked);
         glRasterPos3f(v->bbox.xc, v->bbox.yc, v->bbox.zc);
         break;
     }

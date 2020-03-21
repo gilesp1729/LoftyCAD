@@ -733,6 +733,7 @@ calc_halo_params(Face* face, ListHead *halo)
     free_obj_list(halo);
     for (f = (Face*)vol->faces.head; f != NULL; f = (Face*)f->hdr.next)
     {
+        f->color_decay = 0;
         for (i = 0; i < f->n_edges; i++)
         {
             Edge* e = f->edges[i];
@@ -761,6 +762,7 @@ calc_halo_params(Face* face, ListHead *halo)
     for (f = (Face*)vol->faces.head; f != NULL; f = (Face*)f->hdr.next)
     {
         BOOL in_halo = FALSE;
+        float face_decay = 0;
 
         if (f == face)
             continue;   // don't touch the central face
@@ -784,10 +786,16 @@ calc_halo_params(Face* face, ListHead *halo)
             // Decay factor for each point is only set once
             smooth_decay(e->endpoints[0], &cent);
             smooth_decay(e->endpoints[1], &cent);
+
+            // If face is in the halo, set its decay factor to the largest of the points
             if (e->endpoints[0]->decay > 0 && cosine > 0)
                 in_halo = TRUE;
             if (e->endpoints[1]->decay > 0 && cosine > 0)
                 in_halo = TRUE;
+            if (e->endpoints[0]->decay * cosine > face_decay)
+                face_decay = e->endpoints[0]->decay * cosine;
+            if (e->endpoints[1]->decay * cosine > face_decay)
+                face_decay = e->endpoints[1]->decay * cosine;
 
             // Things like arc centre, Bezier control points etc. also get these set.
             // TODO: not sure what to do about decay for these, they need to be kept in plane.
@@ -814,7 +822,10 @@ calc_halo_params(Face* face, ListHead *halo)
         }
 
         if (in_halo)
-            link_single((Object *)f, halo);
+        {
+            f->color_decay = face_decay;
+            link_single((Object*)f, halo);
+        }
     }
 }
 

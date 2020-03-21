@@ -16,7 +16,8 @@ typedef enum
 } PRESENTATION;
 
 void SetMaterial(int mat);
-void color(OBJECT obj_type, BOOL construction, PRESENTATION pres, BOOL locked);
+void color(Object* obj, BOOL construction, PRESENTATION pres, BOOL locked);
+void color_as(OBJECT obj_type, float color_decay, BOOL construction, PRESENTATION pres, BOOL locked);
 void draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock);
 Face *text_face(Text *text, Face *f);
 

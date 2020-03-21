@@ -75,8 +75,9 @@ SetMaterial(int mat)
 }
 
 // Some standard colors sent to GL.
+// Color as an object of the given type.
 void
-color(OBJECT obj_type, BOOL construction, PRESENTATION pres, BOOL locked)
+color_as(OBJECT obj_type, float color_decay, BOOL construction, PRESENTATION pres, BOOL locked)
 {
     float r, g, b, a;
 
@@ -132,13 +133,42 @@ color(OBJECT obj_type, BOOL construction, PRESENTATION pres, BOOL locked)
             r += 0.2f;
         if (highlighted)
             g += 0.2f;
+        // Halo treatment varies with the blend mode. Remember that halo faces are drawn twice.
         if (in_halo)
-            g += 0.1f;
+        {
+            switch (view_blend)
+            {
+            case BLEND_ALPHA:
+                g += 0.2f;
+                a = 0.5f * color_decay + 0.1f;
+                break;
+            case BLEND_MULTIPLY:
+                r = 0.9f - 0.2f * color_decay;
+                g = 1.0f;
+                b = 0.9f - 0.2f * color_decay;
+                break;
+            default:  // opaque
+                g += 0.15f * color_decay + 0.05f;
+                break;
+            }
+        }
         if (highlighted && locked)
             r = g = b = 0.9f;
         break;
     }
     glColor4f(r, g, b, a);
+}
+
+// Color a passed object.
+void
+color(Object* obj, BOOL construction, PRESENTATION pres, BOOL locked)
+{
+    float color_decay = 1.0f;
+
+    if (obj->type == OBJ_FACE)
+        color_decay = ((Face*)obj)->color_decay;
+
+    color_as(obj->type, color_decay, construction, pres, locked);
 }
 
 // Draw a single mesh triangle with normal and material index.
@@ -223,7 +253,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             // Draw a square blob in the facing plane, so it's more easily seen
             glDisable(GL_CULL_FACE);
             glBegin(GL_POLYGON);
-            color(OBJ_POINT, FALSE, pres, locked);
+            color(obj, FALSE, pres, locked);
             switch (facing_index)
             {
             case PLANE_XY:
@@ -270,7 +300,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
                     p->drawn = curr_drawn_no;
                 }
                 glBegin(GL_POINTS);
-                color(OBJ_POINT, FALSE, pres, locked);
+                color(obj, FALSE, pres, locked);
                 glVertex3_trans(p->x, p->y, p->z);
                 glEnd();
             }
@@ -304,7 +334,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         {
         case EDGE_STRAIGHT:
             glBegin(GL_LINES);
-            color(OBJ_EDGE, edge->type & EDGE_CONSTRUCTION, pres, locked);
+            color(obj, edge->type & EDGE_CONSTRUCTION, pres, locked);
             glVertex3_trans(edge->endpoints[0]->x, edge->endpoints[0]->y, edge->endpoints[0]->z);
             glVertex3_trans(edge->endpoints[1]->x, edge->endpoints[1]->y, edge->endpoints[1]->z);
             glEnd();
@@ -320,7 +350,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             ae = (ArcEdge *)edge;
             gen_view_list_arc(ae);
             glBegin(GL_LINE_STRIP);
-            color(OBJ_EDGE, edge->type & EDGE_CONSTRUCTION, pres, locked);
+            color(obj, edge->type & EDGE_CONSTRUCTION, pres, locked);
             for (p = (Point *)edge->view_list.head; p != NULL; p = (Point *)p->hdr.next)
                 glVertex3_trans(p->x, p->y, p->z);
 
@@ -338,7 +368,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             be = (BezierEdge *)edge;
             gen_view_list_bez(be);
             glBegin(GL_LINE_STRIP);
-            color(OBJ_EDGE, edge->type & EDGE_CONSTRUCTION, pres, locked);
+            color(obj, edge->type & EDGE_CONSTRUCTION, pres, locked);
             for (p = (Point *)edge->view_list.head; p != NULL; p = (Point *)p->hdr.next)
                 glVertex3_trans(p->x, p->y, p->z);
 
@@ -393,7 +423,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             // Draw from the triangulated mesh for the volume.
             // TODO: is this ever reached? The object tree group should have drawn it.
             ASSERT(vol->mesh_valid, "Mesh is not up to date");
-            color(OBJ_FACE, FALSE, pres, FALSE);
+            color(obj, FALSE, pres, FALSE);
             mesh_foreach_face_coords_mat(vol->mesh, draw_triangle, NULL);
         }
         else        
