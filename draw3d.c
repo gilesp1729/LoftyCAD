@@ -21,6 +21,9 @@ ListHead halo = { NULL, NULL };
 // Material array
 Material materials[MAX_MATERIAL];
 
+// Flag to turn drawing off while building display lists (protect the xform_list)
+BOOL suppress_drawing = FALSE;
+
 // Set material and lighting up for the rendered view
 void
 SetMaterial(int mat)
@@ -525,6 +528,9 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
     Object  *obj;
     PRESENTATION pres;
     Object *highlight_obj = NULL;
+
+    if (suppress_drawing)
+        return;
 
     if (!picking)
     {

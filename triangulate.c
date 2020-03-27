@@ -366,6 +366,7 @@ gen_view_list_tree_surfaces(Group *tree, Group *parent_tree)
     if (tree == parent_tree && parent_tree->mesh_valid)
         return;
 
+    suppress_drawing = TRUE;
     parent_tree->mesh_complete = TRUE;
 
     // precedence order: unions, then differences, then intersections
@@ -373,6 +374,7 @@ gen_view_list_tree_surfaces(Group *tree, Group *parent_tree)
     gen_view_list_tree_surfaces_op(OP_DIFFERENCE, tree, parent_tree);
     gen_view_list_tree_surfaces_op(OP_INTERSECTION, tree, parent_tree);
     hide_hint();
+    suppress_drawing = FALSE;
 }
 
 // Regenerate the view lists for all faces of a volume, and also do some special stuff that

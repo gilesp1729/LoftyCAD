@@ -119,6 +119,7 @@ extern SCALED scaled_dirn;
 extern SCALED scaled;
 extern float total_angle;
 extern float halo_rad;
+extern BOOL suppress_drawing;
 
 extern char curr_filename[];
 extern float grid_snap;
