@@ -329,6 +329,7 @@ Reshape(int width, int height)
     Position(FALSE, 0, 0, 0, 0);
 }
 
+
 // Pick an object: find the frontmost object under the cursor, or NULL if nothing is there.
 // Pick objects from "min_priority" down in the hierarchy; e.g. faces/edges/points, or just edges/points.
 // Only execption is that picking a face in a locked volume will pick the parent volume instead.
@@ -529,7 +530,7 @@ Pick_all_in_rect(GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
             if (num_objs == 0)
             {
                 n += 3;  // skip count, min and max
-                break;
+                continue;
             }
 
             // buffer = {{num objs, min depth, max depth, obj name, ...}, ...}
@@ -542,7 +543,7 @@ Pick_all_in_rect(GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                 if (parent == NULL)
                 {
                     n += num_objs + 3;
-                    break;
+                    continue;
                 }
 
                 // If parent is not already in the list, add it
