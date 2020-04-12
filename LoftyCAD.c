@@ -343,6 +343,7 @@ Pick(GLint x_pick, GLint y_pick, BOOL force_pick)
     OBJECT priority = OBJ_MAX;
     Object *obj = NULL;
     OBJECT min_priority = OBJ_MAX;
+    BOOL edit_in_groups = FALSE;        // This is very problematical wrt. moving objects or sub-components.
 
     // Find the object under the cursor, if any
     glSelectBuffer(512, buffer);
@@ -468,13 +469,13 @@ Pick(GLint x_pick, GLint y_pick, BOOL force_pick)
                 if (face->vol->hdr.lock >= LOCK_FACES)
                     obj = (Object *)face->vol;
 
-                if (face->vol->hdr.parent_group->hdr.parent_group != NULL)
+                if (!edit_in_groups && face->vol->hdr.parent_group->hdr.parent_group != NULL)
                     obj = find_top_level_parent(&object_tree, (Object *)face->vol->hdr.parent_group);  // this is fast
             }
             else
             {
                 Object *parent = find_parent_object(&object_tree, obj, TRUE);               // this is not so fast
-                if (parent != NULL && parent->type == OBJ_GROUP)
+                if (!edit_in_groups && parent != NULL && parent->type == OBJ_GROUP)
                     obj = parent;
             }
         }

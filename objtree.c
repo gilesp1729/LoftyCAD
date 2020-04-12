@@ -1021,21 +1021,30 @@ find_top_level_parent(Group *tree, Object *obj)
 void
 build_parent_xform_list(Object *obj, Object *parent, ListHead *xform_list)
 {
-    Object *top_parent = parent;
+    Object *top_parent;
 
     xform_list->head = NULL;
     xform_list->tail = NULL;
     if (parent == NULL)
         return;
 
+    // If the object is a group, we'll just draw it (it will be at top level).
+    // But if the object is a volume, we have to build the xform list for everything containing it
+    // (and for sub-components, the volume transform itself)
+    // The passed-in parent will never be a group.
     if (obj->type < OBJ_VOLUME && parent->type == OBJ_VOLUME)
     {
-        if (((Volume *)parent)->xform != NULL)
-            link((Object *)((Volume *)parent)->xform, xform_list);
-        for (; top_parent->parent_group->hdr.parent_group != NULL; top_parent = (Object *)top_parent->parent_group)
+        if (((Volume*)parent)->xform != NULL)
+            link((Object*)((Volume*)parent)->xform, xform_list);
+    }
+    if (parent->type == OBJ_VOLUME)
+    {
+        for (top_parent = parent; top_parent->parent_group->hdr.parent_group != NULL; top_parent = (Object *)top_parent->parent_group)
         {
-            if (((Group *)top_parent)->xform != NULL)
-                link((Object *)((Group *)top_parent)->xform, xform_list);
+            Group* parent_group = top_parent->parent_group;
+
+            if (parent_group->xform != NULL)
+                link((Object *)(parent_group->xform), xform_list);
         }
     }
 }
