@@ -344,8 +344,8 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             glPopName();
             if (draw_components)
             {
-                draw_object((Object *)edge->endpoints[0], pres, parent_lock);
-                draw_object((Object *)edge->endpoints[1], pres, parent_lock);
+                draw_object((Object *)edge->endpoints[0], (pres & ~DRAW_WITH_DIMENSIONS), parent_lock);
+                draw_object((Object *)edge->endpoints[1], (pres & ~DRAW_WITH_DIMENSIONS), parent_lock);
             }
             break;
 
@@ -361,9 +361,9 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             glPopName();
             if (draw_components)
             {
-                draw_object((Object *)ae->centre, pres, parent_lock);
-                draw_object((Object *)edge->endpoints[0], pres, parent_lock);
-                draw_object((Object *)edge->endpoints[1], pres, parent_lock);
+                draw_object((Object *)ae->centre, (pres & ~DRAW_WITH_DIMENSIONS), parent_lock);
+                draw_object((Object *)edge->endpoints[0], (pres & ~DRAW_WITH_DIMENSIONS), parent_lock);
+                draw_object((Object *)edge->endpoints[1], (pres & ~DRAW_WITH_DIMENSIONS), parent_lock);
             }
             break;
 
@@ -379,10 +379,10 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             glPopName();
             if (draw_components)
             {
-                draw_object((Object *)edge->endpoints[0], pres, parent_lock);
-                draw_object((Object *)edge->endpoints[1], pres, parent_lock);
-                draw_object((Object *)be->ctrlpoints[0], pres, parent_lock);
-                draw_object((Object *)be->ctrlpoints[1], pres, parent_lock);
+                draw_object((Object *)edge->endpoints[0], (pres & ~DRAW_WITH_DIMENSIONS), parent_lock);
+                draw_object((Object *)edge->endpoints[1], (pres & ~DRAW_WITH_DIMENSIONS), parent_lock);
+                draw_object((Object *)be->ctrlpoints[0], (pres & ~DRAW_WITH_DIMENSIONS), parent_lock);
+                draw_object((Object *)be->ctrlpoints[1], (pres & ~DRAW_WITH_DIMENSIONS), parent_lock);
             }
             break;
         }
@@ -566,19 +566,15 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
         }
         else if (left_mouse && app_state != STATE_DRAGGING_SELECT)
         {
-            Object *match_obj;
-
             // If we're performing a left mouse action, we are dragging an object
             // and so picking is unreliable (there are always self-picks). Also, we
             // need a full XYZ coordinate to perform snapping properly, and we're
             // not necessarily snapping things at the mouse position. So we can't use
             // picking here.
             if (app_state == STATE_MOVING)
-                match_obj = picked_obj;  // TODO for moving edges, this will self-pick a point on the edge.
+                highlight_obj = picked_obj;
             else
-                match_obj = curr_obj;
-
-            highlight_obj = find_in_neighbourhood(match_obj, &object_tree);
+                highlight_obj = find_in_neighbourhood(curr_obj, &object_tree);
         }
 
         // Handle left mouse dragging actions. We must be moving or drawing,
@@ -623,6 +619,12 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                 case STATE_MOVING:
                     // Move the selection, or an object, by a delta in XYZ within the facing plane
                     intersect_ray_plane(pt.x, pt.y, facing_plane, &new_point);
+
+                    // NOTE: shift-dragging will drag a selection, unless you hold shift after mouse down.
+                    if (key_status & AUX_SHIFT)
+                        snap_to_angle(picked_plane, &picked_point, &new_point, 45);
+                    else if (snapping_to_angle)
+                        snap_to_angle(picked_plane, &picked_point, &new_point, angle_snap);
                     snap_to_grid(facing_plane, &new_point, key_status & AUX_CONTROL);
                     parent = find_top_level_parent(&object_tree, picked_obj);
 
@@ -1775,6 +1777,8 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
         HDC hdc = auxGetHDC();
         GLint vp[4];
         char *title;
+        char numstr[16];
+        int numlen;
 
         glMatrixMode(GL_MODELVIEW);
         glPushMatrix();
@@ -1789,28 +1793,46 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
         glListBase(1000);
         glColor3f(0.4f, 0.4f, 0.4f);
         glRasterPos2f((float)pt.x + 10, (float)vp[3] - pt.y - 12);
+
+        numlen = sprintf_s(numstr, 16, "%d", highlight_obj->ID);
         switch (highlight_obj->type)
         {
         case OBJ_POINT:
-            glCallLists(5, GL_UNSIGNED_BYTE, "Point"); 
+            glCallLists(6, GL_UNSIGNED_BYTE, "Point "); 
             break;
         case OBJ_EDGE:
-            glCallLists(4, GL_UNSIGNED_BYTE, "Edge");
+            glCallLists(5, GL_UNSIGNED_BYTE, "Edge ");
             break;
         case OBJ_FACE:
-            glCallLists(4, GL_UNSIGNED_BYTE, "Face");
+            glCallLists(5, GL_UNSIGNED_BYTE, "Face ");
             break;
         case OBJ_VOLUME:
-            glCallLists(6, GL_UNSIGNED_BYTE, "Volume");
+            glCallLists(7, GL_UNSIGNED_BYTE, "Volume ");
             break;
         case OBJ_GROUP:
             title = ((Group *)highlight_obj)->title;
             if (title[0] == '\0')
-                glCallLists(5, GL_UNSIGNED_BYTE, "Group"); 
+                glCallLists(6, GL_UNSIGNED_BYTE, "Group "); 
             else
                 glCallLists(strlen(title), GL_UNSIGNED_BYTE, title);
             break;
         }
+        glCallLists(numlen, GL_UNSIGNED_BYTE, numstr);
+
+        // Echo the parent group if there is one.
+        if (highlight_obj->parent_group != NULL && highlight_obj->parent_group->hdr.ID != 0)
+        {
+            glCallLists(2, GL_UNSIGNED_BYTE, " (");
+            numlen = sprintf_s(numstr, 16, "%d", highlight_obj->parent_group->hdr.ID);
+            title = highlight_obj->parent_group->title;
+            if (title[0] == '\0')
+                glCallLists(6, GL_UNSIGNED_BYTE, "Group ");
+            else
+                glCallLists(strlen(title), GL_UNSIGNED_BYTE, title);
+            glCallLists(numlen, GL_UNSIGNED_BYTE, numstr);
+            glCallLists(1, GL_UNSIGNED_BYTE, ")");
+        }
+
         glPopMatrix();
         glMatrixMode(GL_MODELVIEW);
         glPopMatrix();

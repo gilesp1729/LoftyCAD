@@ -714,9 +714,9 @@ left_down(AUX_EVENTREC *event)
     switch (app_state)
     {
     case STATE_NONE:
-        if (event->data[AUX_MOUSESTATUS] & AUX_SHIFT)
+        if ((event->data[AUX_MOUSESTATUS] & AUX_SHIFT) && picked_obj == NULL)
         {
-            // Starting a shift-drag. 
+            // Starting a shift-drag. You must start outside any object (otherwise it is a shift-move)
             SetCapture(auxGetHWND());
             orig_left_mouseX = left_mouseX = event->data[AUX_MOUSEX];
             orig_left_mouseY = left_mouseY = event->data[AUX_MOUSEY];

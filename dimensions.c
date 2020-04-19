@@ -11,6 +11,9 @@ has_dims(Object *obj)
     if (obj == NULL)
         return FALSE;
 
+    if (app_state == STATE_MOVING)
+        return TRUE;
+
     switch (obj->type)
     {
     case OBJ_POINT:
@@ -258,6 +261,14 @@ get_dims_string(Object *obj, char buf[64])
     double angle;
 
     buf[0] = '\0';
+
+    // If moving, return the distance moved.
+    if (app_state == STATE_MOVING)
+    {
+        sprintf_s(buf, 64, "Moved %s mm", display_rounded(buf2, length(&picked_point, &new_point)));
+        return buf;
+    }
+
     switch (obj->type)
     {
     case OBJ_EDGE:
