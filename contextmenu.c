@@ -605,6 +605,7 @@ contextmenu(Object *picked_obj, POINT pt)
     display_help("Context menu");
 
     // Display and track the menu
+    suppress_drawing = TRUE;
     rc = TrackPopupMenu
         (
         hMenu,
@@ -616,6 +617,7 @@ contextmenu(Object *picked_obj, POINT pt)
         NULL
         );
 
+    suppress_drawing = FALSE;
     change_state(app_state);  // back to displaying usual state text
     switch (rc)
     {

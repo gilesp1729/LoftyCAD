@@ -1372,6 +1372,7 @@ right_down(AUX_EVENTREC *event)
     right_mouseX = event->data[AUX_MOUSEX];
     right_mouseY = event->data[AUX_MOUSEY];
     right_mouse = TRUE;
+    suppress_drawing = TRUE;        // prepare for menu to be displayed, hold highlight
 }
 
 
@@ -1380,6 +1381,7 @@ right_up(AUX_EVENTREC *event)
 {
     ReleaseCapture();
     right_mouse = FALSE;
+    suppress_drawing = FALSE;
 }
 
 
@@ -1402,6 +1404,10 @@ mouse_move(AUX_EVENTREC *event)
 
     // get rid of any highlights from the tree view
     treeview_highlight = NULL;
+
+    // allow drawing if panning
+    if (right_mouse)
+        suppress_drawing = FALSE;
 }
 
 
