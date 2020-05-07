@@ -1577,148 +1577,151 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
     xform_list.tail = NULL;
     draw_object((Object *)&object_tree, pres, LOCK_NONE);  // locks come from objects
 
-    // Draw selection. Watch for highlighted objects appearing in the selection list.
-    // Pass lock state of top-level parent to determine what is shown.
-    for (obj = selection.head; obj != NULL; obj = obj->next)
+    if (!view_rendered)
     {
-        Object *parent = find_parent_object(&object_tree, obj->prev, FALSE);
-
-        build_parent_xform_list(obj->prev, parent, &xform_list);
-        if (obj->prev != curr_obj && obj->prev != highlight_obj)
+        // Draw selection. Watch for highlighted objects appearing in the selection list.
+        // Pass lock state of top-level parent to determine what is shown.
+        for (obj = selection.head; obj != NULL; obj = obj->next)
         {
-            pres = DRAW_SELECTED | DRAW_WITH_DIMENSIONS;
-            draw_object(obj->prev, pres, parent != NULL ? parent->lock : LOCK_NONE);
-        }
-    }
-
-    // Draw any current object not yet added to the object tree,
-    // or any under highlighting. Handle the case where it doesn't have a
-    // parent yet. 
-    if (curr_obj != NULL)
-    {
-        Object *parent = find_parent_object(&object_tree, curr_obj, FALSE);
-
-        build_parent_xform_list(curr_obj, parent, &xform_list);
-        pres = DRAW_HIGHLIGHT | DRAW_WITH_DIMENSIONS;
-        if (app_state >= STATE_STARTING_EDGE)
-            pres |= DRAW_HIGHLIGHT_LOCKED;
-        draw_object(curr_obj, pres, parent != NULL ? parent->lock : LOCK_NONE);
-    }
-
-    if (highlight_obj != NULL)
-    {
-        Object *parent = find_parent_object(&object_tree, highlight_obj, FALSE);
-
-        build_parent_xform_list(highlight_obj, parent, &xform_list);
-        pres = DRAW_HIGHLIGHT | DRAW_WITH_DIMENSIONS;
-        if (app_state >= STATE_STARTING_EDGE)
-            pres |= DRAW_HIGHLIGHT_LOCKED;
-        draw_object(highlight_obj, pres, parent != NULL ? parent->lock : LOCK_NONE);
-
-#ifdef DEBUG_HIGHLIGHTING_ENABLED
-        // The bounding box for a volume, or the parent volume of any highlighted component.
-        // TODO: this will not work for groups, as find_parent_object won't return them.
-        if (app_state == STATE_NONE && parent != NULL && parent->type == OBJ_VOLUME)
-        {
-            Volume *vol = (Volume *)parent;
-
-            if (debug_view_bbox)
-            {
-                Bbox box = vol->bbox;
-
-                glPushName(0);
-                glColor3d(1.0, 0.4, 0.4);
-                glBegin(GL_LINE_LOOP);
-                glVertex3f(box.xmin, box.ymin, box.zmin);
-                glVertex3f(box.xmax, box.ymin, box.zmin);
-                glVertex3f(box.xmax, box.ymax, box.zmin);
-                glVertex3f(box.xmin, box.ymax, box.zmin);
-                glEnd();
-                glBegin(GL_LINE_LOOP);
-                glVertex3f(box.xmin, box.ymin, box.zmax);
-                glVertex3f(box.xmax, box.ymin, box.zmax);
-                glVertex3f(box.xmax, box.ymax, box.zmax);
-                glVertex3f(box.xmin, box.ymax, box.zmax);
-                glEnd();
-                glBegin(GL_LINES);
-                glVertex3f(box.xmin, box.ymin, box.zmin);
-                glVertex3f(box.xmin, box.ymin, box.zmax);
-                glEnd();
-                glBegin(GL_LINES);
-                glVertex3f(box.xmax, box.ymin, box.zmin);
-                glVertex3f(box.xmax, box.ymin, box.zmax);
-                glEnd();
-                glBegin(GL_LINES);
-                glVertex3f(box.xmin, box.ymax, box.zmin);
-                glVertex3f(box.xmin, box.ymax, box.zmax);
-                glEnd();
-                glBegin(GL_LINES);
-                glVertex3f(box.xmax, box.ymax, box.zmin);
-                glVertex3f(box.xmax, box.ymax, box.zmax);
-                glEnd();
-                glPopName();
-            }
-        }
-
-        // Draw halo faces, if any.
-        for (obj = halo.head; obj != NULL; obj = obj->next)
-        {
-            Object* parent = find_parent_object(&object_tree, obj->prev, FALSE);
+            Object *parent = find_parent_object(&object_tree, obj->prev, FALSE);
 
             build_parent_xform_list(obj->prev, parent, &xform_list);
             if (obj->prev != curr_obj && obj->prev != highlight_obj)
             {
-                pres = DRAW_HIGHLIGHT_HALO;
+                pres = DRAW_SELECTED | DRAW_WITH_DIMENSIONS;
                 draw_object(obj->prev, pres, parent != NULL ? parent->lock : LOCK_NONE);
             }
         }
 
-        // Normals for all the faces in a volume.
-        if (app_state == STATE_NONE && highlight_obj != NULL && highlight_obj->type == OBJ_VOLUME)
+        // Draw any current object not yet added to the object tree,
+        // or any under highlighting. Handle the case where it doesn't have a
+        // parent yet. 
+        if (curr_obj != NULL)
         {
-            Volume *vol = (Volume *)highlight_obj;
+            Object *parent = find_parent_object(&object_tree, curr_obj, FALSE);
 
-            if (debug_view_normals)
+            build_parent_xform_list(curr_obj, parent, &xform_list);
+            pres = DRAW_HIGHLIGHT | DRAW_WITH_DIMENSIONS;
+            if (app_state >= STATE_STARTING_EDGE)
+                pres |= DRAW_HIGHLIGHT_LOCKED;
+            draw_object(curr_obj, pres, parent != NULL ? parent->lock : LOCK_NONE);
+        }
+
+        if (highlight_obj != NULL)
+        {
+            Object* parent = find_parent_object(&object_tree, highlight_obj, FALSE);
+
+            build_parent_xform_list(highlight_obj, parent, &xform_list);
+            pres = DRAW_HIGHLIGHT | DRAW_WITH_DIMENSIONS;
+            if (app_state >= STATE_STARTING_EDGE)
+                pres |= DRAW_HIGHLIGHT_LOCKED;
+            draw_object(highlight_obj, pres, parent != NULL ? parent->lock : LOCK_NONE);
+
+    #ifdef DEBUG_HIGHLIGHTING_ENABLED
+            // The bounding box for a volume, or the parent volume of any highlighted component.
+            // TODO: this will not work for groups, as find_parent_object won't return them.
+            if (app_state == STATE_NONE && parent != NULL && parent->type == OBJ_VOLUME)
             {
-                Face *f;
+                Volume* vol = (Volume*)parent;
 
-                for (f = (Face *)vol->faces.head; f != NULL; f = (Face *)f->hdr.next)
+                if (debug_view_bbox)
                 {
-                    if (IS_FLAT(f))
-                    {
-                        Plane *n = &f->normal;
+                    Bbox box = vol->bbox;
 
-                        glPushName(0);
-                        glColor3d(1.0, 0.4, 0.4);
-                        glBegin(GL_LINES);
-                        glVertex3f(n->refpt.x, n->refpt.y, n->refpt.z);
-                        glVertex3f(n->refpt.x + n->A, n->refpt.y + n->B, n->refpt.z + n->C);
-                        glEnd();
-                        glPopName();
+                    glPushName(0);
+                    glColor3d(1.0, 0.4, 0.4);
+                    glBegin(GL_LINE_LOOP);
+                    glVertex3f(box.xmin, box.ymin, box.zmin);
+                    glVertex3f(box.xmax, box.ymin, box.zmin);
+                    glVertex3f(box.xmax, box.ymax, box.zmin);
+                    glVertex3f(box.xmin, box.ymax, box.zmin);
+                    glEnd();
+                    glBegin(GL_LINE_LOOP);
+                    glVertex3f(box.xmin, box.ymin, box.zmax);
+                    glVertex3f(box.xmax, box.ymin, box.zmax);
+                    glVertex3f(box.xmax, box.ymax, box.zmax);
+                    glVertex3f(box.xmin, box.ymax, box.zmax);
+                    glEnd();
+                    glBegin(GL_LINES);
+                    glVertex3f(box.xmin, box.ymin, box.zmin);
+                    glVertex3f(box.xmin, box.ymin, box.zmax);
+                    glEnd();
+                    glBegin(GL_LINES);
+                    glVertex3f(box.xmax, box.ymin, box.zmin);
+                    glVertex3f(box.xmax, box.ymin, box.zmax);
+                    glEnd();
+                    glBegin(GL_LINES);
+                    glVertex3f(box.xmin, box.ymax, box.zmin);
+                    glVertex3f(box.xmin, box.ymax, box.zmax);
+                    glEnd();
+                    glBegin(GL_LINES);
+                    glVertex3f(box.xmax, box.ymax, box.zmin);
+                    glVertex3f(box.xmax, box.ymax, box.zmax);
+                    glEnd();
+                    glPopName();
+                }
+            }
+
+            // Draw halo faces, if any.
+            for (obj = halo.head; obj != NULL; obj = obj->next)
+            {
+                Object* parent = find_parent_object(&object_tree, obj->prev, FALSE);
+
+                build_parent_xform_list(obj->prev, parent, &xform_list);
+                if (obj->prev != curr_obj && obj->prev != highlight_obj)
+                {
+                    pres = DRAW_HIGHLIGHT_HALO;
+                    draw_object(obj->prev, pres, parent != NULL ? parent->lock : LOCK_NONE);
+                }
+            }
+
+            // Normals for all the faces in a volume.
+            if (app_state == STATE_NONE && highlight_obj != NULL && highlight_obj->type == OBJ_VOLUME)
+            {
+                Volume* vol = (Volume*)highlight_obj;
+
+                if (debug_view_normals)
+                {
+                    Face* f;
+
+                    for (f = (Face*)vol->faces.head; f != NULL; f = (Face*)f->hdr.next)
+                    {
+                        if (IS_FLAT(f))
+                        {
+                            Plane* n = &f->normal;
+
+                            glPushName(0);
+                            glColor3d(1.0, 0.4, 0.4);
+                            glBegin(GL_LINES);
+                            glVertex3f(n->refpt.x, n->refpt.y, n->refpt.z);
+                            glVertex3f(n->refpt.x + n->A, n->refpt.y + n->B, n->refpt.z + n->C);
+                            glEnd();
+                            glPopName();
+                        }
                     }
                 }
             }
-        }
 
-        // The normal for a single highlighted face.
-        if (app_state == STATE_NONE && highlight_obj != NULL && highlight_obj->type == OBJ_FACE)
-        {
-            Face *f = (Face *)highlight_obj;
-
-            if (debug_view_normals && IS_FLAT(f))
+            // The normal for a single highlighted face.
+            if (app_state == STATE_NONE && highlight_obj != NULL && highlight_obj->type == OBJ_FACE)
             {
-                Plane *n = &f->normal;
+                Face* f = (Face*)highlight_obj;
 
-                glPushName(0);
-                glColor3d(1.0, 0.4, 0.4);
-                glBegin(GL_LINES);
-                glVertex3f(n->refpt.x, n->refpt.y, n->refpt.z);
-                glVertex3f(n->refpt.x + n->A, n->refpt.y + n->B, n->refpt.z + n->C);
-                glEnd();
-                glPopName();
+                if (debug_view_normals && IS_FLAT(f))
+                {
+                    Plane* n = &f->normal;
+
+                    glPushName(0);
+                    glColor3d(1.0, 0.4, 0.4);
+                    glBegin(GL_LINES);
+                    glVertex3f(n->refpt.x, n->refpt.y, n->refpt.z);
+                    glVertex3f(n->refpt.x + n->A, n->refpt.y + n->B, n->refpt.z + n->C);
+                    glEnd();
+                    glPopName();
+                }
             }
+    #endif
         }
-#endif
     }
     
     if (!picking)

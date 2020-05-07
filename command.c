@@ -713,6 +713,10 @@ Command(int message, int wParam, int lParam)
                 }
             }
             clear_selection(&selection);
+            if (object_tree.mesh != NULL)
+                mesh_destroy(object_tree.mesh);
+            object_tree.mesh = NULL;
+            object_tree.mesh_valid = FALSE;
             update_drawing();
             break;
 
