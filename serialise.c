@@ -436,6 +436,9 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
         }
         else if (strcmp(tok, "SCALE") == 0)
         {
+            if (importing)      // Don't overwrite settings when importing to group
+                continue;
+
             tok = strtok_s(NULL, " \t\n", &nexttok);
             half_size = (float)atof(tok);
             tok = strtok_s(NULL, " \t\n", &nexttok);
