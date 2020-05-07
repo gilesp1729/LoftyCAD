@@ -289,7 +289,7 @@ gen_view_list_tree_surfaces_op(OPERATION op, Group *tree, Group *parent_tree)
 
             // update the triangle mesh for the volume
             if (vol->xform != NULL)
-                link_tail((Object *)vol->xform, &xform_list);
+                link((Object *)vol->xform, &xform_list);
             for (f = (Face *)vol->faces.head; f != NULL; f = (Face *)f->hdr.next)
                 gen_view_list_surface(f);
             if (vol->xform != NULL)
@@ -318,7 +318,7 @@ gen_view_list_tree_surfaces_op(OPERATION op, Group *tree, Group *parent_tree)
         case OBJ_GROUP:
             group = (Group *)obj;
             if (group->xform != NULL)
-                link_tail((Object *)group->xform, &xform_list);
+                link((Object *)group->xform, &xform_list);
             if (group->op == OP_NONE)
             {
                 // Render contents of group as if in the parent

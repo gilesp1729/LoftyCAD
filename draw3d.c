@@ -433,7 +433,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         {
             // Draw individual faces
             if (vol->xform != NULL)
-                link_tail((Object *)vol->xform, &xform_list);
+                link((Object *)vol->xform, &xform_list);
             for (face = (Face *)vol->faces.head; face != NULL; face = (Face *)face->hdr.next)
                 draw_object((Object *)face, (pres & ~DRAW_WITH_DIMENSIONS), parent_lock);
             if (vol->xform != NULL)
@@ -471,7 +471,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         {
             // Not a rendered view - just draw the thing no matter what.
             if (group->xform != NULL)
-                link_tail((Object *)group->xform, &xform_list);
+                link((Object *)group->xform, &xform_list);
             for (o = group->obj_list.head; o != NULL; o = o->next)
                 draw_object(o, (pres & ~DRAW_WITH_DIMENSIONS), o->lock);
             if (group->xform != NULL)
