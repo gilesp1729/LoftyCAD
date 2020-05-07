@@ -622,9 +622,9 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
 
                     // NOTE: shift-dragging will drag a selection, unless you hold shift after mouse down.
                     if (key_status & AUX_SHIFT)
-                        snap_to_angle(picked_plane, &picked_point, &new_point, 45);
+                        snap_to_angle(facing_plane, &picked_point, &new_point, 45);
                     else if (snapping_to_angle)
-                        snap_to_angle(picked_plane, &picked_point, &new_point, angle_snap);
+                        snap_to_angle(facing_plane, &picked_point, &new_point, angle_snap);
                     snap_to_grid(facing_plane, &new_point, key_status & AUX_CONTROL);
                     parent = find_top_level_parent(&object_tree, picked_obj);
 

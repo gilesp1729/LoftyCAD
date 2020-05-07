@@ -540,7 +540,7 @@ Pick_all_in_rect(GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
             obj = (Object *)buffer[n + num_objs + 2];
             if (obj != NULL)
             {
-                parent = find_parent_object(&object_tree, obj, TRUE);  // Must be deep
+                parent = find_top_level_parent(&object_tree, obj);
                 if (parent == NULL)
                 {
                     n += num_objs + 3;
