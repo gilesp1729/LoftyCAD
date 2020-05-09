@@ -268,6 +268,9 @@ serialise_tree(Group *tree, char *filename)
     fprintf_s(f, "LOFTYCAD %.1f\n", file_version);
     fprintf_s(f, "TITLE %s\n", tree->title);
     fprintf_s(f, "SCALE %f %f %f %d %f\n", half_size, grid_snap, tolerance, angle_snap, round_rad);
+#if 0 // See below in reading code
+    fprintf_s(f, "VIEW %d %f %f %f\n", view_ortho, xTrans, yTrans, zTrans);
+#endif
 
     // Write materials here, in case some are not used by any volumes. Mark them as written.
     for (i = 0; i < MAX_MATERIAL; i++)
@@ -452,6 +455,31 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
             if (tok != NULL)
                 round_rad = (float)atof(tok);
         }
+#if 0 // Don't do this. It requires a checkpoint every time the view changes.
+        else if (strcmp(tok, "VIEW") == 0)
+        {
+            HMENU hMenu;
+
+            if (importing)      // Don't overwrite settings when importing to group
+                continue;
+
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            view_ortho = atoi(tok);
+
+            // TODO: Find out what else needs writing out here (rotation matrix, etc)
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            xTrans = (float)atof(tok);
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            yTrans = (float)atof(tok);
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            zTrans = (float)atof(tok);
+
+            hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
+            CheckMenuItem(hMenu, ID_VIEW_ORTHO, view_ortho ? MF_CHECKED : MF_UNCHECKED);
+            CheckMenuItem(hMenu, ID_VIEW_PERSPECTIVE, !view_ortho ? MF_CHECKED : MF_UNCHECKED);
+
+        }
+#endif // 0
         else if (strcmp(tok, "BEGIN") == 0)
         {
             // Stack the object ID being constructed
