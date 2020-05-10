@@ -242,7 +242,7 @@ update_dims(Object *obj, char *buf)
     }
 
     // If we have changed anything, invalidate all view lists
-    parent = find_parent_object(&object_tree, obj, FALSE);
+    parent = find_parent_object(&object_tree, obj, TRUE);
     invalidate_all_view_lists(parent, obj, 0, 0, 0);
     update_drawing();
 }

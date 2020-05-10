@@ -956,7 +956,7 @@ find_obj(Object *parent, Object *obj)
 }
 
 // Find the parent object (i.e. in the object tree or in a group) for the given object.
-// The parent object maintains the lock on all its components. Will not return a group.
+// The parent object maintains the lock on all its components. Will not return a group (unless given).
 // There are two versions: a "deep" version which searches the object tree and all groups,
 // and a shallow version which does not go down into groups.
 Object *
@@ -977,6 +977,7 @@ find_parent_object(Group *tree, Object *obj, BOOL deep_search)
             return (Object *)f->vol;
     }
 
+    // Nothing for it but to search the tree exhaustively.
     for (top_level = tree->obj_list.head; top_level != NULL; top_level = top_level->next)
     {
         if (top_level->type == OBJ_GROUP)
@@ -985,7 +986,7 @@ find_parent_object(Group *tree, Object *obj, BOOL deep_search)
             {
                 Object *o = find_parent_object((Group *)top_level, obj, deep_search);
                 if (o != NULL)
-                    return top_level;
+                    return o;
             }
         }
         else if (top_level == obj || find_obj(top_level, obj))
@@ -1019,7 +1020,7 @@ find_top_level_parent(Group *tree, Object *obj)
 
 // Build xform list for volume, and groups leading to the volume
 void
-build_parent_xform_list(Object *obj, Object *parent, ListHead *xform_list)
+build_parent_xform_list(Object* obj, Object *parent, ListHead* xform_list)
 {
     Object *top_parent;
 
@@ -1028,24 +1029,18 @@ build_parent_xform_list(Object *obj, Object *parent, ListHead *xform_list)
     if (parent == NULL)
         return;
 
-    // If the object is a group, we'll just draw it (it will be at top level).
-    // But if the object is a volume, we have to build the xform list for everything containing it
-    // (and for sub-components, the volume transform itself)
-    // The passed-in parent will never be a group.
+    // Build list of xforms from the top-level parent down. Take account of sub-components.
     if (obj->type < OBJ_VOLUME && parent->type == OBJ_VOLUME)
     {
         if (((Volume*)parent)->xform != NULL)
-            link((Object*)((Volume*)parent)->xform, xform_list);
+            link_tail((Object*)((Volume*)parent)->xform, xform_list);
     }
-    if (parent->type == OBJ_VOLUME)
+    for (top_parent = parent; top_parent->parent_group->hdr.parent_group != NULL; top_parent = (Object*)top_parent->parent_group)
     {
-        for (top_parent = parent; top_parent->parent_group->hdr.parent_group != NULL; top_parent = (Object *)top_parent->parent_group)
-        {
-            Group* parent_group = top_parent->parent_group;
+        Group* parent_group = top_parent->parent_group;
 
-            if (parent_group->xform != NULL)
-                link((Object *)(parent_group->xform), xform_list);
-        }
+        if (parent_group->xform != NULL)
+            link_tail((Object*)(parent_group->xform), xform_list);
     }
 }
 

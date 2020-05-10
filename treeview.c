@@ -64,15 +64,29 @@ char *obj_description(Object *obj, char *descr, int descr_len)
 
     case OBJ_VOLUME:
         vol = (Volume *)obj;
-        sprintf_s(descr, descr_len, "%s Volume %d %s", op_string[vol->op], obj->ID, get_dims_string(obj, buf));
+        sprintf_s(descr, descr_len, "%s Volume %d %s %s", 
+                op_string[vol->op], 
+                obj->ID, 
+                get_dims_string(obj, buf), 
+                (vol->xform != NULL) ? "(T)" : ""
+                );
         break;
 
     case OBJ_GROUP:
         grp = (Group *)obj;
         if (grp->title[0] == '\0')
-            sprintf_s(descr, descr_len, "%s Group %d", op_string[grp->op], obj->ID);
+            sprintf_s(descr, descr_len, "%s Group %d %s", 
+                    op_string[grp->op], 
+                    obj->ID,
+                    (grp->xform != NULL) ? "(T)" : ""
+                    );
         else
-            sprintf_s(descr, descr_len, "%s Group %d: %s", op_string[grp->op], obj->ID, grp->title);
+            sprintf_s(descr, descr_len, "%s Group %d: %s %s", 
+                    op_string[grp->op], 
+                    obj->ID, 
+                    grp->title,
+                    (grp->xform != NULL) ? "(T)" : ""
+                    );
         break;
     }
 
@@ -297,7 +311,9 @@ treeview_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             if (treeview_highlight == NULL)
                 break;
             GetCursorPos(&pt);
-            contextmenu(treeview_highlight, pt);
+            obj = treeview_highlight;
+            treeview_highlight = NULL;      // in case it goes away in the context menu operation
+            contextmenu(obj, pt);
             break;
 
         case TVN_SELCHANGED:

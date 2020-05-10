@@ -626,34 +626,6 @@ is_selected_direct(Object *obj, Object **prev_in_list)
     return present;
 }
 
-#if 0 // not used any more
-// Find if an object (or any of its parents) is in the selection.
-BOOL
-is_selected_parent(Object *obj)
-{
-    Object *sel, *parent;
-    BOOL present = FALSE;
-
-    for (sel = selection.head; sel != NULL; sel = sel->next)
-    {
-        if (sel->prev == obj)
-        {
-            present = TRUE;
-            break;
-        }
-
-        // Make sure the object is not locked at the level of the thing being picked
-        parent = find_parent_object(&object_tree, sel->prev, FALSE);
-        if (find_obj(sel->prev, obj) && parent->lock < obj->type)
-        {
-            present = TRUE;
-            break;
-        }
-    }
-
-    return present;
-}
-#endif
 
 // Clear the selection, or the clipboard.   TODO - replace this with a plain old call to free_obj_list.
 void

@@ -454,8 +454,8 @@ contextmenu(Object *picked_obj, POINT pt)
     }
     ModifyMenu(hMenu, 0, MF_BYPOSITION | MF_GRAYED | MF_STRING, 0, buf);
 
-    // Find the top-level parent. Disable irrelevant menu items
-    parent = find_parent_object(&object_tree, picked_obj, FALSE);
+    // Find the parent object. Disable irrelevant menu items
+    parent = find_parent_object(&object_tree, picked_obj, TRUE);
     switch (parent->type)
     {
     case OBJ_EDGE:
@@ -942,7 +942,7 @@ transform_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             box = &((Volume *)obj)->bbox;
             break;
         case OBJ_GROUP:
-            sprintf_s(title, 128, "Group %d: %s", obj->ID, ((Group *)picked_obj)->title);
+            sprintf_s(title, 128, "Group %d: %s", obj->ID, ((Group *)obj)->title);
             xform = ((Group *)obj)->xform;
             box = &((Group *)obj)->bbox;
             break;

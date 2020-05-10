@@ -1580,10 +1580,10 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
     if (!view_rendered)
     {
         // Draw selection. Watch for highlighted objects appearing in the selection list.
-        // Pass lock state of top-level parent to determine what is shown.
+        // Pass lock state of parent to determine what is shown.
         for (obj = selection.head; obj != NULL; obj = obj->next)
         {
-            Object *parent = find_parent_object(&object_tree, obj->prev, FALSE);
+            Object *parent = find_parent_object(&object_tree, obj->prev, TRUE);
 
             build_parent_xform_list(obj->prev, parent, &xform_list);
             if (obj->prev != curr_obj && obj->prev != highlight_obj)
@@ -1598,7 +1598,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
         // parent yet. 
         if (curr_obj != NULL)
         {
-            Object *parent = find_parent_object(&object_tree, curr_obj, FALSE);
+            Object *parent = find_parent_object(&object_tree, curr_obj, TRUE);
 
             build_parent_xform_list(curr_obj, parent, &xform_list);
             pres = DRAW_HIGHLIGHT | DRAW_WITH_DIMENSIONS;
@@ -1609,7 +1609,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
 
         if (highlight_obj != NULL)
         {
-            Object* parent = find_parent_object(&object_tree, highlight_obj, FALSE);
+            Object* parent = find_parent_object(&object_tree, highlight_obj, TRUE);
 
             build_parent_xform_list(highlight_obj, parent, &xform_list);
             pres = DRAW_HIGHLIGHT | DRAW_WITH_DIMENSIONS;
@@ -1665,7 +1665,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
             // Draw halo faces, if any.
             for (obj = halo.head; obj != NULL; obj = obj->next)
             {
-                Object* parent = find_parent_object(&object_tree, obj->prev, FALSE);
+                Object* parent = find_parent_object(&object_tree, obj->prev, TRUE);
 
                 build_parent_xform_list(obj->prev, parent, &xform_list);
                 if (obj->prev != curr_obj && obj->prev != highlight_obj)
