@@ -19,6 +19,31 @@ Object *treeview_highlight;
 // Limit of children, to stop ridiculously large expansions
 #define TREEVIEW_LIMIT     2000
 
+// Descriptive string for a transform, to be used in an object description.
+char* xform_string(Transform* xform, char* buf, int len)
+{
+    int n;
+
+    buf[0] = '\0';
+    if (xform == NULL)
+        return buf;
+
+    strcpy_s(buf, len, "[");
+    n = 1;
+    if (xform->enable_scale)
+        n += sprintf_s(&buf[n], len - n, "S(%.2f, %.2f, %.2f)", xform->sx, xform->sy, xform->sz);
+    if (xform->enable_rotation && n < len)  // assumes n doesn't hit len
+    {
+        if (xform->enable_scale)
+            n += sprintf_s(&buf[n], len - n, ", ");
+        n += sprintf_s(&buf[n], len - n, "R(%.1f, %.1f, %.1f)", xform->rx, xform->ry, xform->rz);
+    }
+    if (n < len)
+        strcpy_s(&buf[n], len - n, "]");
+
+    return buf;
+}
+
 // Descriptive string for an object, to be used in the treeview, and elsewhere there is a
 // need to echo out an object's description.
 char *obj_description(Object *obj, char *descr, int descr_len)
@@ -68,7 +93,8 @@ char *obj_description(Object *obj, char *descr, int descr_len)
                 op_string[vol->op], 
                 obj->ID, 
                 get_dims_string(obj, buf), 
-                (vol->xform != NULL) ? "(T)" : ""
+                xform_string(vol->xform, buf2, 64)
+                //(vol->xform != NULL) ? "(T)" : ""
                 );
         break;
 
@@ -78,7 +104,8 @@ char *obj_description(Object *obj, char *descr, int descr_len)
             sprintf_s(descr, descr_len, "%s Group %d %s", 
                     op_string[grp->op], 
                     obj->ID,
-                    (grp->xform != NULL) ? "(T)" : ""
+                    xform_string(grp->xform, buf, 64)
+                    //(grp->xform != NULL) ? "(T)" : ""
                     );
         else
             sprintf_s(descr, descr_len, "%s Group %d: %s %s", 
