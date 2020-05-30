@@ -465,6 +465,7 @@ contextmenu(Object *picked_obj, POINT pt)
         EnableMenuItem(hMenu, ID_OPERATION_NONE, MF_GRAYED);
         EnableMenuItem(hMenu, ID_LOCKING_FACES, MF_GRAYED);
         EnableMenuItem(hMenu, ID_LOCKING_VOLUME, MF_GRAYED);
+        EnableMenuItem(hMenu, ID_LOCKING_GROUP, MF_GRAYED);
         EnableMenuItem(hMenu, ID_OBJ_SELECTPARENTVOLUME, MF_GRAYED);
         EnableMenuItem(hMenu, ID_OBJ_UNGROUP, MF_GRAYED);
         EnableMenuItem(hMenu, ID_OBJ_SAVEGROUP, MF_GRAYED);
@@ -479,6 +480,7 @@ contextmenu(Object *picked_obj, POINT pt)
         EnableMenuItem(hMenu, ID_OPERATION_DIFFERENCE, MF_GRAYED);
         EnableMenuItem(hMenu, ID_OPERATION_NONE, MF_GRAYED);
         EnableMenuItem(hMenu, ID_LOCKING_VOLUME, MF_GRAYED);
+        EnableMenuItem(hMenu, ID_LOCKING_GROUP, MF_GRAYED);
         EnableMenuItem(hMenu, ID_OBJ_SELECTPARENTVOLUME, MF_GRAYED);
         EnableMenuItem(hMenu, ID_OBJ_GROUPEDGES, MF_GRAYED);
         EnableMenuItem(hMenu, ID_OBJ_UNGROUP, MF_GRAYED);
@@ -491,6 +493,7 @@ contextmenu(Object *picked_obj, POINT pt)
         EnableMenuItem(hMenu, ID_OPERATION_UNION, hole ? MF_GRAYED : MF_ENABLED);
         EnableMenuItem(hMenu, ID_OPERATION_DIFFERENCE, hole ? MF_GRAYED : MF_ENABLED);
         EnableMenuItem(hMenu, ID_OPERATION_NONE, MF_GRAYED);
+        EnableMenuItem(hMenu, ID_LOCKING_GROUP, MF_GRAYED);
         EnableMenuItem(hMenu, ID_OBJ_GROUPEDGES, MF_GRAYED);
         EnableMenuItem(hMenu, ID_OBJ_UNGROUP, MF_GRAYED);
         EnableMenuItem(hMenu, ID_OBJ_SAVEGROUP, MF_GRAYED);
@@ -500,7 +503,6 @@ contextmenu(Object *picked_obj, POINT pt)
         break;
 
     case OBJ_GROUP:
-        EnableMenuItem(hMenu, ID_LOCKING_VOLUME, MF_GRAYED);
         EnableMenuItem(hMenu, ID_LOCKING_FACES, MF_GRAYED);
         EnableMenuItem(hMenu, ID_LOCKING_EDGES, MF_GRAYED);
         EnableMenuItem(hMenu, ID_LOCKING_POINTS, MF_GRAYED);
@@ -580,6 +582,9 @@ contextmenu(Object *picked_obj, POINT pt)
     old_parent_lock = parent->lock;
     switch (parent->lock)
     {
+    case LOCK_GROUP:
+        CheckMenuItem(hMenu, ID_LOCKING_GROUP, MF_CHECKED);
+        break;
     case LOCK_VOLUME:
         CheckMenuItem(hMenu, ID_LOCKING_VOLUME, MF_CHECKED);
         break;
@@ -648,6 +653,11 @@ contextmenu(Object *picked_obj, POINT pt)
         break;
     case ID_LOCKING_VOLUME:
         parent->lock = LOCK_VOLUME;
+        if (parent->lock == picked_obj->type)
+            remove_from_selection(picked_obj);
+        break;
+    case ID_LOCKING_GROUP:
+        parent->lock = LOCK_GROUP;
         if (parent->lock == picked_obj->type)
             remove_from_selection(picked_obj);
         break;

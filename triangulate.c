@@ -274,7 +274,7 @@ gen_view_list_tree_surfaces_op(OPERATION op, Group *tree, Group *parent_tree)
     Volume *vol;
     Group *group;
     POINT pt = { wWidth / 2, wHeight / 2 };
-    char buf[32];
+    char buf[64];
 
     for (obj = tree->obj_list.head; obj != NULL; obj = obj->next)
     {
@@ -305,7 +305,7 @@ gen_view_list_tree_surfaces_op(OPERATION op, Group *tree, Group *parent_tree)
             }
             else
             {
-                show_hint_at(pt, obj_description(obj, buf, 32), FALSE);
+                show_hint_at(pt, obj_description(obj, buf, 64), FALSE);
                 process_messages();
 
                 // Merge volume mesh to tree mesh
@@ -341,7 +341,7 @@ gen_view_list_tree_surfaces_op(OPERATION op, Group *tree, Group *parent_tree)
                 }
                 else
                 {
-                    show_hint_at(pt, obj_description(obj, buf, 32), FALSE);
+                    show_hint_at(pt, obj_description(obj, buf, 64), FALSE);
                     process_messages();
 
                     // Merge group mesh to tree mesh

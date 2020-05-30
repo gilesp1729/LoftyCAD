@@ -49,7 +49,8 @@ typedef enum
     LOCK_POINTS = OBJ_POINT,       // The points are locked; the edges and faces may be selected
     LOCK_EDGES = OBJ_EDGE,         // The edges are locked; the faces may be selected
     LOCK_FACES = OBJ_FACE,         // The faces are locked; only the whole volume can be selected
-    LOCK_VOLUME = OBJ_VOLUME       // The whole volume is locked; nothing can be selected or changed
+    LOCK_VOLUME = OBJ_VOLUME,      // The whole volume is locked; nothing can be selected or changed
+    LOCK_GROUP = OBJ_GROUP         // For groups only: the group is locked and cannot be selected or moved
 } LOCK;
 
 // Operation to use when rendering a volume or group.

@@ -156,7 +156,7 @@ color_as(OBJECT obj_type, float color_decay, BOOL construction, PRESENTATION pre
             }
         }
         if (locked)
-            r = g = b = 0.98f;
+            r = g = b = 1.0f;
         break;
     }
     glColor4f(r, g, b, a);
@@ -472,11 +472,18 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         }
         else
         {
-            // Not a rendered view - just draw the thing no matter what.
+            // Not a rendered view - just draw the thing no matter what. Take account of a locked group.
             if (group->xform != NULL)
                 link((Object *)group->xform, &xform_list);
             for (o = group->obj_list.head; o != NULL; o = o->next)
-                draw_object(o, (pres & ~DRAW_WITH_DIMENSIONS), o->lock);
+            {
+                draw_object
+                (
+                    o,
+                    (pres & ~DRAW_WITH_DIMENSIONS),
+                    parent_lock == LOCK_GROUP ? LOCK_GROUP : o->lock
+                );
+            }
             if (group->xform != NULL)
                 delink((Object *)group->xform, &xform_list);
         }

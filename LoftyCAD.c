@@ -471,6 +471,8 @@ Pick(GLint x_pick, GLint y_pick, BOOL force_pick)
 
                 if (!edit_in_groups && face->vol->hdr.parent_group->hdr.parent_group != NULL)
                     obj = find_top_level_parent(&object_tree, (Object *)face->vol->hdr.parent_group);  // this is fast
+                if (obj->lock >= obj->type && !force_pick)
+                    obj = NULL; // this object is locked
             }
             else
             {

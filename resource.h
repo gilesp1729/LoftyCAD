@@ -125,7 +125,6 @@
 #define IDC_COMBO_MATERIAL              1031
 #define IDC_STATIC_MAT_INDEX            1032
 #define IDC_MATERIAL_NAME               1033
-#define IDC_MATRERIAL_RED               1034
 #define IDC_MATERIAL_RED                1034
 #define IDC_MATERIAL_GREEN              1035
 #define IDC_MATERIAL_BLUE               1036
@@ -240,6 +239,7 @@
 #define ID_MATERIALS_NEW                32896
 #define ID_OBJ_MATERIAL                 32897
 #define ID_MATERIAL_NEW                 32898
+#define ID_LOCKING_GROUP                32899
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -248,7 +248,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        163
-#define _APS_NEXT_COMMAND_VALUE         32899
+#define _APS_NEXT_COMMAND_VALUE         32900
 #define _APS_NEXT_CONTROL_VALUE         1038
 #define _APS_NEXT_SYMED_VALUE           110
 #endif

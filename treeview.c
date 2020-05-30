@@ -94,7 +94,6 @@ char *obj_description(Object *obj, char *descr, int descr_len)
                 obj->ID, 
                 get_dims_string(obj, buf), 
                 xform_string(vol->xform, buf2, 64)
-                //(vol->xform != NULL) ? "(T)" : ""
                 );
         break;
 
@@ -105,15 +104,14 @@ char *obj_description(Object *obj, char *descr, int descr_len)
                     op_string[grp->op], 
                     obj->ID,
                     xform_string(grp->xform, buf, 64)
-                    //(grp->xform != NULL) ? "(T)" : ""
                     );
         else
             sprintf_s(descr, descr_len, "%s Group %d: %s %s", 
                     op_string[grp->op], 
                     obj->ID, 
                     grp->title,
-                    (grp->xform != NULL) ? "(T)" : ""
-                    );
+                    xform_string(grp->xform, buf, 64)
+            );
         break;
     }
 

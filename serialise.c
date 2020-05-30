@@ -25,7 +25,7 @@ static BOOL mat_written[MAX_MATERIAL] = { 0, };
 
 // names of things that make the serialised format a little easier to read
 char *objname[] = { "(none)", "POINT", "EDGE", "FACE", "VOLUME", "ENDGROUP" };
-char *locktypes[] = { "N", "P", "E", "F", "V" };
+char *locktypes[] = { "N", "P", "E", "F", "V", "G" };
 char *edgetypes[] = { "STRAIGHT", "ARC", "BEZIER" };
 char *facetypes[] = { "RECT", "CIRCLE", "FLAT", "CYLINDRICAL", "GENERAL" };
 char *optypes[] = { "UNION", "INTER", "DIFF", "NONE" };
@@ -350,7 +350,7 @@ locktype_of(char *tok)
 {
     int i;
 
-    for (i = 0; i <= LOCK_VOLUME; i++)
+    for (i = 0; i <= LOCK_GROUP; i++)
     {
         if (tok[0] == locktypes[i][0])
             return i;
