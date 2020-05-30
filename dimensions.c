@@ -262,13 +262,16 @@ get_dims_string(Object *obj, char buf[64])
 
     buf[0] = '\0';
 
+#if 0  // this doesn't work for objects with parents (like groups) so take it out.
     // If moving, return the distance moved.
     // TODO - this happens for all objects! Only do it on the one(s) being moved..
-    if (app_state == STATE_MOVING)
+    if (app_state == STATE_MOVING && obj == picked_obj)
     {
         sprintf_s(buf, 64, "Moved %s mm", display_rounded(buf2, length(&picked_point, &new_point)));
         return buf;
     }
+#endif
+
 
     switch (obj->type)
     {

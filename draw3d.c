@@ -115,8 +115,8 @@ color_as(OBJECT obj_type, float color_decay, BOOL construction, PRESENTATION pre
             r += 0.4f;
         if (highlighted)
             g += 0.4f;
-        if (highlighted && locked)
-            r = g = b = 0.1f;
+        if (locked)
+            r = g = b = 0.8f;
         break;
 
     case OBJ_FACE:
@@ -155,8 +155,8 @@ color_as(OBJECT obj_type, float color_decay, BOOL construction, PRESENTATION pre
                 break;
             }
         }
-        if (highlighted && locked)
-            r = g = b = 0.9f;
+        if (locked)
+            r = g = b = 0.98f;
         break;
     }
     glColor4f(r, g, b, a);
@@ -453,6 +453,9 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
 
             if (!group->mesh_complete)
             {
+                // TODO: Is this ever reached?
+                ASSERT(group->mesh_complete, "Mesh is not complete");
+
                 for (o = group->obj_list.head; o != NULL; o = o->next)
                 {
                     BOOL merged = FALSE;
