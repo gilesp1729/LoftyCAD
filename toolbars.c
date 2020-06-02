@@ -101,18 +101,18 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         LoadAndDisplayIcon(hWnd, IDI_RENDERED, IDB_RENDERED, IDS_RENDERED);
 
         // Tools are disabled when in render view
-        EnableWindow(GetDlgItem(hWnd, IDB_EDGE), !view_rendered);
-        EnableWindow(GetDlgItem(hWnd, IDB_RECT), !view_rendered);
-        EnableWindow(GetDlgItem(hWnd, IDB_CIRCLE), !view_rendered);
-        EnableWindow(GetDlgItem(hWnd, IDB_ARC_EDGE), !view_rendered);
-        EnableWindow(GetDlgItem(hWnd, IDB_BEZIER_EDGE), !view_rendered);
-        EnableWindow(GetDlgItem(hWnd, IDB_EXTRUDE), !view_rendered);
-        EnableWindow(GetDlgItem(hWnd, IDB_TEXT), !view_rendered);
-        EnableWindow(GetDlgItem(hWnd, IDB_SCALE), !view_rendered);
-        EnableWindow(GetDlgItem(hWnd, IDB_ROTATE), !view_rendered);
-        EnableWindow(GetDlgItem(hWnd, IDB_CONST_EDGE), !view_rendered);
-        EnableWindow(GetDlgItem(hWnd, IDB_CONST_RECT), !view_rendered);
-        EnableWindow(GetDlgItem(hWnd, IDB_CONST_CIRCLE), !view_rendered);
+        EnableWindow(GetDlgItem(hWnd, IDB_EDGE), !object_tree.view_rendered);
+        EnableWindow(GetDlgItem(hWnd, IDB_RECT), !object_tree.view_rendered);
+        EnableWindow(GetDlgItem(hWnd, IDB_CIRCLE), !object_tree.view_rendered);
+        EnableWindow(GetDlgItem(hWnd, IDB_ARC_EDGE), !object_tree.view_rendered);
+        EnableWindow(GetDlgItem(hWnd, IDB_BEZIER_EDGE), !object_tree.view_rendered);
+        EnableWindow(GetDlgItem(hWnd, IDB_EXTRUDE), !object_tree.view_rendered);
+        EnableWindow(GetDlgItem(hWnd, IDB_TEXT), !object_tree.view_rendered);
+        EnableWindow(GetDlgItem(hWnd, IDB_SCALE), !object_tree.view_rendered);
+        EnableWindow(GetDlgItem(hWnd, IDB_ROTATE), !object_tree.view_rendered);
+        EnableWindow(GetDlgItem(hWnd, IDB_CONST_EDGE), !object_tree.view_rendered);
+        EnableWindow(GetDlgItem(hWnd, IDB_CONST_RECT), !object_tree.view_rendered);
+        EnableWindow(GetDlgItem(hWnd, IDB_CONST_CIRCLE), !object_tree.view_rendered);
         break;
 
     case WM_COMMAND:
@@ -247,9 +247,9 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
             case IDB_RENDERED:
                 hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
-                if (view_rendered)
+                if (object_tree.view_rendered)
                 {
-                    view_rendered = FALSE;
+                    object_tree.view_rendered = FALSE;
                     glEnable(GL_BLEND);
                     CheckMenuItem(hMenu, ID_VIEW_RENDEREDVIEW, MF_UNCHECKED);
                 }
@@ -259,22 +259,22 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                     xform_list.tail = NULL;
                     gen_view_list_tree_volumes(&object_tree);
                     gen_view_list_tree_surfaces(&object_tree, &object_tree);
-                    view_rendered = TRUE;
+                    object_tree.view_rendered = TRUE;
                     glDisable(GL_BLEND);
                     CheckMenuItem(hMenu, ID_VIEW_RENDEREDVIEW, MF_CHECKED);
                 }
-                EnableWindow(GetDlgItem(hWndToolbar, IDB_EDGE), !view_rendered);
-                EnableWindow(GetDlgItem(hWndToolbar, IDB_RECT), !view_rendered);
-                EnableWindow(GetDlgItem(hWndToolbar, IDB_CIRCLE), !view_rendered);
-                EnableWindow(GetDlgItem(hWndToolbar, IDB_ARC_EDGE), !view_rendered);
-                EnableWindow(GetDlgItem(hWndToolbar, IDB_BEZIER_EDGE), !view_rendered);
-                EnableWindow(GetDlgItem(hWndToolbar, IDB_EXTRUDE), !view_rendered);
-                EnableWindow(GetDlgItem(hWndToolbar, IDB_TEXT), !view_rendered);
-                EnableWindow(GetDlgItem(hWndToolbar, IDB_SCALE), !view_rendered);
-                EnableWindow(GetDlgItem(hWndToolbar, IDB_ROTATE), !view_rendered);
-                EnableWindow(GetDlgItem(hWndToolbar, IDB_CONST_EDGE), !view_rendered);
-                EnableWindow(GetDlgItem(hWndToolbar, IDB_CONST_RECT), !view_rendered);
-                EnableWindow(GetDlgItem(hWndToolbar, IDB_CONST_CIRCLE), !view_rendered);
+                EnableWindow(GetDlgItem(hWndToolbar, IDB_EDGE), !object_tree.view_rendered);
+                EnableWindow(GetDlgItem(hWndToolbar, IDB_RECT), !object_tree.view_rendered);
+                EnableWindow(GetDlgItem(hWndToolbar, IDB_CIRCLE), !object_tree.view_rendered);
+                EnableWindow(GetDlgItem(hWndToolbar, IDB_ARC_EDGE), !object_tree.view_rendered);
+                EnableWindow(GetDlgItem(hWndToolbar, IDB_BEZIER_EDGE), !object_tree.view_rendered);
+                EnableWindow(GetDlgItem(hWndToolbar, IDB_EXTRUDE), !object_tree.view_rendered);
+                EnableWindow(GetDlgItem(hWndToolbar, IDB_TEXT), !object_tree.view_rendered);
+                EnableWindow(GetDlgItem(hWndToolbar, IDB_SCALE), !object_tree.view_rendered);
+                EnableWindow(GetDlgItem(hWndToolbar, IDB_ROTATE), !object_tree.view_rendered);
+                EnableWindow(GetDlgItem(hWndToolbar, IDB_CONST_EDGE), !object_tree.view_rendered);
+                EnableWindow(GetDlgItem(hWndToolbar, IDB_CONST_RECT), !object_tree.view_rendered);
+                EnableWindow(GetDlgItem(hWndToolbar, IDB_CONST_CIRCLE), !object_tree.view_rendered);
                 break;
             }
         }

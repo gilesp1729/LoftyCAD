@@ -111,6 +111,7 @@ export_triangle_obj(void* arg, int nv, Vertex_index* vi)
     fprintf_s(objv, "\n");
 }
 
+#if 0
 // Render an un-merged volume or group to triangles and export it to an STL file
 void
 export_unmerged_object_stl(Object *obj)
@@ -132,12 +133,12 @@ export_unmerged_object_stl(Object *obj)
         break;
     }
 }
+#endif
 
 // export every volume to various kinds of files
 void
 export_object_tree(Group *tree, char *filename, int file_index)
 {
-    Object *obj;
     char buf[64], tmpdir[256], basename[256], tmp[256];
     char* dot;
     int i, k, baselen;
@@ -153,17 +154,19 @@ export_object_tree(Group *tree, char *filename, int file_index)
 
         ASSERT(tree->mesh != NULL, "Tree mesh NULL");
         ASSERT(tree->mesh_valid, "Tree mesh not valid");
-        ASSERT(tree->mesh_complete, "Mesh incomplete - writing unmerged objects");
+        ASSERT(tree->mesh_complete, "Mesh not complete");
 
         num_exported_tri = 0;
-        if (tree->mesh != NULL && tree->mesh_valid && !tree->mesh_merged)
+        if (tree->mesh != NULL && tree->mesh_valid)
             mesh_foreach_face_coords(tree->mesh, export_triangle_stl, NULL);
 
         sprintf_s(buf, 64, "Mesh: %d triangles\r\n", num_exported_tri);
         Log(buf);
-
+#if 0
         if (!tree->mesh_complete)
         {
+            Object* obj;
+
             for (obj = tree->obj_list.head; obj != NULL; obj = obj->next)
             {
                 if (obj->type == OBJ_VOLUME || obj->type == OBJ_GROUP)
@@ -172,6 +175,7 @@ export_object_tree(Group *tree, char *filename, int file_index)
             sprintf_s(buf, 64, "Unmerged: %d triangles total\r\n", num_exported_tri);
             Log(buf);
         }
+#endif
 
         fprintf_s(stl, "endsolid %s\n", tree->title);
         fclose(stl);
@@ -474,11 +478,11 @@ export_object_tree(Group *tree, char *filename, int file_index)
 
         ASSERT(tree->mesh != NULL, "Tree mesh NULL");
         ASSERT(tree->mesh_valid, "Tree mesh not valid");
-        ASSERT(tree->mesh_complete, "Mesh incomplete - unmerged objects cannot be written");
+        ASSERT(tree->mesh_complete, "Mesh not complete");
 
         num_exported_tri = 0;
         num_exported_vertices = 0;
-        if (tree->mesh != NULL && tree->mesh_valid && !tree->mesh_merged)
+        if (tree->mesh != NULL && tree->mesh_valid)
         {
             int n_vertices = mesh_num_vertices(tree->mesh);
             int n_faces = mesh_num_faces(tree->mesh);

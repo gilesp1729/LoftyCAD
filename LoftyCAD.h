@@ -91,7 +91,6 @@ extern BOOL view_tools;
 extern BOOL view_debug;
 extern BOOL view_tree;
 extern BOOL view_help;
-extern BOOL view_rendered;
 extern BOOL view_constr;
 extern BOOL view_halo;
 extern BOOL view_ortho;
@@ -182,7 +181,14 @@ extern Material materials[MAX_MATERIAL];
 #define DEBUG_HIGHLIGHTING_ENABLED
 
 // Where do assert and log messages go
-#define USE_DEBUGSTR_LOG
+#undef USE_DEBUGSTR_LOG
+
+// Break on assert failure
+#ifdef _DEBUG
+#define ASSERT_BREAK DebugBreak()
+#else
+#define ASSERT_BREAK
+#endif
 
 #ifdef USE_DEBUGSTR_LOG
 #define Log(msg)            OutputDebugString(msg);
@@ -195,6 +201,7 @@ extern Material materials[MAX_MATERIAL];
     CheckMenuItem(GetSubMenu(GetMenu(auxGetHWND()), 2), ID_VIEW_DEBUGLOG, MF_CHECKED);  \
     view_debug = TRUE;                                                                  \
     SendDlgItemMessage(hWndDebug, IDC_DEBUG, EM_REPLACESEL, 0, (LPARAM)(msg));          \
+    ASSERT_BREAK;                                                                     \
 }
 #endif
 

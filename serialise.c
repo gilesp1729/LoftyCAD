@@ -938,6 +938,7 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
                 link_tail_group(object[id], tree);
             else if (IS_GROUP(object[stack[stkptr - 1]]))
                 link_tail_group(object[id], (Group *)object[stack[stkptr - 1]]);
+
         }
         else if (strcmp(tok, "TRANSFORM") == 0)
         {

@@ -229,9 +229,9 @@ Command(int message, int wParam, int lParam)
 
         case ID_VIEW_RENDEREDVIEW:
             hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
-            if (view_rendered)
+            if (object_tree.view_rendered)
             {
-                view_rendered = FALSE;
+                object_tree.view_rendered = FALSE;
                 glEnable(GL_BLEND);
                 CheckMenuItem(hMenu, ID_VIEW_RENDEREDVIEW, MF_UNCHECKED);
             }
@@ -241,20 +241,20 @@ Command(int message, int wParam, int lParam)
                 xform_list.tail = NULL;
                 gen_view_list_tree_volumes(&object_tree);
                 gen_view_list_tree_surfaces(&object_tree, &object_tree);
-                view_rendered = TRUE;
+                object_tree.view_rendered = TRUE;
                 glDisable(GL_BLEND);
                 CheckMenuItem(hMenu, ID_VIEW_RENDEREDVIEW, MF_CHECKED);
             }
-            EnableWindow(GetDlgItem(hWndToolbar, IDB_EDGE), !view_rendered);
-            EnableWindow(GetDlgItem(hWndToolbar, IDB_RECT), !view_rendered);
-            EnableWindow(GetDlgItem(hWndToolbar, IDB_CIRCLE), !view_rendered);
-            EnableWindow(GetDlgItem(hWndToolbar, IDB_ARC_EDGE), !view_rendered);
-            EnableWindow(GetDlgItem(hWndToolbar, IDB_BEZIER_EDGE), !view_rendered);
-            EnableWindow(GetDlgItem(hWndToolbar, IDB_EXTRUDE), !view_rendered);
-            EnableWindow(GetDlgItem(hWndToolbar, IDB_TEXT), !view_rendered);
-            EnableWindow(GetDlgItem(hWndToolbar, IDB_CONST_EDGE), !view_rendered);
-            EnableWindow(GetDlgItem(hWndToolbar, IDB_CONST_RECT), !view_rendered);
-            EnableWindow(GetDlgItem(hWndToolbar, IDB_CONST_CIRCLE), !view_rendered);
+            EnableWindow(GetDlgItem(hWndToolbar, IDB_EDGE), !object_tree.view_rendered);
+            EnableWindow(GetDlgItem(hWndToolbar, IDB_RECT), !object_tree.view_rendered);
+            EnableWindow(GetDlgItem(hWndToolbar, IDB_CIRCLE), !object_tree.view_rendered);
+            EnableWindow(GetDlgItem(hWndToolbar, IDB_ARC_EDGE), !object_tree.view_rendered);
+            EnableWindow(GetDlgItem(hWndToolbar, IDB_BEZIER_EDGE), !object_tree.view_rendered);
+            EnableWindow(GetDlgItem(hWndToolbar, IDB_EXTRUDE), !object_tree.view_rendered);
+            EnableWindow(GetDlgItem(hWndToolbar, IDB_TEXT), !object_tree.view_rendered);
+            EnableWindow(GetDlgItem(hWndToolbar, IDB_CONST_EDGE), !object_tree.view_rendered);
+            EnableWindow(GetDlgItem(hWndToolbar, IDB_CONST_RECT), !object_tree.view_rendered);
+            EnableWindow(GetDlgItem(hWndToolbar, IDB_CONST_CIRCLE), !object_tree.view_rendered);
             break;
 
 #ifdef DEBUG_HIGHLIGHTING_ENABLED
@@ -409,7 +409,7 @@ Command(int message, int wParam, int lParam)
             clear_selection(&selection);
             purge_tree(&object_tree, clipboard.head != NULL, &saved_list);
             drawing_changed = FALSE;
-            view_rendered = FALSE;
+            object_tree.view_rendered = FALSE;
             clean_checkpoints(curr_filename);
             curr_filename[0] = '\0';
             object_tree.title[0] = '\0';
@@ -592,7 +592,7 @@ Command(int message, int wParam, int lParam)
                 clear_selection(&selection);
                 purge_tree(&object_tree, clipboard.head != NULL, &saved_list);
                 drawing_changed = FALSE;
-                view_rendered = FALSE;
+                object_tree.view_rendered = FALSE;
                 clean_checkpoints(curr_filename);
                 curr_filename[0] = '\0';
                 object_tree.title[0] = '\0';
@@ -892,7 +892,7 @@ Command(int message, int wParam, int lParam)
         else if ((HMENU)wParam == GetSubMenu(GetMenu(auxGetHWND()), 2))
         {
             // View menu
-            EnableMenuItem((HMENU)wParam, ID_VIEW_CONSTRUCTIONEDGES, view_rendered ? MF_GRAYED : MF_ENABLED);
+            EnableMenuItem((HMENU)wParam, ID_VIEW_CONSTRUCTIONEDGES, object_tree.view_rendered ? MF_GRAYED : MF_ENABLED);
 
             hMenu = GetSubMenu((HMENU)wParam, 3);   // Materials pop-out
             load_materials_menu(hMenu, TRUE, 0);         // display materials menu with all check marks
