@@ -275,7 +275,6 @@ gen_view_list_tree_surfaces_op(OPERATION op, Group *tree, Group *parent_tree)
     Group *group;
     POINT pt = { wWidth / 2, wHeight / 2 };
     char buf[64];
-    BOOL rc;
 
     for (obj = tree->obj_list.head; obj != NULL; obj = obj->next)
     {
@@ -302,6 +301,7 @@ gen_view_list_tree_surfaces_op(OPERATION op, Group *tree, Group *parent_tree)
                 // First one: copy vol->mesh into tree->mesh
                 parent_tree->mesh = mesh_copy(vol->mesh);
                 parent_tree->mesh_valid = TRUE;
+                vol->mesh_merged = TRUE;
             }
             else
             {
@@ -309,9 +309,8 @@ gen_view_list_tree_surfaces_op(OPERATION op, Group *tree, Group *parent_tree)
                 process_messages();
 
                 // Merge volume mesh to tree mesh
-                rc = mesh_merge_op(op, &parent_tree->mesh, vol->mesh);
-                ASSERT(rc, "Volume mesh not merged");
-                if (!rc)
+                vol->mesh_merged = mesh_merge_op(op, &parent_tree->mesh, vol->mesh);
+                if (!vol->mesh_merged)
                     parent_tree->mesh_complete = FALSE;
             }
             break;
@@ -338,6 +337,7 @@ gen_view_list_tree_surfaces_op(OPERATION op, Group *tree, Group *parent_tree)
                     // First one: copy vol->mesh into tree->mesh
                     parent_tree->mesh = mesh_copy(group->mesh);
                     parent_tree->mesh_valid = TRUE;
+                    group->mesh_merged = TRUE;
                 }
                 else
                 {
@@ -345,9 +345,8 @@ gen_view_list_tree_surfaces_op(OPERATION op, Group *tree, Group *parent_tree)
                     process_messages();
 
                     // Merge group mesh to tree mesh
-                    rc = mesh_merge_op(op, parent_tree->mesh, group->mesh);
-                    ASSERT(rc, "Group mesh not merged");
-                    if (!rc)
+                    group->mesh_merged = mesh_merge_op(op, parent_tree->mesh, group->mesh);
+                    if (!group->mesh_merged)
                         parent_tree->mesh_complete = FALSE;
                 }
             }
@@ -364,7 +363,6 @@ gen_view_list_tree_surfaces(Group *tree, Group *parent_tree)
 {
     // If the parent tree is up to date, we have nothing to do. (but don't do this
     // check if recursing)
-    // TODO if the group has an operation (not none) and it is up to date, we don't have to regenerate it
     if (tree == parent_tree && parent_tree->mesh_valid)
         return;
 

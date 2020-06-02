@@ -38,8 +38,6 @@ BOOL view_debug = FALSE;
 BOOL view_help = TRUE;
 BOOL view_tree = FALSE;
 
-// Globals
-
 // Micro moving (with arrow keys)
 BOOL micro_moved = FALSE;
 
@@ -116,6 +114,9 @@ PLANE facing_index = PLANE_XY;
 
 // Viewing model (ortho or perspective)
 BOOL view_ortho = FALSE;
+
+// TRUE if viewing rendered representation
+BOOL view_rendered = FALSE;
 
 // TRUE to display construction edges
 BOOL view_constr = TRUE;
@@ -246,9 +247,7 @@ Init(void)
 
     glEnable(GL_CULL_FACE);    // don't show back facing faces
 
-    // Set up object tree group
-    object_tree.hdr.type = OBJ_GROUP;
-    object_tree.hdr.lock = LOCK_GROUP;
+    object_tree.hdr.type = OBJ_GROUP;  // set up object tree group
 }
 
 // Set up frustum and possibly picking matrix. If picking, pass the centre of the
@@ -637,15 +636,27 @@ clear_selection(ListHead *sel_list)
     free_obj_list(sel_list);
 }
 
-// When something has changed: mark drawing as changed, write a checkpoint, and update the volume meshes.
+// When something has changed: mark drawing as changed, write a checkpoint, and update the clipped surface.
 void
 update_drawing(void)
 {
     drawing_changed = TRUE;
     write_checkpoint(&object_tree, curr_filename);
+#if 0
+    xform_list.head = NULL;
+    xform_list.tail = NULL;
+    if (gen_view_list_tree_volumes(&object_tree))
+        surfaces_generated = TRUE;
+    if (surfaces_generated)
+    {
+        gen_view_list_tree_surfaces(&object_tree, &object_tree);
+        surfaces_generated = FALSE;
+    }
+#else
     xform_list.head = NULL;
     xform_list.tail = NULL;
     gen_view_list_tree_volumes(&object_tree);
+#endif
     populate_treeview();
 }
 
@@ -657,7 +668,7 @@ left_down(AUX_EVENTREC *event)
     Volume *vol = NULL;
 
     // If rendered, don't do anything here except orbit.
-    if (object_tree.view_rendered)
+    if (view_rendered)
     {
         trackball_MouseDown(event);
         return;
@@ -1165,7 +1176,7 @@ left_click(AUX_EVENTREC *event)
     hide_hint();
 
     // If rendering, don't do any of this
-    if (object_tree.view_rendered)
+    if (view_rendered)
         return;
 
     // If we have just clicked on an arc centre, do nothing here

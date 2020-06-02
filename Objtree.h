@@ -317,6 +317,7 @@ typedef struct Volume
                                     // STL meshes, and sharing of mesh vertices when building triangle meshes.
     Mesh            *mesh;          // Surface mesh for this volume.
     BOOL            mesh_valid;     // If TRUE, the mesh is up to date.
+    BOOL            mesh_merged;    // If TRUE, the mesh has been merged to its parent group mesh.
     struct ListHead faces;          // Doubly linked list of faces making up the volume
 } Volume;
 
@@ -331,8 +332,9 @@ typedef struct Group
     char            title[256];     // A name for the group
     Mesh            *mesh;          // Mesh for the complete group
     BOOL            mesh_valid;     // If TRUE, the mesh is up to date (but not necessarily complete)
+    BOOL            mesh_merged;    // If TRUE, the mesh has been merged to its parent group mesh.
     BOOL            mesh_complete;  // If TRUE, all volumes have been completely merged to this mesh.
-    BOOL            view_rendered;  // If TRUE, this group will be displayed as rendered.
+                                    // (otherwise, some will need to be added separately to the output)
     struct ListHead obj_list;       // Doubly linked list of objects making up the group
 } Group;
 

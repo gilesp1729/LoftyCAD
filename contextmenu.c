@@ -388,7 +388,7 @@ right_click(AUX_EVENTREC *event)
 {
     POINT pt;
 
-    if (object_tree.view_rendered)
+    if (view_rendered)
         return;
 
     picked_obj = Pick(event->data[0], event->data[1], FALSE);
@@ -423,7 +423,7 @@ contextmenu(Object *picked_obj, POINT pt)
     BOOL inserted = FALSE;
     BOOL hole;
     OPERATION op, old_op;
-    Group *group = NULL;
+    Group *group;
     Face *face;
     Point *p, *nextp;
     int i;
@@ -705,7 +705,6 @@ contextmenu(Object *picked_obj, POINT pt)
         {
             link_group((Object*)group, &object_tree);
             clear_selection(&selection);
-            group = NULL;
             group_changed = TRUE;
         }
         break;
@@ -716,7 +715,6 @@ contextmenu(Object *picked_obj, POINT pt)
         {
             link_group((Object*)face, &object_tree);
             clear_selection(&selection);
-            group = NULL;
             group_changed = TRUE;
         }
         break;
@@ -732,7 +730,7 @@ contextmenu(Object *picked_obj, POINT pt)
             link_tail_group(sel_obj->prev, group);
         }
         clear_selection(&selection);
-        group_changed = TRUE;   /// the group will have its mesh generated
+        group_changed = TRUE;
         break;
 
     case ID_OBJ_UNGROUP:
@@ -746,7 +744,6 @@ contextmenu(Object *picked_obj, POINT pt)
         }
         purge_obj(picked_obj);
         clear_selection(&selection);
-        group = NULL;
         group_changed = TRUE;
         break;
 

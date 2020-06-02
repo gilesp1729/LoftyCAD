@@ -238,7 +238,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
 
     BOOL draw_components = !highlighted || !snapping;
 
-    if (!object_tree.view_rendered)
+    if (!view_rendered)
         glEnable(GL_BLEND);
 
     switch (obj->type)
@@ -421,11 +421,10 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
 
     case OBJ_VOLUME:
         vol = (Volume *)obj;
-        if (object_tree.view_rendered)
+        if (view_rendered)
         {
             // Draw from the triangulated mesh for the volume.
             // TODO: is this ever reached? The object tree group should have drawn it.
-            ASSERT(FALSE, "This should never be reached");
             ASSERT(vol->mesh_valid, "Mesh is not up to date");
             color(obj, FALSE, pres, FALSE);
             mesh_foreach_face_coords_mat(vol->mesh, draw_triangle, NULL);
@@ -443,23 +442,20 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         break;
 
     case OBJ_GROUP:
-        // Draw from the triangulated mesh if this group is to be viewed rendered.
+        // Draw from the triangulated mesh, and then draw any remaining
+        // volume meshes that were not completely merged.
         group = (Group *)obj;
-        if (group->view_rendered)
+        if (view_rendered)
         {
-            if (!group->mesh_valid)
-            {
-                gen_view_list_tree_surfaces(group, group);  // TODO can I do this and will the transforms work?
-            }
-            ASSERT(group->mesh != NULL, "No mesh for group");
-            if (group->mesh != NULL)
-            {
-                ASSERT(group->mesh_complete, "Group mesh is not complete");
+            // The object tree is a group, but it is never merged.
+            if (group->mesh != NULL && group->mesh_valid && !group->mesh_merged)
                 mesh_foreach_face_coords_mat(group->mesh, draw_triangle, NULL);
-            }
-#if 0
+
             if (!group->mesh_complete)
             {
+                // TODO: Is this ever reached?
+                ASSERT(group->mesh_complete, "Mesh is not complete");
+
                 for (o = group->obj_list.head; o != NULL; o = o->next)
                 {
                     BOOL merged = FALSE;
@@ -473,7 +469,6 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
                         draw_object(o, (pres & ~DRAW_WITH_DIMENSIONS), o->lock);
                 }
             }
-#endif
         }
         else
         {
@@ -552,7 +547,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
         // handle mouse movement actions.
         // Highlight pick targets (use highlight_obj for this)
         // If rendering, don't do any picks in here (enables smooth orbiting and spinning)
-        if (!left_mouse && !right_mouse && !object_tree.view_rendered)
+        if (!left_mouse && !right_mouse && !view_rendered)
         {
             auxGetMouseLoc(&pt.x, &pt.y);
             highlight_obj = Pick(pt.x, pt.y, FALSE);
@@ -1556,7 +1551,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
 
         // Only clear pixel buffer stuff if not picking (reduces flashing)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        if (object_tree.view_rendered)
+        if (view_rendered)
         {
             glEnable(GL_DEPTH_TEST);
             glEnable(GL_LIGHTING);
@@ -1592,7 +1587,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
     xform_list.tail = NULL;
     draw_object((Object *)&object_tree, pres, LOCK_NONE);  // locks come from objects
 
-    if (!object_tree.view_rendered)
+    if (!view_rendered)
     {
         // Draw selection. Watch for highlighted objects appearing in the selection list.
         // Pass lock state of parent to determine what is shown.
