@@ -179,10 +179,22 @@ extern Material materials[MAX_MATERIAL];
 #undef DEBUG_TOOLBAR_FACING
 #undef DEBUG_REVERSE_RECT_FACE
 #undef DEBUG_VIEW_LIST_ARC
-#define DEBUG_HIGHLIGHTING_ENABLED
+#undef DEBUG_HIGHLIGHTING_ENABLED
+#undef DEBUG_WRITE_VOL_MESH
+
+
+#ifdef BREAK_ON_ASSERT
+#ifdef _DEBUG
+#define ASSERT_BREAK  DebugBreak()
+#else
+#define ASSERT_BREAK
+#endif
+#else
+#define ASSERT_BREAK
+#endif
 
 // Where do assert and log messages go
-#define USE_DEBUGSTR_LOG
+#undef USE_DEBUGSTR_LOG
 
 #ifdef USE_DEBUGSTR_LOG
 #define Log(msg)            OutputDebugString(msg);
@@ -195,6 +207,8 @@ extern Material materials[MAX_MATERIAL];
     CheckMenuItem(GetSubMenu(GetMenu(auxGetHWND()), 2), ID_VIEW_DEBUGLOG, MF_CHECKED);  \
     view_debug = TRUE;                                                                  \
     SendDlgItemMessage(hWndDebug, IDC_DEBUG, EM_REPLACESEL, 0, (LPARAM)(msg));          \
+    SendDlgItemMessage(hWndDebug, IDC_DEBUG, EM_REPLACESEL, 0, (LPARAM)"\r\n");         \
+    ASSERT_BREAK;                                                                       \
 }
 #endif
 

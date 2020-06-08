@@ -478,7 +478,7 @@ export_object_tree(Group *tree, char *filename, int file_index)
 
         num_exported_tri = 0;
         num_exported_vertices = 0;
-        if (tree->mesh != NULL && tree->mesh_valid && !tree->mesh_merged)
+        if (tree->mesh != NULL && tree->mesh_valid && tree->mesh_complete)
         {
             int n_vertices = mesh_num_vertices(tree->mesh);
             int n_faces = mesh_num_faces(tree->mesh);
@@ -499,6 +499,40 @@ export_object_tree(Group *tree, char *filename, int file_index)
         break;
     }
 }
+
+#ifdef DEBUG_WRITE_VOL_MESH
+
+// Write a mesh out to OFF. Used for debugging (sending meshes to CGAL for bug reporting)
+void
+mesh_write_off(char *prefix, int id, Mesh* mesh)
+{
+    char  filename[128];
+
+    sprintf_s(filename, 128, "mesh_%s_%d.off", prefix, id);
+    Log(filename);
+    Log("\r\n");
+    fopen_s(&off, filename, "wt");
+    if (off == NULL)
+        return;
+    fprintf_s(off, "OFF\n");
+    num_exported_tri = 0;
+    num_exported_vertices = 0;
+    {
+        int n_vertices = mesh_num_vertices(mesh);
+        int n_faces = mesh_num_faces(mesh);
+
+        fprintf_s(off, "%d %d %d\n", n_vertices, n_faces, 0);
+        reindex = (int*)calloc(n_vertices, sizeof(int));
+
+        //mesh_foreach_vertex(mesh, export_vertex_off, NULL);
+        mesh_foreach_vertex_d(mesh, export_vertex_off_d, NULL);
+        mesh_foreach_face_vertices(mesh, export_triangle_off, NULL);
+        free(reindex);
+    }
+    fclose(off);
+}
+
+#endif // DEBUG_WRITE_VOL_MESH
 
 
 #ifdef OLD_EXPORT_CODE  // Old code to export direct from GL tessellator

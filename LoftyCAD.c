@@ -1589,7 +1589,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
         CheckMenuItem(hMenu, ID_DEBUG_NORMALS, debug_view_normals ? MF_CHECKED : MF_UNCHECKED);
 #ifndef DEBUG_HIGHLIGHTING_ENABLED
         EnableMenuItem(hMenu, ID_DEBUG_BBOXES, MF_GRAYED);
-        EnableMenuItem(hMenu, ID_DEBUG_ADJACENT, MF_GRAYED);
+        EnableMenuItem(hMenu, ID_DEBUG_NORMALS, MF_GRAYED);
 #endif
 
         // Display help for the resting state

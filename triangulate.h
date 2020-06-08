@@ -64,6 +64,8 @@ void face_shade(GLUtesselator *tess, Face *face, PRESENTATION pres, BOOL locked)
 
 // Export to STL (export.c)
 void export_object_tree(Group *tree, char *filename, int file_index);
+void mesh_write_off(char* prefix, int id, Mesh* mesh);
+
 
 // Import from STL and various formats (import.c)
 BOOL read_stl_to_group(Group *group, char *filename);

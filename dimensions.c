@@ -83,6 +83,10 @@ show_hint_at(POINT pt, char *buf, BOOL accept_input)
     ClientToScreen(auxGetHWND(), &winpt);
     SetWindowPos(hWndDims, HWND_TOPMOST, winpt.x + 10, winpt.y + 20, 0, 0, SWP_NOSIZE);
     ShowWindow(hWndDims, SW_SHOW);
+#if 1
+    Log(buf);
+    Log("\r\n");
+#endif
 }
 
 // Hide the dimensions window.

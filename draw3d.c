@@ -461,9 +461,11 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
                     BOOL merged = FALSE;
 
                     if (o->type == OBJ_GROUP)
-                        merged = ((Group *)o)->mesh_merged;
+                        merged = ((Group*)o)->mesh_merged;
                     else if (o->type == OBJ_VOLUME)
-                        merged = ((Volume *)o)->mesh_merged;
+                        merged = ((Volume*)o)->mesh_merged;
+                    else
+                        continue;   // can't render edges, points, etc.
 
                     if (!merged)
                         draw_object(o, (pres & ~DRAW_WITH_DIMENSIONS), o->lock);

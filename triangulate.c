@@ -292,6 +292,9 @@ gen_view_list_tree_surfaces_op(OPERATION op, Group *tree, Group *parent_tree)
                 link((Object *)vol->xform, &xform_list);
             for (f = (Face *)vol->faces.head; f != NULL; f = (Face *)f->hdr.next)
                 gen_view_list_surface(f);
+#ifdef DEBUG_WRITE_VOL_MESH
+            mesh_write_off("vol", obj->ID, vol->mesh);
+#endif
             if (vol->xform != NULL)
                 delink((Object *)vol->xform, &xform_list);
 
@@ -302,6 +305,10 @@ gen_view_list_tree_surfaces_op(OPERATION op, Group *tree, Group *parent_tree)
                 parent_tree->mesh = mesh_copy(vol->mesh);
                 parent_tree->mesh_valid = TRUE;
                 vol->mesh_merged = TRUE;
+#ifdef DEBUG_WRITE_VOL_MESH
+                sprintf_s(buf, 64, "Copied vol %d\r\n", obj->ID);
+                Log(buf);
+#endif
             }
             else
             {
@@ -312,6 +319,9 @@ gen_view_list_tree_surfaces_op(OPERATION op, Group *tree, Group *parent_tree)
                 vol->mesh_merged = mesh_merge_op(op, &parent_tree->mesh, vol->mesh);
                 if (!vol->mesh_merged)
                     parent_tree->mesh_complete = FALSE;
+#ifdef DEBUG_WRITE_VOL_MESH
+                mesh_write_off("merge_vol", obj->ID, parent_tree->mesh);
+#endif
             }
             break;
 
@@ -338,6 +348,10 @@ gen_view_list_tree_surfaces_op(OPERATION op, Group *tree, Group *parent_tree)
                     parent_tree->mesh = mesh_copy(group->mesh);
                     parent_tree->mesh_valid = TRUE;
                     group->mesh_merged = TRUE;
+#ifdef DEBUG_WRITE_VOL_MESH
+                    sprintf_s(buf, 64, "Copied group %d\r\n", obj->ID);
+                    Log(buf);
+#endif
                 }
                 else
                 {
@@ -348,6 +362,9 @@ gen_view_list_tree_surfaces_op(OPERATION op, Group *tree, Group *parent_tree)
                     group->mesh_merged = mesh_merge_op(op, parent_tree->mesh, group->mesh);
                     if (!group->mesh_merged)
                         parent_tree->mesh_complete = FALSE;
+#ifdef DEBUG_WRITE_VOL_MESH
+                    mesh_write_off("merge_group", obj->ID, parent_tree->mesh);
+#endif
                 }
             }
             if (group->xform != NULL)
