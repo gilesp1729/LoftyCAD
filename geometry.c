@@ -679,10 +679,32 @@ evaluate_transform(Transform *xform)
     {
         if (xform->rx != 0.0f)
         {
-            float cosrx = cosf(xform->rx / RADF);
-            float sinrx = sinf(xform->rx / RADF);
+            float cosrx;
+            float sinrx;
 
             xform->flags |= XF_ROTATE_X;
+
+            // Handle common cases exactly
+            if (xform->rx == 90.0f)
+            {
+                cosrx = 0;
+                sinrx = 1.0f;
+            }
+            else if (xform->rx == -90.0f)
+            {
+                cosrx = 0;
+                sinrx = -1.0f;
+            }
+            else if (xform->rx == 180.0f || xform->rx == -180.0f)
+            {
+                cosrx = -1.0f;
+                sinrx = 0;
+            }
+            else
+            {
+                cosrx = cosf(xform->rx / RADF);
+                sinrx = sinf(xform->rx / RADF);
+            }
             rotate_x[4] = cosrx;
             rotate_x[5] = -sinrx;
             rotate_x[7] = sinrx;
@@ -695,10 +717,30 @@ evaluate_transform(Transform *xform)
 
         if (xform->ry != 0.0f)
         {
-            float cosry = cosf(xform->ry / RADF);
-            float sinry = sinf(xform->ry / RADF);
+            float cosry;
+            float sinry;
 
             xform->flags |= XF_ROTATE_Y;
+            if (xform->ry == 90.0f)
+            {
+                cosry = 0;
+                sinry = 1.0f;
+            }
+            else if (xform->ry == -90.0f)
+            {
+                cosry = 0;
+                sinry = -1.0f;
+            }
+            else if (xform->ry == 180.0f || xform->ry == -180.0f)
+            {
+                cosry = -1.0f;
+                sinry = 0;
+            }
+            else
+            {
+                cosry = cosf(xform->ry / RADF);
+                sinry = sinf(xform->ry / RADF);
+            }
             rotate_y[0] = cosry;
             rotate_y[2] = sinry;
             rotate_y[6] = -sinry;
@@ -711,10 +753,30 @@ evaluate_transform(Transform *xform)
 
         if (xform->rz != 0.0f)
         {
-            float cosrz = cosf(xform->rz / RADF);
-            float sinrz = sinf(xform->rz / RADF);
+            float cosrz;
+            float sinrz;
 
             xform->flags |= XF_ROTATE_Z;
+            if (xform->rz == 90.0f)
+            {
+                cosrz = 0;
+                sinrz = 1.0f;
+            }
+            else if (xform->rz == -90.0f)
+            {
+                cosrz = 0;
+                sinrz = -1.0f;
+            }
+            else if (xform->rz == 180.0f || xform->rz == -180.0f)
+            {
+                cosrz = -1.0f;
+                sinrz = 0;
+            }
+            else
+            {
+                cosrz = cosf(xform->rz / RADF);
+                sinrz = sinf(xform->rz / RADF);
+            }
             rotate_z[0] = cosrz;
             rotate_z[1] = -sinrz;
             rotate_z[3] = sinrz;
@@ -775,11 +837,9 @@ transform_xyz(Transform *xform, float x, float y, float z, float *tx, float *ty,
         *tz = (z * mat[8]) + xform->zc;
         break;
 
+    // add these in if we need to save a it of time
     //case XF_ROTATE_X:                       // Simple rotations about a single axis: 4 multiply-adds
     //    break; 
-
-    // Add these in if found worth doing.
-    //case XF_ROTATE_X | XF_SCALE_NONUNITY:   // Simple rotations with scale: 5 multiply-adds
 
     default:                                // Do a general 3x3 multiply by vector
         *tx = x * mat[0] + y * mat[1] + z * mat[2] + xform->xc;
