@@ -598,22 +598,22 @@ new_length(Point *p0, Point *p1, float len)
 
 // set 3x3 to identity
 void
-mat_set_ident_3x3(float *mat)
+mat_set_ident_3x3(double *mat)
 {
-    mat[0] = 1.0f;
-    mat[1] = 0.0f;
-    mat[2] = 0.0f;
-    mat[3] = 0.0f;
-    mat[4] = 1.0f;
-    mat[5] = 0.0f;
-    mat[6] = 0.0f;
-    mat[7] = 0.0f;
-    mat[8] = 1.0f;
+    mat[0] = 1.0;
+    mat[1] = 0.0;
+    mat[2] = 0.0;
+    mat[3] = 0.0;
+    mat[4] = 1.0;
+    mat[5] = 0.0;
+    mat[6] = 0.0;
+    mat[7] = 0.0;
+    mat[8] = 1.0;
 }
 
 // copy 3x3
 void
-mat_copy_3x3(float *from, float *to)
+mat_copy_3x3(double *from, double *to)
 {
     int i;
     for (i = 0; i < 9; i++)
@@ -622,9 +622,9 @@ mat_copy_3x3(float *from, float *to)
 
 // multiply 3x3 on left by m, put result back into mat: mat = m * mat
 void
-mat_mult_3x3(float *m, float *mat)
+mat_mult_3x3(double *m, double *mat)
 {
-    float res[9];
+    double res[9];
 
     res[0] = m[0] * mat[0] + m[1] * mat[3] + m[2] * mat[6];
     res[1] = m[0] * mat[1] + m[1] * mat[4] + m[2] * mat[7];
@@ -645,8 +645,8 @@ mat_mult_3x3(float *m, float *mat)
 void
 evaluate_transform(Transform *xform)
 {
-    float scale[9], rotate_x[9], rotate_y[9], rotate_z[9];
-    float inv_scale[9], inv_rotate_x[9], inv_rotate_y[9], inv_rotate_z[9];
+    double scale[9], rotate_x[9], rotate_y[9], rotate_z[9];
+    double inv_scale[9], inv_rotate_x[9], inv_rotate_y[9], inv_rotate_z[9];
 
     // Start with the identity
     mat_set_ident_3x3(scale);
@@ -669,9 +669,9 @@ evaluate_transform(Transform *xform)
             scale[0] = xform->sx;
             scale[4] = xform->sy;
             scale[8] = xform->sz;
-            inv_scale[0] = 1.0f / xform->sx;
-            inv_scale[4] = 1.0f / xform->sy;
-            inv_scale[8] = 1.0f / xform->sz;
+            inv_scale[0] = 1.0 / xform->sx;
+            inv_scale[4] = 1.0 / xform->sy;
+            inv_scale[8] = 1.0 / xform->sz;
         }
     }
 
@@ -679,8 +679,8 @@ evaluate_transform(Transform *xform)
     {
         if (xform->rx != 0.0f)
         {
-            float cosrx;
-            float sinrx;
+            double cosrx;
+            double sinrx;
 
             xform->flags |= XF_ROTATE_X;
 
@@ -688,22 +688,22 @@ evaluate_transform(Transform *xform)
             if (xform->rx == 90.0f)
             {
                 cosrx = 0;
-                sinrx = 1.0f;
+                sinrx = 1.0;
             }
             else if (xform->rx == -90.0f)
             {
                 cosrx = 0;
-                sinrx = -1.0f;
+                sinrx = -1.0;
             }
             else if (xform->rx == 180.0f || xform->rx == -180.0f)
             {
-                cosrx = -1.0f;
+                cosrx = -1.0;
                 sinrx = 0;
             }
             else
             {
-                cosrx = cosf(xform->rx / RADF);
-                sinrx = sinf(xform->rx / RADF);
+                cosrx = cos(xform->rx / RAD);
+                sinrx = sin(xform->rx / RAD);
             }
             rotate_x[4] = cosrx;
             rotate_x[5] = -sinrx;
@@ -717,29 +717,29 @@ evaluate_transform(Transform *xform)
 
         if (xform->ry != 0.0f)
         {
-            float cosry;
-            float sinry;
+            double cosry;
+            double sinry;
 
             xform->flags |= XF_ROTATE_Y;
             if (xform->ry == 90.0f)
             {
                 cosry = 0;
-                sinry = 1.0f;
+                sinry = 1.0;
             }
             else if (xform->ry == -90.0f)
             {
                 cosry = 0;
-                sinry = -1.0f;
+                sinry = -1.0;
             }
             else if (xform->ry == 180.0f || xform->ry == -180.0f)
             {
-                cosry = -1.0f;
+                cosry = -1.0;
                 sinry = 0;
             }
             else
             {
-                cosry = cosf(xform->ry / RADF);
-                sinry = sinf(xform->ry / RADF);
+                cosry = cos(xform->ry / RAD);
+                sinry = sin(xform->ry / RAD);
             }
             rotate_y[0] = cosry;
             rotate_y[2] = sinry;
@@ -753,29 +753,29 @@ evaluate_transform(Transform *xform)
 
         if (xform->rz != 0.0f)
         {
-            float cosrz;
-            float sinrz;
+            double cosrz;
+            double sinrz;
 
             xform->flags |= XF_ROTATE_Z;
             if (xform->rz == 90.0f)
             {
                 cosrz = 0;
-                sinrz = 1.0f;
+                sinrz = 1.0;
             }
             else if (xform->rz == -90.0f)
             {
                 cosrz = 0;
-                sinrz = -1.0f;
+                sinrz = -1.0;
             }
             else if (xform->rz == 180.0f || xform->rz == -180.0f)
             {
-                cosrz = -1.0f;
+                cosrz = -1.0;
                 sinrz = 0;
             }
             else
             {
-                cosrz = cosf(xform->rz / RADF);
-                sinrz = sinf(xform->rz / RADF);
+                cosrz = cos(xform->rz / RAD);
+                sinrz = sin(xform->rz / RAD);
             }
             rotate_z[0] = cosrz;
             rotate_z[1] = -sinrz;
@@ -810,10 +810,11 @@ evaluate_transform(Transform *xform)
 }
 
 // Apply a transform to an XYZ coordinate. It must have already been evaluated.
-void
-transform_xyz(Transform *xform, float x, float y, float z, float *tx, float *ty, float *tz)
+// All coordinates are in double precision.
+static void
+transform_xyz(Transform *xform, double x, double y, double z, double *tx, double *ty, double *tz)
 {
-    float *mat;
+    double *mat;
 
     if (xform->flags == 0)
     {
@@ -850,20 +851,23 @@ transform_xyz(Transform *xform, float x, float y, float z, float *tx, float *ty,
 }
 
 // Apply a list of transforms to an XYZ coordinate. We have to do them one at a time
-// since they will have different centres.
+// since they will have different centres. Output is in double.
 void
-transform_list_xyz(ListHead *xform_list, float x, float y, float z, float *tx, float *ty, float *tz)
+transform_list_xyz(ListHead *xform_list, float x, float y, float z, double *tx, double *ty, double *tz)
 {
     Transform *xf;
+    double dx = x;
+    double dy = y;
+    double dz = z;
 
-    *tx = x;
-    *ty = y;
-    *tz = z;
+    *tx = dx;
+    *ty = dy;
+    *tz = dz;
     for (xf = (Transform *)xform_list->head; xf != NULL; xf = (Transform *)xf->hdr.next)
     {
-        transform_xyz(xf, x, y, z, tx, ty, tz);
-        x = *tx;
-        y = *ty;
-        z = *tz;
+        transform_xyz(xf, dx, dy, dz, tx, ty, tz);
+        dx = *tx;
+        dy = *ty;
+        dz = *tz;
     }
 }

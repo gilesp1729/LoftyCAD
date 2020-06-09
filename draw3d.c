@@ -201,10 +201,10 @@ draw_triangle(void *arg, int mat, float x[3], float y[3], float z[3])
 void
 glVertex3_trans(float x, float y, float z)
 {
-    float tx, ty, tz;
+    double tx, ty, tz;
 
     transform_list_xyz(&xform_list, x, y, z, &tx, &ty, &tz);
-    glVertex3f(tx, ty, tz);
+    glVertex3d(tx, ty, tz);
 }
 
 // Draw any object. Control select/highlight colors per object type, how the parent is locked,

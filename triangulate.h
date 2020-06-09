@@ -37,7 +37,7 @@ void gen_view_list_surface(Face *face);
 Mesh *mesh_new(int material);
 Mesh *mesh_copy(Mesh *from);
 void mesh_destroy(Mesh *mesh);
-void mesh_add_vertex(Mesh *mesh, float x, float y, float z, Vertex_index *vi);
+void mesh_add_vertex(Mesh *mesh, double x, double y, double z, Vertex_index *vi);
 void mesh_add_face(Mesh *mesh, Vertex_index *v1, Vertex_index *v2, Vertex_index *v3, Face_index *fi);
 BOOL mesh_union(Mesh **mesh1, Mesh *mesh2);
 BOOL mesh_intersection(Mesh **mesh1, Mesh *mesh2);

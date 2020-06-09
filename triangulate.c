@@ -995,10 +995,10 @@ void
 render_vertexData(void * vertex_data, void * polygon_data)
 {
     Point *v = (Point *)vertex_data;
-    float tx, ty, tz;
+    double tx, ty, tz;
 
     transform_list_xyz(&xform_list, v->x, v->y, v->z, &tx, &ty, &tz);
-    glVertex3f(tx, ty, tz);
+    glVertex3d(tx, ty, tz);
 }
 
 void 

@@ -58,7 +58,7 @@ clip_tess_write(void * polygon_data)
             }
             else
             {
-                float tx, ty, tz;
+                double tx, ty, tz;
 
                 // Transform these coords before adding vertex to mesh. Clip_tess_pts is untransformed.
                 transform_list_xyz(&xform_list, clip_tess_points[i].x, clip_tess_points[i].y, clip_tess_points[i].z, &tx, &ty, &tz);

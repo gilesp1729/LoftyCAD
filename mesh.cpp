@@ -33,7 +33,7 @@ extern "C"
     }
 
     void
-        mesh_add_vertex(Mesh *mesh, float x, float y, float z, Vertex_index *vi)
+        mesh_add_vertex(Mesh *mesh, double x, double y, double z, Vertex_index *vi)
     {
         K::Point_3 p = { x, y, z };
         *vi = mesh->add_vertex(p);

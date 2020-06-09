@@ -3,8 +3,8 @@
 #ifndef __GEOM_H__
 #define __GEOM_H__
 
-#define PI 3.1415926
-#define RAD 57.29577
+#define PI 3.14159265359
+#define RAD 57.2957795131
 #define RADF 57.29577f
 
 // A large impossible coordinate value
@@ -71,7 +71,6 @@ BOOL centre_2pt_tangent_circle(Point *p1, Point *p2, Point *p, Plane *pl, Point 
 void look_at_centre_d(Point c, Point p1, Plane n, double matrix[16]);
 
 void evaluate_transform(Transform *xform);
-void transform_xyz(Transform *xform, float x, float y, float z, float *tx, float *ty, float *tz);
-void transform_list_xyz(ListHead *xform_list, float x, float y, float z, float *tx, float *ty, float *tz);
+void transform_list_xyz(ListHead *xform_list, float x, float y, float z, double *tx, double *ty, double *tz);
 
 #endif
