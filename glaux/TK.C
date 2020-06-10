@@ -1463,6 +1463,7 @@ PIXELFORMATDESCRIPTOR pfd;
 
       case WM_INITMENUPOPUP:
       case WM_COMMAND:
+      case WM_DROPFILES:
           if (CommandFunc)
               return (*CommandFunc)(message, wParam, lParam);
           break;

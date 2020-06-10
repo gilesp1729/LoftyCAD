@@ -6,6 +6,7 @@
 #include <CommCtrl.h>
 #include <CommDlg.h>
 #include <stdio.h>
+#include <shellapi.h>
 
 #define MAX_LOADSTRING 100
 
@@ -1623,6 +1624,8 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
             gen_view_list_tree_volumes(&object_tree);
             populate_treeview();
         }
+
+        DragAcceptFiles(auxGetHWND(), TRUE);
 
         hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_LOFTYCAD));
 

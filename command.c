@@ -2,6 +2,7 @@
 #include "LoftyCAD.h"
 #include <CommCtrl.h>
 #include <CommDlg.h>
+#include <shellapi.h>
 
 // Message handler for about box.
 INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
@@ -89,10 +90,13 @@ Command(int message, int wParam, int lParam)
     OPENFILENAME ofn;
     char window_title[256];
     char new_filename[256];
-    Object *obj;
-    char *pdot;
+    Object* obj;
+    Group* group;
+    char* pdot;
     char buf[64];
     int i;
+    BOOL rc;
+    char* filetypes[5] = {"lcd", "stl", "amf", "obj", "off"};
 
     // Check for micro moves
     if (micro_moved)
@@ -106,6 +110,124 @@ Command(int message, int wParam, int lParam)
     case WM_SETCURSOR:
         display_cursor(app_state);
         return TRUE;
+
+    case WM_DROPFILES:
+        DragQueryFile((HDROP)wParam, 0, new_filename, 256);
+
+        // If an LCD file, open it. If one of the recognised import formats, import it to a group.
+        pdot = strrchr(new_filename, '.');
+        for (i = 0; i < 5; i++)
+        {
+            if (_stricmp(pdot + 1, filetypes[i]) == 0)
+                break;
+        }
+        if (i == 5)
+            break;   // not recognised, just forget it
+
+        if (i == 0)
+        {
+            HMENU hMenu = LoadMenu(hInst, MAKEINTRESOURCE(IDR_OPENORIMPORT));
+            int rc;
+            POINT pt;
+
+            // allow option to open LCD or import to group
+            DragQueryPoint((HDROP)wParam, &pt);
+            hMenu = GetSubMenu(hMenu, 0);
+            rc = TrackPopupMenu
+            (
+                hMenu,
+                TPM_RETURNCMD | TPM_NONOTIFY | TPM_RIGHTBUTTON,
+                pt.x,
+                pt.y,
+                0,
+                auxGetHWND(),
+                NULL
+            );
+
+            if (rc == 0)
+                break;
+            if (rc == ID_FILE_OPENFILE)
+            {
+                // check if needs saving, close, and open new file
+                if (drawing_changed)
+                {
+                    int rc = MessageBox(auxGetHWND(), "File modified. Save it?", curr_filename, MB_YESNOCANCEL | MB_ICONWARNING);
+
+                    if (rc == IDCANCEL)
+                        break;
+
+                    if (rc == IDYES)
+                    {
+                        if (curr_filename[0] == '\0')
+                            SendMessage(auxGetHWND(), WM_COMMAND, ID_FILE_SAVEAS, 0);
+                        else
+                            serialise_tree(&object_tree, curr_filename);
+                    }
+                }
+
+                clear_selection(&selection);
+                purge_tree(&object_tree, clipboard.head != NULL, &saved_list);
+                drawing_changed = FALSE;
+                view_rendered = FALSE;
+                clean_checkpoints(curr_filename);
+                curr_filename[0] = '\0';
+                object_tree.title[0] = '\0';
+                SetWindowText(auxGetHWND(), "LoftyCAD");
+
+                if (deserialise_tree(&object_tree, new_filename, FALSE))
+                {
+                    strcpy_s(curr_filename, 256, new_filename);
+                    drawing_changed = FALSE;
+                    strcpy_s(window_title, 256, curr_filename);
+                    strcat_s(window_title, 256, " - ");
+                    strcat_s(window_title, 256, object_tree.title);
+                    SetWindowText(auxGetHWND(), window_title);
+                    hMenu = GetSubMenu(GetMenu(auxGetHWND()), 0);
+                    hMenu = GetSubMenu(hMenu, 9);
+                    insert_filename_to_MRU(hMenu, curr_filename);
+                    xform_list.head = NULL;
+                    xform_list.tail = NULL;
+                    gen_view_list_tree_volumes(&object_tree);
+                    populate_treeview();
+                }
+
+                break;
+            }
+        }
+
+        // Import the file to a group
+        group = group_new();
+        rc = FALSE;
+
+        switch (i)
+        {
+        case 0:
+            rc = deserialise_tree(group, new_filename, TRUE);
+            break;
+        case 1:
+            rc = read_stl_to_group(group, new_filename);
+            break;
+        case 2:
+            rc = read_amf_to_group(group, new_filename);
+            break;
+        case 3:
+            rc = read_obj_to_group(group, new_filename);
+            break;
+        case 4:
+            rc = read_off_to_group(group, new_filename);
+            break;
+        }
+        if (rc)
+        {
+            link_group((Object*)group, &object_tree);
+            update_drawing();
+        }
+        else
+        {
+            purge_obj((Object*)group);
+        }
+
+        break;
 
     case WM_COMMAND:
         switch (LOWORD(wParam))
@@ -441,7 +563,6 @@ Command(int message, int wParam, int lParam)
                 xform_list.head = NULL;
                 xform_list.tail = NULL;
                 gen_view_list_tree_volumes(&object_tree);
-                //gen_view_list_tree_surfaces(&object_tree, &object_tree);
                 populate_treeview();
             }
 
@@ -615,7 +736,6 @@ Command(int message, int wParam, int lParam)
                     xform_list.head = NULL;
                     xform_list.tail = NULL;
                     gen_view_list_tree_volumes(&object_tree);
-                    //gen_view_list_tree_surfaces(&object_tree, &object_tree);
                     populate_treeview();
                 }
             }
@@ -739,7 +859,6 @@ Command(int message, int wParam, int lParam)
             xform_list.head = NULL;
             xform_list.tail = NULL;
             gen_view_list_tree_volumes(&object_tree);
-            //gen_view_list_tree_surfaces(&object_tree, &object_tree);
             populate_treeview();
             break;
 
@@ -749,7 +868,6 @@ Command(int message, int wParam, int lParam)
             xform_list.head = NULL;
             xform_list.tail = NULL;
             gen_view_list_tree_volumes(&object_tree);
-            //gen_view_list_tree_surfaces(&object_tree, &object_tree);
             populate_treeview();
             break;
 

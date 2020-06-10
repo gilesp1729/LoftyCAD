@@ -367,6 +367,15 @@ BEGIN
     END
 END
 
+IDR_OPENORIMPORT MENU
+BEGIN
+    POPUP "file"
+    BEGIN
+        MENUITEM "Open file",                   ID_FILE_OPENFILE
+        MENUITEM "Import to group",             ID_FILE_IMPORTTOGROUP
+    END
+END
+
 
 /////////////////////////////////////////////////////////////////////////////
 //
