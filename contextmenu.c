@@ -410,7 +410,7 @@ right_click(AUX_EVENTREC *event)
 void
 contextmenu(Object *picked_obj, POINT pt)
 {
-    HMENU hMenu = LoadMenu(hInst, MAKEINTRESOURCE(IDR_CONTEXT));
+    HMENU hMenu;
     int rc;
     Object *parent, *sel_obj, *o, *o_next;
     char buf[128];
@@ -433,7 +433,6 @@ contextmenu(Object *picked_obj, POINT pt)
     char group_filename[256];
 
     // Display the object ID at the top of the menu
-    hMenu = GetSubMenu(hMenu, 0);
     switch (picked_obj->type)
     {
     case OBJ_POINT:
@@ -452,65 +451,51 @@ contextmenu(Object *picked_obj, POINT pt)
         sprintf_s(buf, 128, "Group %d: %s", picked_obj->ID, ((Group *)picked_obj)->title);
         break;
     }
-    ModifyMenu(hMenu, 0, MF_BYPOSITION | MF_GRAYED | MF_STRING, 0, buf);
 
-    // Find the parent object. Disable irrelevant menu items
+    // Find the parent object. 
+    // Select a menu, and disable irrelevant menu items based on the parent.
     parent = find_parent_object(&object_tree, picked_obj, TRUE);
     switch (parent->type)
     {
     case OBJ_EDGE:
-        EnableMenuItem(hMenu, ID_OPERATION_UNION, MF_GRAYED);
-        EnableMenuItem(hMenu, ID_OPERATION_INTERSECTION, MF_GRAYED);
-        EnableMenuItem(hMenu, ID_OPERATION_DIFFERENCE, MF_GRAYED);
-        EnableMenuItem(hMenu, ID_OPERATION_NONE, MF_GRAYED);
+        hMenu = LoadMenu(hInst, MAKEINTRESOURCE(IDR_CONTEXT_FEP));
+        hMenu = GetSubMenu(hMenu, 0);
+        ModifyMenu(hMenu, 0, MF_BYPOSITION | MF_GRAYED | MF_STRING, 0, buf);
+
         EnableMenuItem(hMenu, ID_LOCKING_FACES, MF_GRAYED);
         EnableMenuItem(hMenu, ID_LOCKING_VOLUME, MF_GRAYED);
-        EnableMenuItem(hMenu, ID_LOCKING_GROUP, MF_GRAYED);
-        EnableMenuItem(hMenu, ID_OBJ_SELECTPARENTVOLUME, MF_GRAYED);
-        EnableMenuItem(hMenu, ID_OBJ_UNGROUP, MF_GRAYED);
-        EnableMenuItem(hMenu, ID_OBJ_SAVEGROUP, MF_GRAYED);
-        EnableMenuItem(hMenu, ID_OBJ_MAKEFACE, MF_GRAYED);
         EnableMenuItem(hMenu, ID_OBJ_CHAMFERCORNER, MF_GRAYED);
         EnableMenuItem(hMenu, ID_OBJ_ROUNDCORNER, MF_GRAYED);
         break;
 
     case OBJ_FACE:
-        EnableMenuItem(hMenu, ID_OPERATION_UNION, MF_GRAYED);
-        EnableMenuItem(hMenu, ID_OPERATION_INTERSECTION, MF_GRAYED);
-        EnableMenuItem(hMenu, ID_OPERATION_DIFFERENCE, MF_GRAYED);
-        EnableMenuItem(hMenu, ID_OPERATION_NONE, MF_GRAYED);
+        hMenu = LoadMenu(hInst, MAKEINTRESOURCE(IDR_CONTEXT_FEP));
+        hMenu = GetSubMenu(hMenu, 0);
+        ModifyMenu(hMenu, 0, MF_BYPOSITION | MF_GRAYED | MF_STRING, 0, buf);
+
         EnableMenuItem(hMenu, ID_LOCKING_VOLUME, MF_GRAYED);
-        EnableMenuItem(hMenu, ID_LOCKING_GROUP, MF_GRAYED);
-        EnableMenuItem(hMenu, ID_OBJ_SELECTPARENTVOLUME, MF_GRAYED);
-        EnableMenuItem(hMenu, ID_OBJ_GROUPEDGES, MF_GRAYED);
-        EnableMenuItem(hMenu, ID_OBJ_UNGROUP, MF_GRAYED);
-        EnableMenuItem(hMenu, ID_OBJ_SAVEGROUP, MF_GRAYED);
-        EnableMenuItem(hMenu, ID_OBJ_MAKEFACE, MF_GRAYED);
         break;
 
     case OBJ_VOLUME:
+    default:  // note: never used, but shuts up compiler
+        hMenu = LoadMenu(hInst, MAKEINTRESOURCE(IDR_CONTEXT_VOL));
+        hMenu = GetSubMenu(hMenu, 0);
+        ModifyMenu(hMenu, 0, MF_BYPOSITION | MF_GRAYED | MF_STRING, 0, buf);
+
         hole = ((Volume *)picked_obj)->extrude_height < 0;
         EnableMenuItem(hMenu, ID_OPERATION_UNION, hole ? MF_GRAYED : MF_ENABLED);
         EnableMenuItem(hMenu, ID_OPERATION_DIFFERENCE, hole ? MF_GRAYED : MF_ENABLED);
-        EnableMenuItem(hMenu, ID_OPERATION_NONE, MF_GRAYED);
-        EnableMenuItem(hMenu, ID_LOCKING_GROUP, MF_GRAYED);
-        EnableMenuItem(hMenu, ID_OBJ_GROUPEDGES, MF_GRAYED);
-        EnableMenuItem(hMenu, ID_OBJ_UNGROUP, MF_GRAYED);
-        EnableMenuItem(hMenu, ID_OBJ_SAVEGROUP, MF_GRAYED);
-        EnableMenuItem(hMenu, ID_OBJ_MAKEFACE, MF_GRAYED);
-        EnableMenuItem(hMenu, ID_OBJ_CHAMFERCORNER, MF_GRAYED);
-        EnableMenuItem(hMenu, ID_OBJ_ROUNDCORNER, MF_GRAYED);
         break;
 
     case OBJ_GROUP:
+        hMenu = LoadMenu(hInst, MAKEINTRESOURCE(IDR_CONTEXT_GROUP));
+        hMenu = GetSubMenu(hMenu, 0);
+        ModifyMenu(hMenu, 0, MF_BYPOSITION | MF_GRAYED | MF_STRING, 0, buf);
+
         EnableMenuItem(hMenu, ID_LOCKING_FACES, MF_GRAYED);
         EnableMenuItem(hMenu, ID_LOCKING_EDGES, MF_GRAYED);
         EnableMenuItem(hMenu, ID_LOCKING_POINTS, MF_GRAYED);
         EnableMenuItem(hMenu, ID_LOCKING_UNLOCKED, MF_GRAYED);
-        EnableMenuItem(hMenu, ID_OBJ_SELECTPARENTVOLUME, MF_GRAYED);
-        EnableMenuItem(hMenu, ID_OBJ_GROUPEDGES, MF_GRAYED);
-        EnableMenuItem(hMenu, ID_OBJ_CHAMFERCORNER, MF_GRAYED);
-        EnableMenuItem(hMenu, ID_OBJ_ROUNDCORNER, MF_GRAYED);
         break;
     }
 
@@ -603,7 +588,7 @@ contextmenu(Object *picked_obj, POINT pt)
     }
 
     if (picked_obj->type == OBJ_VOLUME)
-        load_materials_menu(GetSubMenu(hMenu, 3), FALSE, ((Volume*)picked_obj)->material);
+        load_materials_menu(GetSubMenu(hMenu, 8), FALSE, ((Volume*)picked_obj)->material);
     else
         EnableMenuItem(hMenu, ID_MATERIALS_NEW, MF_GRAYED);
 

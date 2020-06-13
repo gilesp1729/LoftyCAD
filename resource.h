@@ -66,6 +66,7 @@
 #define IDD_PREFS                       142
 #define IDR_CONTEXT                     143
 #define IDD_HELP                        143
+#define IDR_CONTEXT_OLD                 143
 #define IDI_ARC_EDGE                    144
 #define IDD_TREEVIEW                    144
 #define IDI_BEZIER_EDGE                 145
@@ -86,11 +87,13 @@
 #define IDC_EDGE1                       162
 #define IDD_MATERIALS                   162
 #define IDC_EDGE2                       163
-#define IDR_MENU1                       163
 #define IDR_OPENORIMPORT                163
 #define IDC_EDGE3                       164
+#define IDR_CONTEXT_GROUP               164
 #define IDC_FACE                        165
+#define IDR_CONTEXT_VOL                 165
 #define IDC_FACE1                       166
+#define IDR_CONTEXT_FEP                 166
 #define IDC_FACE2                       167
 #define IDC_FACE3                       168
 #define IDC_RESIZE                      169

@@ -477,7 +477,7 @@ Pick(GLint x_pick, GLint y_pick, BOOL force_pick)
             }
             else
             {
-                Object *parent = find_parent_object(&object_tree, obj, TRUE);               // this is not so fast
+                Object *parent = find_top_level_parent(&object_tree, obj);               // this is not so fast
                 if (!edit_in_groups && parent != NULL && parent->type == OBJ_GROUP)
                     obj = parent;
             }
