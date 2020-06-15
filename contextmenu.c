@@ -431,6 +431,7 @@ contextmenu(Object *picked_obj, POINT pt)
     CHOOSEFONT cf;
     LOGFONT lf;
     char group_filename[256];
+    float xc, yc, zc;
 
     // Display the object ID at the top of the menu
     switch (picked_obj->type)
@@ -458,18 +459,16 @@ contextmenu(Object *picked_obj, POINT pt)
     switch (parent->type)
     {
     case OBJ_EDGE:
-        hMenu = LoadMenu(hInst, MAKEINTRESOURCE(IDR_CONTEXT_FEP));
+        hMenu = LoadMenu(hInst, MAKEINTRESOURCE(IDR_CONTEXT_EDGE));
         hMenu = GetSubMenu(hMenu, 0);
         ModifyMenu(hMenu, 0, MF_BYPOSITION | MF_GRAYED | MF_STRING, 0, buf);
 
         EnableMenuItem(hMenu, ID_LOCKING_FACES, MF_GRAYED);
         EnableMenuItem(hMenu, ID_LOCKING_VOLUME, MF_GRAYED);
-        EnableMenuItem(hMenu, ID_OBJ_CHAMFERCORNER, MF_GRAYED);
-        EnableMenuItem(hMenu, ID_OBJ_ROUNDCORNER, MF_GRAYED);
         break;
 
     case OBJ_FACE:
-        hMenu = LoadMenu(hInst, MAKEINTRESOURCE(IDR_CONTEXT_FEP));
+        hMenu = LoadMenu(hInst, MAKEINTRESOURCE(IDR_CONTEXT_FACE));
         hMenu = GetSubMenu(hMenu, 0);
         ModifyMenu(hMenu, 0, MF_BYPOSITION | MF_GRAYED | MF_STRING, 0, buf);
 
@@ -588,7 +587,7 @@ contextmenu(Object *picked_obj, POINT pt)
     }
 
     if (picked_obj->type == OBJ_VOLUME)
-        load_materials_menu(GetSubMenu(hMenu, 8), FALSE, ((Volume*)picked_obj)->material);
+        load_materials_menu(GetSubMenu(hMenu, 10), FALSE, ((Volume*)picked_obj)->material);
     else
         EnableMenuItem(hMenu, ID_MATERIALS_NEW, MF_GRAYED);
 
@@ -825,11 +824,22 @@ contextmenu(Object *picked_obj, POINT pt)
         inserted = TRUE;
         break;
 
+    case ID_OBJ_ROTATE90:
+        find_obj_pivot(parent, &xc, &yc, &zc);
+        rotate_obj_90_facing(parent, xc, yc, zc);
+        clear_move_copy_flags(parent);
+        xform_changed = TRUE;
+        break;
+
+    case ID_OBJ_REFLECT:
+        reflect_obj_facing(parent);                 // TODO find some way to express plane/line
+        clear_move_copy_flags(parent);
+        xform_changed = TRUE;
+        break;
+
     case ID_OBJ_TRANSFORM:
         xform_changed =
             DialogBoxParam(hInst, MAKEINTRESOURCE(IDD_TRANSFORM), auxGetHWND(), transform_dialog, (LPARAM)picked_obj);
-        if (xform_changed)
-            invalidate_all_view_lists(parent, picked_obj, 0, 0, 0);
         break;
 
     case ID_OBJ_EDITTEXT:
@@ -905,7 +915,7 @@ contextmenu(Object *picked_obj, POINT pt)
         invalidate_all_view_lists(parent, picked_obj, 0, 0, 0);
     }
 
-    if (material_changed)
+    if (material_changed || xform_changed)
         invalidate_all_view_lists(parent, picked_obj, 0, 0, 0);
 
     if (parent->lock != old_parent_lock || op != old_op || group_changed || dims_changed || sel_changed || xform_changed || inserted || material_changed)

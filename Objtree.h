@@ -388,13 +388,18 @@ void empty_bucket(Point ***bucket);
 void free_bucket_points(Point ***bucket);
 void free_bucket(Point ***bucket);
 
-// Copy and move object
+// Copy and move object (mover.c)
 Object *copy_obj(Object *obj, float xoffset, float yoffset, float zoffset);
 void move_obj(Object *obj, float xoffset, float yoffset, float zoffset);
 void calc_halo_params(Face* face, ListHead *halo);
 void move_halo_around_face(Face* face, float xoffset, float yoffset, float zoffset);
 void clear_move_copy_flags(Object *obj);
 Face *clone_face_reverse(Face *face);
+
+// Rotate-90 and reflect object in place (note: this is not the same as a transform)
+void find_obj_pivot(Object* obj, float* xc, float* yc, float* zc);
+void rotate_obj_90_facing(Object* obj, float xc, float yc, float zc);
+void reflect_obj_facing(Object* obj);
 
 // Find object in tree, at a location, or as child of another object
 BOOL find_obj(Object *parent, Object *obj);

@@ -66,7 +66,6 @@
 #define IDD_PREFS                       142
 #define IDR_CONTEXT                     143
 #define IDD_HELP                        143
-#define IDR_CONTEXT_OLD                 143
 #define IDI_ARC_EDGE                    144
 #define IDD_TREEVIEW                    144
 #define IDI_BEZIER_EDGE                 145
@@ -93,8 +92,10 @@
 #define IDC_FACE                        165
 #define IDR_CONTEXT_VOL                 165
 #define IDC_FACE1                       166
-#define IDR_CONTEXT_FEP                 166
+#define IDR_CONTEXT_FACE                166
 #define IDC_FACE2                       167
+#define IDR_CONTEXT_FACE1               167
+#define IDR_CONTEXT_EDGE                167
 #define IDC_FACE3                       168
 #define IDC_RESIZE                      169
 #define IDC_RESIZE1                     170
@@ -248,6 +249,8 @@
 #define ID_OPENFILE_IMPORTTOGROUP       32900
 #define ID_OPENFILE_OPENFILE            32901
 #define ID_FILE_OPENFILE                32902
+#define ID_OBJ_REFLECT                  32903
+#define ID_OBJ_ROTATE90                 32904
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -256,7 +259,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        164
-#define _APS_NEXT_COMMAND_VALUE         32903
+#define _APS_NEXT_COMMAND_VALUE         32905
 #define _APS_NEXT_CONTROL_VALUE         1038
 #define _APS_NEXT_SYMED_VALUE           110
 #endif

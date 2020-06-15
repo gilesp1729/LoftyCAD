@@ -123,6 +123,7 @@
     <ClCompile Include="import.c" />
     <ClCompile Include="list.c" />
     <ClCompile Include="mesh.cpp" />
+    <ClCompile Include="mover.c" />
     <ClCompile Include="neighbourhood.c" />
     <ClCompile Include="objtree.c" />
     <ClCompile Include="LoftyCAD.c" />

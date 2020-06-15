@@ -320,53 +320,6 @@ IDI_TEXT                ICON                    "icon-text.ico"
 // Menu
 //
 
-IDR_CONTEXT_OLD MENU
-BEGIN
-    POPUP "Obj"
-    BEGIN
-        MENUITEM "Object type",                 ID_OBJ_OBJECTTYPE, INACTIVE
-        MENUITEM "Select parent volume",        ID_OBJ_SELECTPARENTVOLUME
-        MENUITEM SEPARATOR
-        POPUP "Locking"
-        BEGIN
-            MENUITEM "Group",                       ID_LOCKING_GROUP
-            MENUITEM "Volume",                      ID_LOCKING_VOLUME
-            MENUITEM "Faces",                       ID_LOCKING_FACES
-            MENUITEM "Edges",                       ID_LOCKING_EDGES
-            MENUITEM "Points",                      ID_LOCKING_POINTS
-            MENUITEM "Unlocked",                    ID_LOCKING_UNLOCKED
-        END
-        POPUP "Rendering Operation"
-        BEGIN
-            MENUITEM "Union",                       ID_OPERATION_UNION
-            MENUITEM "Intersection",                ID_OPERATION_INTERSECTION
-            MENUITEM "Difference",                  ID_OPERATION_DIFFERENCE
-            MENUITEM "None (render with parent)",   ID_OPERATION_NONE
-        END
-        MENUITEM "Transform...",                ID_OBJ_TRANSFORM
-        POPUP "Material"
-        BEGIN
-            MENUITEM "New/Edit...",                 ID_MATERIALS_NEW
-            MENUITEM SEPARATOR
-        END
-        POPUP "Grouping"
-        BEGIN
-            MENUITEM "Group Connected Edges",       ID_OBJ_GROUPEDGES
-            MENUITEM "Make Face from Edge Group",   ID_OBJ_MAKEFACE
-            MENUITEM "Group Selected",              ID_OBJ_GROUPSELECTED
-            MENUITEM "Ungroup",                     ID_OBJ_UNGROUP
-            MENUITEM "Save group as...",            ID_OBJ_SAVEGROUP
-        END
-        MENUITEM SEPARATOR
-        MENUITEM "Always show dimensions",      ID_OBJ_ALWAYSSHOWDIMS
-        MENUITEM "Enter dimensions...",         ID_OBJ_ENTERDIMENSIONS
-        MENUITEM "Edit text...",                ID_OBJ_EDITTEXT
-        MENUITEM SEPARATOR
-        MENUITEM "Chamfer corner",              ID_OBJ_CHAMFERCORNER
-        MENUITEM "Round corner",                ID_OBJ_ROUNDCORNER
-    END
-END
-
 IDR_OPENORIMPORT MENU
 BEGIN
     POPUP "file"
@@ -398,6 +351,8 @@ BEGIN
             MENUITEM "Difference",                  ID_OPERATION_DIFFERENCE
             MENUITEM "None (render with parent)",   ID_OPERATION_NONE
         END
+        MENUITEM "Reflect",                     ID_OBJ_REFLECT
+        MENUITEM "Rotate 90",                   ID_OBJ_ROTATE90
         MENUITEM "Transform...",                ID_OBJ_TRANSFORM
         MENUITEM "Group Selected",              ID_OBJ_GROUPSELECTED
         MENUITEM SEPARATOR
@@ -428,6 +383,8 @@ BEGIN
             MENUITEM "Intersection",                ID_OPERATION_INTERSECTION
             MENUITEM "Difference",                  ID_OPERATION_DIFFERENCE
         END
+        MENUITEM "Reflect",                     ID_OBJ_REFLECT
+        MENUITEM "Rotate 90",                   ID_OBJ_ROTATE90
         MENUITEM "Transform...",                ID_OBJ_TRANSFORM
         MENUITEM "Group Selected",              ID_OBJ_GROUPSELECTED
         MENUITEM SEPARATOR
@@ -441,9 +398,9 @@ BEGIN
     END
 END
 
-IDR_CONTEXT_FEP MENU
+IDR_CONTEXT_FACE MENU
 BEGIN
-    POPUP "Obj"
+    POPUP "Face"
     BEGIN
         MENUITEM "Object type",                 ID_OBJ_OBJECTTYPE, INACTIVE
         MENUITEM SEPARATOR
@@ -455,15 +412,41 @@ BEGIN
             MENUITEM "Points",                      ID_LOCKING_POINTS
             MENUITEM "Unlocked",                    ID_LOCKING_UNLOCKED
         END
+        MENUITEM "Reflect",                     ID_OBJ_REFLECT
+        MENUITEM "Rotate 90",                   ID_OBJ_ROTATE90
         MENUITEM "Group Selected",              ID_OBJ_GROUPSELECTED
         MENUITEM SEPARATOR
-        MENUITEM "Group Connected Edges",       ID_OBJ_GROUPEDGES
         MENUITEM "Always show dimensions",      ID_OBJ_ALWAYSSHOWDIMS
         MENUITEM "Enter dimensions...",         ID_OBJ_ENTERDIMENSIONS
-        MENUITEM "Edit text...",                ID_OBJ_EDITTEXT
         MENUITEM SEPARATOR
+        MENUITEM "Edit text...",                ID_OBJ_EDITTEXT
         MENUITEM "Chamfer corner",              ID_OBJ_CHAMFERCORNER
         MENUITEM "Round corner",                ID_OBJ_ROUNDCORNER
+    END
+END
+
+IDR_CONTEXT_EDGE MENU
+BEGIN
+    POPUP "Edge"
+    BEGIN
+        MENUITEM "Object type",                 ID_OBJ_OBJECTTYPE, INACTIVE
+        MENUITEM SEPARATOR
+        POPUP "Locking"
+        BEGIN
+            MENUITEM "Volume",                      ID_LOCKING_VOLUME
+            MENUITEM "Faces",                       ID_LOCKING_FACES
+            MENUITEM "Edges",                       ID_LOCKING_EDGES
+            MENUITEM "Points",                      ID_LOCKING_POINTS
+            MENUITEM "Unlocked",                    ID_LOCKING_UNLOCKED
+        END
+        MENUITEM "Reflect",                     ID_OBJ_REFLECT
+        MENUITEM "Rotate 90",                   ID_OBJ_ROTATE90
+        MENUITEM "Group Selected",              ID_OBJ_GROUPSELECTED
+        MENUITEM SEPARATOR
+        MENUITEM "Always show dimensions",      ID_OBJ_ALWAYSSHOWDIMS
+        MENUITEM "Enter dimensions...",         ID_OBJ_ENTERDIMENSIONS
+        MENUITEM SEPARATOR
+        MENUITEM "Group Connected Edges",       ID_OBJ_GROUPEDGES
     END
 END
 

@@ -167,6 +167,9 @@
     <ClCompile Include="text.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="mover.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="LoftyCAD.rc">
