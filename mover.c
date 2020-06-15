@@ -552,6 +552,30 @@ rotate_coord_90_facing(float* x, float* y, float* z, float xc, float yc, float z
 void
 rotate_plane_90_facing(Plane* pl)
 {
+    float A0 = pl->A;
+    float B0 = pl->B;
+    float C0 = pl->C;
+
+    switch (facing_index)
+    {
+    case PLANE_XY:
+    case PLANE_MINUS_XY:
+        pl->A = -B0;
+        pl->B = A0;
+        break;
+
+    case PLANE_XZ:
+    case PLANE_MINUS_XZ:
+        pl->A = -C0;
+        pl->C = A0;
+        break;
+
+    case PLANE_YZ:
+    case PLANE_MINUS_YZ:
+        pl->B = -C0;
+        pl->C = B0;
+        break;
+    }
 }
 
 // Rotate any object, in the facing plane, by 90 degrees in the positive direction.
@@ -590,8 +614,9 @@ rotate_obj_90_facing(Object* obj, float xc, float yc, float zc)
         {
         case EDGE_ARC:
             ae = (ArcEdge*)obj;
+            if (!ae->centre->moved)     // don't do it twice
+                rotate_plane_90_facing(&ae->normal);
             rotate_obj_90_facing((Object*)ae->centre, xc, yc, zc);
-            rotate_plane_90_facing(&ae->normal);
             edge->view_valid = FALSE;
             break;
 
