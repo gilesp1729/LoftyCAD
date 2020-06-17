@@ -44,9 +44,33 @@ char* xform_string(Transform* xform, char* buf, int len)
     return buf;
 }
 
+// Descriptive string for a face or arc-edge normal.
+char* normal_string(Plane *norm, char* buf, int len)
+{
+    buf[0] = '\0';
+    if (norm == NULL)
+        return buf;
+
+    sprintf_s(buf, len, "N(%.2f, %.2f, %.2f)", norm->A, norm->B, norm->C);
+
+    return buf;
+}
+
+// Descriptive string for a face initial point.
+char* ip_string(Face *f, char* buf, int len)
+{
+    buf[0] = '\0';
+    if (f == NULL || f->initial_point == NULL)
+        return buf;
+
+    sprintf_s(buf, len, "IP%d", f->initial_point->hdr.ID);
+
+    return buf;
+}
+
 // Descriptive string for an object, to be used in the treeview, and elsewhere there is a
 // need to echo out an object's description.
-char *obj_description(Object *obj, char *descr, int descr_len)
+char *obj_description(Object *obj, char *descr, int descr_len, BOOL verbose)
 {
     char buf[64], buf2[64], buf3[64];
     Point *p;
@@ -69,21 +93,25 @@ char *obj_description(Object *obj, char *descr, int descr_len)
 
     case OBJ_EDGE:
         edge = (Edge *)obj;
-        sprintf_s(descr, descr_len, "Edge %d %s%s %s",
+        sprintf_s(descr, descr_len, "Edge %d %s%s %s %s %s",
                   obj->ID,
                   edgetypes[edge->type & ~EDGE_CONSTRUCTION],
                   (edge->type & EDGE_CONSTRUCTION) ? "(C)" : "",
-                  get_dims_string(obj, buf)
+                  verbose ? get_dims_string(obj, buf) : "",
+                  verbose && edge->type == EDGE_ARC ? (((ArcEdge*)edge)->clockwise ? "C" : "AC") : "",
+                  verbose && edge->type == EDGE_ARC ? normal_string(&((ArcEdge *)edge)->normal, buf2, 64) : ""
                   );
         break;
 
     case OBJ_FACE:
         face = (Face *)obj;
-        sprintf_s(descr, descr_len, "Face %d %s%s %s",
+        sprintf_s(descr, descr_len, "Face %d %s%s %s %s %s",
                   obj->ID,
                   facetypes[face->type & ~FACE_CONSTRUCTION],
                   (face->type & FACE_CONSTRUCTION) ? "(C)" : "",
-                  get_dims_string(obj, buf)
+                  verbose ? get_dims_string(obj, buf) : "",
+                  verbose ? ip_string(face, buf2, 64) : "",
+                  verbose && face->type != FACE_CYLINDRICAL ? normal_string(&face->normal, buf3, 64) : ""
                   );
         break;
 
@@ -92,18 +120,18 @@ char *obj_description(Object *obj, char *descr, int descr_len)
         sprintf_s(descr, descr_len, "%s Volume %d %s %s", 
                 op_string[vol->op], 
                 obj->ID, 
-                get_dims_string(obj, buf), 
-                xform_string(vol->xform, buf2, 64)
+                verbose ? get_dims_string(obj, buf) : "",
+                verbose ? xform_string(vol->xform, buf2, 64) : ""
                 );
         break;
 
     case OBJ_GROUP:
         grp = (Group *)obj;
-        if (grp->title[0] == '\0')
+        if (grp->title[0] == '\0' || !verbose)
             sprintf_s(descr, descr_len, "%s Group %d %s", 
                     op_string[grp->op], 
                     obj->ID,
-                    xform_string(grp->xform, buf, 64)
+                    verbose ? xform_string(grp->xform, buf, 64) : ""
                     );
         else
             sprintf_s(descr, descr_len, "%s Group %d: %s %s", 
@@ -120,20 +148,34 @@ char *obj_description(Object *obj, char *descr, int descr_len)
 
 // Populate a treeview item for the components of an object.
 void
-populate_treeview_object(Object *obj, Object *parent, HTREEITEM hItem)
+populate_treeview_object(Object *obj, Object *parent, HTREEITEM hItem, char *tag)
 {
     TVINSERTSTRUCT tvins;
     TVITEM tvi;
-    char descr[64];
+    char descr[128];
+    char tagged_descr[128];
     int i;
     Face *face;
     Edge *edge;
+    ArcEdge* ae;
+    BezierEdge* be;
     Object *o;
 
     switch (obj->type)
     {
     case OBJ_POINT:
-        tvi.pszText = obj_description(obj, descr, 64);
+        obj_description(obj, descr, 128, TRUE);
+        if (tag != NULL)
+        {
+            strcpy_s(tagged_descr, 128, tag);
+            strcat_s(tagged_descr, 128, " ");
+            strcat_s(tagged_descr, 128, descr);
+            tvi.pszText = tagged_descr;
+        }
+        else
+        {
+            tvi.pszText = descr;
+        }
         tvi.cchTextMax = strlen(tvi.pszText);
         tvi.lParam = (LPARAM)obj;
         tvi.mask = TVIF_TEXT | TVIF_PARAM;
@@ -145,13 +187,13 @@ populate_treeview_object(Object *obj, Object *parent, HTREEITEM hItem)
         }
         tvins.item = tvi;
         tvins.hParent = hItem;
-        tvins.hInsertAfter = TVI_FIRST;
+        tvins.hInsertAfter = TVI_LAST;
         hItem = (HTREEITEM)SendDlgItemMessage(hWndTree, IDC_TREEVIEW, TVM_INSERTITEM, 0, (LPARAM)&tvins);
         break;
 
     case OBJ_EDGE:
         edge = (Edge *)obj;
-        tvi.pszText = obj_description(obj, descr, 64);
+        tvi.pszText = obj_description(obj, descr, 128, TRUE);
         tvi.cchTextMax = strlen(tvi.pszText);
         tvi.lParam = (LPARAM)obj;
         tvi.mask = TVIF_TEXT | TVIF_PARAM;
@@ -163,18 +205,29 @@ populate_treeview_object(Object *obj, Object *parent, HTREEITEM hItem)
         }
         tvins.item = tvi;
         tvins.hParent = hItem;
-        tvins.hInsertAfter = TVI_FIRST;
+        tvins.hInsertAfter = TVI_LAST;
         hItem = (HTREEITEM)SendDlgItemMessage(hWndTree, IDC_TREEVIEW, TVM_INSERTITEM, 0, (LPARAM)&tvins);
         if (parent->lock < LOCK_POINTS)
         {
-            populate_treeview_object((Object *)edge->endpoints[0], parent, hItem);
-            populate_treeview_object((Object *)edge->endpoints[1], parent, hItem);
+            populate_treeview_object((Object *)edge->endpoints[0], parent, hItem, "[0]");
+            if (edge->type == EDGE_ARC)
+            {
+                ae = (ArcEdge *)edge;
+                populate_treeview_object((Object *)ae->centre, parent, hItem, "C");
+            }
+            else if (edge->type == EDGE_BEZIER)
+            {
+                be = (BezierEdge *)edge;
+                populate_treeview_object((Object *)be->ctrlpoints[0], parent, hItem, "C0");
+                populate_treeview_object((Object *)be->ctrlpoints[1], parent, hItem, "C1");
+            }
+            populate_treeview_object((Object*)edge->endpoints[1], parent, hItem, "[1]");
         }
         break;
 
     case OBJ_FACE:
         face = (Face *)obj;
-        tvi.pszText = obj_description(obj, descr, 64);
+        tvi.pszText = obj_description(obj, descr, 128, TRUE);
         tvi.cchTextMax = strlen(tvi.pszText);
         tvi.lParam = (LPARAM)obj;
         tvi.mask = TVIF_TEXT | TVIF_PARAM;
@@ -186,17 +239,17 @@ populate_treeview_object(Object *obj, Object *parent, HTREEITEM hItem)
         }
         tvins.item = tvi;
         tvins.hParent = hItem;
-        tvins.hInsertAfter = TVI_FIRST;
+        tvins.hInsertAfter = TVI_LAST;
         hItem = (HTREEITEM)SendDlgItemMessage(hWndTree, IDC_TREEVIEW, TVM_INSERTITEM, 0, (LPARAM)&tvins);
         if (parent->lock < LOCK_EDGES)
         {
             for (i = 0; i < face->n_edges; i++)
-                populate_treeview_object((Object *)face->edges[i], parent, hItem);
+                populate_treeview_object((Object *)face->edges[i], parent, hItem, NULL);
         }
         break;
 
     case OBJ_VOLUME:
-        tvi.pszText = obj_description(obj, descr, 64);
+        tvi.pszText = obj_description(obj, descr, 128, TRUE);
         tvi.cchTextMax = strlen(tvi.pszText);
         tvi.lParam = (LPARAM)obj;
         tvi.mask = TVIF_TEXT | TVIF_PARAM;
@@ -208,7 +261,7 @@ populate_treeview_object(Object *obj, Object *parent, HTREEITEM hItem)
         }
         tvins.item = tvi;
         tvins.hParent = hItem;
-        tvins.hInsertAfter = TVI_FIRST;
+        tvins.hInsertAfter = TVI_LAST;
         hItem = (HTREEITEM)SendDlgItemMessage(hWndTree, IDC_TREEVIEW, TVM_INSERTITEM, 0, (LPARAM)&tvins);
         if (parent->lock < LOCK_FACES)
         {
@@ -216,7 +269,7 @@ populate_treeview_object(Object *obj, Object *parent, HTREEITEM hItem)
             {
                 if (i < TREEVIEW_LIMIT)
                 {
-                    populate_treeview_object((Object *)face, parent, hItem);
+                    populate_treeview_object((Object *)face, parent, hItem, NULL);
                 }
                 else
                 {
@@ -226,7 +279,7 @@ populate_treeview_object(Object *obj, Object *parent, HTREEITEM hItem)
                     tvi.mask = TVIF_TEXT;
                     tvins.item = tvi;
                     tvins.hParent = hItem;
-                    tvins.hInsertAfter = TVI_FIRST;
+                    tvins.hInsertAfter = TVI_LAST;
                     hItem = (HTREEITEM)SendDlgItemMessage(hWndTree, IDC_TREEVIEW, TVM_INSERTITEM, 0, (LPARAM)&tvins);
                     break;
                 }
@@ -250,7 +303,7 @@ populate_treeview_tree(Group *tree, HTREEITEM hItem)
     {
         if (obj->type == OBJ_GROUP)
         {
-            tvi.pszText = obj_description(obj, descr, 128);
+            tvi.pszText = obj_description(obj, descr, 128, TRUE);
             tvi.cchTextMax = strlen(tvi.pszText);
             tvi.lParam = (LPARAM)obj;
             tvi.mask = TVIF_TEXT | TVIF_PARAM;
@@ -262,13 +315,13 @@ populate_treeview_tree(Group *tree, HTREEITEM hItem)
             }
             tvins.item = tvi;
             tvins.hParent = hItem;
-            tvins.hInsertAfter = TVI_FIRST;
+            tvins.hInsertAfter = TVI_LAST;
             hGroup = (HTREEITEM)SendDlgItemMessage(hWndTree, IDC_TREEVIEW, TVM_INSERTITEM, 0, (LPARAM)&tvins);
             populate_treeview_tree((Group *)obj, hGroup);
         }
         else
         {
-            populate_treeview_object(obj, obj, hItem);
+            populate_treeview_object(obj, obj, hItem, NULL);
         }
     }
 }

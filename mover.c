@@ -664,12 +664,185 @@ rotate_obj_90_facing(Object* obj, float xc, float yc, float zc)
     }
 }
 
+// Reflect a coordinate in the facing plane.
+void
+reflect_coord_facing(float* x, float* y, float* z, float xc, float yc, float zc)
+{
+    float x0 = *x - xc;
+    float y0 = *y - yc;
+    float z0 = *z - zc;
+
+    switch (facing_index)
+    {
+    case PLANE_XY:
+    case PLANE_MINUS_XY:
+        *x = xc - x0;
+        break;
+
+    case PLANE_XZ:
+    case PLANE_MINUS_XZ:
+        *x = xc - x0;
+        break;
+
+    case PLANE_YZ:
+    case PLANE_MINUS_YZ:
+        *y = yc - y0;
+        break;
+    }
+}
+
+// Reflect the direction of a plane.
+void
+reflect_plane_facing(Plane* pl)
+{
+    float A0 = pl->A;
+    float B0 = pl->B;
+    float C0 = pl->C;
+
+    switch (facing_index)
+    {
+    case PLANE_XY:
+    case PLANE_MINUS_XY:
+        pl->A = -A0;
+        break;
+
+    case PLANE_XZ:
+    case PLANE_MINUS_XZ:
+        pl->A = -A0;
+        break;
+
+    case PLANE_YZ:
+    case PLANE_MINUS_YZ:
+        pl->B = -B0;
+        break;
+    }
+}
+
 // Reflect any object about the upward pointing axis in the facing plane.
 // take care to get normals and face ordering right!
 // Make sure to call clear_move_copy_flags afterwards.
 void
-reflect_obj_facing(Object* obj)
+reflect_obj_facing(Object* obj, float xc, float yc, float zc)
 {
+    int i;
+    Point* p;
+    EDGE type;
+    Edge* edge, *e0, *e1;
+    ArcEdge* ae;
+    BezierEdge* be;
+    Face* face;
+    Volume* vol;
+    Group* grp;
+    Object* o;
+
+    switch (obj->type)
+    {
+    case OBJ_POINT:
+        p = (Point*)obj;
+        if (!p->moved)
+        {
+            reflect_coord_facing(&p->x, &p->y, &p->z, xc, yc, zc);
+            p->moved = TRUE;
+        }
+        break;
+
+    case OBJ_EDGE:
+        edge = (Edge*)obj;
+        reflect_obj_facing((Object*)edge->endpoints[0], xc, yc, zc);
+        reflect_obj_facing((Object*)edge->endpoints[1], xc, yc, zc);
+        type = ((Edge*)obj)->type & ~EDGE_CONSTRUCTION;
+        switch (type)
+        {
+        case EDGE_ARC:
+            ae = (ArcEdge*)obj;
+            if (!ae->centre->moved)             // don't do these things twice
+            {
+                reflect_plane_facing(&ae->normal);
+                ae->clockwise = !ae->clockwise;     // keep the sense of the arc when reflected
+            }
+            reflect_obj_facing((Object*)ae->centre, xc, yc, zc);
+            edge->view_valid = FALSE;
+            break;
+
+        case EDGE_BEZIER:
+            be = (BezierEdge*)obj;
+            reflect_obj_facing((Object*)be->ctrlpoints[0], xc, yc, zc);
+            reflect_obj_facing((Object*)be->ctrlpoints[1], xc, yc, zc);
+            edge->view_valid = FALSE;
+            break;
+        }
+        break;
+
+    case OBJ_FACE:
+        face = (Face*)obj;
+        for (i = 0; i < face->n_edges; i++)
+        {
+            edge = face->edges[i];
+            reflect_obj_facing((Object*)edge, xc, yc, zc);
+        }
+        // don't forget to reflect the normal refpt too
+        reflect_coord_facing(&face->normal.refpt.x, &face->normal.refpt.y, &face->normal.refpt.z, xc, yc, zc);
+        if (face->text != NULL)             // and the text positions
+        {
+            reflect_coord_facing(&face->text->origin.x, &face->text->origin.y, &face->text->origin.z, xc, yc, zc);
+            reflect_coord_facing(&face->text->endpt.x, &face->text->endpt.y, &face->text->endpt.z, xc, yc, zc);
+        }
+
+#if 0
+        switch (face->type)
+        {
+        case FACE_RECT:
+        case FACE_FLAT:
+        case FACE_CIRCLE:
+        case FACE_CYLINDRICAL:
+#endif
+            // Faces get their edge order reversed. Take care of the initial point. TODO: reverse contour lists.
+            for (i = 0; i < face->n_edges / 2; i++)
+            {
+                Edge* temp = face->edges[i];
+                int ni = face->n_edges - i - 1;
+
+                face->edges[i] = face->edges[ni];
+                face->edges[ni] = temp;
+            }
+            e0 = face->edges[0];
+            e1 = face->edges[1];
+            if (e0->endpoints[0] == e1->endpoints[0] || e0->endpoints[0] == e1->endpoints[1])
+            {
+                face->initial_point = e0->endpoints[1];
+                if (face->contours != NULL)
+                    face->contours[0].ip_index = 1;
+            }
+            else
+            {
+                face->initial_point = e0->endpoints[0];
+                if (face->contours != NULL)
+                    face->contours[0].ip_index = 0;
+            }
+#if 0
+            break;
+        }
+#endif
+
+        face->view_valid = FALSE;
+        break;
+
+    case OBJ_VOLUME:
+        vol = (Volume*)obj;
+        for (face = (Face*)vol->faces.head; face != NULL; face = (Face*)face->hdr.next)
+            reflect_obj_facing((Object*)face, xc, yc, zc);
+        if (vol->xform != NULL)
+            reflect_coord_facing(&vol->xform->xc, &vol->xform->yc, &vol->xform->zc, xc, yc, zc);
+        break;
+
+    case OBJ_GROUP:
+        grp = (Group*)obj;
+        for (o = grp->obj_list.head; o != NULL; o = o->next)
+            reflect_obj_facing(o, xc, yc, zc);
+        if (grp->xform != NULL)
+            reflect_coord_facing(&grp->xform->xc, &grp->xform->yc, &grp->xform->zc, xc, yc, zc);
+        break;
+    }
 }
 
 // Calculate the smoothed point radius decay.

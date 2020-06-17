@@ -325,11 +325,13 @@ get_dims_string(Object *obj, char buf[64])
                           display_rounded(buf, length(p0, p1)),
                           display_rounded(buf2, length(p1, p2)));
                 break;
+#if 0
             case FACE_CIRCLE:
-                e = f->edges[0];
+                e = f->edges[0];   // TODO assumes arc is first
                 ae = (ArcEdge *)e;
                 sprintf_s(buf, 64, "%s mmR", display_rounded(buf2, length(ae->centre, e->endpoints[0])));
                 break;
+#endif
             }
         }
         break;
@@ -374,14 +376,15 @@ get_dims_string(Object *obj, char buf[64])
             sprintf_s(buf, 64, "%sdeg", 
                       display_rounded(buf, cleanup_angle_and_snap(total_angle, key_status & AUX_SHIFT)));
         }
-        else if (((Face *)v->faces.tail)->type == FACE_CIRCLE)    // Cylinders only for now
+#if 0  // TODO fix stuff below
+        else if (((Face *)v->faces.tail)->type == FACE_CIRCLE)    // Cylinders only for now.
         {
             c1 = (Face *)v->faces.tail;
             c2 = (Face *)c1->hdr.prev;
             ASSERT(c1->type == FACE_CIRCLE, "Face 1 must be a circle");
             ASSERT(c2->type == FACE_CIRCLE, "Face 2 must be a circle");
             e1 = c1->edges[0];
-            ae1 = (ArcEdge *)e1;
+            ae1 = (ArcEdge *)e1;    // TODO this assumes arc comes first. Use extruded height instead?
             e2 = c2->edges[0];
             ae2 = (ArcEdge *)e2;
             sprintf_s
@@ -391,6 +394,7 @@ get_dims_string(Object *obj, char buf[64])
                 display_rounded(buf2, length(ae1->centre, ae2->centre))
             );
         }
+#endif // 0
 
         break;
     }

@@ -832,7 +832,8 @@ contextmenu(Object *picked_obj, POINT pt)
         break;
 
     case ID_OBJ_REFLECT:
-        reflect_obj_facing(parent);                 // TODO find some way to express plane/line
+        find_obj_pivot(parent, &xc, &yc, &zc);
+        reflect_obj_facing(parent, xc, yc, zc);
         clear_move_copy_flags(parent);
         xform_changed = TRUE;
         break;

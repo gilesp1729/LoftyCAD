@@ -399,7 +399,7 @@ Face *clone_face_reverse(Face *face);
 // Rotate-90 and reflect object in place (note: this is not the same as a transform)
 void find_obj_pivot(Object* obj, float* xc, float* yc, float* zc);
 void rotate_obj_90_facing(Object* obj, float xc, float yc, float zc);
-void reflect_obj_facing(Object* obj);
+void reflect_obj_facing(Object* obj, float xc, float yc, float zc);
 
 // Find object in tree, at a location, or as child of another object
 BOOL find_obj(Object *parent, Object *obj);

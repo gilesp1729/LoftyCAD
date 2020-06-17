@@ -312,7 +312,7 @@ gen_view_list_tree_surfaces_op(OPERATION op, Group *tree, Group *parent_tree)
             }
             else
             {
-                show_hint_at(pt, obj_description(obj, buf, 64), FALSE);
+                show_hint_at(pt, obj_description(obj, buf, 64, FALSE), FALSE);
                 process_messages();
 
                 // Merge volume mesh to tree mesh
@@ -355,7 +355,7 @@ gen_view_list_tree_surfaces_op(OPERATION op, Group *tree, Group *parent_tree)
                 }
                 else
                 {
-                    show_hint_at(pt, obj_description(obj, buf, 64), FALSE);
+                    show_hint_at(pt, obj_description(obj, buf, 64, FALSE), FALSE);
                     process_messages();
 
                     // Merge group mesh to tree mesh
