@@ -105,6 +105,8 @@ typedef struct Object
                                     // there is a fixed array of objects, e.g. two end points
                                     // for an edge. NULL if the last.
     struct Object   *prev;          // The previous object in a list. NULL if the first.
+    int             tv_flags;       // State flags for treeview (the state of the TVITEM struct)
+                                    // Indicates if the object is expanded (shows children)
 } Object;
 
 // Point (vertex). Points and edges are the only kind of objects that can be shared.

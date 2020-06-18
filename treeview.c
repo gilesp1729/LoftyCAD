@@ -197,11 +197,19 @@ populate_treeview_object(Object *obj, Object *parent, HTREEITEM hItem, char *tag
         tvi.cchTextMax = strlen(tvi.pszText);
         tvi.lParam = (LPARAM)obj;
         tvi.mask = TVIF_TEXT | TVIF_PARAM;
+        tvi.state = 0;
+        tvi.stateMask = 0;
         if (is_selected_direct(obj, &o))
         {
             tvi.mask |= TVIF_STATE;
-            tvi.state = TVIS_BOLD;
-            tvi.stateMask = TVIS_BOLD;
+            tvi.state |= TVIS_BOLD;
+            tvi.stateMask |= TVIS_BOLD;
+        }
+        if (obj->tv_flags & TVIS_EXPANDED)
+        {
+            tvi.mask |= TVIF_STATE;
+            tvi.state |= TVIS_EXPANDED;
+            tvi.stateMask |= TVIS_EXPANDED;
         }
         tvins.item = tvi;
         tvins.hParent = hItem;
@@ -231,11 +239,19 @@ populate_treeview_object(Object *obj, Object *parent, HTREEITEM hItem, char *tag
         tvi.cchTextMax = strlen(tvi.pszText);
         tvi.lParam = (LPARAM)obj;
         tvi.mask = TVIF_TEXT | TVIF_PARAM;
+        tvi.state = 0;
+        tvi.stateMask = 0;
         if (is_selected_direct(obj, &o))
         {
             tvi.mask |= TVIF_STATE;
-            tvi.state = TVIS_BOLD;
-            tvi.stateMask = TVIS_BOLD;
+            tvi.state |= TVIS_BOLD;
+            tvi.stateMask |= TVIS_BOLD;
+        }
+        if (obj->tv_flags & TVIS_EXPANDED)
+        {
+            tvi.mask |= TVIF_STATE;
+            tvi.state |= TVIS_EXPANDED;
+            tvi.stateMask |= TVIS_EXPANDED;
         }
         tvins.item = tvi;
         tvins.hParent = hItem;
@@ -253,11 +269,19 @@ populate_treeview_object(Object *obj, Object *parent, HTREEITEM hItem, char *tag
         tvi.cchTextMax = strlen(tvi.pszText);
         tvi.lParam = (LPARAM)obj;
         tvi.mask = TVIF_TEXT | TVIF_PARAM;
+        tvi.state = 0;
+        tvi.stateMask = 0;
         if (is_selected_direct(obj, &o))
         {
             tvi.mask |= TVIF_STATE;
-            tvi.state = TVIS_BOLD;
-            tvi.stateMask = TVIS_BOLD;
+            tvi.state |= TVIS_BOLD;
+            tvi.stateMask |= TVIS_BOLD;
+        }
+        if (obj->tv_flags & TVIS_EXPANDED)
+        {
+            tvi.mask |= TVIF_STATE;
+            tvi.state |= TVIS_EXPANDED;
+            tvi.stateMask |= TVIS_EXPANDED;
         }
         tvins.item = tvi;
         tvins.hParent = hItem;
@@ -307,11 +331,19 @@ populate_treeview_tree(Group *tree, HTREEITEM hItem)
             tvi.cchTextMax = strlen(tvi.pszText);
             tvi.lParam = (LPARAM)obj;
             tvi.mask = TVIF_TEXT | TVIF_PARAM;
+            tvi.state = 0;
+            tvi.stateMask = 0;
             if (is_selected_direct(obj, &o))
             {
                 tvi.mask |= TVIF_STATE;
-                tvi.state = TVIS_BOLD;
-                tvi.stateMask = TVIS_BOLD;
+                tvi.state |= TVIS_BOLD;
+                tvi.stateMask |= TVIS_BOLD;
+            }
+            if (obj->tv_flags & TVIS_EXPANDED)
+            {
+                tvi.mask |= TVIF_STATE;
+                tvi.state |= TVIS_EXPANDED;
+                tvi.stateMask |= TVIS_EXPANDED;
             }
             tvins.item = tvi;
             tvins.hParent = hItem;
@@ -364,6 +396,7 @@ treeview_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     HMENU hMenu;
     NMTVGETINFOTIP *ngit;
     NMTREEVIEW *nmtv;
+    TVITEM* tvi;
     Object *obj;
     POINT pt;
 
@@ -392,6 +425,12 @@ treeview_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             obj = treeview_highlight;
             treeview_highlight = NULL;      // in case it goes away in the context menu operation
             contextmenu(obj, pt);
+            break;
+
+        case TVN_ITEMEXPANDED:              // set or clear the expanded state flag in the obj
+            nmtv = (NMTREEVIEW*)lParam;
+            tvi = &nmtv->itemNew;
+            ((Object*)tvi->lParam)->tv_flags = tvi->state & TVIS_EXPANDED;
             break;
 
         case TVN_SELCHANGED:
