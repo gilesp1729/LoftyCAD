@@ -727,7 +727,7 @@ reflect_obj_facing(Object* obj, float xc, float yc, float zc)
     int i;
     Point* p;
     EDGE type;
-    Edge* edge, *e0, *e1;
+    Edge* edge;
     ArcEdge* ae;
     BezierEdge* be;
     Face* face;
@@ -796,7 +796,7 @@ reflect_obj_facing(Object* obj, float xc, float yc, float zc)
         case FACE_CIRCLE:
         case FACE_CYLINDRICAL:
 #endif
-            // Faces get their edge order reversed. Take care of the initial point. TODO: reverse contour lists.
+            // Faces get their edge order reversed. Don't touch the initial point. 
             for (i = 0; i < face->n_edges / 2; i++)
             {
                 Edge* temp = face->edges[i];
@@ -805,20 +805,16 @@ reflect_obj_facing(Object* obj, float xc, float yc, float zc)
                 face->edges[i] = face->edges[ni];
                 face->edges[ni] = temp;
             }
-            e0 = face->edges[0];
-            e1 = face->edges[1];
-            if (e0->endpoints[0] == e1->endpoints[0] || e0->endpoints[0] == e1->endpoints[1])
+
+            // TODO: reverse contour lists for multi-contour faces (such as text)
+            if (face->n_contours > 0)
             {
-                face->initial_point = e0->endpoints[1];
-                if (face->contours != NULL)
+                if (face->initial_point == face->edges[0]->endpoints[0])
+                    face->contours[0].ip_index = 0;
+                else
                     face->contours[0].ip_index = 1;
             }
-            else
-            {
-                face->initial_point = e0->endpoints[0];
-                if (face->contours != NULL)
-                    face->contours[0].ip_index = 0;
-            }
+
 #if 0
             break;
         }

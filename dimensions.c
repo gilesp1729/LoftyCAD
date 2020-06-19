@@ -1,6 +1,19 @@
 #include "stdafx.h"
 #include "LoftyCAD.h"
 
+// Quick and dirty find first arc edge in a circle face. It is [0] for normal faces,
+// but [1] if it has been reflected.
+ArcEdge *
+first_arc_edge(Face* f)
+{
+    ASSERT(f->type == FACE_CIRCLE, "Face must be a circle");
+    if (f->edges[0]->type == EDGE_ARC)
+        return (ArcEdge*)f->edges[0];
+
+    ASSERT(f->edges[1]->type == EDGE_ARC, "Something is wrong with the circle face");
+    return (ArcEdge*)f->edges[1];
+}
+
 // Return TRUE if an object has dimensions that can be displayed and changed.
 BOOL
 has_dims(Object *obj)
@@ -258,7 +271,7 @@ get_dims_string(Object *obj, char buf[64])
 {
     char buf2[64];
     Point *p0, *p1, *p2;
-    Edge *e, *e1, *e2;
+    Edge *e, *e1;
     ArcEdge *ae, *ae1, *ae2;
     Face *f, *c1, *c2;
     Volume *v;
@@ -325,13 +338,12 @@ get_dims_string(Object *obj, char buf[64])
                           display_rounded(buf, length(p0, p1)),
                           display_rounded(buf2, length(p1, p2)));
                 break;
-#if 0
+
             case FACE_CIRCLE:
-                e = f->edges[0];   // TODO assumes arc is first
-                ae = (ArcEdge *)e;
+                ae = first_arc_edge(f);
+                e = (Edge*)ae;
                 sprintf_s(buf, 64, "%s mmR", display_rounded(buf2, length(ae->centre, e->endpoints[0])));
                 break;
-#endif
             }
         }
         break;
@@ -376,17 +388,13 @@ get_dims_string(Object *obj, char buf[64])
             sprintf_s(buf, 64, "%sdeg", 
                       display_rounded(buf, cleanup_angle_and_snap(total_angle, key_status & AUX_SHIFT)));
         }
-#if 0  // TODO fix stuff below
         else if (((Face *)v->faces.tail)->type == FACE_CIRCLE)    // Cylinders only for now.
         {
             c1 = (Face *)v->faces.tail;
             c2 = (Face *)c1->hdr.prev;
-            ASSERT(c1->type == FACE_CIRCLE, "Face 1 must be a circle");
-            ASSERT(c2->type == FACE_CIRCLE, "Face 2 must be a circle");
-            e1 = c1->edges[0];
-            ae1 = (ArcEdge *)e1;    // TODO this assumes arc comes first. Use extruded height instead?
-            e2 = c2->edges[0];
-            ae2 = (ArcEdge *)e2;
+            ae1 = first_arc_edge(c1);
+            ae2 = first_arc_edge(c2);
+            e1 = (Edge*)ae1;
             sprintf_s
             (
                 buf, 64, "%s,%s mmR/h", 
@@ -394,7 +402,6 @@ get_dims_string(Object *obj, char buf[64])
                 display_rounded(buf2, length(ae1->centre, ae2->centre))
             );
         }
-#endif // 0
 
         break;
     }

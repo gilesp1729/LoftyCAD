@@ -597,14 +597,31 @@ gen_view_list_face(Face *face)
     else 
     {
         Point *last = p;
+        v = (Point*)face->spare_list.head;
+        int nsteps;
 
         ASSERT((face->type & ~FACE_CONSTRUCTION) == FACE_CYLINDRICAL, "Only cylinder faces should be here");
 
         // Rearrange the cylinder view list into a set of facets, each with its own normal.
-        for (i = 0, v = (Point *)face->spare_list.head; v->hdr.next != NULL; v = (Point *)v->hdr.next, i++)
+
+        // Cylinder faces, as created by extrusion, start with a straight edge.
+        // But after reflection they start with an arc edge.
+        // Detect this difference here so we can match up points correctly.
+
+        if (face->edges[0]->type != EDGE_STRAIGHT)
         {
-            Point *vnext = (Point *)v->hdr.next;
-            Point *lprev = (Point *)last->hdr.prev;
+            last = (Point*)last->hdr.prev;
+            nsteps = face->edges[0]->nsteps;
+        }
+        else
+        {
+            nsteps = face->edges[1]->nsteps;
+        }
+
+        for (i = 0; v->hdr.next != NULL; v = (Point*)v->hdr.next, i++)
+        {
+            Point* vnext = (Point*)v->hdr.next;
+            Point* lprev = (Point*)last->hdr.prev;
             Plane norm;
 
             // A new facet point containing the normal
@@ -613,29 +630,29 @@ gen_view_list_face(Face *face)
             p->hdr.ID = 0;
             objid--;
             p->flags = FLAG_NEW_FACET;
-            link_tail((Object *)p, &face->view_list);
+            link_tail((Object*)p, &face->view_list);
 
             // Four points for the quad
             p = point_newp(v);
             p->hdr.ID = 0;
             objid--;
-            link_tail((Object *)p, &face->view_list);
+            link_tail((Object*)p, &face->view_list);
             p = point_newp(vnext);
             p->hdr.ID = 0;
             objid--;
-            link_tail((Object *)p, &face->view_list);
+            link_tail((Object*)p, &face->view_list);
             p = point_newp(lprev);
             p->hdr.ID = 0;
             objid--;
-            link_tail((Object *)p, &face->view_list);
+            link_tail((Object*)p, &face->view_list);
             p = point_newp(last);
             p->hdr.ID = 0;
             objid--;
-            link_tail((Object *)p, &face->view_list);
+            link_tail((Object*)p, &face->view_list);
 
             // Walk last backwards until we meet in the middle
             last = lprev;
-            if (i >= face->edges[1]->nsteps)
+            if (i >= nsteps)
                 break;
         }
 
