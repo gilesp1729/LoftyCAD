@@ -354,7 +354,6 @@ BEGIN
         MENUITEM "Reflect",                     ID_OBJ_REFLECT
         MENUITEM "Rotate 90",                   ID_OBJ_ROTATE90
         MENUITEM "Transform...",                ID_OBJ_TRANSFORM
-        MENUITEM "Group Selected",              ID_OBJ_GROUPSELECTED
         MENUITEM SEPARATOR
         MENUITEM "Make Face from Edge Group",   ID_OBJ_MAKEFACE
         MENUITEM "Ungroup",                     ID_OBJ_UNGROUP
@@ -367,8 +366,8 @@ BEGIN
     POPUP "Vol"
     BEGIN
         MENUITEM "Object type",                 ID_OBJ_OBJECTTYPE, INACTIVE
-        MENUITEM "Select parent volume",        ID_OBJ_SELECTPARENTVOLUME
         MENUITEM SEPARATOR
+        MENUITEM "Select parent volume",        ID_OBJ_SELECTPARENTVOLUME
         POPUP "Locking"
         BEGIN
             MENUITEM "Volume",                      ID_LOCKING_VOLUME
@@ -386,7 +385,6 @@ BEGIN
         MENUITEM "Reflect",                     ID_OBJ_REFLECT
         MENUITEM "Rotate 90",                   ID_OBJ_ROTATE90
         MENUITEM "Transform...",                ID_OBJ_TRANSFORM
-        MENUITEM "Group Selected",              ID_OBJ_GROUPSELECTED
         MENUITEM SEPARATOR
         POPUP "Material"
         BEGIN
@@ -414,7 +412,6 @@ BEGIN
         END
         MENUITEM "Reflect",                     ID_OBJ_REFLECT
         MENUITEM "Rotate 90",                   ID_OBJ_ROTATE90
-        MENUITEM "Group Selected",              ID_OBJ_GROUPSELECTED
         MENUITEM SEPARATOR
         MENUITEM "Always show dimensions",      ID_OBJ_ALWAYSSHOWDIMS
         MENUITEM "Enter dimensions...",         ID_OBJ_ENTERDIMENSIONS
@@ -441,12 +438,23 @@ BEGIN
         END
         MENUITEM "Reflect",                     ID_OBJ_REFLECT
         MENUITEM "Rotate 90",                   ID_OBJ_ROTATE90
-        MENUITEM "Group Selected",              ID_OBJ_GROUPSELECTED
         MENUITEM SEPARATOR
         MENUITEM "Always show dimensions",      ID_OBJ_ALWAYSSHOWDIMS
         MENUITEM "Enter dimensions...",         ID_OBJ_ENTERDIMENSIONS
         MENUITEM SEPARATOR
         MENUITEM "Group Connected Edges",       ID_OBJ_GROUPEDGES
+    END
+END
+
+IDR_CONTEXT_SELECTION MENU
+BEGIN
+    POPUP "Sel"
+    BEGIN
+        MENUITEM "Selection",                   ID_OBJ_OBJECTTYPE, INACTIVE
+        MENUITEM SEPARATOR
+        MENUITEM "Reflect",                     ID_OBJ_REFLECTSELECTED
+        MENUITEM "Rotate 90",                   ID_OBJ_ROTATESELECTED90
+        MENUITEM "Group Selected",              ID_OBJ_GROUPSELECTED
     END
 END
 

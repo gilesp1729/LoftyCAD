@@ -432,6 +432,7 @@ contextmenu(Object *picked_obj, POINT pt)
     LOGFONT lf;
     char group_filename[256];
     float xc, yc, zc;
+    Bbox box;
 
     // Display the object ID at the top of the menu
     switch (picked_obj->type)
@@ -455,50 +456,57 @@ contextmenu(Object *picked_obj, POINT pt)
 
     // Find the parent object. 
     // Select a menu, and disable irrelevant menu items based on the parent.
+    // If we are on a selected object, selections get a special menu.
     parent = find_parent_object(&object_tree, picked_obj, TRUE);
-    switch (parent->type)
+    if (is_selected_direct(picked_obj, &o))
     {
-    case OBJ_EDGE:
-        hMenu = LoadMenu(hInst, MAKEINTRESOURCE(IDR_CONTEXT_EDGE));
+        hMenu = LoadMenu(hInst, MAKEINTRESOURCE(IDR_CONTEXT_SELECTION));
         hMenu = GetSubMenu(hMenu, 0);
-        ModifyMenu(hMenu, 0, MF_BYPOSITION | MF_GRAYED | MF_STRING, 0, buf);
-
-        EnableMenuItem(hMenu, ID_LOCKING_FACES, MF_GRAYED);
-        EnableMenuItem(hMenu, ID_LOCKING_VOLUME, MF_GRAYED);
-        break;
-
-    case OBJ_FACE:
-        hMenu = LoadMenu(hInst, MAKEINTRESOURCE(IDR_CONTEXT_FACE));
-        hMenu = GetSubMenu(hMenu, 0);
-        ModifyMenu(hMenu, 0, MF_BYPOSITION | MF_GRAYED | MF_STRING, 0, buf);
-
-        EnableMenuItem(hMenu, ID_LOCKING_VOLUME, MF_GRAYED);
-        break;
-
-    case OBJ_VOLUME:
-    default:  // note: never used, but shuts up compiler
-        hMenu = LoadMenu(hInst, MAKEINTRESOURCE(IDR_CONTEXT_VOL));
-        hMenu = GetSubMenu(hMenu, 0);
-        ModifyMenu(hMenu, 0, MF_BYPOSITION | MF_GRAYED | MF_STRING, 0, buf);
-
-        hole = ((Volume *)picked_obj)->extrude_height < 0;
-        EnableMenuItem(hMenu, ID_OPERATION_UNION, hole ? MF_GRAYED : MF_ENABLED);
-        EnableMenuItem(hMenu, ID_OPERATION_DIFFERENCE, hole ? MF_GRAYED : MF_ENABLED);
-        break;
-
-    case OBJ_GROUP:
-        hMenu = LoadMenu(hInst, MAKEINTRESOURCE(IDR_CONTEXT_GROUP));
-        hMenu = GetSubMenu(hMenu, 0);
-        ModifyMenu(hMenu, 0, MF_BYPOSITION | MF_GRAYED | MF_STRING, 0, buf);
-
-        EnableMenuItem(hMenu, ID_LOCKING_FACES, MF_GRAYED);
-        EnableMenuItem(hMenu, ID_LOCKING_EDGES, MF_GRAYED);
-        EnableMenuItem(hMenu, ID_LOCKING_POINTS, MF_GRAYED);
-        EnableMenuItem(hMenu, ID_LOCKING_UNLOCKED, MF_GRAYED);
-        break;
     }
+    else
+    {
+        switch (parent->type)
+        {
+        case OBJ_EDGE:
+            hMenu = LoadMenu(hInst, MAKEINTRESOURCE(IDR_CONTEXT_EDGE));
+            hMenu = GetSubMenu(hMenu, 0);
+            ModifyMenu(hMenu, 0, MF_BYPOSITION | MF_GRAYED | MF_STRING, 0, buf);
 
-    EnableMenuItem(hMenu, ID_OBJ_GROUPSELECTED, is_selected_direct(picked_obj, &o) ? MF_ENABLED : MF_GRAYED);
+            EnableMenuItem(hMenu, ID_LOCKING_FACES, MF_GRAYED);
+            EnableMenuItem(hMenu, ID_LOCKING_VOLUME, MF_GRAYED);
+            break;
+
+        case OBJ_FACE:
+            hMenu = LoadMenu(hInst, MAKEINTRESOURCE(IDR_CONTEXT_FACE));
+            hMenu = GetSubMenu(hMenu, 0);
+            ModifyMenu(hMenu, 0, MF_BYPOSITION | MF_GRAYED | MF_STRING, 0, buf);
+
+            EnableMenuItem(hMenu, ID_LOCKING_VOLUME, MF_GRAYED);
+            break;
+
+        case OBJ_VOLUME:
+        default:  // note: never used, but shuts up compiler
+            hMenu = LoadMenu(hInst, MAKEINTRESOURCE(IDR_CONTEXT_VOL));
+            hMenu = GetSubMenu(hMenu, 0);
+            ModifyMenu(hMenu, 0, MF_BYPOSITION | MF_GRAYED | MF_STRING, 0, buf);
+
+            hole = ((Volume*)picked_obj)->extrude_height < 0;
+            EnableMenuItem(hMenu, ID_OPERATION_UNION, hole ? MF_GRAYED : MF_ENABLED);
+            EnableMenuItem(hMenu, ID_OPERATION_DIFFERENCE, hole ? MF_GRAYED : MF_ENABLED);
+            break;
+
+        case OBJ_GROUP:
+            hMenu = LoadMenu(hInst, MAKEINTRESOURCE(IDR_CONTEXT_GROUP));
+            hMenu = GetSubMenu(hMenu, 0);
+            ModifyMenu(hMenu, 0, MF_BYPOSITION | MF_GRAYED | MF_STRING, 0, buf);
+
+            EnableMenuItem(hMenu, ID_LOCKING_FACES, MF_GRAYED);
+            EnableMenuItem(hMenu, ID_LOCKING_EDGES, MF_GRAYED);
+            EnableMenuItem(hMenu, ID_LOCKING_POINTS, MF_GRAYED);
+            EnableMenuItem(hMenu, ID_LOCKING_UNLOCKED, MF_GRAYED);
+            break;
+        }
+    }
 
     // Disable "enter dimensions" for objects that have no dimensions that can be easily changed
     if (!has_dims(picked_obj))
@@ -708,7 +716,7 @@ contextmenu(Object *picked_obj, POINT pt)
         link_group((Object*)group, &object_tree);
         for (sel_obj = selection.head; sel_obj != NULL; sel_obj = sel_obj->next)
         {
-            // TODO - bug here if a component is selected. You should onnly ever be able to 
+            // TODO - bug here if a component is selected. You should only ever be able to 
             // put the parent in the group.
             delink_group(sel_obj->prev, &object_tree);
             link_tail_group(sel_obj->prev, group);
@@ -831,10 +839,47 @@ contextmenu(Object *picked_obj, POINT pt)
         xform_changed = TRUE;
         break;
 
+    case ID_OBJ_ROTATESELECTED90:
+        // find the centre of all the pivots of the selected objects
+        clear_bbox(&box);
+        for (sel_obj = selection.head; sel_obj != NULL; sel_obj = sel_obj->next)
+        {
+            find_obj_pivot(sel_obj->prev, &xc, &yc, &zc);
+            expand_bbox_coords(&box, xc, yc, zc);
+        }
+        xc = (box.xmin + box.xmax) / 2;
+        yc = (box.ymin + box.xmax) / 2;
+        zc = (box.zmin + box.zmax) / 2;
+        for (sel_obj = selection.head; sel_obj != NULL; sel_obj = sel_obj->next)
+        {
+            rotate_obj_90_facing(sel_obj->prev, xc, yc, zc);
+            clear_move_copy_flags(sel_obj->prev);
+        }
+        xform_changed = TRUE;
+        break;
+
     case ID_OBJ_REFLECT:
         find_obj_pivot(parent, &xc, &yc, &zc);
         reflect_obj_facing(parent, xc, yc, zc);
         clear_move_copy_flags(parent);
+        xform_changed = TRUE;
+        break;
+
+    case ID_OBJ_REFLECTSELECTED:
+        clear_bbox(&box);
+        for (sel_obj = selection.head; sel_obj != NULL; sel_obj = sel_obj->next)
+        {
+            find_obj_pivot(sel_obj->prev, &xc, &yc, &zc);
+            expand_bbox_coords(&box, xc, yc, zc);
+        }
+        xc = (box.xmin + box.xmax) / 2;
+        yc = (box.ymin + box.xmax) / 2;
+        zc = (box.zmin + box.zmax) / 2;
+        for (sel_obj = selection.head; sel_obj != NULL; sel_obj = sel_obj->next)
+        {
+            reflect_obj_facing(sel_obj->prev, xc, yc, zc);
+            clear_move_copy_flags(sel_obj->prev);
+        }
         xform_changed = TRUE;
         break;
 

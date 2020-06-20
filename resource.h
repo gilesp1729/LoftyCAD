@@ -94,9 +94,9 @@
 #define IDC_FACE1                       166
 #define IDR_CONTEXT_FACE                166
 #define IDC_FACE2                       167
-#define IDR_CONTEXT_FACE1               167
 #define IDR_CONTEXT_EDGE                167
 #define IDC_FACE3                       168
+#define IDR_CONTEXT_SELECTION           168
 #define IDC_RESIZE                      169
 #define IDC_RESIZE1                     170
 #define IDC_RESIZE2                     171
@@ -251,6 +251,8 @@
 #define ID_FILE_OPENFILE                32902
 #define ID_OBJ_REFLECT                  32903
 #define ID_OBJ_ROTATE90                 32904
+#define ID_OBJ_REFLECTSELECTED          32905
+#define ID_OBJ_ROTATESELECTED90         32906
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -259,7 +261,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        164
-#define _APS_NEXT_COMMAND_VALUE         32905
+#define _APS_NEXT_COMMAND_VALUE         32907
 #define _APS_NEXT_CONTROL_VALUE         1038
 #define _APS_NEXT_SYMED_VALUE           110
 #endif

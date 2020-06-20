@@ -8,7 +8,7 @@
 GLUtesselator *rtess = NULL;
 
 
-// Clear a volume bounding box to empty
+// Clear a bounding box to empty
 void
 clear_bbox(Bbox *box)
 {
@@ -20,24 +20,44 @@ clear_bbox(Bbox *box)
     box->zmax = -LARGE_COORD;
 }
 
-// Expand a volume bounding box to include a point
+// Expand a bounding box to include a point
 void
 expand_bbox(Bbox *box, Point *p)
 {
     if (p->x < box->xmin)
         box->xmin = p->x;
-    else if (p->x > box->xmax)
+    if (p->x > box->xmax)
         box->xmax = p->x;
 
     if (p->y < box->ymin)
         box->ymin = p->y;
-    else if (p->y > box->ymax)
+    if (p->y > box->ymax)
         box->ymax = p->y;
 
     if (p->z < box->zmin)
         box->zmin = p->z;
-    else if (p->z > box->zmax)
+    if (p->z > box->zmax)
         box->zmax = p->z;
+}
+
+// Expand a bounding box to include a point given by (x, y, z)
+void
+expand_bbox_coords(Bbox* box, float x, float y, float z)
+{
+    if (x < box->xmin)
+        box->xmin = x;
+    if (x > box->xmax)
+        box->xmax = x;
+
+    if (y < box->ymin)
+        box->ymin = y;
+    if (y > box->ymax)
+        box->ymax = y;
+
+    if (z < box->zmin)
+        box->zmin = z;
+    if (z > box->zmax)
+        box->zmax = z;
 }
 
 // Form the union of two bboxes

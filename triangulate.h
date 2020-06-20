@@ -10,6 +10,7 @@
 // Bounding boxes
 void clear_bbox(Bbox *box);
 void expand_bbox(Bbox *box, Point *p);
+void expand_bbox_coords(Bbox* box, float x, float y, float z);
 void union_bbox(Bbox *box1, Bbox *box2, Bbox *u);
 BOOL intersects_bbox(Bbox *box1, Bbox *box2);
 
