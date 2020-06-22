@@ -724,7 +724,7 @@ reflect_plane_facing(Plane* pl)
 void
 reflect_obj_facing(Object* obj, float xc, float yc, float zc)
 {
-    int i;
+    int i, n;
     Point* p;
     EDGE type;
     Edge* edge;
@@ -734,6 +734,7 @@ reflect_obj_facing(Object* obj, float xc, float yc, float zc)
     Volume* vol;
     Group* grp;
     Object* o;
+    Point** ipts = NULL;
 
     switch (obj->type)
     {
@@ -782,43 +783,70 @@ reflect_obj_facing(Object* obj, float xc, float yc, float zc)
         }
         // don't forget to reflect the normal refpt too
         reflect_coord_facing(&face->normal.refpt.x, &face->normal.refpt.y, &face->normal.refpt.z, xc, yc, zc);
-        if (face->text != NULL)             // and the text positions
+        if (face->text != NULL) 
         {
-            reflect_coord_facing(&face->text->origin.x, &face->text->origin.y, &face->text->origin.z, xc, yc, zc);
-            reflect_coord_facing(&face->text->endpt.x, &face->text->endpt.y, &face->text->endpt.z, xc, yc, zc);
+            //reflect_coord_facing(&face->text->origin.x, &face->text->origin.y, &face->text->origin.z, xc, yc, zc);
+            //reflect_coord_facing(&face->text->endpt.x, &face->text->endpt.y, &face->text->endpt.z, xc, yc, zc);
+
+            // Lose the text struct as it can no longer be regenerated
+            free(face->text);
+            face->text = NULL;
         }
 
-#if 0
-        switch (face->type)
+        // If there are contours, remember all the initial points by their actual pointers
+        // The indices will be updated to point to the same point struct after the edges are reversed
+        if (face->n_contours > 0)
         {
-        case FACE_RECT:
-        case FACE_FLAT:
-        case FACE_CIRCLE:
-        case FACE_CYLINDRICAL:
-#endif
-            // Faces get their edge order reversed. Don't touch the initial point. 
-            for (i = 0; i < face->n_edges / 2; i++)
+            ipts = malloc(face->n_contours * sizeof(Point*));
+            for (i = 0, n = 0; i < face->n_contours; i++)
             {
-                Edge* temp = face->edges[i];
-                int ni = face->n_edges - i - 1;
+                int ni = face->n_contours - i - 1;
+                // Build this array reversed, since we will be reversing the edges
+                ipts[ni] = face->edges[n]->endpoints[face->contours[i].ip_index];
+                n += face->contours[i].n_edges;
+            }
+        }
 
-                face->edges[i] = face->edges[ni];
-                face->edges[ni] = temp;
+        // Faces get their edge order reversed. Don't touch the initial point yet. 
+        for (i = 0; i < face->n_edges / 2; i++)
+        {
+            Edge* temp = face->edges[i];
+            int ni = face->n_edges - i - 1;
+
+            face->edges[i] = face->edges[ni];
+            face->edges[ni] = temp;
+        }
+
+        // Reverse contour lists for multi-contour faces (such as text)
+        if (face->n_contours > 0)
+        {
+            for (i = 0; i < face->n_contours / 2; i++)
+            {
+                Contour temp = face->contours[i];
+                int ni = face->n_contours - i - 1;
+
+                face->contours[i] = face->contours[ni];
+                face->contours[ni] = temp;
             }
 
-            // TODO: reverse contour lists for multi-contour faces (such as text)
-            if (face->n_contours > 0)
+            // Fix up the edge indicies and IP indicies
+            for (i = 0, n = 0; i < face->n_contours; i++)
             {
-                if (face->initial_point == face->edges[0]->endpoints[0])
-                    face->contours[0].ip_index = 0;
+                face->contours[i].edge_index = n;
+                if (ipts[i] == face->edges[n]->endpoints[0])
+                    face->contours[i].ip_index = 0;
                 else
-                    face->contours[0].ip_index = 1;
+                {
+                    ASSERT(ipts[i] == face->edges[n]->endpoints[1], "Edges in contour don't join up");
+                    face->contours[i].ip_index = 1;
+                }
+                n += face->contours[i].n_edges;
             }
 
-#if 0
-            break;
+            // Set the face IP to the first contour's IP
+            face->initial_point = ipts[0];
+            free(ipts);
         }
-#endif
 
         face->view_valid = FALSE;
         break;
