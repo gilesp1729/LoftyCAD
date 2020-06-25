@@ -169,8 +169,9 @@ typedef struct Edge
     struct Object   hdr;            // Header
     EDGE            type;           // What kind of edge this is
     unsigned int    drawn;          // Drawn number increments and stops shared edges being drawn twice.
+    BOOL            corner;         // If TRUE, this edge is a round or chamfer corner.
     struct Point    *endpoints[2];  // Two endpoints (valid for any edge type)
-    struct Edge     *start_next;    // Next edge in the starting list (edges that start at endpoint 0)
+    struct Edge     *start_next;    // Next edge in the starting list (edges that start at endpoint 0. Only used when importing)
     struct ListHead view_list;      // List of intermediate points on the curve, generated 
                                     // between the two endpoints, to be flat within the
                                     // specified tolerance. Only used for arcs and beziers.
@@ -236,6 +237,7 @@ typedef struct Face
     Plane           normal;         // What plane is the face lying in (if flat) 
     struct Volume   *vol;           // What volume references (owns) this face
     BOOL            extruded;       // TRUE for the faces that were initially extruded to create a volume.
+    BOOL            corner;         // If TRUE, this face is extruded from a round or chamfer corner.
     float           color_decay;    // Color attenuation factor for halo faces (derived from points)
     struct Point    *initial_point; // Point in the first edge that the face starts from. Used to allow
                                     // view lists to be built up independent of the order of points
@@ -395,6 +397,8 @@ Object *copy_obj(Object *obj, float xoffset, float yoffset, float zoffset);
 void move_obj(Object *obj, float xoffset, float yoffset, float zoffset);
 void calc_halo_params(Face* face, ListHead *halo);
 void move_halo_around_face(Face* face, float xoffset, float yoffset, float zoffset);
+void find_corner_edges(Object* obj, Object* parent, ListHead *halo);
+void move_corner_edges(ListHead *halo, float xoffset, float yoffset, float zoffset);
 void clear_move_copy_flags(Object *obj);
 Face *clone_face_reverse(Face *face);
 

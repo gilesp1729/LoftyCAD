@@ -115,6 +115,25 @@ color_as(OBJECT obj_type, float color_decay, BOOL construction, PRESENTATION pre
             r += 0.4f;
         if (highlighted)
             g += 0.4f;
+        // Halo treatment varies with the blend mode. Remember that halo edges are drawn (at least) twice.
+        if (in_halo)
+        {
+            switch (view_blend)
+            {
+            case BLEND_ALPHA:
+                g += 0.2f;
+                a = 0.5f * color_decay + 0.1f;
+                break;
+            case BLEND_MULTIPLY:
+                r = 0.9f - 0.2f * color_decay;
+                g = 1.0f;
+                b = 0.9f - 0.2f * color_decay;
+                break;
+            default:  // opaque
+                g += 0.15f * color_decay + 0.05f;
+                break;
+            }
+        }
         if (locked)
             r = g = b = 0.8f;
         break;
@@ -321,13 +340,13 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             return;
 
         // Disable blending here so highlight shows up with multiply-blending
-        if (selected || highlighted)
+        if (selected || highlighted || in_halo)
         {
             glDisable(GL_BLEND);
         }
-        else  // normal drawing, check the drawn no. and don't draw shared edges twice
+        else  // normal drawing, check the drawn no. and don't draw shared edges twice (unless in halo)
         {
-            if (edge->drawn == curr_drawn_no)
+            if (edge->drawn == curr_drawn_no && !in_halo)
                 return;
             edge->drawn = curr_drawn_no;
         }
@@ -563,7 +582,50 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
             // stop stale scaling directions from showing on hover
             scaled = 0;
 
+            // Tailor feedback to the action (e.g. extruding faces). Some other faces or edges
+            // may be put into the halo list.
+            free_obj_list(&halo);
+            if 
+            (
+                app_state == STATE_STARTING_EXTRUDE 
+                && 
+                highlight_obj != NULL
+                &&
+                (highlight_obj->type == OBJ_FACE || highlight_obj->type == OBJ_VOLUME)
+            )
+            {
+                if (highlight_obj->type == OBJ_VOLUME)
+                {
+                    find_corner_edges
+                    (
+                        raw_picked_obj,     // get the face
+                        highlight_obj,
+                        &halo
+                    );
+                    highlight_obj = raw_picked_obj;
+                }
+                else
+                {
+                    find_corner_edges
+                    (
+                        highlight_obj,
+                        (Object *)((Face *)highlight_obj)->vol,
+                        &halo
+                    );
+                }
+            }
+            else if (highlight_obj != NULL && highlight_obj->type == OBJ_EDGE)
+            {
+                find_corner_edges
+                (
+                    highlight_obj,
+                    find_parent_object(&object_tree, highlight_obj, FALSE),
+                    &halo
+                );
+            }
+
             // Set up the halo if we are doing halo highlighting for smooth extrusions, etc.
+            // view_halo controls this (but corner edges etc. are still put in the halo list for highlighting)
             if 
             (
                 view_halo 
@@ -656,7 +718,20 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                             new_point.y - last_point.y,
                             new_point.z - last_point.z
                             );
-                        clear_move_copy_flags(picked_obj);
+
+                        // Move any corner edges adjacent to edges of this face
+                        move_corner_edges
+                        (
+                            &halo,
+                            new_point.x - last_point.x,
+                            new_point.y - last_point.y,
+                            new_point.z - last_point.z
+                        );
+
+                        if (halo.head != NULL)
+                            clear_move_copy_flags(parent);
+                        else
+                            clear_move_copy_flags(picked_obj);
 
                         // If the point is in a text struct, special case here to regenerate the text.
                         // Only if position has actually changed
@@ -1279,7 +1354,8 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                                         side->edges[2] = ne;
                                         side->edges[3] = e;
                                         side->n_edges = 4;
-
+                                        if (e->corner)
+                                            side->corner = TRUE;    // if extruding a corner edge, mark face too
                                         link((Object *)side, &vol->faces);
                                     }
                                 }
@@ -1321,6 +1397,16 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                                 face->normal.C * length
                             );
 
+                            // Move any corner edges adjacent to edges of this face
+                            move_corner_edges
+                            (
+                                &halo,
+                                face->normal.A * length,
+                                face->normal.B * length,
+                                face->normal.C * length
+                            );
+
+                            // Move any halo faces if called for
                             if (view_halo)
                             {
                                 move_halo_around_face
@@ -1629,7 +1715,20 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                 pres |= DRAW_HIGHLIGHT_LOCKED;
             draw_object(highlight_obj, pres, parent != NULL ? parent->lock : LOCK_NONE);
 
-    #ifdef DEBUG_HIGHLIGHTING_ENABLED
+            // Draw halo objects, if any have been picked out for highlighting.
+            for (obj = halo.head; obj != NULL; obj = obj->next)
+            {
+                Object* parent = find_parent_object(&object_tree, obj->prev, TRUE);
+
+                build_parent_xform_list(obj->prev, parent, &xform_list);
+                if (obj->prev != curr_obj && obj->prev != highlight_obj)
+                {
+                    pres = DRAW_HIGHLIGHT_HALO;
+                    draw_object(obj->prev, pres, parent != NULL ? parent->lock : LOCK_NONE);
+                }
+            }
+
+#ifdef DEBUG_HIGHLIGHTING_ENABLED
             // The bounding box for a volume, or the parent volume of any highlighted component.
             // TODO: this will not work for groups, as find_parent_object won't return them.
             if (app_state == STATE_NONE && parent != NULL && parent->type == OBJ_VOLUME)
@@ -1671,19 +1770,6 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                     glVertex3f(box.xmax, box.ymax, box.zmax);
                     glEnd();
                     glPopName();
-                }
-            }
-
-            // Draw halo faces, if any.
-            for (obj = halo.head; obj != NULL; obj = obj->next)
-            {
-                Object* parent = find_parent_object(&object_tree, obj->prev, TRUE);
-
-                build_parent_xform_list(obj->prev, parent, &xform_list);
-                if (obj->prev != curr_obj && obj->prev != highlight_obj)
-                {
-                    pres = DRAW_HIGHLIGHT_HALO;
-                    draw_object(obj->prev, pres, parent != NULL ? parent->lock : LOCK_NONE);
                 }
             }
 

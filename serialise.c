@@ -133,6 +133,8 @@ serialise_obj(Object *obj, FILE *f)
                       e->stepping, e->stepsize, e->nsteps);
             break;
         }
+        if (e->corner)
+            fprintf_s(f, "CORNER %d\n", obj->ID);
         break;
 
     case OBJ_FACE:
@@ -177,6 +179,8 @@ serialise_obj(Object *obj, FILE *f)
             fprintf_s(f, "FONT %d %d %d %s\n",
                       obj->ID, text->bold, text->italic, text->font);
         }
+        if (face->corner)
+            fprintf_s(f, "CORNER %d\n", obj->ID);
         break;
 
     case OBJ_VOLUME:
@@ -849,6 +853,20 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
             tok = strtok_s(NULL, "\n", &nexttok);  // rest of line till \n
             if (tok != NULL)
                 strcpy_s(face->text->font, 32, tok);
+        }
+        else if (strcmp(tok, "CORNER") == 0)
+        {
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            id = atoi(tok) + id_offset;
+            switch (object[id]->type)
+            {
+            case OBJ_EDGE:
+                ((Edge*)object[id])->corner = TRUE;
+                break;
+            case OBJ_FACE:
+                ((Face*)object[id])->corner = TRUE;
+                break;
+            }
         }
         else if (strcmp(tok, "VOLUME") == 0)
         {

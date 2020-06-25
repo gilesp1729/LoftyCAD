@@ -469,6 +469,73 @@ move_obj(Object* obj, float xoffset, float yoffset, float zoffset)
     }
 }
 
+// Find any adjacent round/chamfer corner edges to the given edge or face
+// that need moving along with it. If a face is being picked, return faces that
+// need moving (not just edges) since they will be used for highlighting.
+void
+find_corner_edges(Object* obj, Object* parent, ListHead* halo)
+{
+    int i;
+
+    switch (parent->type)
+    {
+    case OBJ_FACE:
+        if (obj->type == OBJ_EDGE)
+        {
+            Face* face = (Face*)parent;
+
+            // Picked edge, with parent face. Put adjacent corner edges in the halo list.
+            for (i = 0; i < face->n_edges; i++)
+            {
+                if ((Object *)face->edges[i] == obj)
+                {
+                    int next = (i < face->n_edges - 1) ? i + 1 : 0;
+                    int prev = (i > 0) ? i - 1 : face->n_edges - 1;
+
+                    if (face->edges[prev]->corner)
+                        link_single((Object*)face->edges[prev], halo);
+                    if (face->edges[next]->corner)
+                        link_single((Object*)face->edges[next], halo);
+                    break;
+                }
+            }
+        }
+        break;
+
+    case OBJ_VOLUME:
+        if (obj->type == OBJ_EDGE)
+        {
+            // Picked edge, with parent volume. Find corner edges adjacent to the
+            // picked edge in all the faces in the volume's face list.
+
+
+
+        }
+        else if (obj->type == OBJ_FACE)
+        {
+            // Picked face, with parent volume. Find corner _faces_ adjacent to the
+            // picked face in the volume's face list.
+
+
+
+
+
+        }
+        break;
+    }
+}
+
+// Move any edges or faces that have been put in the halo list by find_corner_edges.
+// Ignore any smooth factors.
+void
+move_corner_edges(ListHead *halo, float xoffset, float yoffset, float zoffset)
+{
+    Object* obj;
+
+    for (obj = halo->head; obj != NULL; obj = obj->next)
+        move_obj(obj->prev, xoffset, yoffset, zoffset);
+}
+
 // Find a suitable (x,y,z) point about which to rotate any object.
 void
 find_obj_pivot(Object* obj, float* x, float* y, float* z)
@@ -928,8 +995,7 @@ calc_halo_params(Face* face, ListHead* halo)
     cent.y /= face->n_edges;
     cent.z /= face->n_edges;
 
-    // Clear the halo list, and set all points' decay factors to zero.
-    free_obj_list(halo);
+    // Set all points' decay factors to zero.
     for (f = (Face*)vol->faces.head; f != NULL; f = (Face*)f->hdr.next)
     {
         f->color_decay = 0;

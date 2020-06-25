@@ -380,6 +380,7 @@ insert_chamfer_round(Point *pt, Face *parent, float size, EDGE edge_type, BOOL r
         parent->edges[eindex[1]] = ne;
     }
     parent->n_edges++;
+    ne->corner = TRUE;      // mark this as a corner edge
 }
 
 // handle context menu when right-clicking on a highlightable object.
