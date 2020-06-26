@@ -549,6 +549,21 @@ assign_picked_plane(POINT pt)
     // other picked obj types just wait till the mouse moves off them
 }
 
+// Can we extrude this face?
+BOOL
+extrudible(Object *obj)
+{
+    Face* face = (Face*)obj;
+
+    if (obj == NULL || obj->type != OBJ_FACE)
+        return FALSE;
+    if (face->type & FACE_CONSTRUCTION)
+        return FALSE;
+    if (face->type == FACE_CYLINDRICAL || face->type == FACE_GENERAL)
+        return FALSE;
+
+    return TRUE;
+}
 
 // Draw the contents of the main window. Everything happens in here.
 void CALLBACK
@@ -585,14 +600,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
             // Tailor feedback to the action (e.g. extruding faces). Some other faces or edges
             // may be put into the halo list.
             free_obj_list(&halo);
-            if 
-            (
-                app_state == STATE_STARTING_EXTRUDE 
-                && 
-                highlight_obj != NULL
-                &&
-                (highlight_obj->type == OBJ_FACE || highlight_obj->type == OBJ_VOLUME)
-            )
+            if (highlight_obj != NULL)
             {
                 if (highlight_obj->type == OBJ_VOLUME)
                 {
@@ -602,26 +610,31 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         highlight_obj,
                         &halo
                     );
-                    highlight_obj = raw_picked_obj;
+
+                    // If volume locked at face level, highlight the face if extruding
+                    // TODO: only highlight faces that are legal to extrude
+                    if (app_state == STATE_STARTING_EXTRUDE)
+                    {
+                        if (extrudible(raw_picked_obj))
+                            highlight_obj = raw_picked_obj;
+                        else
+                            highlight_obj = NULL;
+                    }
                 }
-                else
+                else if (highlight_obj->type == OBJ_EDGE || highlight_obj->type == OBJ_FACE)
                 {
                     find_corner_edges
                     (
                         highlight_obj,
-                        (Object *)((Face *)highlight_obj)->vol,
+                        find_parent_object(&object_tree, highlight_obj, FALSE),
                         &halo
                     );
+                    if (app_state == STATE_STARTING_EXTRUDE)
+                    {
+                        if (!extrudible(raw_picked_obj))
+                            highlight_obj = NULL;
+                    }
                 }
-            }
-            else if (highlight_obj != NULL && highlight_obj->type == OBJ_EDGE)
-            {
-                find_corner_edges
-                (
-                    highlight_obj,
-                    find_parent_object(&object_tree, highlight_obj, FALSE),
-                    &halo
-                );
             }
 
             // Set up the halo if we are doing halo highlighting for smooth extrusions, etc.
@@ -719,7 +732,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                             new_point.z - last_point.z
                             );
 
-                        // Move any corner edges adjacent to edges of this face
+                        // Move any corner edges/faces adjacent to edges of this face
                         move_corner_edges
                         (
                             &halo,
@@ -728,10 +741,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                             new_point.z - last_point.z
                         );
 
-                        if (halo.head != NULL)
-                            clear_move_copy_flags(parent);
-                        else
-                            clear_move_copy_flags(picked_obj);
+                        clear_move_copy_flags(parent);  // do whole parent in case halo moves other things
 
                         // If the point is in a text struct, special case here to regenerate the text.
                         // Only if position has actually changed
@@ -1242,9 +1252,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         float length;
 
                         // Can we extrude this face?
-                        if (face->type & FACE_CONSTRUCTION)
-                            break;
-                        if (face->type == FACE_CYLINDRICAL || face->type == FACE_GENERAL)
+                        if (!extrudible((Object *)face))
                             break;
 
                         curr_obj = picked_obj;  // for highlighting
@@ -1397,7 +1405,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                                 face->normal.C * length
                             );
 
-                            // Move any corner edges adjacent to edges of this face
+                            // Move any corner edges/faces adjacent to edges of this face
                             move_corner_edges
                             (
                                 &halo,
@@ -1416,12 +1424,8 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                                     face->normal.B * length,
                                     face->normal.C * length
                                 );
-                                clear_move_copy_flags((Object*)face->vol); // need to do on whole volume if moving halo.
                             }
-                            else
-                            {
-                                clear_move_copy_flags(picked_obj);
-                            }
+                            clear_move_copy_flags((Object*)face->vol); // need to do on whole volume if moving halo.
                             picked_point = new_point;
                         }
 
