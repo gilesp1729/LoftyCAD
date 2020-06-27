@@ -319,8 +319,17 @@ get_dims_string(Object *obj, char buf[64])
         f = (Face *)obj;
         if ((app_state == STATE_STARTING_EXTRUDE || app_state == STATE_DRAWING_EXTRUDE) && f->paired)
         {
-            // We are extruding, so show the height.
-            sprintf_s(buf, 64, "%s mm high", display_rounded(buf, f->extrude_height));
+            float x = fabsf(dot(f->normal.A, f->normal.B, f->normal.C, 1, 0, 0));
+            float y = fabsf(dot(f->normal.A, f->normal.B, f->normal.C, 0, 1, 0));
+            float z = fabsf(dot(f->normal.A, f->normal.B, f->normal.C, 0, 0, 1));
+
+            // We are extruding, so show the length/width/height.
+            if (x > y && x > z)
+                sprintf_s(buf, 64, "%s mm long", display_rounded(buf, f->extrude_height));
+            else if (y > x && y > z)
+                sprintf_s(buf, 64, "%s mm wide", display_rounded(buf, f->extrude_height));
+            else if (z > x && z > y)
+                sprintf_s(buf, 64, "%s mm high", display_rounded(buf, f->extrude_height));
         }
         else
         {
@@ -443,6 +452,8 @@ show_dims_on(Object *obj, PRESENTATION pres, LOCK parent_lock)
     Face *f;
     Edge *e;
     Point *p0, *p1, *p2;
+    int n;
+    float x, y, z;
     BOOL locked;
     BOOL selected = pres & DRAW_SELECTED;
     BOOL highlighted = pres & DRAW_HIGHLIGHT;
@@ -482,7 +493,15 @@ show_dims_on(Object *obj, PRESENTATION pres, LOCK parent_lock)
         switch (f->type)
         {
         case FACE_CIRCLE:
-            p0 = f->edges[0]->endpoints[0];
+            if (f->edges[0]->type == EDGE_ARC)
+                p0 = ((ArcEdge*)f->edges[0])->centre;
+            else if (f->edges[1]->type == EDGE_ARC)
+                p0 = ((ArcEdge*)f->edges[1])->centre;
+            else
+            {
+                ASSERT(FALSE, "Where's the arc edge?");
+                p0 = f->edges[0]->endpoints[0];
+            }
             glRasterPos3f(p0->x, p0->y, p0->z);
             break;
 
@@ -493,25 +512,27 @@ show_dims_on(Object *obj, PRESENTATION pres, LOCK parent_lock)
                 p0 = (Point *)f->view_list.head;
                 p1 = (Point *)p0->hdr.next;
                 p2 = (Point *)p1->hdr.next;
+                glRasterPos3f
+                (
+                    (p0->x + p2->x) / 2,
+                    (p0->y + p2->y) / 2,
+                    (p0->z + p2->z) / 2
+                );
             }
             else
             {
-                p0 = f->initial_point;
-                if (f->edges[0]->endpoints[0] == p0)
-                    p1 = f->edges[0]->endpoints[1];
-                else
-                    p1 = f->edges[0]->endpoints[0];
-                if (f->edges[1]->endpoints[0] == p1)
-                    p2 = f->edges[1]->endpoints[1];
-                else
-                    p2 = f->edges[1]->endpoints[0];
+                x = y = z = 0;
+                for (n = 0, p0 = (Point*)f->view_list.head->next; p0 != NULL; p0 = (Point*)p0->hdr.next, n++)
+                {
+                    x += p0->x;
+                    y += p0->y;
+                    z += p0->z;
+                }
+                x /= n;
+                y /= n;
+                z /= n;
+                glRasterPos3f(x, y, z);
             }
-            glRasterPos3f
-                (
-                (p0->x + p2->x) / 2,
-                (p0->y + p2->y) / 2,
-                (p0->z + p2->z) / 2
-                );
             break;
         }
         break;

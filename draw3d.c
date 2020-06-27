@@ -615,7 +615,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                     );
                     if (app_state == STATE_STARTING_EXTRUDE)
                     {
-                        if (!extrudible(raw_picked_obj))
+                        if (!extrudible(highlight_obj))
                             highlight_obj = NULL;
                     }
                 }
