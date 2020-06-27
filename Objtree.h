@@ -236,7 +236,12 @@ typedef struct Face
     int             max_edges;      // the allocated size of the above array
     Plane           normal;         // What plane is the face lying in (if flat) 
     struct Volume   *vol;           // What volume references (owns) this face
-    BOOL            extruded;       // TRUE for the faces that were initially extruded to create a volume.
+    BOOL            paired;         // TRUE for the faces that can be extruded and have a height to 
+                                    // their opposite number with an equal and opposite normal.
+    BOOL            has_corners;    // TRUE for faces that contain corner edges in their edge list.
+                                    // These faces cannot have corner faces adjacent to them.
+    float           extrude_height; // Extrude height to the paired face. 
+                                    // If negative, it's a hole (face normals face inwards)
     BOOL            corner;         // If TRUE, this face is extruded from a round or chamfer corner.
     float           color_decay;    // Color attenuation factor for halo faces (derived from points)
     struct Point    *initial_point; // Point in the first edge that the face starts from. Used to allow
@@ -315,7 +320,7 @@ typedef struct Volume
     OPERATION       op;             // Operation to use when combining volume with tree
                                     // NOTE THE ABOVE MUST FOLLOW immediately after header
     int             material;       // Material index (0 is the default)
-    float           extrude_height; // Extrude height. If negative, it's a hole (face normals face inwards)
+    BOOL            measured;       // If TRUE, all faces are paired, and the volume has dimensions (l/w/h)
     struct Point    ***point_bucket;  // Bucket structure of Points whose coordinates are copied from 
                                     // child faces' view lists. Allow sharing points when importing
                                     // STL meshes, and sharing of mesh vertices when building triangle meshes.
@@ -426,5 +431,9 @@ void clean_checkpoints(char *filename);
 void purge_obj(Object *obj);
 void purge_obj_top(Object *obj, OBJECT type);
 void purge_tree(Group *tree, BOOL preserve_objects, ListHead *saved_list);
+
+// Extrude heights/dimensions
+BOOL extrudible(Object* obj);
+void calc_extrude_heights(Volume* vol);
 
 #endif /* __OBJTREE_H__ */

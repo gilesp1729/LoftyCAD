@@ -491,9 +491,11 @@ contextmenu(Object *picked_obj, POINT pt)
             hMenu = GetSubMenu(hMenu, 0);
             ModifyMenu(hMenu, 0, MF_BYPOSITION | MF_GRAYED | MF_STRING, 0, buf);
 
+#if 0 /// TODO: fix this
             hole = ((Volume*)picked_obj)->extrude_height < 0;
             EnableMenuItem(hMenu, ID_OPERATION_UNION, hole ? MF_GRAYED : MF_ENABLED);
             EnableMenuItem(hMenu, ID_OPERATION_DIFFERENCE, hole ? MF_GRAYED : MF_ENABLED);
+#endif
             break;
 
         case OBJ_GROUP:

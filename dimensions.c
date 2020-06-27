@@ -47,7 +47,7 @@ has_dims(Object *obj)
             // If we are extruding, then we show a height on the dims.
             // Otherwise flat faces don't have anything.
             f = (Face *)obj;
-            if ((app_state == STATE_STARTING_EXTRUDE || app_state == STATE_DRAWING_EXTRUDE) && f->extruded)
+            if ((app_state == STATE_STARTING_EXTRUDE || app_state == STATE_DRAWING_EXTRUDE) && f->paired)
                 return TRUE;
             else
                 return FALSE;
@@ -317,10 +317,10 @@ get_dims_string(Object *obj, char buf[64])
 
     case OBJ_FACE:
         f = (Face *)obj;
-        if ((app_state == STATE_STARTING_EXTRUDE || app_state == STATE_DRAWING_EXTRUDE) && f->extruded)
+        if ((app_state == STATE_STARTING_EXTRUDE || app_state == STATE_DRAWING_EXTRUDE) && f->paired)
         {
             // We are extruding, so show the height.
-            sprintf_s(buf, 64, "%s mm high", display_rounded(buf, f->vol->extrude_height));
+            sprintf_s(buf, 64, "%s mm high", display_rounded(buf, f->extrude_height));
         }
         else
         {

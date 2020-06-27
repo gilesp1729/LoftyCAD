@@ -549,22 +549,6 @@ assign_picked_plane(POINT pt)
     // other picked obj types just wait till the mouse moves off them
 }
 
-// Can we extrude this face?
-BOOL
-extrudible(Object *obj)
-{
-    Face* face = (Face*)obj;
-
-    if (obj == NULL || obj->type != OBJ_FACE)
-        return FALSE;
-    if (face->type & FACE_CONSTRUCTION)
-        return FALSE;
-    if (face->type == FACE_CYLINDRICAL || face->type == FACE_GENERAL)
-        return FALSE;
-
-    return TRUE;
-}
-
 // Draw the contents of the main window. Everything happens in here.
 void CALLBACK
 Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
@@ -1429,16 +1413,18 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                             picked_point = new_point;
                         }
 
-                        // calculate the extruded height
-                        if (face->extruded)
+                        // calculate the extruded heights
+                        calc_extrude_heights(face->vol);
+#if 0
+                        if (face->paired)
                         {
                             Volume *vol = face->vol;
                             Face *opposite = NULL;
 
                             // find the face's opposite number
-                            if (face->hdr.next != NULL && ((Face *)face->hdr.next)->extruded)
+                            if (face->hdr.next != NULL && ((Face *)face->hdr.next)->paired)
                                 opposite = (Face *)face->hdr.next;
-                            else if (((Face *)face->hdr.prev)->extruded)
+                            else if (((Face *)face->hdr.prev)->paired)
                                 opposite = (Face *)face->hdr.prev;
                             else
                                 ASSERT(FALSE, "Where's the opposite face?");
@@ -1448,6 +1434,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                                 -distance_point_plane(&face->normal, &opposite->normal.refpt);
                             face->vol->op = face->vol->extrude_height < 0 ? OP_INTERSECTION : OP_UNION;
                         }
+#endif
 
                         // Invalidate all the view lists for the volume, as any of them may have changed
                         invalidate_all_view_lists((Object *)face->vol, (Object *)face->vol, 0, 0, 0);

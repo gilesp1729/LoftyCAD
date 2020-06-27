@@ -168,6 +168,9 @@ copy_obj(Object* obj, float xoffset, float yoffset, float zoffset)
             new_face->edges = realloc(new_face->edges, new_face->max_edges * sizeof(Edge*));
         }
         new_face->n_edges = face->n_edges;
+        new_face->paired = face->paired;
+        new_face->extrude_height = face->extrude_height;
+
 
         // Alloc and copy any contour array. Don't worry about the power of 2 thing as it will
         // not be extended again.
@@ -219,7 +222,6 @@ copy_obj(Object* obj, float xoffset, float yoffset, float zoffset)
             new_vol->xform->yc += yoffset;
             new_vol->xform->zc += zoffset;
         }
-        new_vol->extrude_height = vol->extrude_height;
         new_vol->op = vol->op;
         break;
 
@@ -271,8 +273,8 @@ Face
     clone->max_edges = face->max_edges;
 
     // associate the face with its clone by setting the extrude flag
-    clone->extruded = TRUE;
-    face->extruded = TRUE;
+    clone->paired = TRUE;
+    face->paired = TRUE;
 
     // If the face does not have a contour array, create one here for the face and its clone.
     // The extrusion code needs to use it later, and it makes everything simpler here as well.
@@ -535,11 +537,11 @@ find_corner_edges(Object* obj, Object* parent, ListHead* halo)
         {
             // Picked face, with parent volume. Find corner _faces_ adjacent to the
             // picked face in the volume's face list. Note that:
-            // - if the picked face has been extruded, there will be no corner faces edge-adjacent to it.
+            // - if the picked face has corner edges, there will be no corner faces edge-adjacent to it.
             // - that leaves the picked face being a side face, and any corner faces will be adjacent 
             // to it in the fast list.
             face = (Face*)obj;
-            if (face->extruded)
+            if (face->has_corners)
                 return FALSE;
             for (f = (Face*)vol->faces.head; f != NULL; f = (Face*)f->hdr.next)
             {

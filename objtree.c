@@ -511,4 +511,87 @@ purge_tree(Group *tree, BOOL preserve_objects, ListHead *saved_list)
     tree->mesh_complete = FALSE;
 }
 
+// Can we extrude this face?
+BOOL
+extrudible(Object* obj)
+{
+    Face* face = (Face*)obj;
 
+    if (obj == NULL || obj->type != OBJ_FACE)
+        return FALSE;
+    if (face->type & FACE_CONSTRUCTION)
+        return FALSE;
+    if (face->type == FACE_CYLINDRICAL || face->type == FACE_GENERAL)
+        return FALSE;
+    if (face->corner)
+        return FALSE;
+
+    return TRUE;
+}
+
+// Calculate the extruded heights for a volume that was created by extruding faces.
+// Mark faces having a valid oppsite number (and a height to it) as being paired.
+// If the extrude heights are negative, the volume is a hole (it will be intersected)
+void
+calc_extrude_heights(Volume* vol)
+{
+    Face* last_face, * prev_last, *f, *g;
+
+    // An extruded volume made in LoftyCAD always has its last two faces
+    // initially extruded. If they were not, we assume the volue is imported and
+    // may not have any parallel faces (you can still extrude, but no heights will be shown)
+    last_face = (Face *)vol->faces.tail;
+    prev_last = (Face *)last_face->hdr.prev;
+
+    // Unpair everything first
+    vol->measured = FALSE;
+    for (f = (Face*)vol->faces.head; f != NULL; f = (Face*)f->hdr.next)
+        f->paired = FALSE;
+
+    // if this is ~ -1 then normals are opposite, and the faces are paired.
+    if (!nz(pldot(&last_face->normal, &prev_last->normal) + 1.0f))
+        return;         // forget it. Nothing is paired.
+
+    vol->measured = TRUE;   // assume it is, unless we find an exception
+    last_face->extrude_height = 
+        -distance_point_plane(&last_face->normal, &prev_last->normal.refpt);
+    prev_last->extrude_height = last_face->extrude_height;
+    last_face->paired = TRUE;
+    prev_last->paired = TRUE;
+
+    // TODO: Handle explicitly-given render op separately somehow
+    vol->op = last_face->extrude_height < 0 ? OP_INTERSECTION : OP_UNION;
+
+    // Check the rest of the faces, skipping those that are already paired.
+    // If all the faces are paired (other than possible round-corner faces)
+    // then the volume is measured (dimensions may be shown and changed)
+    for (f = (Face*)vol->faces.head; f != NULL; f = (Face*)f->hdr.next)
+    {
+        if (f->paired)
+            continue;
+        if (!extrudible((Object*)f))
+            continue;
+
+        for (g = (Face*)f->hdr.next; g != NULL; g = (Face*)g->hdr.next)
+        {
+            if (!extrudible((Object*)g))
+                continue;
+
+            if (nz(pldot(&g->normal, &f->normal) + 1.0f))
+            {
+                ASSERT(!g->paired, "Pairing with already paired face?");
+                g->extrude_height =
+                    -distance_point_plane(&g->normal, &f->normal.refpt);
+                f->extrude_height = g->extrude_height;
+                g->paired = TRUE;
+                f->paired = TRUE;
+                break;
+            }
+        }
+        if (g == NULL)
+        {
+            // A pair was not found for this face.
+            vol->measured = FALSE;
+        }
+    }
+}

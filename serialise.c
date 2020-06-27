@@ -761,6 +761,8 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
                 }
 
                 face->edges[face->n_edges++] = (Edge *)object[eid];
+                if (((Edge*)object[eid])->corner)
+                    face->has_corners = TRUE;
             }
 
             face->hdr.ID = id;
@@ -915,10 +917,12 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
                 last_face = (Face *)object[fid];
             }
 
+            calc_extrude_heights(vol);
+#if 0
             // The last two faces are always the extruded ones - mark them as such,
             // and calculate the current extruded height
-            last_face->extruded = TRUE;
-            ((Face *)last_face->hdr.prev)->extruded = TRUE;
+            last_face->paired = TRUE;
+            ((Face *)last_face->hdr.prev)->paired = TRUE;
             vol->extrude_height = 
                 -distance_point_plane(&last_face->normal, &((Face *)last_face->hdr.prev)->normal.refpt);
 
@@ -927,6 +931,7 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
             // TODO store extruded flag on faces explicitly?
             if (vol->op == OP_MAX)
                 vol->op = vol->extrude_height < 0 ? OP_INTERSECTION : OP_UNION;
+#endif
 
             ASSERT(stkptr > 0 && id == stack[stkptr - 1], "Badly formed volume record");
             stkptr--;
