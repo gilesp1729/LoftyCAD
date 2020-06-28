@@ -3,7 +3,7 @@ Simple CAD for 3D printers for Windows. It came out of dissatisfactions with Ske
 
 # LoftyCAD goals
 # General
-It is open-source, actively maintained, and free to all.
+LoftyCAD is a hierarchical CSG 3D-modelling program. It is open-source, actively maintained, and free to all.
 Simple to use like Sketchup, but with some improvements:
 In particular, it will:
 - Retain the identity of 3D shapes, do not merge irreversibly with others
@@ -30,13 +30,14 @@ In particular, it will:
 # Stretch goals
 - Allow manipulation of triangle meshes: smooth extrusion, refinement, and more
 - Bezier surfaces (compound curves)
+- Axially symmetric objects
 - Lofting (a nod to the original Lofty, which is LoftyCAD's spiritual ancestor)
 
 # Installing LoftyCAD from the prebuilt installer
 Unzip the zip in the Installer directory, to any directory on the Windows system (c:\Program Files (x86) is the standard place for 32-bit programs). The install.bat file will do this (run as administrator!), register the file associations, and create a desktop link.
 
 # Building LoftyCAD
-LoftyCAD uses the CGAL computational geometry library to merge and intersect triangle meshes.
+LoftyCAD uses the excellent CGAL computational geometry library to merge and intersect triangle meshes.
 
 # Material Girl branch:
 # This branch is the live development branch and will become the master in due course. Features described above refer to this branch and may not be present in the deprecated master branch.
