@@ -490,7 +490,7 @@ contextmenu(Object *picked_obj, POINT pt)
             hMenu = LoadMenu(hInst, MAKEINTRESOURCE(IDR_CONTEXT_VOL));
             hMenu = GetSubMenu(hMenu, 0);
             ModifyMenu(hMenu, 0, MF_BYPOSITION | MF_GRAYED | MF_STRING, 0, buf);
-            face = (Face *)(((Volume*)picked_obj)->faces.tail);
+            face = (Face *)(((Volume*)parent)->faces.tail);
             hole = face->extrude_height < 0;
             EnableMenuItem(hMenu, ID_OPERATION_UNION, hole ? MF_GRAYED : MF_ENABLED);
             EnableMenuItem(hMenu, ID_OPERATION_DIFFERENCE, hole ? MF_GRAYED : MF_ENABLED);

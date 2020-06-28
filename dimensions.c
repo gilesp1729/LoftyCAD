@@ -64,10 +64,11 @@ has_dims(Object *obj)
             return TRUE;
         if (app_state == STATE_STARTING_ROTATE || app_state == STATE_DRAWING_ROTATE)
             return TRUE;
-        if (((Face *)v->faces.tail)->type == FACE_CIRCLE)    // Cylinders only for now
+        if (((Face *)v->faces.tail)->type == FACE_CIRCLE)
             return TRUE;
-        else
-            return FALSE;
+        if (v->measured)
+            return TRUE;
+        return FALSE;
 
     case OBJ_GROUP:
         if (app_state == STATE_STARTING_SCALE || app_state == STATE_DRAWING_SCALE)
@@ -227,16 +228,17 @@ update_dims(Object *obj, char *buf)
 
     case OBJ_VOLUME:
         vol = (Volume *)obj;
-        if (((Face *)vol->faces.tail)->type == FACE_CIRCLE)    // Cylinders only for now
+        if (((Face *)vol->faces.tail)->type == FACE_CIRCLE)    // Cylinders
         {
             c1 = (Face *)vol->faces.tail;
             c2 = (Face *)c1->hdr.prev;
             ASSERT(c1->type == FACE_CIRCLE, "Face 1 must be a circle");
             ASSERT(c2->type == FACE_CIRCLE, "Face 2 must be a circle");
-            e1 = c1->edges[0];
-            ae1 = (ArcEdge *)e1;
-            e2 = c2->edges[0];
-            ae2 = (ArcEdge *)e2;
+
+            ae1 = first_arc_edge(c1);
+            ae2 = first_arc_edge(c2);
+            e1 = (Edge *)ae1;
+            e2 = (Edge *)ae2;
             tok = strtok_s(buf, " ,\t\n", &nexttok);
             rad = (float)atof(tok);
             if (rad == 0)
@@ -254,6 +256,45 @@ update_dims(Object *obj, char *buf)
             new_length(e2->endpoints[0], e1->endpoints[0], len);
             new_length(e2->endpoints[1], e1->endpoints[1], len);
         }
+        else if (vol->measured)
+        {
+            float l, w, h;
+
+            tok = strtok_s(buf, " ,\t\n", &nexttok);
+            l = (float)atof(tok);
+            tok = strtok_s(NULL, " ,\t\n", &nexttok);
+            w = (float)atof(tok);
+            tok = strtok_s(NULL, " ,\t\n", &nexttok);
+            h = (float)atof(tok);
+
+            // Determine principal directions from paired faces with positive axis-aligned normals
+            for (f = (Face*)vol->faces.head; f != NULL; f = (Face*)f->hdr.next)
+            {
+                float x, y, z;
+
+                if (!f->paired)
+                    continue;
+                x = dot(f->normal.A, f->normal.B, f->normal.C, 1, 0, 0);
+                y = dot(f->normal.A, f->normal.B, f->normal.C, 0, 1, 0);
+                z = dot(f->normal.A, f->normal.B, f->normal.C, 0, 0, 1);
+                if (x > y && x > z)
+                {
+                    move_obj((Object*)f, l - f->extrude_height, 0, 0);
+                    clear_move_copy_flags((Object*)f);
+                }
+                else if (y > x && y > z)
+                {
+                    move_obj((Object*)f, 0, w - f->extrude_height, 0);
+                    clear_move_copy_flags((Object*)f);
+                }
+                else if (z > x && z > y)
+                {
+                    move_obj((Object*)f, 0, 0, h - f->extrude_height);
+                    clear_move_copy_flags((Object *)f);
+                }
+            }
+            calc_extrude_heights(vol);
+        }
 
         break;
     }
@@ -269,12 +310,13 @@ update_dims(Object *obj, char *buf)
 char *
 get_dims_string(Object *obj, char buf[64])
 {
-    char buf2[64];
+    char buf2[64], buf3[64];
     Point *p0, *p1, *p2;
     Edge *e, *e1;
     ArcEdge *ae, *ae1, *ae2;
     Face *f, *c1, *c2;
     Volume *v;
+    Group* g;
     double angle;
 
     buf[0] = '\0';
@@ -397,7 +439,7 @@ get_dims_string(Object *obj, char buf[64])
             sprintf_s(buf, 64, "%sdeg", 
                       display_rounded(buf, cleanup_angle_and_snap(total_angle, key_status & AUX_SHIFT)));
         }
-        else if (((Face *)v->faces.tail)->type == FACE_CIRCLE)    // Cylinders only for now.
+        else if (((Face *)v->faces.tail)->type == FACE_CIRCLE)    // Cylinders
         {
             c1 = (Face *)v->faces.tail;
             c2 = (Face *)c1->hdr.prev;
@@ -410,6 +452,76 @@ get_dims_string(Object *obj, char buf[64])
                 display_rounded(buf, length(ae1->centre, e1->endpoints[0])),
                 display_rounded(buf2, length(ae1->centre, ae2->centre))
             );
+        }
+        else if (v->measured)   // Rect prisms with all 3 dims known from parallel faces
+        {
+            float x, y, z, l, w, h;
+
+            // Determine principal directions from paired faces with positive axis-aligned normals
+            for (f = (Face*)v->faces.head; f != NULL; f = (Face*)f->hdr.next)
+            {
+                if (!f->paired)
+                    continue;
+                x = dot(f->normal.A, f->normal.B, f->normal.C, 1, 0, 0);
+                y = dot(f->normal.A, f->normal.B, f->normal.C, 0, 1, 0);
+                z = dot(f->normal.A, f->normal.B, f->normal.C, 0, 0, 1);
+                if (x > y && x > z)
+                    l = f->extrude_height;
+                else if (y > x && y > z)
+                    w = f->extrude_height;
+                else if (z > x && z > y)
+                    h = f->extrude_height;
+            }
+            sprintf_s
+            (
+                buf, 64, "%s,%s,%s mm",
+                display_rounded(buf, l),
+                display_rounded(buf2, w),
+                display_rounded(buf3, h)
+            );
+        }
+
+        break;
+
+    case OBJ_GROUP:
+        g = (Group*)obj;
+        if (app_state == STATE_STARTING_SCALE || app_state == STATE_DRAWING_SCALE)
+        {
+            if (g->xform != NULL)
+            {
+                switch (scaled)
+                {
+                case DIRN_X:
+                    sprintf_s(buf, 64, "%sx", display_rounded(buf, g->xform->sx));
+                    break;
+                case DIRN_Y:
+                    sprintf_s(buf, 64, "%sy", display_rounded(buf, g->xform->sy));
+                    break;
+                case DIRN_Z:
+                    sprintf_s(buf, 64, "%sz", display_rounded(buf, g->xform->sz));
+                    break;
+                case DIRN_X | DIRN_Y:
+                    sprintf_s(buf, 64, "%s,%sxy",
+                        display_rounded(buf, g->xform->sx),
+                        display_rounded(buf2, g->xform->sy));
+                    break;
+                case DIRN_X | DIRN_Z:
+                    sprintf_s(buf, 64, "%s,%sxz",
+                        display_rounded(buf, g->xform->sx),
+                        display_rounded(buf2, g->xform->sz));
+                    break;
+                case DIRN_Y | DIRN_Z:
+                    sprintf_s(buf, 64, "%s,%syz",
+                        display_rounded(buf, g->xform->sy),
+                        display_rounded(buf2, g->xform->sz));
+                    break;
+                }
+            }
+        }
+        else if (app_state == STATE_STARTING_ROTATE || app_state == STATE_DRAWING_ROTATE)
+        {
+            sprintf_s(buf, 64, "%sdeg",
+                display_rounded(buf, cleanup_angle_and_snap(total_angle, key_status & AUX_SHIFT)));
         }
 
         break;
@@ -454,7 +566,6 @@ show_dims_on(Object *obj, PRESENTATION pres, LOCK parent_lock)
     Point *p0, *p1, *p2;
     int n;
     float x, y, z;
-    BOOL locked;
     BOOL selected = pres & DRAW_SELECTED;
     BOOL highlighted = pres & DRAW_HIGHLIGHT;
 
@@ -465,7 +576,6 @@ show_dims_on(Object *obj, PRESENTATION pres, LOCK parent_lock)
 
     get_dims_string(obj, buf);
 
-    locked = parent_lock >= obj->type;
     switch (obj->type & ~EDGE_CONSTRUCTION)
     {
     case OBJ_EDGE:
@@ -473,7 +583,7 @@ show_dims_on(Object *obj, PRESENTATION pres, LOCK parent_lock)
         if ((e->type & EDGE_CONSTRUCTION) && !view_constr)
             return;
 
-        color_as(OBJ_EDGE, 1.0f, e->type & EDGE_CONSTRUCTION, 0, locked);
+        color_as(OBJ_EDGE, 1.0f, e->type & EDGE_CONSTRUCTION, 0, FALSE);
         glRasterPos3f
         (
             (e->endpoints[0]->x + e->endpoints[1]->x) / 2,
@@ -488,7 +598,7 @@ show_dims_on(Object *obj, PRESENTATION pres, LOCK parent_lock)
             return;
 
         // color face dims in the edge color, so they can be easily read
-        color_as(OBJ_EDGE, 1.0f, f->type & FACE_CONSTRUCTION, 0, locked);
+        color_as(OBJ_EDGE, 1.0f, f->type & FACE_CONSTRUCTION, 0, FALSE);
 
         switch (f->type)
         {
@@ -540,7 +650,7 @@ show_dims_on(Object *obj, PRESENTATION pres, LOCK parent_lock)
     case OBJ_VOLUME:
     case OBJ_GROUP:
         v = (Volume *)obj;
-        color_as(OBJ_EDGE, 1.0f, FALSE, 0, locked);
+        color_as(OBJ_EDGE, 1.0f, FALSE, 0, FALSE);
         glRasterPos3f(v->bbox.xc, v->bbox.yc, v->bbox.zc);
         break;
     }

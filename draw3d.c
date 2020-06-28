@@ -582,11 +582,17 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
             scaled = 0;
 
             // Tailor feedback to the action (e.g. extruding faces). Some other faces or edges
-            // may be put into the halo list.
+            // may be put into the halo list. Some types of objects will have their highlighting
+            // suppressed if the action cannot be performed upon them.
             free_obj_list(&halo);
             if (highlight_obj != NULL)
             {
-                if (highlight_obj->type == OBJ_VOLUME)
+                if (highlight_obj->type == OBJ_GROUP)
+                {
+                    if (app_state == STATE_STARTING_EXTRUDE)
+                        highlight_obj = NULL;
+                }
+                else if (highlight_obj->type == OBJ_VOLUME)
                 {
                     find_corner_edges
                     (
@@ -617,6 +623,10 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                     {
                         if (!extrudible(highlight_obj))
                             highlight_obj = NULL;
+                    }
+                    if (app_state == STATE_STARTING_ROTATE || app_state == STATE_STARTING_SCALE)
+                    {
+                        highlight_obj = NULL;
                     }
                 }
             }
@@ -1696,6 +1706,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
             draw_object(curr_obj, pres, parent != NULL ? parent->lock : LOCK_NONE);
         }
 
+        // Draw highlighted object(s).
         if (highlight_obj != NULL)
         {
             Object* parent = find_parent_object(&object_tree, highlight_obj, TRUE);
@@ -1705,6 +1716,16 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
             if (app_state >= STATE_STARTING_EDGE)
                 pres |= DRAW_HIGHLIGHT_LOCKED;
             draw_object(highlight_obj, pres, parent != NULL ? parent->lock : LOCK_NONE);
+
+            // Draw parent object so its dimensions are updated and shown 
+            // (edges/faces only; volumes are handled by extrusion)
+            if (parent != NULL && parent != highlight_obj && parent->type <= OBJ_FACE)
+            {
+                pres = DRAW_HIGHLIGHT | DRAW_WITH_DIMENSIONS;
+                if (app_state >= STATE_STARTING_EDGE)
+                    pres |= DRAW_HIGHLIGHT_LOCKED;
+                draw_object(parent, pres, parent->lock);
+            }
 
             // Draw halo objects, if any have been picked out for highlighting.
             for (obj = halo.head; obj != NULL; obj = obj->next)
