@@ -72,6 +72,7 @@ typedef enum
 extern HINSTANCE hInst;
 
 extern GLint wWidth, wHeight;
+extern int toolbar_bottom;
 extern float xTrans, yTrans, zTrans;
 extern int zoom_delta;
 

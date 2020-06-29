@@ -166,6 +166,7 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 if (!ChooseFont(&cf))
                 {
                     free(curr_text);
+                    display_help_state(STATE_NONE);
                     break;
                 }
 

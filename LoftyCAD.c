@@ -19,6 +19,7 @@ INT_PTR CALLBACK	About(HWND, UINT, WPARAM, LPARAM);
 
 
 GLint wWidth = 800, wHeight = 800;
+int toolbar_bottom;
 
 // Mouse movements recorded here
 int	left_mouseX, left_mouseY;
@@ -1464,6 +1465,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 	HACCEL hAccelTable;
     HMENU hMenu;
     POINT pt = { 0, 0 };
+    RECT rect;
 
 	// Initialize global strings
 	LoadString(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
@@ -1507,7 +1509,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
         auxIdleFunc(DrawCB);
         auxMainLoop(DrawCB);
 
-        // Toolbar
+        // Toolbar, and get the bottom to position other windows against
         hWndToolbar = CreateDialog
             (
             hInst,
@@ -1519,6 +1521,8 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
         SetWindowPos(hWndToolbar, HWND_NOTOPMOST, wWidth, 0, 0, 0, SWP_NOSIZE);
         if (view_tools)
             ShowWindow(hWndToolbar, SW_SHOW);
+        GetWindowRect(hWndToolbar, &rect);
+        toolbar_bottom = rect.bottom;
 
         // Debug log
         hWndDebug = CreateDialog
@@ -1529,7 +1533,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
             debug_dialog
             );
 
-        SetWindowPos(hWndDebug, HWND_NOTOPMOST, wWidth, wHeight/2, 0, 0, SWP_NOSIZE);
+        SetWindowPos(hWndDebug, HWND_NOTOPMOST, wWidth, toolbar_bottom, 0, 0, SWP_NOSIZE);
         if (view_debug)
             ShowWindow(hWndDebug, SW_SHOW);
 

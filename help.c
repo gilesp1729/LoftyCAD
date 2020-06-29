@@ -83,7 +83,7 @@ HWND init_help_window(void)
         help_dialog
         );
 
-    SetWindowPos(hWnd, HWND_NOTOPMOST, wWidth, wHeight / 2, 0, 0, SWP_NOSIZE);
+    SetWindowPos(hWnd, HWND_NOTOPMOST, wWidth, toolbar_bottom, 0, 0, SWP_NOSIZE);
     if (view_help)
         ShowWindow(hWnd, SW_SHOW);
 

@@ -1105,6 +1105,9 @@ PIXELFORMATDESCRIPTOR pfd;
               SetCursor(LoadCursor(NULL, IDC_ARROW));
               return FALSE;
           }
+          if (LOWORD(lParam) != HTCLIENT)
+              break;  // send non-client hits to DefWindowProc
+
           if (CommandFunc)
               return (*CommandFunc)(message, wParam, lParam);
           return TRUE;
