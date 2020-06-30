@@ -552,12 +552,17 @@ calc_extrude_heights(Volume* vol)
     if (!nz(pldot(&last_face->normal, &prev_last->normal) + 1.0f))
         return;         // forget it. Nothing is paired.
 
-    vol->measured = TRUE;   // assume it is, unless we find an exception
     last_face->extrude_height = 
         -distance_point_plane(&last_face->normal, &prev_last->normal.refpt);
     prev_last->extrude_height = last_face->extrude_height;
     last_face->paired = TRUE;
     prev_last->paired = TRUE;
+
+    // Stop here for multi-contour faces (such as text) as only the top and bottom faces can be paired
+    if (last_face->n_contours > 1)
+        return;
+
+    vol->measured = TRUE;   // assume it is, unless we find an exception
 
     // TODO: Handle explicitly-given render op separately somehow
     vol->op = last_face->extrude_height < 0 ? OP_INTERSECTION : OP_UNION;
