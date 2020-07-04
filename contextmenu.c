@@ -160,6 +160,8 @@ make_face(Group *group)
     ListHead plist = { NULL, NULL };
     Point *pt;
     int i;
+    FACE face_type;
+    EDGE edge_types[4], min_type, max_type;
 
     // Check that the group is locked at Edges (made by group-connected_edges)
     if (group->hdr.lock != LOCK_EDGES)
@@ -207,6 +209,9 @@ make_face(Group *group)
         if (e->hdr.next->type != OBJ_EDGE)
             return NULL;
 
+        // Strip construction edges, as we can't consistently create them
+        e->type &= ~EDGE_CONSTRUCTION;
+
         if (near_pt(next_edge->endpoints[0], pt, snap_tol))
         {
             next_edge->endpoints[0] = pt;       // share the point
@@ -231,7 +236,8 @@ make_face(Group *group)
     ASSERT(near_pt(((Edge *)group->obj_list.head)->endpoints[initial], pt, snap_tol), "The edges don't close at the starting point");
     next_edge->endpoints[final] = ((Edge *)group->obj_list.head)->endpoints[initial];
 
-    // Get the normal and see if we need to reverse
+    // Get the normal and see if we need to reverse. This depends on the face being generally
+    // in one plane (it may be a bit curved, but a full circle cylinder will confuse things..)
     polygon_normal((Point *)plist.head, &norm);
     if (dot(norm.A, norm.B, norm.C, facing_plane->A, facing_plane->B, facing_plane->C) < 0)
     {
@@ -240,15 +246,70 @@ make_face(Group *group)
         norm.B = -norm.B;
         norm.C = -norm.C;
     }
+    norm.refpt = *((Edge*)group->obj_list.head)->endpoints[initial];
 
-    // make the face
-    face = face_new(FACE_FLAT, norm);
+    // Add any Bezier control points and circle centres into the points list
+    // so we can test them for being in the same plane later on
+    for (e = (Edge*)group->obj_list.head; e != NULL; e = (Edge*)e->hdr.next)
+    {
+        switch (e->type)
+        {
+        case EDGE_ARC:
+            link_tail((Object*)((ArcEdge*)e)->centre, &plist);
+            break;
+        case EDGE_BEZIER:
+            link_tail((Object*)((BezierEdge*)e)->ctrlpoints[0], &plist);
+            link_tail((Object*)((BezierEdge*)e)->ctrlpoints[1], &plist);
+            break;
+        }
+    }
+
+    // Make the face, of whatever type matches the input edges
+    // Determine if the face is really flat by checking distance to a plane defined
+    // by the normal we found above.
+    max_type = EDGE_STRAIGHT;
+    min_type = EDGE_BEZIER;
+    if (n_edges != 4)
+    {
+        // More than 4 edges cannot be a barrel face, so make it flat
+        face_type = FACE_FLAT;
+    }
+    else if (polygon_planar((Point*)plist.head, &norm))
+    {
+        // If it lies in one plane, make it flat too
+        face_type = FACE_FLAT;
+    }
+    else
+    {
+        // We have a non-flat face. Find the different edge types
+        for (i = 0, e = (Edge*)group->obj_list.head; e != NULL; e = (Edge*)e->hdr.next, i++)
+        {
+            edge_types[i] = e->type;
+            if (e->type < min_type)
+                min_type = e->type;
+            if (e->type > max_type)
+                max_type = e->type;
+        }
+        ASSERT(i == 4, "Already tested this");
+        if (edge_types[0] != edge_types[2] || edge_types[1] != edge_types[3] || max_type == EDGE_STRAIGHT)
+            face_type = FACE_FLAT;  // even if out of plane, we can't express this as a barrel face
+        else if (min_type == EDGE_STRAIGHT)
+            face_type = FACE_CYLINDRICAL;   // straight/arc or straight/bezier
+        else if (max_type == EDGE_ARC)
+            face_type = FACE_BARREL_ARC;    // arc/arc 
+        else if (max_type == EDGE_BEZIER)
+            face_type = FACE_BARREL_BEZIER; // arc/bez
+    }
+
+    face = face_new(face_type, norm);
     face->n_edges = n_edges;
-    face->max_edges = 1;
-    while (face->max_edges <= n_edges)
-        face->max_edges <<= 1;          // round up to a power of 2
-    if (face->max_edges > 16)           // does it need any more than the default 16?
-        face->edges = realloc(face->edges, face->max_edges * sizeof(Edge *));
+    if (face_type == FACE_FLAT)
+    {
+        while (face->max_edges <= n_edges)
+            face->max_edges <<= 1;          // round up to a power of 2
+        if (face->max_edges > 16)           // does it need any more than the default 16?
+            face->edges = realloc(face->edges, face->max_edges * sizeof(Edge*));
+    }
 
     // Populate the edge list, sharing points along the way. 
     if (reverse)
@@ -1078,7 +1139,7 @@ transform_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             xform->rz = (float)atof(buf);
 
             evaluate_transform(xform);
-            if (LOWORD(wParam) == IDOK)    // TODO XFORM - do inval and update here, if too hard get rid of Apply button
+            if (LOWORD(wParam) == IDOK)    // TODO_XFORM - do inval and update here, if too hard get rid of Apply button
                 EndDialog(hWnd, 1);
             break;
 
@@ -1097,7 +1158,7 @@ transform_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 ((Group *)obj)->xform = NULL;
                 break;
             }
-            EndDialog(hWnd, 1);     // TODO XFORM - behave as Apply here and stay in dialog
+            EndDialog(hWnd, 1);     // TODO_XFORM - behave as Apply here and stay in dialog
             break;
         }
     }

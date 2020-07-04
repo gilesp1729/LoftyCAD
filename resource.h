@@ -253,6 +253,8 @@
 #define ID_OBJ_ROTATE90                 32904
 #define ID_OBJ_REFLECTSELECTED          32905
 #define ID_OBJ_ROTATESELECTED90         32906
+#define ID_DEBUG_HIGHLIGHTVIEWLISTPOINTS 32907
+#define ID_DEBUG_VIEWLIST               32908
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -261,7 +263,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        164
-#define _APS_NEXT_COMMAND_VALUE         32907
+#define _APS_NEXT_COMMAND_VALUE         32909
 #define _APS_NEXT_CONTROL_VALUE         1038
 #define _APS_NEXT_SYMED_VALUE           110
 #endif

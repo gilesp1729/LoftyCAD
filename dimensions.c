@@ -41,8 +41,12 @@ has_dims(Object *obj)
         break;
 
     case OBJ_FACE:
-        switch (((Face *)obj)->type)
+        switch (((Face *)obj)->type & ~FACE_CONSTRUCTION)
         {
+        case FACE_RECT:
+        case FACE_CIRCLE:
+            return TRUE;
+
         case FACE_FLAT:
             // If we are extruding, then we show a height on the dims.
             // Otherwise flat faces don't have anything.
@@ -53,7 +57,8 @@ has_dims(Object *obj)
                 return FALSE;
 
         case FACE_CYLINDRICAL:
-        case FACE_GENERAL:
+        case FACE_BARREL_ARC:
+        case FACE_BARREL_BEZIER:
             return FALSE;
         }
         break;

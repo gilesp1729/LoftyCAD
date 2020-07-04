@@ -219,6 +219,7 @@ extern Material materials[MAX_MATERIAL];
 // Debug externs
 extern BOOL debug_view_bbox;
 extern BOOL debug_view_normals;
+extern BOOL debug_view_viewlist;
 
 // Some forwards
 Object * Pick(GLint x_pick, GLint y_pick, BOOL force_pick);

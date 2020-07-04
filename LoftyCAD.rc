@@ -114,6 +114,7 @@ BEGIN
             MENUITEM "&Debug Log",                  ID_VIEW_DEBUGLOG
             MENUITEM "Highlight Face &Normals",     ID_DEBUG_NORMALS
             MENUITEM "Highlight &Bounding boxes",   ID_DEBUG_BBOXES
+            MENUITEM "Highlight &View List Points", ID_DEBUG_VIEWLIST
         END
     END
     POPUP "&Help"

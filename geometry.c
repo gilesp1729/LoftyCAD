@@ -279,6 +279,26 @@ polygon_normal(Point *list, Plane *norm)
     normalise_plane(norm);
 }
 
+// Determine if a 3D polygon is planar within tolerance, given a normal direction
+// (as returned from polygon_normal on the same set of points)
+BOOL
+polygon_planar(Point* list, Plane* norm)
+{
+    Point* p;
+    Plane pl;
+
+    pl = *norm;             // set up the plane passing through the first point
+    pl.refpt = *list;
+    for (p = (Point *)list->hdr.next; p->hdr.next != NULL; p = (Point*)p->hdr.next)
+    {
+        // check every other point's distance to the plane
+        if (fabsf(distance_point_plane(&pl, p)) > tolerance)
+            return FALSE;
+    }
+
+    return TRUE;
+}
+
 // multiply a 4x4 by 4-vector 
 void
 mat_mult_by_row(float *m, float *v, float *res)
@@ -413,6 +433,15 @@ normalise_plane(Plane *p)
     p->B = p->B / length;
     p->C = p->C / length;
     return TRUE;
+}
+
+// Is the normal valid?
+BOOL
+normalised(Plane* p)
+{
+    float length = (float)sqrt(p->A * p->A + p->B * p->B + p->C * p->C);
+
+    return nz(fabsf(length) - 1.0f);
 }
 
 // Dot and cross products between two planes.

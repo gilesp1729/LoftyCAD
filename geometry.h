@@ -41,7 +41,8 @@ float distance_point_plane(Plane *plane, Point *p);
 BOOL snap_ray_edge(GLint x, GLint y, Edge *edge, Point *new_point);
 float dist_point_to_edge(Point *P, Edge *S);
 void normal_list(Point *list, Plane *norm);
-void polygon_normal(Point *list, Plane *norm);
+void polygon_normal(Point* list, Plane* norm);
+BOOL polygon_planar(Point* list, Plane* norm);
 BOOL normal3(Point *b, Point *a, Point *c, Plane *norm);
 float angle3(Point *b, Point *a, Point *c, Plane *n);
 void mat_mult_by_row(float *m, float *v, float *res);
@@ -57,7 +58,9 @@ void cross(float x0, float y0, float z0, float x1, float y1, float z1, float *xc
 void pcross(Point *p1, Point *p2, Point *cp);
 void plcross(Plane *p1, Plane *p2, Plane *cp);
 BOOL normalise_point(Point *p);
-BOOL normalise_plane(Plane *p);
+BOOL normalised(Plane* p);
+BOOL normalise_plane(Plane* p);
+
 void new_length(Point *p0, Point *p1, float len);
 
 void snap_to_grid(Plane *plane, Point *point, BOOL inhibit_snapping);

@@ -37,8 +37,9 @@ typedef enum
     FACE_CIRCLE,                    // A complete circle, lying in one plane.
     FACE_FLAT,                      // Any number of edges making a closed face, lying in one plane.
                                     // Only flat faces (up to here) may be extruded.
-    FACE_CYLINDRICAL,               // A simply curved face (2 straight edges opposite, and 2 curved)
-    FACE_GENERAL,                   // A compound-curved face (e.g. 4 bezier edges)
+    FACE_CYLINDRICAL,               // A simply-curved face (an opposing pair of straight edges, the other pair arcs or beziers)
+    FACE_BARREL_ARC,                // A compound-curved face (an opposing pair of arcs, the other pair arcs or beziers)
+    FACE_BARREL_BEZIER,             // A compound-curved face (2 opposing pairs of beziers)
     FACE_CONSTRUCTION = 0x8000      // OR this in to indicate a construction face
 } FACE;
 
@@ -201,7 +202,9 @@ typedef struct ArcEdge
 typedef struct BezierEdge
 {
     struct Edge     edge;           // Edge
-    struct Point    *ctrlpoints[2]; // Two control points
+    struct Point    *ctrlpoints[2]; // Two control points, corresponding in order to the edge endpoints
+    struct Point    *bezctl[4];      // End and control points copied into the correct order for building
+                                    // the face view list, to help with Bezier surface interpolation
 } BezierEdge;
 
 // Contour in a multi-contour face. This information is used when reversing and extruding faces.

@@ -136,10 +136,11 @@ Face *face_new(FACE face_type, Plane norm)
         face->hdr.show_dims = face_type & FACE_CONSTRUCTION;
         // fallthrough
     case FACE_CYLINDRICAL:
+    default:                // barrel types here too
         face->max_edges = 4;
         break;
 
-    default:  // general and flat faces may have many edges
+    case FACE_FLAT:
         face->max_edges = 16;
         break;
     }
@@ -511,7 +512,8 @@ purge_tree(Group *tree, BOOL preserve_objects, ListHead *saved_list)
     tree->mesh_complete = FALSE;
 }
 
-// Can we extrude this face?
+// Can we extrude this face? Any face can be extruded, as long it has a valid normal
+// and is not a corner face or a construction face.
 BOOL
 extrudible(Object* obj)
 {
@@ -521,7 +523,7 @@ extrudible(Object* obj)
         return FALSE;
     if (face->type & FACE_CONSTRUCTION)
         return FALSE;
-    if (face->type == FACE_CYLINDRICAL || face->type == FACE_GENERAL)
+    if (!normalised(&face->normal))
         return FALSE;
     if (face->corner)
         return FALSE;

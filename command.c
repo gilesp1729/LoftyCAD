@@ -407,6 +407,19 @@ Command(int message, int wParam, int lParam)
                 CheckMenuItem(hMenu, ID_DEBUG_NORMALS, MF_CHECKED);
             }
             break;
+        case ID_DEBUG_VIEWLIST:
+            hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
+            if (debug_view_viewlist)
+            {
+                debug_view_viewlist = FALSE;
+                CheckMenuItem(hMenu, ID_DEBUG_VIEWLIST, MF_UNCHECKED);
+            }
+            else
+            {
+                debug_view_viewlist = TRUE;
+                CheckMenuItem(hMenu, ID_DEBUG_VIEWLIST, MF_CHECKED);
+            }
+            break;
 #endif
 
         case ID_VIEW_TOP:

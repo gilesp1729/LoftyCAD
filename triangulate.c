@@ -395,6 +395,8 @@ gen_view_list_tree_surfaces_op(OPERATION op, Group *tree, Group *parent_tree)
 }
 
 // Generate mesh for entire tree (a group or the object tree)
+// TODO_MESH Get it to throw up a message box if it can't complete the mesh, with a helpful-ish error message..
+// Make sure it doesn't crash program!
 void
 gen_view_list_tree_surfaces(Group *tree, Group *parent_tree)
 {
@@ -577,6 +579,17 @@ gen_view_list_face(Face *face)
                         expand_bbox(&face->vol->bbox, p);
                     link_tail((Object *)p, list);
                 }
+
+                // Copy the Bezier control points in the correct order
+                if ((e->type & ~EDGE_CONSTRUCTION) == EDGE_BEZIER)
+                {
+                    BezierEdge* be = (BezierEdge*)e;
+
+                    be->bezctl[0] = e->endpoints[0];
+                    be->bezctl[1] = be->ctrlpoints[0];
+                    be->bezctl[2] = be->ctrlpoints[1];
+                    be->bezctl[3] = e->endpoints[1];
+                }
             }
             else
             {
@@ -592,6 +605,15 @@ gen_view_list_face(Face *face)
                     if (face->vol != NULL)
                         expand_bbox(&face->vol->bbox, p);
                     link_tail((Object *)p, list);
+                }
+                if ((e->type & ~EDGE_CONSTRUCTION) == EDGE_BEZIER)
+                {
+                    BezierEdge* be = (BezierEdge*)e;
+
+                    be->bezctl[0] = e->endpoints[1];
+                    be->bezctl[1] = be->ctrlpoints[1];
+                    be->bezctl[2] = be->ctrlpoints[0];
+                    be->bezctl[3] = e->endpoints[0];
                 }
             }
 
@@ -620,60 +642,75 @@ gen_view_list_face(Face *face)
         v = (Point*)face->spare_list.head;
         int nsteps;
 
-        ASSERT((face->type & ~FACE_CONSTRUCTION) == FACE_CYLINDRICAL, "Only cylinder faces should be here");
 
-        // Rearrange the cylinder view list into a set of facets, each with its own normal.
-
-        // Cylinder faces, as created by extrusion, start with a straight edge.
-        // But after reflection they start with an arc edge.
-        // Detect this difference here so we can match up points correctly.
-
-        if (face->edges[0]->type != EDGE_STRAIGHT)
+        switch (face->type & ~FACE_CONSTRUCTION)
         {
-            last = (Point*)last->hdr.prev;
-            nsteps = face->edges[0]->nsteps;
-        }
-        else
-        {
-            nsteps = face->edges[1]->nsteps;
-        }
+        case FACE_CYLINDRICAL:
 
-        for (i = 0; v->hdr.next != NULL; v = (Point*)v->hdr.next, i++)
-        {
-            Point* vnext = (Point*)v->hdr.next;
-            Point* lprev = (Point*)last->hdr.prev;
-            Plane norm;
+            // Rearrange the cylinder view list into a set of facets, each with its own normal.
 
-            // A new facet point containing the normal
-            normal3(last, lprev, vnext, &norm);
-            p = point_new(norm.A, norm.B, norm.C);
-            p->hdr.ID = 0;
-            objid--;
-            p->flags = FLAG_NEW_FACET;
-            link_tail((Object*)p, &face->view_list);
+            // Cylinder faces, as created by extrusion, start with a straight edge.
+            // But after reflection they start with an arc edge.
+            // Detect this difference here so we can match up points correctly.
 
-            // Four points for the quad
-            p = point_newp(v);
-            p->hdr.ID = 0;
-            objid--;
-            link_tail((Object*)p, &face->view_list);
-            p = point_newp(vnext);
-            p->hdr.ID = 0;
-            objid--;
-            link_tail((Object*)p, &face->view_list);
-            p = point_newp(lprev);
-            p->hdr.ID = 0;
-            objid--;
-            link_tail((Object*)p, &face->view_list);
-            p = point_newp(last);
-            p->hdr.ID = 0;
-            objid--;
-            link_tail((Object*)p, &face->view_list);
+            if (face->edges[0]->type != EDGE_STRAIGHT)
+            {
+                last = (Point*)last->hdr.prev;
+                nsteps = face->edges[0]->nsteps;
+            }
+            else
+            {
+                nsteps = face->edges[1]->nsteps;
+            }
 
-            // Walk last backwards until we meet in the middle
-            last = lprev;
-            if (i >= nsteps)
-                break;
+            for (i = 0; v->hdr.next != NULL; v = (Point*)v->hdr.next, i++)
+            {
+                Point* vnext = (Point*)v->hdr.next;
+                Point* lprev = (Point*)last->hdr.prev;
+                Plane norm;
+
+                // A new facet point containing the normal
+                normal3(last, lprev, vnext, &norm);
+                p = point_new(norm.A, norm.B, norm.C);
+                p->hdr.ID = 0;
+                objid--;
+                p->flags = FLAG_NEW_FACET;
+                link_tail((Object*)p, &face->view_list);
+
+                // Four points for the quad
+                p = point_newp(v);
+                p->hdr.ID = 0;
+                objid--;
+                link_tail((Object*)p, &face->view_list);
+                p = point_newp(vnext);
+                p->hdr.ID = 0;
+                objid--;
+                link_tail((Object*)p, &face->view_list);
+                p = point_newp(lprev);
+                p->hdr.ID = 0;
+                objid--;
+                link_tail((Object*)p, &face->view_list);
+                p = point_newp(last);
+                p->hdr.ID = 0;
+                objid--;
+                link_tail((Object*)p, &face->view_list);
+
+                // Walk last backwards until we meet in the middle
+                last = lprev;
+                if (i >= nsteps)
+                    break;
+            }
+            break;
+
+            // TODO_BARREL face facets (arc-arc, arc-bez, and bez-bez faces)
+            // These and cyl faces need a valid normal ABC to stop crap from being written out to file
+        case FACE_BARREL_ARC:
+
+            break;
+
+        case FACE_BARREL_BEZIER:
+
+            break;
         }
 
         // We are finished with the spare list for now, so free it
@@ -1024,7 +1061,7 @@ render_beginData(GLenum type, void * polygon_data)
 {
     Plane *norm = (Plane *)polygon_data;
 
-    glNormal3f(norm->A, norm->B, norm->C);  // TODO XFORM - need to transform this too! But it probably doesn't matter.
+    glNormal3f(norm->A, norm->B, norm->C);  // TODO_XFORM - need to transform this too! But it probably doesn't matter.
     glBegin(type);
 }
 

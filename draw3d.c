@@ -1245,7 +1245,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         Face *face = (Face *)picked_obj;
                         float length;
 
-                        // Can we extrude this face?
+                        // Can we extrude this face? (does it have a normal?)
                         if (!extrudible((Object *)face))
                             break;
 
@@ -1272,96 +1272,89 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                             }
                             face->view_valid = FALSE;
 
-                            switch (face->type)
+                            // Clone the face with coincident edges/points, but in the
+                            // opposite sense (and with an opposite normal)
+                            opposite = clone_face_reverse(face);
+                            clear_move_copy_flags(picked_obj);
+                            link((Object *)opposite, &vol->faces);
+                            opposite->vol = vol;
+
+                            // After cloning, both the face and its clone have contour arrays.
+                            // The edge indexes and edge counts of each contour will line up.
+                            for (c = 0; c < face->n_contours; c++)
                             {
-                            case FACE_RECT:
-                            case FACE_CIRCLE:
-                            case FACE_FLAT:
-                                // Clone the face with coincident edges/points, but in the
-                                // opposite sense (and with an opposite normal)
-                                opposite = clone_face_reverse(face);
-                                clear_move_copy_flags(picked_obj);
-                                link((Object *)opposite, &vol->faces);
-                                opposite->vol = vol;
+                                int ei = face->contours[c].edge_index;
 
-                                // After cloning, both the face and its clone have contour arrays.
-                                // The edge indexes and edge counts of each contour will line up.
-                                for (c = 0; c < face->n_contours; c++)
+                                // Create faces that link the picked face to its clone
+                                // Take care to traverse the opposite edges backwards
+                                // Start with the initial points of the countours
+                                //eip = face->initial_point;
+                                eip = face->edges[ei]->endpoints[face->contours[c].ip_index];
+                                //oip = opposite->initial_point;
+                                oip = opposite->edges[ei]->endpoints[opposite->contours[c].ip_index];
+                                o = opposite->edges[ei];
+                                if (oip == o->endpoints[0])
+                                    oip = o->endpoints[1];
+                                else
+                                    oip = o->endpoints[0];
+
+                                for (i = 0; i < face->contours[c].n_edges; i++)
                                 {
-                                    int ei = face->contours[c].edge_index;
+                                    FACE side_type;
 
-                                    // Create faces that link the picked face to its clone
-                                    // Take care to traverse the opposite edges backwards
-                                    // Start with the initial points of the countours
-                                    //eip = face->initial_point;
-                                    eip = face->edges[ei]->endpoints[face->contours[c].ip_index];
-                                    //oip = opposite->initial_point;
-                                    oip = opposite->edges[ei]->endpoints[opposite->contours[c].ip_index];
-                                    o = opposite->edges[ei];
-                                    if (oip == o->endpoints[0])
-                                        oip = o->endpoints[1];
+                                    e = face->edges[ei + i];
+                                    if (i == 0)
+                                        o = opposite->edges[ei];
                                     else
-                                        oip = o->endpoints[0];
+                                        o = opposite->edges[ei + face->contours[c].n_edges - i];
 
-                                    for (i = 0; i < face->contours[c].n_edges; i++)
+                                    side_type = FACE_RECT;
+                                    if (e->type == EDGE_ARC || e->type == EDGE_BEZIER)
+                                        side_type = FACE_CYLINDRICAL;
+                                    ASSERT(e->type == o->type, "Opposite edge types don't match");
+                                    norm.A = norm.B = norm.C = 0; 
+                                    side = face_new(side_type, norm);
+                                    side->normal.refpt = *eip;      // give it a valid refpt but a denormal ABC
+                                    side->initial_point = eip;
+                                    side->vol = vol;
+
+                                    ne = edge_new(EDGE_STRAIGHT);
+                                    ne->endpoints[0] = eip;
+                                    ne->endpoints[1] = oip;
+                                    side->edges[0] = ne;
+                                    side->edges[1] = o;
+
+                                    // Move to the next pair of points
+                                    if (eip == e->endpoints[0])
                                     {
-                                        FACE side_type;
-
-                                        e = face->edges[ei + i];
-                                        if (i == 0)
-                                            o = opposite->edges[ei];
-                                        else
-                                            o = opposite->edges[ei + face->contours[c].n_edges - i];
-
-                                        side_type = FACE_RECT;
-                                        if (e->type == EDGE_ARC || e->type == EDGE_BEZIER)
-                                            side_type = FACE_CYLINDRICAL;
-                                        ASSERT(e->type == o->type, "Opposite edge types don't match");
-                                        norm.A = 0;   // Initialise norm to stop exceptions
-                                        side = face_new(side_type, norm);   // Any old norm will do, its (ABC) will come with the view list
-                                        side->normal.refpt = *eip;          // but we need to set a valid ref point
-                                        side->initial_point = eip;
-                                        side->vol = vol;
-
-                                        ne = edge_new(EDGE_STRAIGHT);
-                                        ne->endpoints[0] = eip;
-                                        ne->endpoints[1] = oip;
-                                        side->edges[0] = ne;
-                                        side->edges[1] = o;
-
-                                        // Move to the next pair of points
-                                        if (eip == e->endpoints[0])
-                                        {
-                                            eip = e->endpoints[1];
-                                        }
-                                        else
-                                        {
-                                            ASSERT(eip == e->endpoints[1], "Edges don't join up");
-                                            eip = e->endpoints[0];
-                                        }
-
-                                        if (oip == o->endpoints[0])
-                                        {
-                                            oip = o->endpoints[1];
-                                        }
-                                        else
-                                        {
-                                            ASSERT(oip == o->endpoints[1], "Edges don't join up");
-                                            oip = o->endpoints[0];
-                                        }
-
-                                        ne = edge_new(EDGE_STRAIGHT);
-                                        ne->endpoints[0] = oip;
-                                        ne->endpoints[1] = eip;
-                                        side->edges[2] = ne;
-                                        side->edges[3] = e;
-                                        side->n_edges = 4;
-                                        if (e->corner)
-                                            side->corner = TRUE;    // if extruding a corner edge, mark face too
-                                        link((Object *)side, &vol->faces);
+                                        eip = e->endpoints[1];
                                     }
+                                    else
+                                    {
+                                        ASSERT(eip == e->endpoints[1], "Edges don't join up");
+                                        eip = e->endpoints[0];
+                                    }
+
+                                    if (oip == o->endpoints[0])
+                                    {
+                                        oip = o->endpoints[1];
+                                    }
+                                    else
+                                    {
+                                        ASSERT(oip == o->endpoints[1], "Edges don't join up");
+                                        oip = o->endpoints[0];
+                                    }
+
+                                    ne = edge_new(EDGE_STRAIGHT);
+                                    ne->endpoints[0] = oip;
+                                    ne->endpoints[1] = eip;
+                                    side->edges[2] = ne;
+                                    side->edges[3] = e;
+                                    side->n_edges = 4;
+                                    if (e->corner)
+                                        side->corner = TRUE;    // if extruding a corner edge, mark face too
+                                    link((Object *)side, &vol->faces);
                                 }
-                                break;
                             }
 
                             // Link the volume into the object tree. Set its lock to FACES
@@ -1425,26 +1418,6 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
 
                         // calculate the extruded heights
                         calc_extrude_heights(face->vol);
-#if 0
-                        if (face->paired)
-                        {
-                            Volume *vol = face->vol;
-                            Face *opposite = NULL;
-
-                            // find the face's opposite number
-                            if (face->hdr.next != NULL && ((Face *)face->hdr.next)->paired)
-                                opposite = (Face *)face->hdr.next;
-                            else if (((Face *)face->hdr.prev)->paired)
-                                opposite = (Face *)face->hdr.prev;
-                            else
-                                ASSERT(FALSE, "Where's the opposite face?");
-
-                            // TODO handle default-extruded and explicitly set ops differently
-                            face->vol->extrude_height = 
-                                -distance_point_plane(&face->normal, &opposite->normal.refpt);
-                            face->vol->op = face->vol->extrude_height < 0 ? OP_INTERSECTION : OP_UNION;
-                        }
-#endif
 
                         // Invalidate all the view lists for the volume, as any of them may have changed
                         invalidate_all_view_lists((Object *)face->vol, (Object *)face->vol, 0, 0, 0);
@@ -1828,6 +1801,18 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                     glVertex3f(n->refpt.x + n->A, n->refpt.y + n->B, n->refpt.z + n->C);
                     glEnd();
                     glPopName();
+                }
+
+                // The view list for a single highlighted face.
+                if (debug_view_viewlist)
+                {
+                    Point* v;
+
+                    for (v = (Point*)f->view_list.head; v->hdr.next != NULL; v = (Point*)v->hdr.next)
+                    {
+                        if (v->flags == FLAG_NONE)
+                            draw_object((Object*)v, DRAW_SELECTED, LOCK_NONE);
+                    }
                 }
             }
     #endif

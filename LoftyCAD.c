@@ -186,6 +186,7 @@ int max_generation = 0;
 // Debugging options
 BOOL debug_view_bbox = FALSE;
 BOOL debug_view_normals = FALSE;
+BOOL debug_view_viewlist = FALSE;
 
 // Size and span of point-searching buckets used in coordinate matching.
 // Chosen so that there are 40 buckets covering +/-halfsize, in X and Y (we don't bucket on Z)
@@ -644,21 +645,9 @@ update_drawing(void)
 {
     drawing_changed = TRUE;
     write_checkpoint(&object_tree, curr_filename);
-#if 0
-    xform_list.head = NULL;
-    xform_list.tail = NULL;
-    if (gen_view_list_tree_volumes(&object_tree))
-        surfaces_generated = TRUE;
-    if (surfaces_generated)
-    {
-        gen_view_list_tree_surfaces(&object_tree, &object_tree);
-        surfaces_generated = FALSE;
-    }
-#else
     xform_list.head = NULL;
     xform_list.tail = NULL;
     gen_view_list_tree_volumes(&object_tree);
-#endif
     populate_treeview();
 }
 
@@ -1592,6 +1581,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
         CheckMenuItem(hMenu, ID_VIEW_DEBUGLOG, view_debug ? MF_CHECKED : MF_UNCHECKED);
         CheckMenuItem(hMenu, ID_DEBUG_BBOXES, debug_view_bbox ? MF_CHECKED : MF_UNCHECKED);
         CheckMenuItem(hMenu, ID_DEBUG_NORMALS, debug_view_normals ? MF_CHECKED : MF_UNCHECKED);
+        CheckMenuItem(hMenu, ID_DEBUG_VIEWLIST, debug_view_viewlist ? MF_CHECKED : MF_UNCHECKED);
 #ifndef DEBUG_HIGHLIGHTING_ENABLED
         EnableMenuItem(hMenu, ID_DEBUG_BBOXES, MF_GRAYED);
         EnableMenuItem(hMenu, ID_DEBUG_NORMALS, MF_GRAYED);

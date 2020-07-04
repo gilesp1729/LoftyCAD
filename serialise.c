@@ -918,20 +918,6 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
             }
 
             calc_extrude_heights(vol);
-#if 0
-            // The last two faces are always the extruded ones - mark them as such,
-            // and calculate the current extruded height
-            last_face->paired = TRUE;
-            ((Face *)last_face->hdr.prev)->paired = TRUE;
-            vol->extrude_height = 
-                -distance_point_plane(&last_face->normal, &((Face *)last_face->hdr.prev)->normal.refpt);
-
-            // Default operation code if not specified
-            // TODO handle default-extruded and explicitly set ops differently
-            // TODO store extruded flag on faces explicitly?
-            if (vol->op == OP_MAX)
-                vol->op = vol->extrude_height < 0 ? OP_INTERSECTION : OP_UNION;
-#endif
 
             ASSERT(stkptr > 0 && id == stack[stkptr - 1], "Badly formed volume record");
             stkptr--;
