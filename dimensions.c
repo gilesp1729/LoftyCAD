@@ -661,6 +661,7 @@ show_dims_on(Object *obj, PRESENTATION pres, LOCK parent_lock)
     }
 
     glListBase(1000);
+    ASSERT(strlen(buf) < 64, "String too long!");
     glCallLists(strlen(buf), GL_UNSIGNED_BYTE, buf);
 }
 

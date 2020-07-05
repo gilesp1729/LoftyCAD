@@ -811,16 +811,19 @@ gen_view_list_arc(ArcEdge *ae)
     else
         theta = angle3(edge->endpoints[0], ae->centre, edge->endpoints[1], &n);
 
-    // step for angle. This may be fixed in advance.
+    // TODO_BARREL Make nsteps the independent variable, and calculate stepsize from that.
+    // (for both arcs and beziers)
+
+    // Calculate step for angle. The number of steps may be fixed in advance.
     if (edge->stepping && edge->nsteps > 0)
     {
-        step = edge->stepsize;
+        step = (fabs(theta) + 0.001) / edge->nsteps;
     }
     else
     {
         step = 2.0 * acos(1.0 - tolerance / rad);
-        edge->stepsize = (float)step;
     }
+    edge->stepsize = (float)step;
     i = 0;
 
     if (ae->clockwise)  // Clockwise angles go negative
@@ -915,6 +918,9 @@ iterate_bez
     Edge *e = (Edge *)be;
     double t;
 
+    // Number of steps has been given in advance, so work out the stepsize
+    e->stepsize = 1.0f / e->nsteps;
+
     // the first point has already been output, so start at stepsize
     for (t = e->stepsize; t < 1.0001f; t += e->stepsize)
     {
@@ -931,7 +937,6 @@ iterate_bez
         p->hdr.ID = 0;
         objid--;
         link_tail((Object *)p, &e->view_list);
-        e->nsteps++;
     }
 }
 
@@ -1023,10 +1028,9 @@ gen_view_list_bez(BezierEdge *be)
     objid--;
     link_tail((Object *)p, &e->view_list);
 
-    // Perform fixed step division if stepsize > 0
+    // Perform fixed step division if number of steps given in advance
     if (e->stepping && e->nsteps > 0)
     {
-        e->nsteps = 0;
         iterate_bez
             (
             be,

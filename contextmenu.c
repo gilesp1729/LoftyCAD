@@ -299,6 +299,29 @@ make_face(Group *group)
             face_type = FACE_BARREL_ARC;    // arc/arc 
         else if (max_type == EDGE_BEZIER)
             face_type = FACE_BARREL_BEZIER; // arc/bez
+
+        // Make sure opposing pairs of curved edges have their step counts in agreement
+        for (i = 0, e = (Edge*)group->obj_list.head; e != NULL && i < 2; e = (Edge*)e->hdr.next, i++)
+        {
+            Edge* o = (Edge*)e->hdr.next->next;
+            int n_steps;
+
+            ASSERT(e->type == o->type, "Already tested this");
+            if (e->type >= EDGE_ARC)
+            {
+                // Set step counts to the maximum of the two, and zero the step size so it gets
+                // recalculated again with the next view list update.
+                n_steps = e->nsteps;
+                if (o->nsteps > n_steps)
+                    n_steps = o->nsteps;
+                e->nsteps = n_steps;
+                o->nsteps = n_steps;
+                e->stepsize = 0;
+                o->stepsize = 0;
+                e->stepping = TRUE;
+                o->stepping = TRUE;
+            }
+        }
     }
 
     face = face_new(face_type, norm);
@@ -339,6 +362,7 @@ make_face(Group *group)
     purge_obj((Object *)group);
 
     // Finally, update the view list for the face
+    face->view_valid = FALSE;
     gen_view_list_face(face);
 
     return face;
