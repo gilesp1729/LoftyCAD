@@ -259,9 +259,6 @@ typedef struct Face
                                     // (for the edges) and polygon(s) (for the face). Point flags indicate
                                     // the presence of multiple facets. Regenerated whenever
                                     // something has changed. Doubly linked list.
-    struct ListHead spare_list;     // List of spare points allocated by the tessellator's combine
-                                    // callback. They are recorded here so they can be freed. Also used
-                                    // for intermediate results while clipping.
     BOOL            view_valid;     // is TRUE if the view list is up to date.
     struct Point2D  *view_list2D;   // Array of 2D points for the view list, for quick point-in-polygon
                                     // testing. Indexed [0] to [N-1], with [N] = [0].

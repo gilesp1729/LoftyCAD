@@ -468,13 +468,13 @@ gen_view_list_vol(Volume *vol)
 // Regenerate the unclipped view list for a face. While here, also calculate the outward
 // normal for the face. 
 void
-gen_view_list_face(Face *face)
+gen_view_list_face(Face* face)
 {
     int i, c;
-    Edge *e;
-    Point *last_point;
-    Point *p, *v;
-    ListHead *list;
+    Edge* e;
+    Point* last_point;
+    Point* p, * v, * w;
+    ListHead* list, ** elists;
     //char buf[256];
 
     if (face->view_valid)
@@ -482,162 +482,334 @@ gen_view_list_face(Face *face)
 
     free_view_list_face(face);
 
-    // For flat faces, construct the view list directly, as there is only one facet. 
-    // But for cylinders, we construct it in the spare list, and then rearrange it into 
-    // the real view list to make facets.
-    if (IS_FLAT(face))
+    switch (face->type & ~FACE_CONSTRUCTION)
+    {
+    case FACE_RECT:
+    case FACE_CIRCLE:
+    case FACE_FLAT:
+        // For flat faces, construct the view list directly, as there is only one facet. 
+        // The view list just goes around all the edges in order until the starting point is
+        // reached again.
         list = &face->view_list;
-    else
-        list = &face->spare_list;
-    
-    // Add points at tail of list, to preserve order
-    // First the start point
-    p = point_newp(face->initial_point);
-    p->hdr.ID = 0;
-    objid--;        // prevent explosion of objid's
-    if (face->vol != NULL)
-        expand_bbox(&face->vol->bbox, p);
-    link_tail((Object *)p, list);
+
+        // Add points at tail of list, to preserve order
+        // First the start point
+        p = point_newp(face->initial_point);
+        p->hdr.ID = 0;
+        objid--;        // prevent explosion of objid's
+        if (face->vol != NULL)
+            expand_bbox(&face->vol->bbox, p);
+        link_tail((Object*)p, list);
 
 #if DEBUG_VIEW_LIST_RECT_FACE
-    sprintf_s(buf, 256, "Face %d IP %d\r\n", face->hdr.ID, face->initial_point->hdr.ID);
-    Log(buf);
-    sprintf_s(buf, 256, "%d %d\r\n", ((StraightEdge *)face->edges[0])->endpoints[0]->hdr.ID, ((StraightEdge *)face->edges[0])->endpoints[1]->hdr.ID);
-    Log(buf);
-    sprintf_s(buf, 256, "%d %d\r\n", ((StraightEdge *)face->edges[1])->endpoints[0]->hdr.ID, ((StraightEdge *)face->edges[1])->endpoints[1]->hdr.ID);
-    Log(buf);
-    sprintf_s(buf, 256, "%d %d\r\n", ((StraightEdge *)face->edges[2])->endpoints[0]->hdr.ID, ((StraightEdge *)face->edges[2])->endpoints[1]->hdr.ID);
-    Log(buf);
-    sprintf_s(buf, 256, "%d %d\r\n", ((StraightEdge *)face->edges[3])->endpoints[0]->hdr.ID, ((StraightEdge *)face->edges[3])->endpoints[1]->hdr.ID);
-    Log(buf);
+        sprintf_s(buf, 256, "Face %d IP %d\r\n", face->hdr.ID, face->initial_point->hdr.ID);
+        Log(buf);
+        sprintf_s(buf, 256, "%d %d\r\n", ((StraightEdge*)face->edges[0])->endpoints[0]->hdr.ID, ((StraightEdge*)face->edges[0])->endpoints[1]->hdr.ID);
+        Log(buf);
+        sprintf_s(buf, 256, "%d %d\r\n", ((StraightEdge*)face->edges[1])->endpoints[0]->hdr.ID, ((StraightEdge*)face->edges[1])->endpoints[1]->hdr.ID);
+        Log(buf);
+        sprintf_s(buf, 256, "%d %d\r\n", ((StraightEdge*)face->edges[2])->endpoints[0]->hdr.ID, ((StraightEdge*)face->edges[2])->endpoints[1]->hdr.ID);
+        Log(buf);
+        sprintf_s(buf, 256, "%d %d\r\n", ((StraightEdge*)face->edges[3])->endpoints[0]->hdr.ID, ((StraightEdge*)face->edges[3])->endpoints[1]->hdr.ID);
+        Log(buf);
 #endif
-    last_point = face->initial_point;
-    c = 0;
+        last_point = face->initial_point;
+        c = 0;
 
-    for (i = 0; i < face->n_edges; i++)
-    {
-        e = face->edges[i];
-
-        // Then the subsequent points. Edges will follow in order, but their points
-        // may be reversed.
-        switch (e->type & ~EDGE_CONSTRUCTION)
+        for (i = 0; i < face->n_edges; i++)
         {
-        case EDGE_STRAIGHT:
-            if (last_point == e->endpoints[0])
-            {
-                last_point = e->endpoints[1];
-            }
-            else if (last_point == e->endpoints[1])
-            {
-                last_point = e->endpoints[0];
-            }
-            else
-            {
-                // Starting a new contour in a list of edges (look at next contour array to see which point starts)
-                int idx = 0;
-                
-                c++;
-                if (c < face->n_contours)
-                    idx = face->contours[c].ip_index;
+            e = face->edges[i];
 
-                p = point_newp(e->endpoints[idx]);
-                p->flags = FLAG_NEW_CONTOUR;
+            // Then the subsequent points. Edges will follow in order, but their points
+            // may be reversed.
+            switch (e->type & ~EDGE_CONSTRUCTION)
+            {
+            case EDGE_STRAIGHT:
+                if (last_point == e->endpoints[0])
+                {
+                    last_point = e->endpoints[1];
+                }
+                else if (last_point == e->endpoints[1])
+                {
+                    last_point = e->endpoints[0];
+                }
+                else
+                {
+                    // Starting a new contour in a list of edges (look at next contour array to see which point starts)
+                    int idx = 0;
+
+                    c++;
+                    if (c < face->n_contours)
+                        idx = face->contours[c].ip_index;
+
+                    p = point_newp(e->endpoints[idx]);
+                    p->flags = FLAG_NEW_CONTOUR;
+                    p->hdr.ID = 0;
+                    objid--;
+                    if (face->vol != NULL)
+                        expand_bbox(&face->vol->bbox, p);
+                    link_tail((Object*)p, list);
+                    last_point = e->endpoints[1 - idx];
+                }
+
+                p = point_newp(last_point);
                 p->hdr.ID = 0;
                 objid--;
                 if (face->vol != NULL)
                     expand_bbox(&face->vol->bbox, p);
-                link_tail((Object *)p, list);
-                last_point = e->endpoints[1 - idx];
+                link_tail((Object*)p, list);
+                break;
+
+            case EDGE_ARC:
+                gen_view_list_arc((ArcEdge*)e);
+                goto copy_view_list_flat;
+
+            case EDGE_BEZIER:
+                gen_view_list_bez((BezierEdge*)e);
+            copy_view_list_flat:
+                if (last_point == e->endpoints[0])
+                {
+                    last_point = e->endpoints[1];
+
+                    // copy the view list forwards. Skip the first point as it has already been added
+                    for (v = (Point*)e->view_list.head->next; v != NULL; v = (Point*)v->hdr.next)
+                    {
+                        p = point_newp(v);
+                        p->hdr.ID = 0;
+                        objid--;
+                        if (face->vol != NULL)
+                            expand_bbox(&face->vol->bbox, p);
+                        link_tail((Object*)p, list);
+                    }
+                }
+                else
+                {
+                    ASSERT(last_point == e->endpoints[1], "Point order messed up");
+                    last_point = e->endpoints[0];
+
+                    // copy the view list backwards, skipping the last point.
+                    for (v = (Point*)e->view_list.tail->prev; v != NULL; v = (Point*)v->hdr.prev)
+                    {
+                        p = point_newp(v);
+                        p->hdr.ID = 0;
+                        objid--;
+                        if (face->vol != NULL)
+                            expand_bbox(&face->vol->bbox, p);
+                        link_tail((Object*)p, list);
+                    }
+                }
+
+                p = point_newp(last_point);
+                p->hdr.ID = 0;
+                objid--;
+                if (face->vol != NULL)
+                    expand_bbox(&face->vol->bbox, p);
+                link_tail((Object*)p, list);
+                break;
             }
-
-            p = point_newp(last_point);
-            p->hdr.ID = 0;
-            objid--;
-            if (face->vol != NULL)
-                expand_bbox(&face->vol->bbox, p);
-            link_tail((Object *)p, list);
-            break;
-
-        case EDGE_ARC:
-            gen_view_list_arc((ArcEdge *)e);
-            goto copy_view_list;
-
-        case EDGE_BEZIER:
-            gen_view_list_bez((BezierEdge *)e);
-        copy_view_list:
-            if (last_point == e->endpoints[0])
-            {
-                last_point = e->endpoints[1];
-
-                // copy the view list forwards. Skip the first point as it has already been added
-                for (v = (Point *)e->view_list.head->next; v != NULL; v = (Point *)v->hdr.next)
-                {
-                    p = point_newp(v);
-                    p->hdr.ID = 0;
-                    objid--;
-                    if (face->vol != NULL)
-                        expand_bbox(&face->vol->bbox, p);
-                    link_tail((Object *)p, list);
-                }
-
-                // Copy the Bezier control points in the correct order
-                if ((e->type & ~EDGE_CONSTRUCTION) == EDGE_BEZIER)
-                {
-                    BezierEdge* be = (BezierEdge*)e;
-
-                    be->bezctl[0] = e->endpoints[0];
-                    be->bezctl[1] = be->ctrlpoints[0];
-                    be->bezctl[2] = be->ctrlpoints[1];
-                    be->bezctl[3] = e->endpoints[1];
-                }
-            }
-            else
-            {
-                ASSERT(last_point == e->endpoints[1], "Point order messed up");
-                last_point = e->endpoints[0];
-
-                // copy the view list backwards, skipping the last point.
-                for (v = (Point *)e->view_list.tail->prev; v != NULL; v = (Point *)v->hdr.prev)
-                {
-                    p = point_newp(v);
-                    p->hdr.ID = 0;
-                    objid--;
-                    if (face->vol != NULL)
-                        expand_bbox(&face->vol->bbox, p);
-                    link_tail((Object *)p, list);
-                }
-                if ((e->type & ~EDGE_CONSTRUCTION) == EDGE_BEZIER)
-                {
-                    BezierEdge* be = (BezierEdge*)e;
-
-                    be->bezctl[0] = e->endpoints[1];
-                    be->bezctl[1] = be->ctrlpoints[1];
-                    be->bezctl[2] = be->ctrlpoints[0];
-                    be->bezctl[3] = e->endpoints[0];
-                }
-            }
-
-            p = point_newp(last_point);
-            p->hdr.ID = 0;
-            objid--;
-            if (face->vol != NULL)
-                expand_bbox(&face->vol->bbox, p);
-            link_tail((Object *)p, list);
-            break;
         }
-    }
 
-    if (IS_FLAT(face))
-    {
         // calculate the normal vector.  Store a new refpt here too, in case something has moved.
-        polygon_normal((Point *)face->view_list.head, &face->normal);
+        polygon_normal((Point*)face->view_list.head, &face->normal);
         face->normal.refpt = *face->edges[0]->endpoints[0];
 
         // Update the 2D view list
         update_view_list_2D(face);
+        break;
+
+    case FACE_CYLINDRICAL:
+        // For these faces, there are 4 edges only. Two are arcs or beziers, the other two straight.
+        // Corral the view lists of the non-straight edges into two lists, pointing in the same direction.
+        // The first curved edge is copied forward, the second backward (modulo any edge endpoint ordering issues)
+        elists = (ListHead**)malloc(2 * sizeof(ListHead*));
+        elists[0] = (ListHead*)calloc(1, sizeof(ListHead));
+        elists[1] = (ListHead*)calloc(1, sizeof(ListHead));
+
+        last_point = face->initial_point;
+        c = 0;
+
+        for (i = 0; i < face->n_edges; i++)
+        {
+            e = face->edges[i];
+
+            switch (e->type & ~EDGE_CONSTRUCTION)
+            {
+            case EDGE_STRAIGHT:
+                // Update last_point to the beginning of the next edge, which must be a curved edge.
+                if (last_point == e->endpoints[0])
+                {
+                    last_point = e->endpoints[1];
+                }
+                else
+                {
+                    ASSERT(last_point == e->endpoints[1], "Straight edge doesn't join up");
+                    last_point = e->endpoints[0];
+                }
+
+                break;
+
+            case EDGE_ARC:
+                list = elists[c];
+                p = point_newp(last_point);
+                p->hdr.ID = 0;
+                objid--;
+                if (face->vol != NULL)
+                    expand_bbox(&face->vol->bbox, p);
+                link_tail((Object*)p, list);
+
+                gen_view_list_arc((ArcEdge*)e);
+                goto copy_view_list_cyl;
+
+            case EDGE_BEZIER:
+                list = elists[c];
+                p = point_newp(last_point);
+                p->hdr.ID = 0;
+                objid--;
+                if (face->vol != NULL)
+                    expand_bbox(&face->vol->bbox, p);
+                link_tail((Object*)p, list);
+
+                gen_view_list_bez((BezierEdge*)e);
+
+            copy_view_list_cyl:
+                if (last_point == e->endpoints[c])
+                {
+                    last_point = e->endpoints[1 - c];
+
+                    // copy the view list forwards. Skip the first point as it has already been added
+                    for (v = (Point*)e->view_list.head->next; v != NULL; v = (Point*)v->hdr.next)
+                    {
+                        p = point_newp(v);
+                        p->hdr.ID = 0;
+                        objid--;
+                        if (face->vol != NULL)
+                            expand_bbox(&face->vol->bbox, p);
+                        link_tail((Object*)p, list);
+                    }
+
+                    // Copy the Bezier control points in the correct order
+                    if ((e->type & ~EDGE_CONSTRUCTION) == EDGE_BEZIER)
+                    {
+                        BezierEdge* be = (BezierEdge*)e;
+
+                        be->bezctl[0] = e->endpoints[0];
+                        be->bezctl[1] = be->ctrlpoints[0];
+                        be->bezctl[2] = be->ctrlpoints[1];
+                        be->bezctl[3] = e->endpoints[1];
+                    }
+                }
+                else
+                {
+                    ASSERT(last_point == e->endpoints[1 - c], "Point order messed up");
+                    last_point = e->endpoints[c];
+
+                    // copy the view list backwards, skipping the last point.
+                    for (v = (Point*)e->view_list.tail->prev; v != NULL; v = (Point*)v->hdr.prev)
+                    {
+                        p = point_newp(v);
+                        p->hdr.ID = 0;
+                        objid--;
+                        if (face->vol != NULL)
+                            expand_bbox(&face->vol->bbox, p);
+                        link_tail((Object*)p, list);
+                    }
+                    if ((e->type & ~EDGE_CONSTRUCTION) == EDGE_BEZIER)
+                    {
+                        BezierEdge* be = (BezierEdge*)e;
+
+                        be->bezctl[0] = e->endpoints[1];
+                        be->bezctl[1] = be->ctrlpoints[1];
+                        be->bezctl[2] = be->ctrlpoints[0];
+                        be->bezctl[3] = e->endpoints[0];
+                    }
+                }
+
+                p = point_newp(last_point);
+                p->hdr.ID = 0;
+                objid--;
+                if (face->vol != NULL)
+                    expand_bbox(&face->vol->bbox, p);
+                link_tail((Object*)p, list);
+
+                c++;    // update list index to process the other curved edge
+                break;
+            }
+        }
+        ASSERT(c == 2, "Should be exactly 2 curved edges in a cylinder face");
+
+        // Join up corresponding groups of 2 points in each list into facets.
+
+        for
+        (
+            v = (Point*)elists[0]->head, w = (Point*)elists[1]->head;
+            v->hdr.next != NULL;
+            v = (Point*)v->hdr.next, w = (Point*)w->hdr.next
+        )
+        {
+            Point* vnext = (Point*)v->hdr.next;
+            Point* wnext = (Point*)w->hdr.next;
+            Plane norm;
+
+            // A new facet point containing the normal
+            normal3(v, w, vnext, &norm);  
+            p = point_new(norm.A, norm.B, norm.C);
+            p->hdr.ID = 0;
+            objid--;
+            p->flags = FLAG_NEW_FACET;
+            link_tail((Object*)p, &face->view_list);
+
+            // Four points for the quad
+            p = point_newp(v);
+            p->hdr.ID = 0;
+            objid--;
+            link_tail((Object*)p, &face->view_list);
+            p = point_newp(vnext);
+            p->hdr.ID = 0;
+            objid--;
+            link_tail((Object*)p, &face->view_list);
+            p = point_newp(wnext);
+            p->hdr.ID = 0;
+            objid--;
+            link_tail((Object*)p, &face->view_list);
+            p = point_newp(w);
+            p->hdr.ID = 0;
+            objid--;
+            link_tail((Object*)p, &face->view_list);
+        }
+
+        free_point_list(elists[0]);
+        free_point_list(elists[1]);
+        free(elists);
+        break;
+
+    case FACE_BARREL:
+        // For these faces, there are 4 edges only. Two are arcs.
+        // Corral the view lists of the arc edges into two lists, pointing in the same direction.
+
+
+
+
+        break;
+
+    case FACE_BEZIER:
+        // For these faces, there are 4 edges only. All of them are beziers.
+
+
+
+
+
+
+        break;
     }
-    else 
-    {
+
+    // The view list is valid, as is the 2D view list, the face normal, and the face's
+    // contribution to the volume bounding bbox.
+    face->view_valid = TRUE;
+    return;
+}
+
+#if 0     
+   {
         Point *last = p;
         v = (Point*)face->spare_list.head;
         int nsteps;
@@ -716,11 +888,7 @@ gen_view_list_face(Face *face)
         // We are finished with the spare list for now, so free it
         free_point_list(&face->spare_list);
     }
-
-    // The view list is valid, as is the 2D view list, the face normal, and the face's
-    // contribution to the volume bounding bbox.
-    face->view_valid = TRUE;
-}
+#endif // 0
 
 void
 update_view_list_2D(Face *face)
@@ -769,7 +937,6 @@ void
 free_view_list_face(Face *face)
 {
     free_point_list(&face->view_list);
-    free_point_list(&face->spare_list);
     face->view_valid = FALSE;
     face->n_view2D = 0;
 }
