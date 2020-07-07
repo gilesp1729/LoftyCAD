@@ -650,25 +650,11 @@ gen_view_list_face(Face* face)
 
             case EDGE_ARC:
                 list = elists[c];
-                p = point_newp(last_point);
-                p->hdr.ID = 0;
-                objid--;
-                if (face->vol != NULL)
-                    expand_bbox(&face->vol->bbox, p);
-                link_tail((Object*)p, list);
-
                 gen_view_list_arc((ArcEdge*)e);
                 goto copy_view_list_cyl;
 
             case EDGE_BEZIER:
                 list = elists[c];
-                p = point_newp(last_point);
-                p->hdr.ID = 0;
-                objid--;
-                if (face->vol != NULL)
-                    expand_bbox(&face->vol->bbox, p);
-                link_tail((Object*)p, list);
-
                 gen_view_list_bez((BezierEdge*)e);
 
             copy_view_list_cyl:
@@ -676,8 +662,8 @@ gen_view_list_face(Face* face)
                 {
                     last_point = e->endpoints[1 - c];
 
-                    // copy the view list forwards. Skip the first point as it has already been added
-                    for (v = (Point*)e->view_list.head->next; v != NULL; v = (Point*)v->hdr.next)
+                    // copy the view list forwards. 
+                    for (v = (Point*)e->view_list.head; v != NULL; v = (Point*)v->hdr.next)
                     {
                         p = point_newp(v);
                         p->hdr.ID = 0;
@@ -703,8 +689,8 @@ gen_view_list_face(Face* face)
                     ASSERT(last_point == e->endpoints[1 - c], "Point order messed up");
                     last_point = e->endpoints[c];
 
-                    // copy the view list backwards, skipping the last point.
-                    for (v = (Point*)e->view_list.tail->prev; v != NULL; v = (Point*)v->hdr.prev)
+                    // copy the view list backwards.
+                    for (v = (Point*)e->view_list.tail; v != NULL; v = (Point*)v->hdr.prev)
                     {
                         p = point_newp(v);
                         p->hdr.ID = 0;
@@ -723,14 +709,6 @@ gen_view_list_face(Face* face)
                         be->bezctl[3] = e->endpoints[0];
                     }
                 }
-
-                p = point_newp(last_point);
-                p->hdr.ID = 0;
-                objid--;
-                if (face->vol != NULL)
-                    expand_bbox(&face->vol->bbox, p);
-                link_tail((Object*)p, list);
-
                 c++;    // update list index to process the other curved edge
                 break;
             }
@@ -783,8 +761,12 @@ gen_view_list_face(Face* face)
         break;
 
     case FACE_BARREL:
-        // For these faces, there are 4 edges only. Two are arcs.
+        // For these faces, there are 4 edges only. Two are arcs. 
+        // Find the first arc.
         // Corral the view lists of the arc edges into two lists, pointing in the same direction.
+        // Create internal "edges" that interpolate between the first arc and its opposite number,
+        // build an array of edge list heads for them, then join successive list rows ito facets
+        // in the same way as the cylinder case above.
 
 
 
@@ -792,7 +774,9 @@ gen_view_list_face(Face* face)
         break;
 
     case FACE_BEZIER:
-        // For these faces, there are 4 edges only. All of them are beziers.
+        // For these faces, there are 4 edges only. All of them are beziers. Construct the 4 internal
+        // control points and use the resulting 16-point bezier surface to interpolate internal edges
+        // as in the barrel case above.
 
 
 
@@ -807,88 +791,6 @@ gen_view_list_face(Face* face)
     face->view_valid = TRUE;
     return;
 }
-
-#if 0     
-   {
-        Point *last = p;
-        v = (Point*)face->spare_list.head;
-        int nsteps;
-
-
-        switch (face->type & ~FACE_CONSTRUCTION)
-        {
-        case FACE_CYLINDRICAL:
-
-            // Rearrange the cylinder view list into a set of facets, each with its own normal.
-
-            // Circular cylinder faces, as created by extrusion, start with a straight edge.
-            // But after reflection they start with an arc edge.
-            // Detect this difference here so we can match up points correctly.
-
-            if (face->edges[0]->type != EDGE_STRAIGHT)
-            {
-                last = (Point*)last->hdr.prev;
-                nsteps = face->edges[0]->nsteps;
-            }
-            else
-            {
-                nsteps = face->edges[1]->nsteps;
-            }
-
-            for (i = 0; v->hdr.next != NULL; v = (Point*)v->hdr.next, i++)
-            {
-                Point* vnext = (Point*)v->hdr.next;
-                Point* lprev = (Point*)last->hdr.prev;
-                Plane norm;
-
-                // A new facet point containing the normal
-                normal3(last, lprev, vnext, &norm);
-                p = point_new(norm.A, norm.B, norm.C);
-                p->hdr.ID = 0;
-                objid--;
-                p->flags = FLAG_NEW_FACET;
-                link_tail((Object*)p, &face->view_list);
-
-                // Four points for the quad
-                p = point_newp(v);
-                p->hdr.ID = 0;
-                objid--;
-                link_tail((Object*)p, &face->view_list);
-                p = point_newp(vnext);
-                p->hdr.ID = 0;
-                objid--;
-                link_tail((Object*)p, &face->view_list);
-                p = point_newp(lprev);
-                p->hdr.ID = 0;
-                objid--;
-                link_tail((Object*)p, &face->view_list);
-                p = point_newp(last);
-                p->hdr.ID = 0;
-                objid--;
-                link_tail((Object*)p, &face->view_list);
-
-                // Walk last backwards until we meet in the middle
-                last = lprev;
-                if (i >= nsteps)
-                    break;
-            }
-            break;
-
-            // TODO_BARREL face facets (arc-arc, arc-bez, and bez-bez faces)
-            // These and cyl faces need a valid normal ABC to stop crap from being written out to file
-        case FACE_BARREL:
-
-            break;
-
-        case FACE_BEZIER:
-
-            break;
-        }
-
-        // We are finished with the spare list for now, so free it
-        free_point_list(&face->spare_list);
-    }
-#endif // 0
 
 void
 update_view_list_2D(Face *face)
