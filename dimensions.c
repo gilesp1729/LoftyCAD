@@ -57,8 +57,8 @@ has_dims(Object *obj)
                 return FALSE;
 
         case FACE_CYLINDRICAL:
-        case FACE_BARREL_ARC:
-        case FACE_BARREL_BEZIER:
+        case FACE_BARREL:
+        case FACE_BEZIER:
             return FALSE;
         }
         break;

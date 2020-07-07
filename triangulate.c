@@ -649,7 +649,7 @@ gen_view_list_face(Face *face)
 
             // Rearrange the cylinder view list into a set of facets, each with its own normal.
 
-            // Cylinder faces, as created by extrusion, start with a straight edge.
+            // Circular cylinder faces, as created by extrusion, start with a straight edge.
             // But after reflection they start with an arc edge.
             // Detect this difference here so we can match up points correctly.
 
@@ -704,11 +704,11 @@ gen_view_list_face(Face *face)
 
             // TODO_BARREL face facets (arc-arc, arc-bez, and bez-bez faces)
             // These and cyl faces need a valid normal ABC to stop crap from being written out to file
-        case FACE_BARREL_ARC:
+        case FACE_BARREL:
 
             break;
 
-        case FACE_BARREL_BEZIER:
+        case FACE_BEZIER:
 
             break;
         }

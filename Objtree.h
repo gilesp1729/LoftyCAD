@@ -33,13 +33,13 @@ typedef enum
 // What kind of face this is
 typedef enum
 {
-    FACE_RECT,                      // There are 4 edges, and they are constrained to be rectangular.
+    FACE_RECT,                      // There are 4 edges, and they are constrained (initially) to be rectangular.
     FACE_CIRCLE,                    // A complete circle, lying in one plane.
-    FACE_FLAT,                      // Any number of edges making a closed face, lying in one plane.
+    FACE_FLAT,                      // Any number of edges making a closed face, lying generally in one plane.
                                     // Only flat faces (up to here) may be extruded.
-    FACE_CYLINDRICAL,               // A simply-curved face (an opposing pair of straight edges, the other pair arcs or beziers)
-    FACE_BARREL_ARC,                // A compound-curved face (an opposing pair of arcs, the other pair arcs or beziers)
-    FACE_BARREL_BEZIER,             // A compound-curved face (2 opposing pairs of beziers)
+    FACE_CYLINDRICAL,               // A simply-curved face bounded by an opposing pair of arcs, the other pair straights.
+    FACE_BARREL,                    // A compound-curved face bounded by one opposing pair of arcs, the other pair arcs or beziers.
+    FACE_BEZIER,                    // A compound-curved face bounded by two opposing pairs of beziers.
     FACE_CONSTRUCTION = 0x8000      // OR this in to indicate a construction face
 } FACE;
 

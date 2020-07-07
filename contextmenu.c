@@ -271,7 +271,7 @@ make_face(Group *group)
     min_type = EDGE_BEZIER;
     if (n_edges != 4)
     {
-        // More than 4 edges cannot be a barrel face, so make it flat
+        // More than 4 edges cannot be a curved face, so make it flat
         face_type = FACE_FLAT;
     }
     else if (polygon_planar((Point*)plist.head, &norm))
@@ -281,7 +281,7 @@ make_face(Group *group)
     }
     else
     {
-        // We have a non-flat face. Find the different edge types
+        // We have a non-flat face bounded by 4 edges. Find the different edge types
         for (i = 0, e = (Edge*)group->obj_list.head; e != NULL; e = (Edge*)e->hdr.next, i++)
         {
             edge_types[i] = e->type;
@@ -292,13 +292,13 @@ make_face(Group *group)
         }
         ASSERT(i == 4, "Already tested this");
         if (edge_types[0] != edge_types[2] || edge_types[1] != edge_types[3] || max_type == EDGE_STRAIGHT)
-            face_type = FACE_FLAT;  // even if out of plane, we can't express this as a barrel face
+            face_type = FACE_FLAT;  // even if out of plane
         else if (min_type == EDGE_STRAIGHT)
             face_type = FACE_CYLINDRICAL;   // straight/arc or straight/bezier
-        else if (max_type == EDGE_ARC)
-            face_type = FACE_BARREL_ARC;    // arc/arc 
-        else if (max_type == EDGE_BEZIER)
-            face_type = FACE_BARREL_BEZIER; // arc/bez
+        else if (min_type == EDGE_ARC)
+            face_type = FACE_BARREL;    // arc/arc 
+        else if (min_type == EDGE_BEZIER)
+            face_type = FACE_BEZIER; // arc/bez
 
         // Make sure opposing pairs of curved edges have their step counts in agreement
         for (i = 0, e = (Edge*)group->obj_list.head; e != NULL && i < 2; e = (Edge*)e->hdr.next, i++)
