@@ -31,14 +31,15 @@ Object *obj_new(void)
     return obj;
 }
 
-Point *point_new(float x, float y, float z)
+// Get me a fresh clean Point!
+Point* point_new_raw()
 {
-    Point   *pt;
-    
+    Point* pt;
+
     // Try and obtain a point from the free list first
     if (free_list_pt.head != NULL)
     {
-        pt = (Point *)free_list_pt.head;
+        pt = (Point*)free_list_pt.head;
         free_list_pt.head = free_list_pt.head->next;
         if (free_list_pt.head == NULL)
             free_list_pt.tail = NULL;
@@ -48,6 +49,12 @@ Point *point_new(float x, float y, float z)
     {
         pt = calloc(1, sizeof(Point));
     }
+    return pt;
+}
+
+Point *point_new(float x, float y, float z)
+{
+    Point* pt = point_new_raw();
 
     pt->hdr.type = OBJ_POINT;
     pt->hdr.ID = objid++;
@@ -60,23 +67,35 @@ Point *point_new(float x, float y, float z)
 // Copy just the coordinates from the given point.
 Point *point_newp(Point *p)
 {
-    Point   *pt;
-
-    if (free_list_pt.head != NULL)
-    {
-        pt = (Point *)free_list_pt.head;
-        free_list_pt.head = free_list_pt.head->next;
-        if (free_list_pt.head == NULL)
-            free_list_pt.tail = NULL;
-        memset(pt, 0, sizeof(Point));
-    }
-    else
-    {
-        pt = calloc(1, sizeof(Point));
-    }
+    Point* pt = point_new_raw();
 
     pt->hdr.type = OBJ_POINT;
     pt->hdr.ID = objid++;
+    pt->x = p->x;
+    pt->y = p->y;
+    pt->z = p->z;
+    return pt;
+}
+
+// The same, but don't store or increment an objid. Used for viewlists.
+Point* point_newv(float x, float y, float z)
+{
+    Point* pt = point_new_raw();
+
+    pt->hdr.type = OBJ_POINT;
+    pt->hdr.ID = 0;
+    pt->x = x;
+    pt->y = y;
+    pt->z = z;
+    return pt;
+}
+
+Point* point_newpv(Point* p)
+{
+    Point* pt = point_new_raw();
+
+    pt->hdr.type = OBJ_POINT;
+    pt->hdr.ID = 0;
     pt->x = p->x;
     pt->y = p->y;
     pt->z = p->z;
@@ -136,7 +155,7 @@ Face *face_new(FACE face_type, Plane norm)
         face->hdr.show_dims = face_type & FACE_CONSTRUCTION;
         // fallthrough
     case FACE_CYLINDRICAL:
-    default:                // barrel types here too
+    default:                // barrel/bezier types here too
         face->max_edges = 4;
         break;
 

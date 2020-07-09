@@ -66,9 +66,7 @@ clip_tess_write(void * polygon_data)
                 clip_tess_points[i].vi = v[i];
 
                 // Copy the point with its coordinates, and stash it in the point bucket.
-                np = point_newp(&clip_tess_points[i]);
-                np->hdr.ID = 0;
-                objid--;
+                np = point_newpv(&clip_tess_points[i]);
                 np->vi = v[i];
                 np->bucket_next = *b;
                 *b = np;
@@ -143,9 +141,7 @@ clip_tess_combineData(GLdouble coords[3], void *vertex_data[4], GLfloat weight[4
 {
     // Allocate a new Point for the new vertex, and (TODO:) hang it off the face's spare vertices list.
     // It will be freed when the view list is regenerated.
-    Point *p = point_new((float)coords[0], (float)coords[1], (float)coords[2]);
-    p->hdr.ID = 0;
-    objid--;
+    Point *p = point_newv((float)coords[0], (float)coords[1], (float)coords[2]);
 
     *outData = p;
 }

@@ -209,6 +209,7 @@ typedef struct BezierEdge
 
 // Contour in a multi-contour face. This information is used when reversing and extruding faces.
 // If it isn't present, the face's edges array, initial point and n_edges define the only contour.
+// Only flat faces can have contours.
 typedef struct Contour
 {
     int             edge_index;     // Index into main edges array of the starting edge
@@ -367,8 +368,10 @@ extern ListHead free_list_obj;
 
 // Object creation
 Object *obj_new();
-Point *point_new(float x, float y, float z);
-Point *point_newp(Point *p);
+Point* point_new(float x, float y, float z);
+Point* point_newp(Point* p);
+Point* point_newv(float x, float y, float z);
+Point* point_newpv(Point* p);
 Edge *edge_new(EDGE edge_type);
 Face *face_new(FACE face_type, Plane norm);
 Volume *vol_new(void);

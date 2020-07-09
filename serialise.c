@@ -6,7 +6,7 @@
 #define MAXLINE 1024
 
 // Version of output file
-double file_version = 0.3;
+double file_version = 0.4;
 
 // A constantly incrementing ID. 
 // Should not need to worry about it overflowing 32-bits (4G objects!)
@@ -23,11 +23,12 @@ static unsigned int save_count = 1;
 // Marks whetther a material has been written out.
 static BOOL mat_written[MAX_MATERIAL] = { 0, };
 
-// names of things that make the serialised format a little easier to read
+// names of things that make the serialised format a little easier to read.
+// Agree with enums in objtree.h
 char *objname[] = { "(none)", "POINT", "EDGE", "FACE", "VOLUME", "ENDGROUP" };
 char *locktypes[] = { "N", "P", "E", "F", "V", "G" };
 char *edgetypes[] = { "STRAIGHT", "ARC", "BEZIER" };
-char *facetypes[] = { "RECT", "CIRCLE", "FLAT", "CYLINDRICAL", "GENERAL" };
+char *facetypes[] = { "RECT", "CIRCLE", "FLAT", "CYLINDRICAL", "BARREL", "BEZIER" };
 char *optypes[] = { "UNION", "INTER", "DIFF", "NONE" };
 
 // Serialise an object. Children go out before their parents, in general.
@@ -710,9 +711,17 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
             {
                 type = FACE_CYLINDRICAL;
             }
+            else if (strcmp(tok, "BARREL") == 0)
+            {
+                type = FACE_BARREL;
+            }
+            else if (strcmp(tok, "BEZIER") == 0)
+            {
+                type = FACE_BEZIER;
+            }
             else
             {
-                ASSERT(FALSE, "Deserialise Face (general) Not implemented");
+                ASSERT(FALSE, "Unrecognised face type");
             }
 
             tok = strtok_s(NULL, " \t\n", &nexttok);
