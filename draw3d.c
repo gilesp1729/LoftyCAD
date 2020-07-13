@@ -592,7 +592,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                     if (app_state == STATE_STARTING_EXTRUDE)
                         highlight_obj = NULL;
                 }
-                else if (highlight_obj->type == OBJ_VOLUME)
+                else if (highlight_obj->type == OBJ_VOLUME && raw_picked_obj != NULL)
                 {
                     find_corner_edges
                     (

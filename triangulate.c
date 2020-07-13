@@ -943,12 +943,13 @@ gen_view_list_face(Face* face)
             objid--;
             ae->centre = point_newv
             (
-                t * ae0->centre->x + (1 - t) * ae1->centre->x,
-                t * ae0->centre->y + (1 - t) * ae1->centre->y,
-                t * ae0->centre->z + (1 - t) * ae1->centre->z
+                t * ae1->centre->x + (1 - t) * ae0->centre->x,
+                t * ae1->centre->y + (1 - t) * ae0->centre->y,
+                t * ae1->centre->z + (1 - t) * ae0->centre->z
             );
             e->endpoints[0] = point_newpv(s0);
             e->endpoints[1] = point_newpv(s1);
+
             // make sure it points in the same direction as the first_arc
             ae->clockwise = first_arc_forward ? ae0->clockwise : !ae0->clockwise;
             if (ae->clockwise)
