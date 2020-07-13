@@ -501,6 +501,22 @@ purge_obj(Object *obj)
     purge_obj_top(obj, obj->type);
 }
 
+void
+purge_list(ListHead* list)
+{
+    Object* obj;
+    Object* nextobj = NULL;
+
+    for (obj = list->head; obj != NULL; obj = nextobj)
+    {
+        nextobj = obj->next;
+        purge_obj(obj);
+    }
+
+    list->head = NULL;
+    list->tail = NULL;
+}
+
 // Purge a tree, freeing everything in it, except for Points, which are
 // placed in the free list. 
 void
@@ -589,18 +605,23 @@ calc_extrude_heights(Volume* vol)
     vol->op = last_face->extrude_height < 0 ? OP_INTERSECTION : OP_UNION;
 
     // Check the rest of the faces, skipping those that are already paired.
-    // If all the faces are paired (other than possible round-corner faces)
+    // If all the faces are flat and paired (other than possible round-corner faces)
     // then the volume is measured (dimensions may be shown and changed)
     for (f = (Face*)vol->faces.head; f != NULL; f = (Face*)f->hdr.next)
     {
         if (f->paired)
             continue;
-        if (!extrudible((Object*)f))
+        //if (!extrudible((Object*)f))
+        if (!IS_FLAT(f))
+        {
+            vol->measured = FALSE;
             continue;
+        }
 
         for (g = (Face*)f->hdr.next; g != NULL; g = (Face*)g->hdr.next)
         {
-            if (!extrudible((Object*)g))
+            //if (!extrudible((Object*)g))
+            if (!IS_FLAT(g))
                 continue;
 
             if (nz(pldot(&g->normal, &f->normal) + 1.0f))

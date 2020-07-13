@@ -27,10 +27,10 @@ In particular, it will:
 - Import STL, AMF, OBJ, OFF to groups containing meshes as volumes
 - Always output full normals
 
-# Stretch goals
+# Works in progress
 - Allow manipulation of triangle meshes: smooth extrusion, refinement, and more
 - Bezier surfaces (compound curves)
-- Axially symmetric objects
+- Axially symmetric objects (volumes of revolution)
 - Lofting (a nod to the original Lofty, which is LoftyCAD's spiritual ancestor)
 
 # Installing LoftyCAD from the prebuilt installer

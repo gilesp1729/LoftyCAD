@@ -465,17 +465,25 @@ gen_view_list_vol(Volume *vol)
     return TRUE;
 }
 
+#define SUPPORT_BARREL_FACES
+#define SUPPORT_BEZIER_FACES
+
 // Regenerate the unclipped view list for a face. While here, also calculate the outward
 // normal for the face. 
 void
 gen_view_list_face(Face* face)
 {
-    int i, c;
+    int i, c, side_nsteps;
+    float step, t;
     Edge* e, *e0, *e1;
     Point* last_point;
-    Point* p, * v, * w;
+    Point* p, * v, * w, *s0, *s1;
+    ArcEdge* ae0, *ae1;
     ListHead* list, **elists, **slists;
+    ListHead internal;
     int first_arc;
+    BOOL first_arc_forward;
+
     //char buf[256];
 
     // Index struct to control order of gathering view list point an barrel/bezier edges
@@ -751,10 +759,25 @@ gen_view_list_face(Face* face)
         free(elists);
         break;
 
+#ifdef SUPPORT_BARREL_FACES
     case FACE_BARREL:
-#if 0 // This section is very incomplete. 
         // For these faces, there are 4 edges only. Two are arcs. 
         // Find the first arc.
+        // Determine which is the first arc. If there are two of them, I need a better idea...
+        e0 = face->edges[0];
+        e1 = face->edges[1];
+        if (e0->type != EDGE_ARC)
+            first_arc = 1;
+        else if (e1->type != EDGE_ARC)
+            first_arc = 0;
+        else  // they are both arcs, what to do? TODO_BARREL: Set it to 0 just for now.
+        {
+            first_arc = 0;
+        }
+
+        // Find the number of steps in the side edges (this count includes first and last points)
+        side_nsteps = face->edges[1 - first_arc]->nsteps;
+
         // Corral the view lists of the arc edges into two lists, pointing in the same direction.
         // Also do the same with the side edges.
         // Create internal arc edges that interpolate between the first side edge and its opposite number,
@@ -769,25 +792,15 @@ gen_view_list_face(Face* face)
         //      <-----------
         //          arc
         //
-        elists = (ListHead**)malloc(2 * sizeof(ListHead*));
-        elists[0] = (ListHead*)calloc(1, sizeof(ListHead));     // copy of view list of first arc edge
-        elists[1] = (ListHead*)calloc(1, sizeof(ListHead));     // copy of view list of second arc edge TODO: [nsteps]
+        // leave room in pointer array for pointers to VL's of internal arcs
+        elists = (ListHead**)malloc((side_nsteps + 1) * sizeof(ListHead*));
+        elists[0] = (ListHead*)calloc(1, sizeof(ListHead));                 // copy of view list of first arc edge
+        elists[side_nsteps] = (ListHead*)calloc(1, sizeof(ListHead));     // copy of view list of second arc edge 
 
         slists = (ListHead**)malloc(2 * sizeof(ListHead*));
         slists[0] = (ListHead*)calloc(1, sizeof(ListHead));     // copy of view list of first side edge
         slists[1] = (ListHead*)calloc(1, sizeof(ListHead));     // copy of view list of second side edge
 
-        // Determine which is the first arc. If there are two of them, I need a better idea...
-        e0 = face->edges[0];
-        e1 = face->edges[1];
-        if (e0->type != EDGE_ARC)
-            first_arc = 1;
-        else if (e1->type != EDGE_ARC)
-            first_arc = 0;
-        else  // they are both arcs, what to do? TODO_BARREL: Set it to 0 just for now.
-        {
-            first_arc = 0;  
-        }
 
         if (first_arc == 0)
         {
@@ -800,12 +813,12 @@ gen_view_list_face(Face* face)
             //      v          v
             //      <-----------
             //          arc
-            // E0F, S1F, E1R, S0R
+            // E0F, S1F, EnR, S0R
             indx[0].list = elists[0];
             indx[0].rev = 0;
             indx[1].list = slists[1];
             indx[1].rev = 0;
-            indx[2].list = elists[1];
+            indx[2].list = elists[side_nsteps];
             indx[2].rev = 1;
             indx[3].list = slists[0];
             indx[3].rev = 1;
@@ -821,17 +834,19 @@ gen_view_list_face(Face* face)
             //      v          v
             //      <---------IP
             //          arc
+             // S0R, E0F, S1F, EnR
             indx[0].list = slists[0];
             indx[0].rev = 1;
             indx[1].list = elists[0];
             indx[1].rev = 0;
             indx[2].list = slists[1];
             indx[2].rev = 0;
-            indx[3].list = elists[1];
+            indx[3].list = elists[side_nsteps];
             indx[3].rev = 1;
         }
 
         last_point = face->initial_point;
+        first_arc_forward = FALSE;
         for (i = 0; i < face->n_edges; i++)
         {
             e = face->edges[i];
@@ -851,6 +866,8 @@ gen_view_list_face(Face* face)
                 if (last_point == e->endpoints[c])
                 {
                     last_point = e->endpoints[1 - c];
+                    if (i == first_arc)
+                        first_arc_forward = TRUE;
 
                     // copy the view list forwards. 
                     for (v = (Point*)e->view_list.head; v != NULL; v = (Point*)v->hdr.next)
@@ -903,15 +920,102 @@ gen_view_list_face(Face* face)
             }
         }
 
+        // Create internal arc edges:
+        // - centre interpolated between boundary arc edge centres
+        // - endpoints taken from side edge view list points
+        // - plane adjusted so VL points in same direction as the list at elists[0]
+        e0 = face->edges[first_arc];
+        e1 = face->edges[first_arc + 2];
+        ae0 = (ArcEdge*)e0;
+        ae1 = (ArcEdge*)e1;
+        step = 1.0f / side_nsteps;
+        s0 = (Point *)slists[0]->head->next;
+        s1 = (Point *)slists[1]->head->next;
+        internal.head = NULL;
+        internal.tail = NULL;
+        for (i = 1, t = step; i < side_nsteps; i++, t += step)
+        {
+            ArcEdge* ae = (ArcEdge*)edge_new(EDGE_ARC);
+            Edge* e = (Edge*)ae;
 
+            // Don't add this edge to the object tree.
+            e->hdr.ID = 0;
+            objid--;
+            ae->centre = point_newv
+            (
+                t * ae0->centre->x + (1 - t) * ae1->centre->x,
+                t * ae0->centre->y + (1 - t) * ae1->centre->y,
+                t * ae0->centre->z + (1 - t) * ae1->centre->z
+            );
+            e->endpoints[0] = point_newpv(s0);
+            e->endpoints[1] = point_newpv(s1);
+            // make sure it points in the same direction as the first_arc
+            ae->clockwise = first_arc_forward ? ae0->clockwise : !ae0->clockwise;
+            if (ae->clockwise)
+                normal3(e->endpoints[1], ae->centre, e->endpoints[0], &ae->normal);
+            else
+                normal3(e->endpoints[0], ae->centre, e->endpoints[1], &ae->normal);
 
+            // Make sure it has the same number of steps as the first_arc
+            e->stepsize = 0;
+            e->nsteps = e0->nsteps;
+            e->stepping = TRUE;
 
+            // Save the view list, and the edge itself, for later freeing
+            gen_view_list_arc(ae);
+            elists[i] = &e->view_list;
+            link_tail((Object*)ae, &internal);
 
+            // advance to next pair of VL points in side edges
+            s0 = (Point*)s0->hdr.next;
+            s1 = (Point*)s1->hdr.next;
+        }
 
+        // Link up boundary and internal edges into facets and store these in the face VL
+        for (i = 1; i <= side_nsteps; i++)
+        {
+            for
+            (
+                v = (Point*)elists[i-1]->head, w = (Point*)elists[i]->head;
+                v->hdr.next != NULL;
+                v = (Point*)v->hdr.next, w = (Point*)w->hdr.next
+            )
+            {
+                Point* vnext = (Point*)v->hdr.next;
+                Point* wnext = (Point*)w->hdr.next;
+                Plane norm;
 
-#endif // 0
+                // A new facet point containing the normal
+                normal3(v, w, vnext, &norm);
+                p = point_newv(norm.A, norm.B, norm.C);
+                p->flags = FLAG_NEW_FACET;
+                link_tail((Object*)p, &face->view_list);
+
+                // Four points for the quad
+                p = point_newpv(v);
+                link_tail((Object*)p, &face->view_list);
+                p = point_newpv(vnext);
+                link_tail((Object*)p, &face->view_list);
+                p = point_newpv(wnext);
+                link_tail((Object*)p, &face->view_list);
+                p = point_newpv(w);
+                link_tail((Object*)p, &face->view_list);
+            }
+        }
+
+        // Free the internal edges now we no longer need them, and the point lists
+        purge_list(&internal);
+        free_point_list(elists[0]);
+        free_point_list(elists[side_nsteps]);
+        free(elists);
+        free_point_list(slists[0]);
+        free_point_list(slists[1]);
+        free(slists);
+
         break;
+#endif // SUPPORT_BARREL_FACES
 
+#ifdef SUPPORT_BEZIER_FACES
     case FACE_BEZIER:
         // For these faces, there are 4 edges only. All of them are beziers. Construct the 4 internal
         // control points and use the resulting 16-point bezier surface to interpolate internal edges
@@ -923,6 +1027,7 @@ gen_view_list_face(Face* face)
 
 
         break;
+#endif // SUPPORT_BEZIER_FACES
     }
 
     // The view list is valid, as is the 2D view list, the face normal, and the face's

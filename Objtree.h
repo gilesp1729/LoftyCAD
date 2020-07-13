@@ -433,6 +433,7 @@ void clean_checkpoints(char *filename);
 // Delete an object, or the whole tree
 void purge_obj(Object *obj);
 void purge_obj_top(Object *obj, OBJECT type);
+void purge_list(ListHead* list);
 void purge_tree(Group *tree, BOOL preserve_objects, ListHead *saved_list);
 
 // Extrude heights/dimensions
