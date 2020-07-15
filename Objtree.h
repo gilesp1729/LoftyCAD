@@ -205,6 +205,8 @@ typedef struct BezierEdge
     struct Point    *ctrlpoints[2]; // Two control points, corresponding in order to the edge endpoints
     struct Point    *bezctl[4];      // End and control points copied into the correct order for building
                                     // the face view list, to help with Bezier surface interpolation
+    struct Point    *bezcurve[2];   // On-curve intermediate points used to calculate internal control
+                                    // points, to help with Bezier surface interpolation
 } BezierEdge;
 
 // Contour in a multi-contour face. This information is used when reversing and extruding faces.

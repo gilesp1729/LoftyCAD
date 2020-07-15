@@ -468,17 +468,37 @@ gen_view_list_vol(Volume *vol)
 #define SUPPORT_BARREL_FACES
 #define SUPPORT_BEZIER_FACES
 
+// Interpolate a bezier edge be at t using the bezctl points, giving a Point p.
+// The edge must have had its bezctl points placed into the correct order first.
+Point*
+bez_interp(BezierEdge* be, float t)
+{
+    double mt = 1.0 - t;
+    double c0 = mt * mt * mt;
+    double c1 = 3 * mt * mt * t;
+    double c2 = 3 * mt * t * t;
+    double c3 = t * t * t;
+    double x = c0 * be->bezctl[0]->x + c1 * be->bezctl[1]->x + c2 * be->bezctl[2]->x + c3 * be->bezctl[3]->x;
+    double y = c0 * be->bezctl[0]->y + c1 * be->bezctl[1]->y + c2 * be->bezctl[2]->y + c3 * be->bezctl[3]->y;
+    double z = c0 * be->bezctl[0]->z + c1 * be->bezctl[1]->z + c2 * be->bezctl[2]->z + c3 * be->bezctl[3]->z;
+
+    return point_newv((float)x, (float)y, (float)z);
+}
+
 // Regenerate the unclipped view list for a face. While here, also calculate the outward
 // normal for the face. 
 void
 gen_view_list_face(Face* face)
 {
-    int i, c, side_nsteps;
+    int i, c, bez_nsteps, side_nsteps;
     float step, t;
+    double u, u_step, v_step;
     Edge* e, *e0, *e1;
     Point* last_point;
     Point* p, * v, * w, *s0, *s1;
     ArcEdge* ae0, *ae1;
+    BezierEdge* be, * be0, * be2;
+    Point cp[4][4];
     ListHead* list, **elists, **slists;
     ListHead internal;
     int first_arc;
@@ -683,17 +703,6 @@ gen_view_list_face(Face* face)
                             expand_bbox(&face->vol->bbox, p);
                         link_tail((Object*)p, list);
                     }
-
-                    // Copy the Bezier control points in the correct order
-                    if ((e->type & ~EDGE_CONSTRUCTION) == EDGE_BEZIER)
-                    {
-                        BezierEdge* be = (BezierEdge*)e;
-
-                        be->bezctl[0] = e->endpoints[0];
-                        be->bezctl[1] = be->ctrlpoints[0];
-                        be->bezctl[2] = be->ctrlpoints[1];
-                        be->bezctl[3] = e->endpoints[1];
-                    }
                 }
                 else
                 {
@@ -707,15 +716,6 @@ gen_view_list_face(Face* face)
                         if (face->vol != NULL)
                             expand_bbox(&face->vol->bbox, p);
                         link_tail((Object*)p, list);
-                    }
-                    if ((e->type & ~EDGE_CONSTRUCTION) == EDGE_BEZIER)
-                    {
-                        BezierEdge* be = (BezierEdge*)e;
-
-                        be->bezctl[0] = e->endpoints[1];
-                        be->bezctl[1] = be->ctrlpoints[1];
-                        be->bezctl[2] = be->ctrlpoints[0];
-                        be->bezctl[3] = e->endpoints[0];
                     }
                 }
                 c++;    // update list index to process the other curved edge
@@ -877,17 +877,6 @@ gen_view_list_face(Face* face)
                             expand_bbox(&face->vol->bbox, p);
                         link_tail((Object*)p, list);
                     }
-
-                    // Copy the Bezier control points in the correct order
-                    if ((e->type & ~EDGE_CONSTRUCTION) == EDGE_BEZIER)
-                    {
-                        BezierEdge* be = (BezierEdge*)e;
-
-                        be->bezctl[0] = e->endpoints[0];
-                        be->bezctl[1] = be->ctrlpoints[0];
-                        be->bezctl[2] = be->ctrlpoints[1];
-                        be->bezctl[3] = e->endpoints[1];
-                    }
                 }
                 else
                 {
@@ -901,15 +890,6 @@ gen_view_list_face(Face* face)
                         if (face->vol != NULL)
                             expand_bbox(&face->vol->bbox, p);
                         link_tail((Object*)p, list);
-                    }
-                    if ((e->type & ~EDGE_CONSTRUCTION) == EDGE_BEZIER)
-                    {
-                        BezierEdge* be = (BezierEdge*)e;
-
-                        be->bezctl[0] = e->endpoints[1];
-                        be->bezctl[1] = be->ctrlpoints[1];
-                        be->bezctl[2] = be->ctrlpoints[0];
-                        be->bezctl[3] = e->endpoints[0];
                     }
                 }
                 break;
@@ -1021,10 +1001,259 @@ gen_view_list_face(Face* face)
         // For these faces, there are 4 edges only. All of them are beziers. Construct the 4 internal
         // control points and use the resulting 16-point bezier surface to interpolate internal edges
         // as in the barrel case above.
+        e0 = face->edges[0];
+        e1 = face->edges[1];
 
+        // Find the number of steps in the bezier and side edges (this count includes first and last points)
+        bez_nsteps = e0->nsteps;
+        side_nsteps = e1->nsteps;
 
+        // Corral the view lists of the bezier edges into two lists, pointing in the same direction.
+        // Also do the same with the side edges.
+        //          E0
+        //      <----------IP
+        //      |   bez    |
+        // side |          | side (also bez)
+        //  S1  |          |  S0
+        //      v   En     v
+        //      <-----------
+        //          bez
+        //   Order: E0F, S1F, EnR, S0R (edges traversed anticlockwise)
+        //
+        // Unlike arcs, we have alocate all the elists.
+        elists = (ListHead**)malloc((side_nsteps + 1) * sizeof(ListHead*));
+        for (i = 0; i < side_nsteps + 1; i++)
+            elists[i] = (ListHead*)calloc(1, sizeof(ListHead));
 
+        slists = (ListHead**)malloc(2 * sizeof(ListHead*));
+        slists[0] = (ListHead*)calloc(1, sizeof(ListHead));     // copy of view list of first side edge
+        slists[1] = (ListHead*)calloc(1, sizeof(ListHead));     // copy of view list of second side edge
 
+        indx[0].list = elists[0];
+        indx[0].rev = 0;
+        indx[1].list = slists[1];
+        indx[1].rev = 0;
+        indx[2].list = elists[side_nsteps];
+        indx[2].rev = 1;
+        indx[3].list = slists[0];
+        indx[3].rev = 1;
+
+        last_point = face->initial_point;
+        for (i = 0; i < face->n_edges; i++)
+        {
+            e = face->edges[i];
+            be = (BezierEdge*)e;
+            list = indx[i].list;
+            c = indx[i].rev;
+
+            ASSERT((e->type & ~EDGE_CONSTRUCTION) == EDGE_BEZIER, "Should only be bezier edges in here");
+            gen_view_list_bez(be);
+
+            if (last_point == e->endpoints[c])
+            {
+                last_point = e->endpoints[1 - c];
+
+                // copy the view list forwards. 
+                for (v = (Point*)e->view_list.head; v != NULL; v = (Point*)v->hdr.next)
+                {
+                    p = point_newpv(v);
+                    if (face->vol != NULL)
+                        expand_bbox(&face->vol->bbox, p);
+                    link_tail((Object*)p, list);
+                }
+
+                // Copy the Bezier control points in the correct order
+                be->bezctl[0] = e->endpoints[0];
+                be->bezctl[1] = be->ctrlpoints[0];
+                be->bezctl[2] = be->ctrlpoints[1];
+                be->bezctl[3] = e->endpoints[1];
+            }
+            else
+            {
+                ASSERT(last_point == e->endpoints[1 - c], "Point order messed up");
+                last_point = e->endpoints[c];
+
+                // copy the view list backwards.
+                for (v = (Point*)e->view_list.tail; v != NULL; v = (Point*)v->hdr.prev)
+                {
+                    p = point_newpv(v);
+                    if (face->vol != NULL)
+                        expand_bbox(&face->vol->bbox, p);
+                    link_tail((Object*)p, list);
+                }
+                be->bezctl[0] = e->endpoints[1];
+                be->bezctl[1] = be->ctrlpoints[1];
+                be->bezctl[2] = be->ctrlpoints[0];
+                be->bezctl[3] = e->endpoints[0];
+            }
+        }
+
+        // Create on-curve intermediate points for the side edges, to help calculation
+        // of the 4 internal control points later on.
+        be = (BezierEdge*)face->edges[1];
+        t = length(be->bezctl[1], be->bezctl[0]) / length(be->bezctl[3], be->bezctl[0]);
+        be->bezcurve[0] = bez_interp(be, t);
+        t = length(be->bezctl[3], be->bezctl[2]) / length(be->bezctl[3], be->bezctl[0]);
+        be->bezcurve[1] = bez_interp(be, 1.0f - t);
+
+        be = (BezierEdge*)face->edges[3];
+        t = length(be->bezctl[1], be->bezctl[0]) / length(be->bezctl[3], be->bezctl[0]);
+        be->bezcurve[0] = bez_interp(be, t);
+        t = length(be->bezctl[3], be->bezctl[2]) / length(be->bezctl[3], be->bezctl[0]);
+        be->bezcurve[1] = bez_interp(be, 1.0f - t);
+
+        // Get together the 16 control points for the bezier surface
+        be = (BezierEdge*)face->edges[3];
+        be0 = (BezierEdge*)face->edges[0];
+        be2 = (BezierEdge*)face->edges[2];
+
+        cp[0][0].x = be->bezctl[0]->x;
+        cp[0][0].y = be->bezctl[0]->y;
+        cp[0][0].z = be->bezctl[0]->z;
+        cp[1][0].x = be->bezctl[1]->x;
+        cp[1][0].y = be->bezctl[1]->y;
+        cp[1][0].z = be->bezctl[1]->z;
+        cp[2][0].x = be->bezctl[2]->x;
+        cp[2][0].y = be->bezctl[2]->y;
+        cp[2][0].z = be->bezctl[2]->z;
+        cp[3][0].x = be->bezctl[3]->x;
+        cp[3][0].y = be->bezctl[3]->y;
+        cp[3][0].z = be->bezctl[3]->z;
+
+        cp[0][1].x = be0->bezctl[1]->x;
+        cp[0][1].y = be0->bezctl[1]->y;
+        cp[0][1].z = be0->bezctl[1]->z;
+        cp[1][1].x = be->bezcurve[0]->x + (be0->bezctl[1]->x - be0->bezctl[0]->x);
+        cp[1][1].y = be->bezcurve[0]->y + (be0->bezctl[1]->y - be0->bezctl[0]->y);
+        cp[1][1].z = be->bezcurve[0]->z + (be0->bezctl[1]->z - be0->bezctl[0]->z);
+        cp[2][1].x = be->bezcurve[1]->x + (be2->bezctl[1]->x - be2->bezctl[0]->x);
+        cp[2][1].y = be->bezcurve[1]->y + (be2->bezctl[1]->y - be2->bezctl[0]->y);
+        cp[2][1].z = be->bezcurve[1]->z + (be2->bezctl[1]->z - be2->bezctl[0]->z);
+        cp[3][1].x = be2->bezctl[1]->x;
+        cp[3][1].y = be2->bezctl[1]->y;
+        cp[3][1].z = be2->bezctl[1]->z;
+
+        be = (BezierEdge*)face->edges[1];
+        cp[0][2].x = be0->bezctl[2]->x;
+        cp[0][2].y = be0->bezctl[2]->y;
+        cp[0][2].z = be0->bezctl[2]->z;
+        cp[1][2].x = be->bezcurve[0]->x + (be0->bezctl[2]->x - be0->bezctl[3]->x);
+        cp[1][2].y = be->bezcurve[0]->y + (be0->bezctl[2]->y - be0->bezctl[3]->y);
+        cp[1][2].z = be->bezcurve[0]->z + (be0->bezctl[2]->z - be0->bezctl[3]->z);
+        cp[2][2].x = be->bezcurve[1]->x + (be2->bezctl[2]->x - be2->bezctl[3]->x);
+        cp[2][2].y = be->bezcurve[1]->y + (be2->bezctl[2]->y - be2->bezctl[3]->y);
+        cp[2][2].z = be->bezcurve[1]->z + (be2->bezctl[2]->z - be2->bezctl[3]->z);
+        cp[3][2].x = be2->bezctl[2]->x;
+        cp[3][2].y = be2->bezctl[2]->y;
+        cp[3][2].z = be2->bezctl[2]->z;
+
+        cp[0][3].x = be->bezctl[0]->x;
+        cp[0][3].y = be->bezctl[0]->y;
+        cp[0][3].z = be->bezctl[0]->z;
+        cp[1][3].x = be->bezctl[1]->x;
+        cp[1][3].y = be->bezctl[1]->y;
+        cp[1][3].z = be->bezctl[1]->z;
+        cp[2][3].x = be->bezctl[2]->x;
+        cp[2][3].y = be->bezctl[2]->y;
+        cp[2][3].z = be->bezctl[2]->z;
+        cp[3][3].x = be->bezctl[3]->x;
+        cp[3][3].y = be->bezctl[3]->y;
+        cp[3][3].z = be->bezctl[3]->z;
+
+        // Create internal view list points by 2D bezier interpolation. We only do the 
+        // internal ones this way; the boundary points are directly copied from their edge's
+        // view list, to avoid any floating-point rounding errors causing mismatching edges.
+        s0 = (Point *)slists[0]->head->next;
+        s1 = (Point *)slists[1]->head->next;
+        u_step = 1.0 / side_nsteps;
+        v_step = 1.0 / bez_nsteps;
+        for (i = 1, u = u_step; u < 1.0; u += u_step, i++)
+        {
+            double v, bu[4], bv[4];
+            double u1 = 1 - u;
+
+            // Start with the initial view list point from the side edge
+            // Make a copy, as the same point can't be in two lists at once
+            link_tail((Object*)point_newpv(s0), elists[i]);
+
+            bu[0] = u1 * u1 * u1;
+            bu[1] = 3 * u * u1 * u1;
+            bu[2] = 3 * u * u * u1;
+            bu[3] = u * u * u;
+
+            for (v = v_step; v < 1.0; v += v_step)
+            {
+                double v1 = 1 - v;
+                double px = 0, py = 0, pz = 0;
+                int m, n;
+
+                bv[0] = v1 * v1 * v1;
+                bv[1] = 3 * v * v1 * v1;
+                bv[2] = 3 * v * v * v1;
+                bv[3] = v * v * v;
+
+                for (m = 0; m < 4; m++)
+                {
+                    for (n = 0; n < 4; n++)
+                    {
+                        px += bu[m] * bv[n] * cp[m][n].x;
+                        py += bu[m] * bv[n] * cp[m][n].y;
+                        pz += bu[m] * bv[n] * cp[m][n].z;
+                    }
+                }
+
+                // Put the internal point into the elist
+                link_tail((Object*)point_newv((float)px, (float)py, (float)pz), elists[i]);
+            }
+
+            // Put the last side edge view list point into the elist, and move to the next row
+            link_tail((Object*)point_newpv(s1), elists[i]);
+            s0 = (Point*)s0->hdr.next;
+            s1 = (Point*)s1->hdr.next;
+        }
+        ASSERT(i == side_nsteps, "Row count mismatch");
+
+        // Link up boundary and internal edges into facets and store these in the face VL
+        for (i = 1; i <= side_nsteps; i++)
+        {
+            for
+            (
+                v = (Point*)elists[i - 1]->head, w = (Point*)elists[i]->head;
+                v->hdr.next != NULL;
+                v = (Point*)v->hdr.next, w = (Point*)w->hdr.next
+            )
+            {
+                Point* vnext = (Point*)v->hdr.next;
+                Point* wnext = (Point*)w->hdr.next;
+                Plane norm;
+
+                // A new facet point containing the normal
+                normal3(v, w, vnext, &norm);
+                p = point_newv(norm.A, norm.B, norm.C);
+                p->flags = FLAG_NEW_FACET;
+                link_tail((Object*)p, &face->view_list);
+
+                // Four points for the quad
+                p = point_newpv(v);
+                link_tail((Object*)p, &face->view_list);
+                p = point_newpv(vnext);
+                link_tail((Object*)p, &face->view_list);
+                p = point_newpv(wnext);
+                link_tail((Object*)p, &face->view_list);
+                p = point_newpv(w);
+                link_tail((Object*)p, &face->view_list);
+            }
+        }
+
+        // Free the internal edges now we no longer need them, and the point lists
+        for (i = 0; i < side_nsteps + 1; i++)
+            free_point_list(elists[i]);
+        free(elists);
+        free_point_list(slists[0]);
+        free_point_list(slists[1]);
+        free(slists);
+
+        // TODO free the bezcurve points
 
 
         break;
@@ -1359,7 +1588,6 @@ gen_view_list_bez(BezierEdge *be)
 
     e->view_valid = TRUE;
 }
-
 
 // callbacks for rendering tessellated stuff to GL
 void 

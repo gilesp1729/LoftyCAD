@@ -483,6 +483,9 @@ find_corner_edges(Object* obj, Object* parent, ListHead* halo)
     Volume* vol;
     BOOL rc = FALSE;
 
+    if (parent == NULL) // no parent, nothing to do
+        return FALSE;
+
     switch (parent->type)
     {
     case OBJ_FACE:
