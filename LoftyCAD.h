@@ -182,6 +182,7 @@ extern Material materials[MAX_MATERIAL];
 #undef DEBUG_VIEW_LIST_ARC
 #define DEBUG_HIGHLIGHTING_ENABLED
 #undef DEBUG_WRITE_VOL_MESH
+#undef DEBUG_FREELISTS
 
 
 #ifdef BREAK_ON_ASSERT
@@ -244,6 +245,7 @@ void CALLBACK check_file_changed(HWND hWnd);
 void update_drawing(void);
 void contextmenu(Object *picked_obj, POINT pt);
 void load_materials_menu(HMENU hMenu, BOOL show_all_checks, int which_check);
+void enable_rendered_view_items(void);
 
 // Forwards for window procedures and similar
 int CALLBACK Command(int message, int wParam, int lParam);

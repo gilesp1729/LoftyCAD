@@ -105,6 +105,28 @@ void link_single_checked(Object *new_obj, ListHead *obj_list)
     link_single(new_obj, obj_list);
 }
 
+// Free an Edge to its free list.
+void
+free_edge(Object* obj)
+{
+    ASSERT(obj->type == OBJ_EDGE, "This must be an Edge");
+    obj->next = (Object*)free_list_edge.head;
+    if (free_list_edge.head == NULL)
+        free_list_edge.tail = obj;
+    free_list_edge.head = obj;
+}
+
+// Free a Point to its free list.
+void
+free_point(Object* obj)
+{
+    ASSERT(obj->type == OBJ_POINT, "This must be a Point");
+    obj->next = (Object*)free_list_pt.head;
+    if (free_list_pt.head == NULL)
+        free_list_pt.tail = obj;
+    free_list_pt.head = obj;
+}
+
 // Clean out a view list (a singly linked list of Points) by joining it to the free list.
 // The points already have ID's of 0. 
 void
@@ -112,6 +134,10 @@ free_point_list(ListHead *pt_list)
 {
     if (pt_list->head == NULL)
         return;
+
+    // we can't check them all, so just check the first one
+    ASSERT(pt_list->head->type == OBJ_POINT, "Only Points should be in here");
+    ASSERT(pt_list->head->ID == 0, "Only view list or temporary Points should be in here");
 
     if (free_list_pt.head == NULL)
     {

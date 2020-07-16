@@ -87,19 +87,27 @@ extern "C"
         visitor.properties[mesh2] = mesh2_id;
         visitor.properties[out] = out_id;
 
-        rc = (PMP::corefine_and_compute_union(*mesh1,
-            *mesh2,
-            *out,
-            params::vertex_point_map(mesh1_pm).visitor(visitor),
-            params::vertex_point_map(mesh2_pm),
-            params::vertex_point_map(out_pm)));
-
-        if (rc)
+        try
         {
-            delete mesh1;
-            *mesh1_ptr = out;
-        }
+            rc = (PMP::corefine_and_compute_union(*mesh1,
+                *mesh2,
+                *out,
+                params::vertex_point_map(mesh1_pm).visitor(visitor),
+                params::vertex_point_map(mesh2_pm),
+                params::vertex_point_map(out_pm)));
 
+            if (rc)
+            {
+                delete mesh1;
+                *mesh1_ptr = out;
+            }
+        }
+        catch (CGAL::Failure_exception &e)
+        {
+            // TODO store file line and expr away someplace --> MessageBox
+            // TODO check self-intersections and throw for those too
+            rc = 0;
+        }
         return rc;
     }
 

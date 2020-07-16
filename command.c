@@ -82,6 +82,25 @@ load_materials_menu(HMENU hMenu, BOOL show_all_checks, int which_check)
         CheckMenuItem(hMenu, ID_MATERIAL_BASE + which_check, MF_CHECKED);
 }
 
+// Set/reset rendered view blanking of toolbar buttons.
+void
+enable_rendered_view_items(void)
+{
+    EnableWindow(GetDlgItem(hWndToolbar, IDB_EDGE), !view_rendered);
+    EnableWindow(GetDlgItem(hWndToolbar, IDB_RECT), !view_rendered);
+    EnableWindow(GetDlgItem(hWndToolbar, IDB_CIRCLE), !view_rendered);
+    EnableWindow(GetDlgItem(hWndToolbar, IDB_ARC_EDGE), !view_rendered);
+    EnableWindow(GetDlgItem(hWndToolbar, IDB_BEZIER_EDGE), !view_rendered);
+    EnableWindow(GetDlgItem(hWndToolbar, IDB_EXTRUDE), !view_rendered);
+    EnableWindow(GetDlgItem(hWndToolbar, IDB_TEXT), !view_rendered);
+    EnableWindow(GetDlgItem(hWndToolbar, IDB_SCALE), !view_rendered);
+    EnableWindow(GetDlgItem(hWndToolbar, IDB_ROTATE), !view_rendered);
+    EnableWindow(GetDlgItem(hWndToolbar, IDB_CONST_EDGE), !view_rendered);
+    EnableWindow(GetDlgItem(hWndToolbar, IDB_CONST_RECT), !view_rendered);
+    EnableWindow(GetDlgItem(hWndToolbar, IDB_CONST_CIRCLE), !view_rendered);
+
+}
+
 // Process WM_COMMAND, INITMENUPOPUP and the like, from TK window proc
 int CALLBACK
 Command(int message, int wParam, int lParam)
@@ -169,6 +188,7 @@ Command(int message, int wParam, int lParam)
                 purge_tree(&object_tree, clipboard.head != NULL, &saved_list);
                 drawing_changed = FALSE;
                 view_rendered = FALSE;
+                enable_rendered_view_items();
                 clean_checkpoints(curr_filename);
                 curr_filename[0] = '\0';
                 object_tree.title[0] = '\0';
@@ -367,16 +387,7 @@ Command(int message, int wParam, int lParam)
                 glDisable(GL_BLEND);
                 CheckMenuItem(hMenu, ID_VIEW_RENDEREDVIEW, MF_CHECKED);
             }
-            EnableWindow(GetDlgItem(hWndToolbar, IDB_EDGE), !view_rendered);
-            EnableWindow(GetDlgItem(hWndToolbar, IDB_RECT), !view_rendered);
-            EnableWindow(GetDlgItem(hWndToolbar, IDB_CIRCLE), !view_rendered);
-            EnableWindow(GetDlgItem(hWndToolbar, IDB_ARC_EDGE), !view_rendered);
-            EnableWindow(GetDlgItem(hWndToolbar, IDB_BEZIER_EDGE), !view_rendered);
-            EnableWindow(GetDlgItem(hWndToolbar, IDB_EXTRUDE), !view_rendered);
-            EnableWindow(GetDlgItem(hWndToolbar, IDB_TEXT), !view_rendered);
-            EnableWindow(GetDlgItem(hWndToolbar, IDB_CONST_EDGE), !view_rendered);
-            EnableWindow(GetDlgItem(hWndToolbar, IDB_CONST_RECT), !view_rendered);
-            EnableWindow(GetDlgItem(hWndToolbar, IDB_CONST_CIRCLE), !view_rendered);
+            enable_rendered_view_items();
             break;
 
 #ifdef DEBUG_HIGHLIGHTING_ENABLED
@@ -545,6 +556,7 @@ Command(int message, int wParam, int lParam)
             purge_tree(&object_tree, clipboard.head != NULL, &saved_list);
             drawing_changed = FALSE;
             view_rendered = FALSE;
+            enable_rendered_view_items();
             clean_checkpoints(curr_filename);
             curr_filename[0] = '\0';
             object_tree.title[0] = '\0';
@@ -727,6 +739,7 @@ Command(int message, int wParam, int lParam)
                 purge_tree(&object_tree, clipboard.head != NULL, &saved_list);
                 drawing_changed = FALSE;
                 view_rendered = FALSE;
+                enable_rendered_view_items();
                 clean_checkpoints(curr_filename);
                 curr_filename[0] = '\0';
                 object_tree.title[0] = '\0';

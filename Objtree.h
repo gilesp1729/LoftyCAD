@@ -209,6 +209,9 @@ typedef struct BezierEdge
                                     // points, to help with Bezier surface interpolation
 } BezierEdge;
 
+// The largest of the edge structures (only used for allocation size)
+#define FreeEdge ArcEdge
+
 // Contour in a multi-contour face. This information is used when reversing and extruding faces.
 // If it isn't present, the face's edges array, initial point and n_edges define the only contour.
 // Only flat faces can have contours.
@@ -353,6 +356,7 @@ typedef struct Group
 // Externs
 
 extern unsigned int objid;
+extern ListHead free_list_edge;
 extern ListHead free_list_pt;
 extern ListHead free_list_obj;
 
@@ -379,7 +383,6 @@ Face *face_new(FACE face_type, Plane norm);
 Volume *vol_new(void);
 Group *group_new(void);
 Transform *xform_new(void);
-Face *make_flat_face(Edge *edge);
 
 // Link and delink from doubly linked lists (list.c)
 void link(Object *new_obj, ListHead *obj_list);
@@ -388,7 +391,10 @@ void link_tail(Object *new_obj, ListHead *obj_list);
 void link_group(Object *new_obj, Group *group);
 void delink_group(Object *obj, Group *group);
 void link_tail_group(Object *new_obj, Group *group);
+void free_edge(Object* obj);
+void free_point(Object* obj);
 void free_point_list(ListHead *pt_list);
+void purge_temp_edge_list(ListHead* list);
 
 // ...and for singly linked lists (using prev pointer to point to arbitrary object)
 void link_single(Object *new_obj, ListHead *obj_list);

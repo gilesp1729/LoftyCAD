@@ -101,18 +101,7 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         LoadAndDisplayIcon(hWnd, IDI_RENDERED, IDB_RENDERED, IDS_RENDERED);
 
         // Tools are disabled when in render view
-        EnableWindow(GetDlgItem(hWnd, IDB_EDGE), !view_rendered);
-        EnableWindow(GetDlgItem(hWnd, IDB_RECT), !view_rendered);
-        EnableWindow(GetDlgItem(hWnd, IDB_CIRCLE), !view_rendered);
-        EnableWindow(GetDlgItem(hWnd, IDB_ARC_EDGE), !view_rendered);
-        EnableWindow(GetDlgItem(hWnd, IDB_BEZIER_EDGE), !view_rendered);
-        EnableWindow(GetDlgItem(hWnd, IDB_EXTRUDE), !view_rendered);
-        EnableWindow(GetDlgItem(hWnd, IDB_TEXT), !view_rendered);
-        EnableWindow(GetDlgItem(hWnd, IDB_SCALE), !view_rendered);
-        EnableWindow(GetDlgItem(hWnd, IDB_ROTATE), !view_rendered);
-        EnableWindow(GetDlgItem(hWnd, IDB_CONST_EDGE), !view_rendered);
-        EnableWindow(GetDlgItem(hWnd, IDB_CONST_RECT), !view_rendered);
-        EnableWindow(GetDlgItem(hWnd, IDB_CONST_CIRCLE), !view_rendered);
+        enable_rendered_view_items();
         break;
 
     case WM_COMMAND:
@@ -264,18 +253,7 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                     glDisable(GL_BLEND);
                     CheckMenuItem(hMenu, ID_VIEW_RENDEREDVIEW, MF_CHECKED);
                 }
-                EnableWindow(GetDlgItem(hWndToolbar, IDB_EDGE), !view_rendered);
-                EnableWindow(GetDlgItem(hWndToolbar, IDB_RECT), !view_rendered);
-                EnableWindow(GetDlgItem(hWndToolbar, IDB_CIRCLE), !view_rendered);
-                EnableWindow(GetDlgItem(hWndToolbar, IDB_ARC_EDGE), !view_rendered);
-                EnableWindow(GetDlgItem(hWndToolbar, IDB_BEZIER_EDGE), !view_rendered);
-                EnableWindow(GetDlgItem(hWndToolbar, IDB_EXTRUDE), !view_rendered);
-                EnableWindow(GetDlgItem(hWndToolbar, IDB_TEXT), !view_rendered);
-                EnableWindow(GetDlgItem(hWndToolbar, IDB_SCALE), !view_rendered);
-                EnableWindow(GetDlgItem(hWndToolbar, IDB_ROTATE), !view_rendered);
-                EnableWindow(GetDlgItem(hWndToolbar, IDB_CONST_EDGE), !view_rendered);
-                EnableWindow(GetDlgItem(hWndToolbar, IDB_CONST_RECT), !view_rendered);
-                EnableWindow(GetDlgItem(hWndToolbar, IDB_CONST_CIRCLE), !view_rendered);
+                enable_rendered_view_items();
                 break;
             }
         }

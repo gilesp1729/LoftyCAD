@@ -3,9 +3,17 @@
 #include <stdio.h>
 
 
-// Free lists for Points and Objects. Only singly linked.
+// Free lists for Edges, Points and Objects. Only singly linked.
+ListHead free_list_edge = { NULL, NULL };
 ListHead free_list_pt = { NULL, NULL };
 ListHead free_list_obj = { NULL, NULL };
+
+#ifdef DEBUG_FREELISTS
+// Some counters
+int n_alloc_obj = 0;
+int n_alloc_pt = 0;
+int n_alloc_edge = 0;
+#endif
 
 // Creation functions for objects
 Object *obj_new(void)
@@ -24,6 +32,9 @@ Object *obj_new(void)
     else
     {
         obj = calloc(1, sizeof(Object));
+#ifdef DEBUG_FREELISTS
+        n_alloc_obj++;
+#endif
     }
 
     obj->type = OBJ_NONE;
@@ -48,6 +59,9 @@ Point* point_new_raw()
     else
     {
         pt = calloc(1, sizeof(Point));
+#ifdef DEBUG_FREELISTS
+        n_alloc_pt++;
+#endif
     }
     return pt;
 }
@@ -105,37 +119,32 @@ Point* point_newpv(Point* p)
 // Edges. 
 Edge *edge_new(EDGE edge_type)
 {
-    StraightEdge *se;
-    ArcEdge *ae;
-    BezierEdge *be;
+    FreeEdge* fe;
+    Edge* e;
 
-    switch (edge_type & ~EDGE_CONSTRUCTION)
+    if (free_list_edge.head != NULL)
     {
-    case EDGE_STRAIGHT:
-    default:  // just to shut compiler up
-        se = calloc(1, sizeof(StraightEdge));
-        se->edge.hdr.type = OBJ_EDGE;
-        se->edge.hdr.ID = objid++;
-        se->edge.hdr.show_dims = edge_type & EDGE_CONSTRUCTION;
-        se->edge.type = edge_type;
-        return (Edge *)se;
-
-    case EDGE_ARC:
-        ae = calloc(1, sizeof(ArcEdge));
-        ae->edge.hdr.type = OBJ_EDGE;
-        ae->edge.hdr.ID = objid++;
-        ae->edge.hdr.show_dims = edge_type & EDGE_CONSTRUCTION;
-        ae->edge.type = edge_type;
-        return (Edge *)ae;
-
-    case EDGE_BEZIER:
-        be = calloc(1, sizeof(BezierEdge));
-        be->edge.hdr.type = OBJ_EDGE;
-        be->edge.hdr.ID = objid++;
-        be->edge.hdr.show_dims = edge_type & EDGE_CONSTRUCTION;
-        be->edge.type = edge_type;
-        return (Edge *)be;
+        fe = (FreeEdge *)free_list_edge.head;
+        free_list_edge.head = free_list_edge.head->next;
+        if (free_list_edge.head == NULL)
+            free_list_edge.tail = NULL;
+        memset(fe, 0, sizeof(FreeEdge));
     }
+    else
+    {
+        fe = calloc(1, sizeof(FreeEdge));
+#ifdef DEBUG_FREELISTS
+        n_alloc_edge++;
+#endif
+    }
+
+    e = (Edge*)fe;
+    e->hdr.type = OBJ_EDGE;
+    e->hdr.ID = objid++;
+    e->hdr.show_dims = edge_type & EDGE_CONSTRUCTION;
+    e->type = edge_type;
+
+    return e;
 }
 
 Face *face_new(FACE face_type, Plane norm)
@@ -420,11 +429,8 @@ purge_obj_top(Object *obj, OBJECT top_type)
     case OBJ_POINT:
         if (obj->ID == 0)
             break;              // it's already been freed
-        obj->next = (Object *)free_list_pt.head;
-        if (free_list_pt.head == NULL)
-            free_list_pt.tail = obj;
-        free_list_pt.head = obj;
         obj->ID = 0;
+        free_point(obj);
         break;
 
     case OBJ_EDGE:
@@ -447,8 +453,11 @@ purge_obj_top(Object *obj, OBJECT top_type)
             free_view_list_edge(e);
             break;
         }
-        if (top_type <= OBJ_FACE)       // If this edge is not part of a volume, we can safely delete it
-            free(obj);
+        //if (top_type <= OBJ_FACE)       // If this edge is not part of a volume, we can safely delete it
+        if (obj->ID == 0)
+            break;
+        obj->ID = 0;
+        free_edge(obj);
         break;
 
     case OBJ_FACE:
@@ -501,16 +510,43 @@ purge_obj(Object *obj)
     purge_obj_top(obj, obj->type);
 }
 
+// Free a list of temporary edges. They and their points have ID's of zero.
+// Points are never shared and may be placed directly in the free list.
 void
-purge_list(ListHead* list)
+purge_temp_edge_list(ListHead* list)
 {
     Object* obj;
     Object* nextobj = NULL;
+    EDGE type;
+    Edge* e;
+    ArcEdge *ae;
+    BezierEdge* be;
 
     for (obj = list->head; obj != NULL; obj = nextobj)
     {
         nextobj = obj->next;
-        purge_obj(obj);
+        ASSERT(obj->type == OBJ_EDGE, "Only edges should be in here");
+        ASSERT(obj->ID == 0, "Only temporary edges should be in here");
+        e = (Edge*)obj;
+        free_point((Object*)e->endpoints[0]);
+        free_point((Object*)e->endpoints[1]);
+        type = ((Edge*)obj)->type & ~EDGE_CONSTRUCTION;
+        switch (type)
+        {
+        case EDGE_ARC:
+            ae = (ArcEdge*)obj;
+            free_point((Object*)ae->centre);
+            free_view_list_edge(e);
+            break;
+
+        case EDGE_BEZIER:
+            be = (BezierEdge*)obj;
+            free_point((Object*)be->ctrlpoints[0]);
+            free_point((Object*)be->ctrlpoints[1]);
+            free_view_list_edge(e);
+            break;
+        }
+        free_edge(obj);
     }
 
     list->head = NULL;

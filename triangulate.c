@@ -465,9 +465,6 @@ gen_view_list_vol(Volume *vol)
     return TRUE;
 }
 
-#define SUPPORT_BARREL_FACES
-#define SUPPORT_BEZIER_FACES
-
 // Interpolate a bezier edge be at t using the bezctl points, giving a Point p.
 // The edge must have had its bezctl points placed into the correct order first.
 Point*
@@ -500,7 +497,7 @@ gen_view_list_face(Face* face)
     BezierEdge* be, * be0, * be2;
     Point cp[4][4];
     ListHead* list, **elists, **slists;
-    ListHead internal;
+    ListHead internal = { NULL, NULL };
     int first_arc;
     BOOL first_arc_forward;
 
@@ -759,7 +756,6 @@ gen_view_list_face(Face* face)
         free(elists);
         break;
 
-#ifdef SUPPORT_BARREL_FACES
     case FACE_BARREL:
         // For these faces, there are 4 edges only. Two are arcs. 
         // Find the first arc.
@@ -911,8 +907,6 @@ gen_view_list_face(Face* face)
         step = 1.0f / side_nsteps;
         s0 = (Point *)slists[0]->head->next;
         s1 = (Point *)slists[1]->head->next;
-        internal.head = NULL;
-        internal.tail = NULL;
         for (i = 1, t = step; i < side_nsteps; i++, t += step)
         {
             ArcEdge* ae = (ArcEdge*)edge_new(EDGE_ARC);
@@ -985,7 +979,7 @@ gen_view_list_face(Face* face)
         }
 
         // Free the internal edges now we no longer need them, and the point lists
-        purge_list(&internal);
+        purge_temp_edge_list(&internal);
         free_point_list(elists[0]);
         free_point_list(elists[side_nsteps]);
         free(elists);
@@ -994,9 +988,7 @@ gen_view_list_face(Face* face)
         free(slists);
 
         break;
-#endif // SUPPORT_BARREL_FACES
 
-#ifdef SUPPORT_BEZIER_FACES
     case FACE_BEZIER:
         // For these faces, there are 4 edges only. All of them are beziers. Construct the 4 internal
         // control points and use the resulting 16-point bezier surface to interpolate internal edges
@@ -1093,14 +1085,18 @@ gen_view_list_face(Face* face)
         be = (BezierEdge*)face->edges[1];
         t = length(be->bezctl[1], be->bezctl[0]) / length(be->bezctl[3], be->bezctl[0]);
         be->bezcurve[0] = bez_interp(be, t);
+        link_tail((Object*)be->bezcurve[0], &internal);
         t = length(be->bezctl[3], be->bezctl[2]) / length(be->bezctl[3], be->bezctl[0]);
         be->bezcurve[1] = bez_interp(be, 1.0f - t);
+        link_tail((Object*)be->bezcurve[1], &internal);
 
         be = (BezierEdge*)face->edges[3];
         t = length(be->bezctl[1], be->bezctl[0]) / length(be->bezctl[3], be->bezctl[0]);
         be->bezcurve[0] = bez_interp(be, t);
+        link_tail((Object*)be->bezcurve[0], &internal);
         t = length(be->bezctl[3], be->bezctl[2]) / length(be->bezctl[3], be->bezctl[0]);
         be->bezcurve[1] = bez_interp(be, 1.0f - t);
+        link_tail((Object*)be->bezcurve[1], &internal);
 
         // Get together the 16 control points for the bezier surface
         be = (BezierEdge*)face->edges[3];
@@ -1245,7 +1241,8 @@ gen_view_list_face(Face* face)
             }
         }
 
-        // Free the internal edges now we no longer need them, and the point lists
+        // Free the oncurve points now we no longer need them, and the point lists
+        free_point_list(&internal);
         for (i = 0; i < side_nsteps + 1; i++)
             free_point_list(elists[i]);
         free(elists);
@@ -1253,11 +1250,7 @@ gen_view_list_face(Face* face)
         free_point_list(slists[1]);
         free(slists);
 
-        // TODO free the bezcurve points
-
-
         break;
-#endif // SUPPORT_BEZIER_FACES
     }
 
     // The view list is valid, as is the 2D view list, the face normal, and the face's

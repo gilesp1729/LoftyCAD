@@ -757,6 +757,10 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                             // TODo what happens if face comes back NULL?
                         }
 
+                        // calculate the extruded heights
+                        if (parent->type == OBJ_VOLUME)
+                            calc_extrude_heights((Volume *)parent);
+
                         // If we have moved some part of another object containing view lists:
                         // Invalidate them, as any of them may have changed.
                         invalidate_all_view_lists
