@@ -143,6 +143,14 @@ export_object_tree(Group *tree, char *filename, int file_index)
     int i, k, baselen;
     int candidates[MAX_MATERIAL];
 
+    ASSERT(tree->mesh != NULL, "Tree mesh NULL");
+    ASSERT(tree->mesh_valid, "Tree mesh not valid");
+    if (tree->mesh == NULL || !tree->mesh_valid)
+        return;
+
+    // TODO: Make this a message box
+    ASSERT(tree->mesh_complete, "Mesh incomplete - writing unmerged objects");
+
     switch (file_index)
     {
     case 1: // Export to an STL file
@@ -150,10 +158,6 @@ export_object_tree(Group *tree, char *filename, int file_index)
         if (stl == NULL)
             return;
         fprintf_s(stl, "solid %s\n", tree->title);
-
-        ASSERT(tree->mesh != NULL, "Tree mesh NULL");
-        ASSERT(tree->mesh_valid, "Tree mesh not valid");
-        ASSERT(tree->mesh_complete, "Mesh incomplete - writing unmerged objects");
 
         num_exported_tri = 0;
         if (tree->mesh != NULL && tree->mesh_valid && !tree->mesh_merged)
@@ -471,10 +475,6 @@ export_object_tree(Group *tree, char *filename, int file_index)
         if (off == NULL)
             return;
         fprintf_s(off, "OFF\n");
-
-        ASSERT(tree->mesh != NULL, "Tree mesh NULL");
-        ASSERT(tree->mesh_valid, "Tree mesh not valid");
-        ASSERT(tree->mesh_complete, "Mesh incomplete - unmerged objects cannot be written");
 
         num_exported_tri = 0;
         num_exported_vertices = 0;

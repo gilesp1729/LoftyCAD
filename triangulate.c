@@ -7,6 +7,8 @@
 // Tessellator for rendering to GL.
 GLUtesselator *rtess = NULL;
 
+// Catch CGAL errors of various kinds
+char err[256];
 
 // Clear a bounding box to empty
 void
@@ -285,6 +287,19 @@ mesh_merge_op(OPERATION op, Mesh **mesh1, Mesh *mesh2)
     return rc;
 }
 
+// If a mesh operation fails due to an assertion or other error in CGAL,
+// gather up the incriminating evidence and flash it to the user in a
+// MessageBox. Return the OK/Cancel status.
+int
+inform_mesh_error(Object* obj)
+{
+    char buf[64];
+
+    hide_hint();
+    return MessageBox(auxGetHWND(), err, obj_description(obj, buf, 64, FALSE), MB_OKCANCEL | MB_ICONEXCLAMATION);
+}
+
+
 // Generate mesh for a class of operations for a group tree (or the object tree)
 void
 gen_view_list_tree_surfaces_op(OPERATION op, Group *tree, Group *parent_tree)
@@ -338,7 +353,10 @@ gen_view_list_tree_surfaces_op(OPERATION op, Group *tree, Group *parent_tree)
                 // Merge volume mesh to tree mesh
                 vol->mesh_merged = mesh_merge_op(op, &parent_tree->mesh, vol->mesh);
                 if (!vol->mesh_merged)
+                {
                     parent_tree->mesh_complete = FALSE;
+                    inform_mesh_error(obj);
+                }
 #ifdef DEBUG_WRITE_VOL_MESH
                 mesh_write_off("merge_vol", obj->ID, parent_tree->mesh);
 #endif
@@ -381,7 +399,10 @@ gen_view_list_tree_surfaces_op(OPERATION op, Group *tree, Group *parent_tree)
                     // Merge group mesh to tree mesh
                     group->mesh_merged = mesh_merge_op(op, parent_tree->mesh, group->mesh);
                     if (!group->mesh_merged)
+                    {
                         parent_tree->mesh_complete = FALSE;
+                        inform_mesh_error(obj);
+                    }
 #ifdef DEBUG_WRITE_VOL_MESH
                     mesh_write_off("merge_group", obj->ID, parent_tree->mesh);
 #endif

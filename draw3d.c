@@ -472,9 +472,6 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
 
             if (!group->mesh_complete)
             {
-                // TODO: Is this ever reached?
-                ASSERT(group->mesh_complete, "Mesh is not complete");
-
                 for (o = group->obj_list.head; o != NULL; o = o->next)
                 {
                     BOOL merged = FALSE;

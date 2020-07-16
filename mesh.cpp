@@ -7,8 +7,11 @@ typedef void(*FaceVertexCB)(void *arg, int nv, Vertex_index *vi);
 typedef void(*VertexCB)(void* arg, Vertex_index* v, float x, float y, float z);
 typedef void(*VertexCB_D)(void* arg, Vertex_index* v, double x, double y, double z);
 
+
 extern "C"
 {
+    extern char err[];
+
     void
         mesh_destroy(Mesh *mesh)
     {
@@ -92,7 +95,7 @@ extern "C"
             rc = (PMP::corefine_and_compute_union(*mesh1,
                 *mesh2,
                 *out,
-                params::vertex_point_map(mesh1_pm).visitor(visitor),
+                params::vertex_point_map(mesh1_pm).visitor(visitor).throw_on_self_intersection(true),
                 params::vertex_point_map(mesh2_pm),
                 params::vertex_point_map(out_pm)));
 
@@ -102,11 +105,15 @@ extern "C"
                 *mesh1_ptr = out;
             }
         }
-        catch (CGAL::Failure_exception &e)
+        catch (PMP::Corefinement::Self_intersection_exception& e)
         {
-            // TODO store file line and expr away someplace --> MessageBox
-            // TODO check self-intersections and throw for those too
             rc = 0;
+            strcpy_s(err, 256, "CGAL: Self-intersection exception");
+        }
+        catch (CGAL::Failure_exception& e)
+        {
+            rc = 0;
+            strcpy_s(err, 256, e.what());
         }
         return rc;
     }
