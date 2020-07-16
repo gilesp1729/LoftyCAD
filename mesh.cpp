@@ -12,6 +12,7 @@ extern "C"
 {
     extern char err[];
 
+    // Destroy a mesh.
     void
         mesh_destroy(Mesh *mesh)
     {
@@ -28,6 +29,7 @@ extern "C"
         return mesh;
     }
 
+    // Copy a mesh.
     Mesh *
         mesh_copy(Mesh *from)
     {
@@ -35,6 +37,7 @@ extern "C"
         return mesh;
     }
 
+    // Build a mesh by adding vertices or faces.
     void
         mesh_add_vertex(Mesh *mesh, double x, double y, double z, Vertex_index *vi)
     {
@@ -48,9 +51,8 @@ extern "C"
         *fi = mesh->add_face(*v1, *v2, *v3);
     }
 
-#define NON_INPLACE_ISSUE_4522
-// Non-in-place operations to work around CGAL issue #4522.
-#ifdef NON_INPLACE_ISSUE_4522
+// Non-in-place operations to work around CGAL issue #4522 (for CGAL 5.0) but also to keep the
+// original mesh intact (not corefined) in case of a non-fatal error.
     int // no BOOL here
         mesh_union(Mesh **mesh1_ptr, Mesh *mesh2)
     {
@@ -108,7 +110,7 @@ extern "C"
         catch (PMP::Corefinement::Self_intersection_exception& e)
         {
             rc = 0;
-            strcpy_s(err, 256, "CGAL: Self-intersection exception");
+            strcpy_s(err, 256, "CGAL: Self-intersection detected");
         }
         catch (CGAL::Failure_exception& e)
         {
@@ -227,115 +229,8 @@ extern "C"
 
         return rc;
     }
-#else // old in-place code, but with the ** pointer to maintain compatibility with caller
-    int // no BOOL here
-        mesh_union(Mesh** mesh1_ptr, Mesh* mesh2)
-    {
-        Mesh* mesh1 = *mesh1_ptr;
 
-        // Create new (or reference existing) property maps
-        Exact_point_map mesh1_exact_points =
-            mesh1->add_property_map<vertex_descriptor, EK::Point_3>("e:exact_point").first;
-        Exact_point_computed mesh1_exact_points_computed =
-            mesh1->add_property_map<vertex_descriptor, bool>("e:exact_points_computed").first;
-
-        Exact_point_map mesh2_exact_points =
-            mesh2->add_property_map<vertex_descriptor, EK::Point_3>("e:exact_point").first;
-        Exact_point_computed mesh2_exact_points_computed =
-            mesh2->add_property_map<vertex_descriptor, bool>("e:exact_points_computed").first;
-
-        Coref_point_map mesh1_pm(mesh1_exact_points, mesh1_exact_points_computed, *mesh1);
-        Coref_point_map mesh2_pm(mesh2_exact_points, mesh2_exact_points_computed, *mesh2);
-
-        Mesh::Property_map<Mesh::Face_index, int> mesh1_id =
-            mesh1->add_property_map<Mesh::Face_index, int>("f:id", 0).first;
-        Mesh::Property_map<Mesh::Face_index, int> mesh2_id =
-            mesh2->add_property_map<Mesh::Face_index, int>("f:id", 0).first;
-
-        Visitor visitor;
-        visitor.properties[mesh1] = mesh1_id;
-        visitor.properties[mesh2] = mesh2_id;
-
-        return (PMP::corefine_and_compute_union(*mesh1,
-            *mesh2,
-            *mesh1,
-            params::vertex_point_map(mesh1_pm).visitor(visitor),
-            params::vertex_point_map(mesh2_pm),
-            params::vertex_point_map(mesh1_pm)));
-    }
-
-    int // no BOOL here
-        mesh_intersection(Mesh **mesh1_ptr, Mesh *mesh2)
-    {
-        Mesh* mesh1 = *mesh1_ptr;
-
-        Exact_point_map mesh1_exact_points =
-            mesh1->add_property_map<vertex_descriptor, EK::Point_3>("e:exact_point").first;
-        Exact_point_computed mesh1_exact_points_computed =
-            mesh1->add_property_map<vertex_descriptor, bool>("e:exact_points_computed").first;
-
-        Exact_point_map mesh2_exact_points =
-            mesh2->add_property_map<vertex_descriptor, EK::Point_3>("e:exact_point").first;
-        Exact_point_computed mesh2_exact_points_computed =
-            mesh2->add_property_map<vertex_descriptor, bool>("e:exact_points_computed").first;
-
-        Coref_point_map mesh1_pm(mesh1_exact_points, mesh1_exact_points_computed, *mesh1);
-        Coref_point_map mesh2_pm(mesh2_exact_points, mesh2_exact_points_computed, *mesh2);
-
-        Mesh::Property_map<Mesh::Face_index, int> mesh1_id =
-            mesh1->add_property_map<Mesh::Face_index, int>("f:id", 0).first;
-        Mesh::Property_map<Mesh::Face_index, int> mesh2_id =
-            mesh2->add_property_map<Mesh::Face_index, int>("f:id", 0).first;
-
-        Visitor visitor;
-        visitor.properties[mesh1] = mesh1_id;
-        visitor.properties[mesh2] = mesh2_id;
-
-        return (PMP::corefine_and_compute_intersection(*mesh1,
-            *mesh2,
-            *mesh1,
-            params::vertex_point_map(mesh1_pm).visitor(visitor),
-            params::vertex_point_map(mesh2_pm),
-            params::vertex_point_map(mesh1_pm)));
-    }
-
-    int // no BOOL here
-        mesh_difference(Mesh **mesh1_ptr, Mesh *mesh2)
-    {
-        Mesh* mesh1 = *mesh1_ptr;
-
-        Exact_point_map mesh1_exact_points =
-            mesh1->add_property_map<vertex_descriptor, EK::Point_3>("e:exact_point").first;
-        Exact_point_computed mesh1_exact_points_computed =
-            mesh1->add_property_map<vertex_descriptor, bool>("e:exact_points_computed").first;
-
-        Exact_point_map mesh2_exact_points =
-            mesh2->add_property_map<vertex_descriptor, EK::Point_3>("e:exact_point").first;
-        Exact_point_computed mesh2_exact_points_computed =
-            mesh2->add_property_map<vertex_descriptor, bool>("e:exact_points_computed").first;
-
-        Coref_point_map mesh1_pm(mesh1_exact_points, mesh1_exact_points_computed, *mesh1);
-        Coref_point_map mesh2_pm(mesh2_exact_points, mesh2_exact_points_computed, *mesh2);
-
-        Mesh::Property_map<Mesh::Face_index, int> mesh1_id =
-            mesh1->add_property_map<Mesh::Face_index, int>("f:id", 0).first;
-        Mesh::Property_map<Mesh::Face_index, int> mesh2_id =
-            mesh2->add_property_map<Mesh::Face_index, int>("f:id", 0).first;
-
-        Visitor visitor;
-        visitor.properties[mesh1] = mesh1_id;
-        visitor.properties[mesh2] = mesh2_id;
-
-        return (PMP::corefine_and_compute_difference(*mesh1,
-            *mesh2,
-            *mesh1,
-            params::vertex_point_map(mesh1_pm).visitor(visitor),
-            params::vertex_point_map(mesh2_pm),
-            params::vertex_point_map(mesh1_pm)));
-    }
-
-#endif // NON_INPLACE_ISSUE_4522
-
+    // Routines for enumerating vertices in index or coord form.
     void
         mesh_foreach_vertex(Mesh* mesh, VertexCB callback, void* callback_arg)
     {
