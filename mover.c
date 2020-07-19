@@ -542,7 +542,7 @@ find_corner_edges(Object* obj, Object* parent, ListHead* halo)
             // picked face in the volume's face list. Note that:
             // - if the picked face has corner edges, there will be no corner faces edge-adjacent to it.
             // - that leaves the picked face being a side face, and any corner faces will be adjacent 
-            // to it in the fast list.
+            // to it in the volume's face list.
             face = (Face*)obj;
             if (face->has_corners)
                 return FALSE;

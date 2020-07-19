@@ -503,6 +503,31 @@ bez_interp(BezierEdge* be, float t)
     return point_newv((float)x, (float)y, (float)z);
 }
 
+// Check if a generated vertex is near one of the edge endpoints,
+// and store the facet normal in its local normal if found.
+void
+check_local(Point* v, Edge* e0, Plane* norm, PlaneRef** n)
+{
+    if (near_pt(v, e0->endpoints[0], SMALL_COORD))
+    {
+        (*n)->A = norm->A;
+        (*n)->B = norm->B;
+        (*n)->C = norm->C;
+        normalise_plane((Plane*)(*n));
+        (*n)->refpt = e0->endpoints[0];
+        (*n)++;
+    }
+    if (near_pt(v, e0->endpoints[1], SMALL_COORD))
+    {
+        (*n)->A = norm->A;
+        (*n)->B = norm->B;
+        (*n)->C = norm->C;
+        normalise_plane((Plane*)(*n));
+        (*n)->refpt = e0->endpoints[1];
+        (*n)++;
+    }
+}
+
 // Regenerate the unclipped view list for a face. While here, also calculate the outward
 // normal for the face. 
 void
@@ -521,6 +546,7 @@ gen_view_list_face(Face* face)
     ListHead internal = { NULL, NULL };
     int first_arc;
     BOOL first_arc_forward;
+    PlaneRef* n;
 
     //char buf[256];
 
@@ -917,14 +943,45 @@ gen_view_list_face(Face* face)
             }
         }
 
-        // Create internal arc edges:
-        // - centre interpolated between boundary arc edge centres
-        // - endpoints taken from side edge view list points
-        // - plane adjusted so VL points in same direction as the list at elists[0]
+        // Local normals for the endpoints of first_arc and its opposite number.
+        // The side edges are not consulted for these.
         e0 = face->edges[first_arc];
         e1 = face->edges[first_arc + 2];
         ae0 = (ArcEdge*)e0;
         ae1 = (ArcEdge*)e1;
+#if 0  // this is shite
+        n = face->local_norm;
+        n->A = e0->endpoints[0]->x - ae0->centre->x;
+        n->B = e0->endpoints[0]->y - ae0->centre->y;
+        n->C = e0->endpoints[0]->z - ae0->centre->z;
+        normalise_plane((Plane*)n);
+        n->refpt = e0->endpoints[0];
+        n++;
+        n->A = e0->endpoints[1]->x - ae0->centre->x;
+        n->B = e0->endpoints[1]->y - ae0->centre->y;
+        n->C = e0->endpoints[1]->z - ae0->centre->z;
+        normalise_plane((Plane*)n);
+        n->refpt = e0->endpoints[1];
+        n++;
+        n->A = e1->endpoints[0]->x - ae1->centre->x;
+        n->B = e1->endpoints[0]->y - ae1->centre->y;
+        n->C = e1->endpoints[0]->z - ae1->centre->z;
+        normalise_plane((Plane*)n);
+        n->refpt = e1->endpoints[0];
+        n++;
+        n->A = e1->endpoints[1]->x - ae1->centre->x;
+        n->B = e1->endpoints[1]->y - ae1->centre->y;
+        n->C = e1->endpoints[1]->z - ae1->centre->z;
+        normalise_plane((Plane*)n);
+        n->refpt = e1->endpoints[1];
+
+        face->n_local = 4;
+#endif
+
+        // Create internal arc edges:
+        // - centre interpolated between boundary arc edge centres
+        // - endpoints taken from side edge view list points
+        // - plane adjusted so VL points in same direction as the list at elists[0]
         step = 1.0f / side_nsteps;
         s0 = (Point *)slists[0]->head->next;
         s1 = (Point *)slists[1]->head->next;
@@ -968,6 +1025,8 @@ gen_view_list_face(Face* face)
         }
 
         // Link up boundary and internal edges into facets and store these in the face VL
+        n = face->local_norm;
+        face->n_local = 0;
         for (i = 1; i <= side_nsteps; i++)
         {
             for
@@ -987,6 +1046,12 @@ gen_view_list_face(Face* face)
                 p->flags = FLAG_NEW_FACET;
                 link_tail((Object*)p, &face->view_list);
 
+                // Check if we are on the corner points and remember their local normal
+                check_local(v, e0, &norm, &n);
+                check_local(vnext, e0, &norm, &n);
+                check_local(w, e1, &norm, &n);
+                check_local(wnext, e1, &norm, &n);
+
                 // Four points for the quad
                 p = point_newpv(v);
                 link_tail((Object*)p, &face->view_list);
@@ -998,6 +1063,7 @@ gen_view_list_face(Face* face)
                 link_tail((Object*)p, &face->view_list);
             }
         }
+        face->n_local = n - face->local_norm;
 
         // Free the internal edges now we no longer need them, and the point lists
         purge_temp_edge_list(&internal);
@@ -1231,6 +1297,10 @@ gen_view_list_face(Face* face)
         ASSERT(i == side_nsteps, "Row count mismatch");
 
         // Link up boundary and internal edges into facets and store these in the face VL
+        e0 = face->edges[0];
+        e1 = face->edges[2];
+        n = face->local_norm;
+        face->n_local = 0;
         for (i = 1; i <= side_nsteps; i++)
         {
             for
@@ -1250,6 +1320,12 @@ gen_view_list_face(Face* face)
                 p->flags = FLAG_NEW_FACET;
                 link_tail((Object*)p, &face->view_list);
 
+                // Check if we are on the corner points and remember their local normal
+                check_local(v, e0, &norm, &n);
+                check_local(vnext, e0, &norm, &n);
+                check_local(w, e1, &norm, &n);
+                check_local(wnext, e1, &norm, &n);
+
                 // Four points for the quad
                 p = point_newpv(v);
                 link_tail((Object*)p, &face->view_list);
@@ -1261,6 +1337,7 @@ gen_view_list_face(Face* face)
                 link_tail((Object*)p, &face->view_list);
             }
         }
+        face->n_local = n - face->local_norm;
 
         // Free the oncurve points now we no longer need them, and the point lists
         free_point_list(&internal);

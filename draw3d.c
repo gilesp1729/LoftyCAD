@@ -1759,7 +1759,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                 }
             }
 
-            // Normals for all the faces in a volume.
+            // Normals, and local normals, for all the faces in a volume.
             if (app_state == STATE_NONE && highlight_obj != NULL && highlight_obj->type == OBJ_VOLUME)
             {
                 Volume* vol = (Volume*)highlight_obj;
@@ -1767,10 +1767,11 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                 if (debug_view_normals)
                 {
                     Face* f;
+                    int i;
 
                     for (f = (Face*)vol->faces.head; f != NULL; f = (Face*)f->hdr.next)
                     {
-                        if (IS_FLAT(f))
+                        if (extrudible((Object *)f))
                         {
                             Plane* n = &f->normal;
 
@@ -1778,7 +1779,20 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                             glColor3d(1.0, 0.4, 0.4);
                             glBegin(GL_LINES);
                             glVertex3f(n->refpt.x, n->refpt.y, n->refpt.z);
-                            glVertex3f(n->refpt.x + n->A, n->refpt.y + n->B, n->refpt.z + n->C);
+                            glVertex3f(n->refpt.x + 3 * n->A, n->refpt.y + 3 * n->B, n->refpt.z + 3 * n->C);
+                            glEnd();
+                            glPopName();
+                        }
+
+                        for (i = 0; i < f->n_local; i++)
+                        {
+                            PlaneRef* n = &f->local_norm[i];
+
+                            glPushName(0);
+                            glColor3d(0.4, 0.4, 1.0);
+                            glBegin(GL_LINES);
+                            glVertex3f(n->refpt->x, n->refpt->y, n->refpt->z);
+                            glVertex3f(n->refpt->x + 2 * n->A, n->refpt->y + 2 * n->B, n->refpt->z + 2 * n->C);
                             glEnd();
                             glPopName();
                         }
@@ -1786,22 +1800,38 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                 }
             }
 
-            // The normal for a single highlighted face.
+            // The normal and any local normals for a single highlighted face.
             if (app_state == STATE_NONE && highlight_obj != NULL && highlight_obj->type == OBJ_FACE)
             {
                 Face* f = (Face*)highlight_obj;
+                int i;
 
-                if (debug_view_normals && IS_FLAT(f))
+                if (debug_view_normals)
                 {
-                    Plane* n = &f->normal;
+                    if (extrudible((Object*)f))
+                    {
+                        Plane* n = &f->normal;
 
-                    glPushName(0);
-                    glColor3d(1.0, 0.4, 0.4);
-                    glBegin(GL_LINES);
-                    glVertex3f(n->refpt.x, n->refpt.y, n->refpt.z);
-                    glVertex3f(n->refpt.x + n->A, n->refpt.y + n->B, n->refpt.z + n->C);
-                    glEnd();
-                    glPopName();
+                        glPushName(0);
+                        glColor3d(1.0, 0.4, 0.4);
+                        glBegin(GL_LINES);
+                        glVertex3f(n->refpt.x, n->refpt.y, n->refpt.z);
+                        glVertex3f(n->refpt.x + 3 * n->A, n->refpt.y + 3 * n->B, n->refpt.z + 3 * n->C);
+                        glEnd();
+                        glPopName();
+                    }
+                    for (i = 0; i < f->n_local; i++)
+                    {
+                        PlaneRef* n = &f->local_norm[i];
+
+                        glPushName(0);
+                        glColor3d(0.4, 0.4, 1.0);
+                        glBegin(GL_LINES);
+                        glVertex3f(n->refpt->x, n->refpt->y, n->refpt->z);
+                        glVertex3f(n->refpt->x + 2 * n->A, n->refpt->y + 2 * n->B, n->refpt->z + 2 * n->C);
+                        glEnd();
+                        glPopName();
+                    }
                 }
 
                 // The view list for a single highlighted face.

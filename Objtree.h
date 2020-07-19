@@ -135,14 +135,24 @@ typedef struct Point2D
     float y;
 } Point2D;
 
-// Plane definition
+// Plane definitions
 typedef struct Plane
 {
-    struct Point    refpt;          // Point that lies on the plane
     float           A;              // Vector of plane equation
     float           B;              // A(x-x1) + B(y-y1) + C(z-z1) = 0
     float           C;
+    struct Point    refpt;          // Point that lies on the plane
 } Plane;
+
+// Like a Plane, but references a Point, rather than containing one.
+// If only the ABC are used, it is interchangeable with a Plane.
+typedef struct PlaneRef
+{
+    float           A;              // Vector of plane equation
+    float           B;              // A(x-x1) + B(y-y1) + C(z-z1) = 0
+    float           C;
+    struct Point*   refpt;         // Pointer to a point that lies on the plane
+} PlaneRef;
 
 // Standard planes 
 typedef enum
@@ -244,6 +254,9 @@ typedef struct Face
     int             n_edges;        // the number of edges in the above array
     int             max_edges;      // the allocated size of the above array
     Plane           normal;         // What plane is the face lying in (if flat) 
+    PlaneRef        local_norm[12]; // Local normals for points round curved faces. 
+                                    // (8 for cylinders or barrels, 12 for bezier faces)
+    int             n_local;        // Number of valid local normals in the above.
     struct Volume   *vol;           // What volume references (owns) this face
     BOOL            paired;         // TRUE for the faces that can be extruded and have a height to 
                                     // their opposite number with an equal and opposite normal.
