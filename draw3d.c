@@ -1384,34 +1384,41 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         snap_to_scale(&length, key_status& AUX_CONTROL);
                         if (length != 0)
                         {
-                            // Move the picked face by a delta in XYZ up its own normal
-                            move_obj
-                            (
-                                picked_obj,
-                                face->normal.A * length,
-                                face->normal.B * length,
-                                face->normal.C * length
-                            );
-
-                            // Move any corner edges/faces adjacent to edges of this face
-                            move_corner_edges
-                            (
-                                &halo,
-                                face->normal.A * length,
-                                face->normal.B * length,
-                                face->normal.C * length
-                            );
-
-                            // Move any halo faces if called for
-                            if (view_halo)
+                            if (IS_FLAT(face))
                             {
-                                move_halo_around_face
+                                // Move the picked face by a delta in XYZ up its own normal
+                                move_obj
                                 (
-                                    face,
+                                    picked_obj,
                                     face->normal.A * length,
                                     face->normal.B * length,
                                     face->normal.C * length
                                 );
+
+                                // Move any corner edges/faces adjacent to edges of this face
+                                move_corner_edges
+                                (
+                                    &halo,
+                                    face->normal.A * length,
+                                    face->normal.B * length,
+                                    face->normal.C * length
+                                );
+
+                                // Move any halo faces if called for
+                                if (view_halo)
+                                {
+                                    move_halo_around_face
+                                    (
+                                        face,
+                                        face->normal.A * length,
+                                        face->normal.B * length,
+                                        face->normal.C * length
+                                    );
+                                }
+                            }
+                            else    // Curved faces get their points extruded by their local normals
+                            {
+                                extrude_local(face, length);
                             }
                             clear_move_copy_flags((Object*)face->vol); // need to do on whole volume if moving halo.
                             picked_point = new_point;
@@ -1759,7 +1766,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                 }
             }
 
-            // Normals, and local normals, for all the faces in a volume.
+            // Normals (red) and local normals (blue) for all the faces in a volume.
             if (app_state == STATE_NONE && highlight_obj != NULL && highlight_obj->type == OBJ_VOLUME)
             {
                 Volume* vol = (Volume*)highlight_obj;

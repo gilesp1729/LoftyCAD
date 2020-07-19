@@ -508,6 +508,9 @@ bez_interp(BezierEdge* be, float t)
 void
 check_local(Point* v, Edge* e0, Plane* norm, PlaneRef** n)
 {
+    if (e0 == NULL)     // shoud never happen
+        return;
+
     if (near_pt(v, e0->endpoints[0], SMALL_COORD))
     {
         (*n)->A = norm->A;
@@ -704,6 +707,7 @@ gen_view_list_face(Face* face)
 
         last_point = face->initial_point;
         c = 0;
+        e0 = e1 = NULL; // just to shut compiler up
 
         for (i = 0; i < face->n_edges; i++)
         {
@@ -735,6 +739,11 @@ gen_view_list_face(Face* face)
                 gen_view_list_bez((BezierEdge*)e);
 
             copy_view_list_cyl:
+                if (c == 0)
+                    e0 = e;
+                else
+                    e1 = e;
+
                 if (last_point == e->endpoints[c])
                 {
                     last_point = e->endpoints[1 - c];
@@ -769,7 +778,8 @@ gen_view_list_face(Face* face)
         ASSERT(c == 2, "Should be exactly 2 curved edges in a cylinder face");
 
         // Join up corresponding groups of 2 points in each list into facets.
-
+        n = face->local_norm;
+        face->n_local = 0;
         for
         (
             v = (Point*)elists[0]->head, w = (Point*)elists[1]->head;
@@ -787,6 +797,12 @@ gen_view_list_face(Face* face)
             p->flags = FLAG_NEW_FACET;
             link_tail((Object*)p, &face->view_list);
 
+            // Check if we are on the corner points and remember their local normal
+            check_local(v, e0, &norm, &n);
+            check_local(vnext, e0, &norm, &n);
+            check_local(w, e1, &norm, &n);
+            check_local(wnext, e1, &norm, &n);
+
             // Four points for the quad
             p = point_newpv(v);
             link_tail((Object*)p, &face->view_list);
@@ -797,6 +813,7 @@ gen_view_list_face(Face* face)
             p = point_newpv(w);
             link_tail((Object*)p, &face->view_list);
         }
+        face->n_local = n - face->local_norm;
 
         free_point_list(elists[0]);
         free_point_list(elists[1]);
@@ -943,40 +960,10 @@ gen_view_list_face(Face* face)
             }
         }
 
-        // Local normals for the endpoints of first_arc and its opposite number.
-        // The side edges are not consulted for these.
         e0 = face->edges[first_arc];
         e1 = face->edges[first_arc + 2];
         ae0 = (ArcEdge*)e0;
         ae1 = (ArcEdge*)e1;
-#if 0  // this is shite
-        n = face->local_norm;
-        n->A = e0->endpoints[0]->x - ae0->centre->x;
-        n->B = e0->endpoints[0]->y - ae0->centre->y;
-        n->C = e0->endpoints[0]->z - ae0->centre->z;
-        normalise_plane((Plane*)n);
-        n->refpt = e0->endpoints[0];
-        n++;
-        n->A = e0->endpoints[1]->x - ae0->centre->x;
-        n->B = e0->endpoints[1]->y - ae0->centre->y;
-        n->C = e0->endpoints[1]->z - ae0->centre->z;
-        normalise_plane((Plane*)n);
-        n->refpt = e0->endpoints[1];
-        n++;
-        n->A = e1->endpoints[0]->x - ae1->centre->x;
-        n->B = e1->endpoints[0]->y - ae1->centre->y;
-        n->C = e1->endpoints[0]->z - ae1->centre->z;
-        normalise_plane((Plane*)n);
-        n->refpt = e1->endpoints[0];
-        n++;
-        n->A = e1->endpoints[1]->x - ae1->centre->x;
-        n->B = e1->endpoints[1]->y - ae1->centre->y;
-        n->C = e1->endpoints[1]->z - ae1->centre->z;
-        normalise_plane((Plane*)n);
-        n->refpt = e1->endpoints[1];
-
-        face->n_local = 4;
-#endif
 
         // Create internal arc edges:
         // - centre interpolated between boundary arc edge centres

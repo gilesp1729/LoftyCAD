@@ -471,6 +471,21 @@ move_obj(Object* obj, float xoffset, float yoffset, float zoffset)
     }
 }
 
+// Move a face by local normals (each boundary point is assumed to have a local normal
+// in the face's PlaneRef array)
+void
+extrude_local(Face* face, float length)
+{
+    int i;
+
+    for (i = 0; i < face->n_local; i++)
+    {
+        PlaneRef* n = &face->local_norm[i];
+
+        move_obj((Object *)n->refpt, n->A * length, n->B * length, n->C * length);
+    }
+}
+
 // Find any adjacent round/chamfer corner edges to the given edge or face
 // that need moving along with it. If a face is being picked, return faces that
 // need moving (not just edges) since they will be used for highlighting.

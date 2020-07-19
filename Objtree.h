@@ -424,6 +424,7 @@ void free_bucket(Point ***bucket);
 // Copy and move object (mover.c)
 Object *copy_obj(Object *obj, float xoffset, float yoffset, float zoffset);
 void move_obj(Object *obj, float xoffset, float yoffset, float zoffset);
+void extrude_local(Face* face, float length);
 void calc_halo_params(Face* face, ListHead *halo);
 void move_halo_around_face(Face* face, float xoffset, float yoffset, float zoffset);
 BOOL find_corner_edges(Object* obj, Object* parent, ListHead *halo);
