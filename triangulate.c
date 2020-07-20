@@ -1120,8 +1120,20 @@ gen_view_list_face(Face* face)
             // Get the t-values for the edge's control points. Note that this is a rather
             // arbitrary approximation, and there are probably better (but not perfect..) 
             // ways to do it when the curvature gets large.
+
             be->t1 = length(be->bezctl[1], be->bezctl[0]) / length(be->bezctl[3], be->bezctl[0]);
             be->t2 = 1 - length(be->bezctl[3], be->bezctl[2]) / length(be->bezctl[3], be->bezctl[0]);
+#if 0 // Not sure how to do this best...
+            be->t1 = dot
+            (
+                be->bezctl[1]->x - be->bezctl[0]->x,
+                be->bezctl[1]->y - be->bezctl[0]->y,
+                be->bezctl[1]->z - be->bezctl[0]->z,
+                be->bezctl[3]->x - be->bezctl[0]->x,
+                be->bezctl[3]->y - be->bezctl[0]->y,
+                be->bezctl[3]->z - be->bezctl[0]->z
+            ) / length(be->bezctl[3], be->bezctl[0]);
+#endif
         }
 
         // Create on-curve intermediate points for the side edges, to help calculation

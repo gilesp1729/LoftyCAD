@@ -25,6 +25,7 @@
 #define IDB_CHAMFER_RECT                22
 #define IDB_ROTATE                      22
 #define IDB_TEXT                        23
+#define IDB_EXTRUDE_LOCAL               24
 #define IDD_LOFTYCAD_DIALOG             102
 #define IDS_APP_TITLE                   103
 #define IDD_ABOUTBOX                    103
@@ -52,6 +53,7 @@
 #define IDS_SCALE                       122
 #define IDS_ROTATE                      123
 #define IDS_TEXT                        124
+#define IDS_EXTRUDE_LOCAL               125
 #define IDR_MAINFRAME                   128
 #define IDD_TOOLBAR                     129
 #define IDI_RECT                        131
@@ -83,6 +85,8 @@
 #define IDI_ROTATE                      159
 #define IDC_SQUIGGLE                    160
 #define IDI_TEXT                        160
+#define IDI_EXTRUDE1                    161
+#define IDI_EXTRUDE_LOCAL               161
 #define IDC_EDGE1                       162
 #define IDD_MATERIALS                   162
 #define IDC_EDGE2                       163

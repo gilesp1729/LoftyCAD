@@ -158,6 +158,7 @@
     <Image Include="icon-const-rect.ico" />
     <Image Include="icon-edge.ico" />
     <Image Include="icon-extrude.ico" />
+    <Image Include="icon-extrudelocal.ico" />
     <Image Include="icon-point.ico" />
     <Image Include="icon-rect.ico" />
     <Image Include="icon-rotate.ico" />
