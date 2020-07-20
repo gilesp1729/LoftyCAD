@@ -503,40 +503,12 @@ bez_interp(BezierEdge* be, float t)
     return point_newv((float)x, (float)y, (float)z);
 }
 
-// Check if a generated vertex is near one of the edge endpoints,
-// and store the facet normal in its local normal if found.
-void
-check_local(Point* v, Edge* e0, Plane* norm, PlaneRef** n)
-{
-    if (e0 == NULL)     // shoud never happen
-        return;
-
-    if (near_pt(v, e0->endpoints[0], SMALL_COORD))
-    {
-        (*n)->A = norm->A;
-        (*n)->B = norm->B;
-        (*n)->C = norm->C;
-        normalise_plane((Plane*)(*n));
-        (*n)->refpt = e0->endpoints[0];
-        (*n)++;
-    }
-    if (near_pt(v, e0->endpoints[1], SMALL_COORD))
-    {
-        (*n)->A = norm->A;
-        (*n)->B = norm->B;
-        (*n)->C = norm->C;
-        normalise_plane((Plane*)(*n));
-        (*n)->refpt = e0->endpoints[1];
-        (*n)++;
-    }
-}
-
 // Regenerate the unclipped view list for a face. While here, also calculate the outward
 // normal for the face. 
 void
 gen_view_list_face(Face* face)
 {
-    int i, c, bez_nsteps, side_nsteps;
+    int i, j, c, bez_nsteps, side_nsteps;
     float step, t;
     double u, u_step, v_step;
     Edge* e, *e0, *e1;
@@ -544,14 +516,24 @@ gen_view_list_face(Face* face)
     Point* p, * v, * w, *s0, *s1;
     ArcEdge* ae0, *ae1;
     BezierEdge* be, * be0, * be2;
-    Point cp[4][4];
     ListHead* list, **elists, **slists;
     ListHead internal = { NULL, NULL };
     int first_arc;
     BOOL first_arc_forward;
-    PlaneRef* n;
+    PlaneRef* lnorm;
 
     //char buf[256];
+
+    // Struct for corner/control points, their (u,v) values, and the Point they refer back to
+    struct
+    {
+        float x;
+        float y;
+        float z;
+        float u;
+        float v;
+        Point* p;
+    } *pt, cp[4][4];
 
     // Index struct to control order of gathering view list point an barrel/bezier edges
     struct
@@ -778,8 +760,6 @@ gen_view_list_face(Face* face)
         ASSERT(c == 2, "Should be exactly 2 curved edges in a cylinder face");
 
         // Join up corresponding groups of 2 points in each list into facets.
-        n = face->local_norm;
-        face->n_local = 0;
         for
         (
             v = (Point*)elists[0]->head, w = (Point*)elists[1]->head;
@@ -797,12 +777,6 @@ gen_view_list_face(Face* face)
             p->flags = FLAG_NEW_FACET;
             link_tail((Object*)p, &face->view_list);
 
-            // Check if we are on the corner points and remember their local normal
-            check_local(v, e0, &norm, &n);
-            check_local(vnext, e0, &norm, &n);
-            check_local(w, e1, &norm, &n);
-            check_local(wnext, e1, &norm, &n);
-
             // Four points for the quad
             p = point_newpv(v);
             link_tail((Object*)p, &face->view_list);
@@ -813,7 +787,6 @@ gen_view_list_face(Face* face)
             p = point_newpv(w);
             link_tail((Object*)p, &face->view_list);
         }
-        face->n_local = n - face->local_norm;
 
         free_point_list(elists[0]);
         free_point_list(elists[1]);
@@ -1012,8 +985,6 @@ gen_view_list_face(Face* face)
         }
 
         // Link up boundary and internal edges into facets and store these in the face VL
-        n = face->local_norm;
-        face->n_local = 0;
         for (i = 1; i <= side_nsteps; i++)
         {
             for
@@ -1033,12 +1004,6 @@ gen_view_list_face(Face* face)
                 p->flags = FLAG_NEW_FACET;
                 link_tail((Object*)p, &face->view_list);
 
-                // Check if we are on the corner points and remember their local normal
-                check_local(v, e0, &norm, &n);
-                check_local(vnext, e0, &norm, &n);
-                check_local(w, e1, &norm, &n);
-                check_local(wnext, e1, &norm, &n);
-
                 // Four points for the quad
                 p = point_newpv(v);
                 link_tail((Object*)p, &face->view_list);
@@ -1050,7 +1015,6 @@ gen_view_list_face(Face* face)
                 link_tail((Object*)p, &face->view_list);
             }
         }
-        face->n_local = n - face->local_norm;
 
         // Free the internal edges now we no longer need them, and the point lists
         purge_temp_edge_list(&internal);
@@ -1152,27 +1116,31 @@ gen_view_list_face(Face* face)
                 be->bezctl[2] = be->ctrlpoints[0];
                 be->bezctl[3] = e->endpoints[0];
             }
+
+            // Get the t-values for the edge's control points. Note that this is a rather
+            // arbitrary approximation, and there are probably better (but not perfect..) 
+            // ways to do it when the curvature gets large.
+            be->t1 = length(be->bezctl[1], be->bezctl[0]) / length(be->bezctl[3], be->bezctl[0]);
+            be->t2 = 1 - length(be->bezctl[3], be->bezctl[2]) / length(be->bezctl[3], be->bezctl[0]);
         }
 
         // Create on-curve intermediate points for the side edges, to help calculation
         // of the 4 internal control points later on.
         be = (BezierEdge*)face->edges[1];
-        t = length(be->bezctl[1], be->bezctl[0]) / length(be->bezctl[3], be->bezctl[0]);
-        be->bezcurve[0] = bez_interp(be, t);
+        be->bezcurve[0] = bez_interp(be, be->t1);
         link_tail((Object*)be->bezcurve[0], &internal);
-        t = length(be->bezctl[3], be->bezctl[2]) / length(be->bezctl[3], be->bezctl[0]);
-        be->bezcurve[1] = bez_interp(be, 1.0f - t);
+        be->bezcurve[1] = bez_interp(be, be->t2);
         link_tail((Object*)be->bezcurve[1], &internal);
 
         be = (BezierEdge*)face->edges[3];
-        t = length(be->bezctl[1], be->bezctl[0]) / length(be->bezctl[3], be->bezctl[0]);
-        be->bezcurve[0] = bez_interp(be, t);
+        be->bezcurve[0] = bez_interp(be, be->t1);
         link_tail((Object*)be->bezcurve[0], &internal);
-        t = length(be->bezctl[3], be->bezctl[2]) / length(be->bezctl[3], be->bezctl[0]);
-        be->bezcurve[1] = bez_interp(be, 1.0f - t);
+        be->bezcurve[1] = bez_interp(be, be->t2);
         link_tail((Object*)be->bezcurve[1], &internal);
 
-        // Get together the 16 control points for the bezier surface
+        // Get together the 16 control points for the bezier surface. Each one has the (u,v) of the
+        // point on the surface, as well as the underlying control point, to help calculation of
+        // their local normals later on. (a NULL point means we don't need the normal)
         be = (BezierEdge*)face->edges[3];
         be0 = (BezierEdge*)face->edges[0];
         be2 = (BezierEdge*)face->edges[2];
@@ -1180,55 +1148,107 @@ gen_view_list_face(Face* face)
         cp[0][0].x = be->bezctl[0]->x;
         cp[0][0].y = be->bezctl[0]->y;
         cp[0][0].z = be->bezctl[0]->z;
+        cp[0][0].u = 0;
+        cp[0][0].v = 0;
+        cp[0][0].p = be->bezctl[0];
+
         cp[1][0].x = be->bezctl[1]->x;
         cp[1][0].y = be->bezctl[1]->y;
         cp[1][0].z = be->bezctl[1]->z;
+        cp[1][0].u = be->t1;
+        cp[1][0].v = 0;
+        cp[1][0].p = be->bezctl[1];
+
         cp[2][0].x = be->bezctl[2]->x;
         cp[2][0].y = be->bezctl[2]->y;
         cp[2][0].z = be->bezctl[2]->z;
+        cp[2][0].u = be->t2;
+        cp[2][0].v = 0;
+        cp[2][0].p = be->bezctl[2];
+
         cp[3][0].x = be->bezctl[3]->x;
         cp[3][0].y = be->bezctl[3]->y;
         cp[3][0].z = be->bezctl[3]->z;
+        cp[3][0].u = 1;
+        cp[3][0].v = 0;
+        cp[3][0].p = be->bezctl[3];
 
         cp[0][1].x = be0->bezctl[1]->x;
         cp[0][1].y = be0->bezctl[1]->y;
         cp[0][1].z = be0->bezctl[1]->z;
+        cp[0][1].u = 0;
+        cp[0][1].v = be0->t1;
+        cp[0][1].p = be0->bezctl[1];
+
         cp[1][1].x = be->bezcurve[0]->x + (be0->bezctl[1]->x - be0->bezctl[0]->x);
         cp[1][1].y = be->bezcurve[0]->y + (be0->bezctl[1]->y - be0->bezctl[0]->y);
         cp[1][1].z = be->bezcurve[0]->z + (be0->bezctl[1]->z - be0->bezctl[0]->z);
+        cp[1][1].p = NULL; 
+
         cp[2][1].x = be->bezcurve[1]->x + (be2->bezctl[1]->x - be2->bezctl[0]->x);
         cp[2][1].y = be->bezcurve[1]->y + (be2->bezctl[1]->y - be2->bezctl[0]->y);
         cp[2][1].z = be->bezcurve[1]->z + (be2->bezctl[1]->z - be2->bezctl[0]->z);
+        cp[2][1].p = NULL;
+
         cp[3][1].x = be2->bezctl[1]->x;
         cp[3][1].y = be2->bezctl[1]->y;
         cp[3][1].z = be2->bezctl[1]->z;
+        cp[3][1].u = 1;
+        cp[3][1].v = be2->t1;
+        cp[3][1].p = be2->bezctl[1];
 
         be = (BezierEdge*)face->edges[1];
         cp[0][2].x = be0->bezctl[2]->x;
         cp[0][2].y = be0->bezctl[2]->y;
         cp[0][2].z = be0->bezctl[2]->z;
+        cp[0][2].u = 0;
+        cp[0][2].v = be0->t2;
+        cp[0][2].p = be0->bezctl[2];
+
         cp[1][2].x = be->bezcurve[0]->x + (be0->bezctl[2]->x - be0->bezctl[3]->x);
         cp[1][2].y = be->bezcurve[0]->y + (be0->bezctl[2]->y - be0->bezctl[3]->y);
         cp[1][2].z = be->bezcurve[0]->z + (be0->bezctl[2]->z - be0->bezctl[3]->z);
+        cp[1][2].p = NULL;
+
         cp[2][2].x = be->bezcurve[1]->x + (be2->bezctl[2]->x - be2->bezctl[3]->x);
         cp[2][2].y = be->bezcurve[1]->y + (be2->bezctl[2]->y - be2->bezctl[3]->y);
         cp[2][2].z = be->bezcurve[1]->z + (be2->bezctl[2]->z - be2->bezctl[3]->z);
+        cp[2][2].p = NULL;
+
         cp[3][2].x = be2->bezctl[2]->x;
         cp[3][2].y = be2->bezctl[2]->y;
         cp[3][2].z = be2->bezctl[2]->z;
+        cp[3][2].u = 1;
+        cp[3][2].v = be2->t2;
+        cp[3][2].p = be2->bezctl[2];
 
         cp[0][3].x = be->bezctl[0]->x;
         cp[0][3].y = be->bezctl[0]->y;
         cp[0][3].z = be->bezctl[0]->z;
+        cp[0][3].u = 0;
+        cp[0][3].v = 1;
+        cp[0][3].p = be->bezctl[0];
+
         cp[1][3].x = be->bezctl[1]->x;
         cp[1][3].y = be->bezctl[1]->y;
         cp[1][3].z = be->bezctl[1]->z;
+        cp[1][3].u = be->t1;
+        cp[1][3].v = 1;
+        cp[1][3].p = be->bezctl[1];
+
         cp[2][3].x = be->bezctl[2]->x;
         cp[2][3].y = be->bezctl[2]->y;
         cp[2][3].z = be->bezctl[2]->z;
+        cp[2][3].u = be->t2;
+        cp[2][3].v = 1;
+        cp[2][3].p = be->bezctl[2];
+
         cp[3][3].x = be->bezctl[3]->x;
         cp[3][3].y = be->bezctl[3]->y;
         cp[3][3].z = be->bezctl[3]->z;
+        cp[3][3].u = 1;
+        cp[3][3].v = 1;
+        cp[3][3].p = be->bezctl[3];
 
         // Create internal view list points by 2D bezier interpolation. We only do the 
         // internal ones this way; the boundary points are directly copied from their edge's
@@ -1283,11 +1303,78 @@ gen_view_list_face(Face* face)
         }
         ASSERT(i == side_nsteps, "Row count mismatch");
 
-        // Link up boundary and internal edges into facets and store these in the face VL
-        e0 = face->edges[0];
-        e1 = face->edges[2];
-        n = face->local_norm;
+        // Calculate the local normals by summing derivatives at the control points to
+        // get tangents in the u and v directions, and crossing those to get the normal
+        lnorm = face->local_norm;
         face->n_local = 0;
+        for (i = 0; i < 4; i++)
+        {
+            double u, v, u1, v1, bu[4], bdu[4], bv[4], bdv[4];
+
+            for (j = 0; j < 4; j++)
+            {
+                int m, n; 
+                Point udv, vdu, ln;
+
+                pt = &cp[i][j];
+                if (pt->p == NULL)  // skip the purely internal ones
+                    continue;
+
+                u = pt->u;
+                u1 = 1 - u;
+                v = pt->v;
+                v1 = 1 - v;
+
+                // There's a little wasted time doing these in the inner loop, but what the hey.
+                bu[0] = u1 * u1 * u1;
+                bu[1] = 3 * u * u1 * u1;
+                bu[2] = 3 * u * u * u1;
+                bu[3] = u * u * u;
+
+                bdu[0] = -3 * u1 * u1;
+                bdu[1] = 3 * u1 * u1 - 6 * u * u1;
+                bdu[2] = 6 * u * u1 - 3 * u * u;
+                bdu[3] = 3 * u * u;
+
+                bv[0] = v1 * v1 * v1;
+                bv[1] = 3 * v * v1 * v1;
+                bv[2] = 3 * v * v * v1;
+                bv[3] = v * v * v;
+
+                bdv[0] = -3 * v1 * v1;
+                bdv[1] = 3 * v1 * v1 - 6 * v * v1;
+                bdv[2] = 6 * v * v1 - 3 * v * v;
+                bdv[3] = 3 * v * v;
+
+                udv.x = udv.y = udv.z = 0;
+                vdu.x = vdu.y = vdu.z = 0;
+                for (m = 0; m < 4; m++)
+                {
+                    for (n = 0; n < 4; n++)
+                    {
+                        udv.x += bu[m] * bdv[n] * cp[m][n].x;
+                        udv.y += bu[m] * bdv[n] * cp[m][n].y;
+                        udv.z += bu[m] * bdv[n] * cp[m][n].z;
+
+                        vdu.x += bdu[m] * bv[n] * cp[m][n].x;
+                        vdu.y += bdu[m] * bv[n] * cp[m][n].y;
+                        vdu.z += bdu[m] * bv[n] * cp[m][n].z;
+                    }
+                }
+
+                normalise_point(&udv);
+                normalise_point(&vdu);
+                pcross(&udv, &vdu, &ln);
+                lnorm->A = ln.x;
+                lnorm->B = ln.y;
+                lnorm->C = ln.z;
+                lnorm->refpt = pt->p;
+                lnorm++;
+            }
+        }
+        face->n_local = lnorm - face->local_norm;
+
+        // Link up boundary and internal edges into facets and store these in the face VL
         for (i = 1; i <= side_nsteps; i++)
         {
             for
@@ -1307,12 +1394,6 @@ gen_view_list_face(Face* face)
                 p->flags = FLAG_NEW_FACET;
                 link_tail((Object*)p, &face->view_list);
 
-                // Check if we are on the corner points and remember their local normal
-                check_local(v, e0, &norm, &n);
-                check_local(vnext, e0, &norm, &n);
-                check_local(w, e1, &norm, &n);
-                check_local(wnext, e1, &norm, &n);
-
                 // Four points for the quad
                 p = point_newpv(v);
                 link_tail((Object*)p, &face->view_list);
@@ -1324,7 +1405,6 @@ gen_view_list_face(Face* face)
                 link_tail((Object*)p, &face->view_list);
             }
         }
-        face->n_local = n - face->local_norm;
 
         // Free the oncurve points now we no longer need them, and the point lists
         free_point_list(&internal);

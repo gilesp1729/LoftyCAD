@@ -484,6 +484,12 @@ extrude_local(Face* face, float length)
 
         move_obj((Object *)n->refpt, n->A * length, n->B * length, n->C * length);
     }
+
+    // If the face contains arcs, their normals need to be recalculated.
+
+
+
+
 }
 
 // Find any adjacent round/chamfer corner edges to the given edge or face
