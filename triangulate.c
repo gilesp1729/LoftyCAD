@@ -1071,6 +1071,8 @@ gen_view_list_face(Face* face)
         last_point = face->initial_point;
         for (i = 0; i < face->n_edges; i++)
         {
+            float l30;
+
             e = face->edges[i];
             be = (BezierEdge*)e;
             list = indx[i].list;
@@ -1119,11 +1121,14 @@ gen_view_list_face(Face* face)
 
             // Get the t-values for the edge's control points. Note that this is a rather
             // arbitrary approximation, and there are probably better (but not perfect..) 
-            // ways to do it when the curvature gets large.
+            // ways to do it when the curvature gets large. Project the control point leg
+            // onto the line between the endpoints.
 
+#if 0 // simple length division suffers when curvature is large
             be->t1 = length(be->bezctl[1], be->bezctl[0]) / length(be->bezctl[3], be->bezctl[0]);
             be->t2 = 1 - length(be->bezctl[3], be->bezctl[2]) / length(be->bezctl[3], be->bezctl[0]);
-#if 0 // Not sure how to do this best...
+#endif // 0
+            l30 = length(be->bezctl[3], be->bezctl[0]);
             be->t1 = dot
             (
                 be->bezctl[1]->x - be->bezctl[0]->x,
@@ -1132,8 +1137,16 @@ gen_view_list_face(Face* face)
                 be->bezctl[3]->x - be->bezctl[0]->x,
                 be->bezctl[3]->y - be->bezctl[0]->y,
                 be->bezctl[3]->z - be->bezctl[0]->z
-            ) / length(be->bezctl[3], be->bezctl[0]);
-#endif
+            ) / (l30 * l30);
+            be->t2 = 1 - dot
+            (
+                be->bezctl[3]->x - be->bezctl[2]->x,
+                be->bezctl[3]->y - be->bezctl[2]->y,
+                be->bezctl[3]->z - be->bezctl[2]->z,
+                be->bezctl[3]->x - be->bezctl[0]->x,
+                be->bezctl[3]->y - be->bezctl[0]->y,
+                be->bezctl[3]->z - be->bezctl[0]->z
+            ) / (l30 * l30);
         }
 
         // Create on-curve intermediate points for the side edges, to help calculation
@@ -1321,7 +1334,8 @@ gen_view_list_face(Face* face)
         face->n_local = 0;
         for (i = 0; i < 4; i++)
         {
-            double u, v, u1, v1, bu[4], bdu[4], bv[4], bdv[4];
+            // No need for great accuracy in the normals
+            float u, v, u1, v1, bu[4], bdu[4], bv[4], bdv[4];
 
             for (j = 0; j < 4; j++)
             {
