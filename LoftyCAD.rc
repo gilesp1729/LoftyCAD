@@ -746,6 +746,8 @@ IDC_RESIZE2             CURSOR                  "resize2.cur"
 
 IDC_FACE4               CURSOR                  "face4.cur"
 
+IDC_FACE5               CURSOR                  "face5.cur"
+
 
 /////////////////////////////////////////////////////////////////////////////
 //

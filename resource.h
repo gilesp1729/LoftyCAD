@@ -85,7 +85,6 @@
 #define IDI_ROTATE                      159
 #define IDC_SQUIGGLE                    160
 #define IDI_TEXT                        160
-#define IDI_EXTRUDE1                    161
 #define IDI_EXTRUDE_LOCAL               161
 #define IDC_EDGE1                       162
 #define IDD_MATERIALS                   162
@@ -105,6 +104,7 @@
 #define IDC_RESIZE1                     170
 #define IDC_RESIZE2                     171
 #define IDC_FACE4                       172
+#define IDC_FACE5                       173
 #define IDC_DEBUG                       1002
 #define IDB_CLEARDEBUG                  1003
 #define IDC_DIMENSIONS                  1004
