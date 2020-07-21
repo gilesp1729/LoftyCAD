@@ -300,8 +300,9 @@ inform_mesh_error(Object* obj)
 }
 
 
-// Generate mesh for a class of operations for a group tree (or the object tree)
-void
+// Generate mesh for a class of operations for a group tree (or the object tree).
+// Return FALSE if an error occurred and the user cancelled via the message box.
+BOOL
 gen_view_list_tree_surfaces_op(OPERATION op, Group *tree, Group *parent_tree)
 {
     Object *obj;
@@ -355,7 +356,11 @@ gen_view_list_tree_surfaces_op(OPERATION op, Group *tree, Group *parent_tree)
                 if (!vol->mesh_merged)
                 {
                     parent_tree->mesh_complete = FALSE;
-                    inform_mesh_error(obj);
+                    if (inform_mesh_error(obj) == IDCANCEL)
+                    {
+                        parent_tree->mesh_valid = FALSE;
+                        return FALSE;
+                    }
                 }
 #ifdef DEBUG_WRITE_VOL_MESH
                 mesh_write_off("merge_vol", obj->ID, parent_tree->mesh);
@@ -401,7 +406,11 @@ gen_view_list_tree_surfaces_op(OPERATION op, Group *tree, Group *parent_tree)
                     if (!group->mesh_merged)
                     {
                         parent_tree->mesh_complete = FALSE;
-                        inform_mesh_error(obj);
+                        if (inform_mesh_error(obj) == IDCANCEL)
+                        {
+                            parent_tree->mesh_valid = FALSE;
+                            return FALSE;
+                        }
                     }
 #ifdef DEBUG_WRITE_VOL_MESH
                     mesh_write_off("merge_group", obj->ID, parent_tree->mesh);
@@ -413,28 +422,36 @@ gen_view_list_tree_surfaces_op(OPERATION op, Group *tree, Group *parent_tree)
             break;
         }
     }
+    return TRUE;
 }
 
 // Generate mesh for entire tree (a group or the object tree)
-// TODO_MESH Get it to throw up a message box if it can't complete the mesh, with a helpful-ish error message..
-// Make sure it doesn't crash program!
-void
+BOOL
 gen_view_list_tree_surfaces(Group *tree, Group *parent_tree)
 {
+
+    BOOL rc = TRUE;
+
     // If the parent tree is up to date, we have nothing to do. (but don't do this
     // check if recursing)
     if (tree == parent_tree && parent_tree->mesh_valid)
-        return;
+        return TRUE;
 
     suppress_drawing = TRUE;
     parent_tree->mesh_complete = TRUE;
 
-    // precedence order: unions, then differences, then intersections
-    gen_view_list_tree_surfaces_op(OP_UNION, tree, parent_tree);
-    gen_view_list_tree_surfaces_op(OP_DIFFERENCE, tree, parent_tree);
-    gen_view_list_tree_surfaces_op(OP_INTERSECTION, tree, parent_tree);
+    // Precedence order: unions, then differences, then intersections.
+    // If any are cancelled (by user) then bail out (expression will evaluate FALSE)
+    rc =
+        gen_view_list_tree_surfaces_op(OP_UNION, tree, parent_tree)
+        &&
+        gen_view_list_tree_surfaces_op(OP_DIFFERENCE, tree, parent_tree)
+        &&
+        gen_view_list_tree_surfaces_op(OP_INTERSECTION, tree, parent_tree);
+
     hide_hint();
     suppress_drawing = FALSE;
+    return rc;
 }
 
 // Regenerate the view lists for all faces of a volume, and also do some special stuff that

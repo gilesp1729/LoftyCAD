@@ -27,7 +27,7 @@ void free_view_list_edge(Edge *edge);
 // Surface meshes
 BOOL gen_view_list_vol(Volume *vol);
 BOOL gen_view_list_tree_volumes(Group *tree);
-void gen_view_list_tree_surfaces(Group *tree, Group *parent_tree);
+BOOL gen_view_list_tree_surfaces(Group *tree, Group *parent_tree);
 BOOL mesh_merge_op(OPERATION op, Mesh *mesh1, Mesh *mesh2);
 
 // Clip a view list (clipviewlist.c)

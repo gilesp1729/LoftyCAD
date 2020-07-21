@@ -159,17 +159,30 @@ extern "C"
         visitor.properties[mesh2] = mesh2_id;
         visitor.properties[out] = out_id;
 
-        rc = (PMP::corefine_and_compute_intersection(*mesh1,
-            *mesh2,
-            *out,
-            params::vertex_point_map(mesh1_pm).visitor(visitor),
-            params::vertex_point_map(mesh2_pm),
-            params::vertex_point_map(out_pm)));
-
-        if (rc)
+        try
         {
-            delete mesh1;
-            *mesh1_ptr = out;
+            rc = (PMP::corefine_and_compute_intersection(*mesh1,
+                *mesh2,
+                *out,
+                params::vertex_point_map(mesh1_pm).visitor(visitor),
+                params::vertex_point_map(mesh2_pm),
+                params::vertex_point_map(out_pm)));
+
+            if (rc)
+            {
+                delete mesh1;
+                *mesh1_ptr = out;
+            }
+        }
+        catch (PMP::Corefinement::Self_intersection_exception& e)
+        {
+            rc = 0;
+            strcpy_s(err, 256, "CGAL: Self-intersection detected");
+        }
+        catch (CGAL::Failure_exception& e)
+        {
+            rc = 0;
+            strcpy_s(err, 256, e.what());
         }
 
         return rc;
@@ -214,17 +227,30 @@ extern "C"
         visitor.properties[mesh2] = mesh2_id;
         visitor.properties[out] = out_id;
 
-        rc = (PMP::corefine_and_compute_difference(*mesh1,
-            *mesh2,
-            *out,
-            params::vertex_point_map(mesh1_pm).visitor(visitor),
-            params::vertex_point_map(mesh2_pm),
-            params::vertex_point_map(out_pm)));
-
-        if (rc)
+        try
         {
-            delete mesh1;
-            *mesh1_ptr = out;
+            rc = (PMP::corefine_and_compute_difference(*mesh1,
+                *mesh2,
+                *out,
+                params::vertex_point_map(mesh1_pm).visitor(visitor),
+                params::vertex_point_map(mesh2_pm),
+                params::vertex_point_map(out_pm)));
+
+            if (rc)
+            {
+                delete mesh1;
+                *mesh1_ptr = out;
+            }
+        }
+        catch (PMP::Corefinement::Self_intersection_exception& e)
+        {
+            rc = 0;
+            strcpy_s(err, 256, "CGAL: Self-intersection detected");
+        }
+        catch (CGAL::Failure_exception& e)
+        {
+            rc = 0;
+            strcpy_s(err, 256, e.what());
         }
 
         return rc;
