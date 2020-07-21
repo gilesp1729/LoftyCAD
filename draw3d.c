@@ -586,7 +586,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
             {
                 if (highlight_obj->type == OBJ_GROUP)
                 {
-                    if (app_state == STATE_STARTING_EXTRUDE)
+                    if (app_state == STATE_STARTING_EXTRUDE || app_state == STATE_STARTING_EXTRUDE_LOCAL)
                         highlight_obj = NULL;
                 }
                 else if (highlight_obj->type == OBJ_VOLUME && raw_picked_obj != NULL)
@@ -600,7 +600,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
 
                     // If volume locked at face level, highlight the face if extruding
                     // TODO: only highlight faces that are legal to extrude
-                    if (app_state == STATE_STARTING_EXTRUDE)
+                    if (app_state == STATE_STARTING_EXTRUDE || app_state == STATE_STARTING_EXTRUDE_LOCAL)
                     {
                         if (extrudible(raw_picked_obj))
                             highlight_obj = raw_picked_obj;
@@ -616,7 +616,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         find_parent_object(&object_tree, highlight_obj, FALSE),
                         &halo
                     );
-                    if (app_state == STATE_STARTING_EXTRUDE)
+                    if (app_state == STATE_STARTING_EXTRUDE || app_state == STATE_STARTING_EXTRUDE_LOCAL)
                     {
                         if (!extrudible(highlight_obj))
                             highlight_obj = NULL;
@@ -1240,6 +1240,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                     break;
 
                 case STATE_DRAWING_EXTRUDE:
+                case STATE_DRAWING_EXTRUDE_LOCAL:
                     if (picked_obj != NULL && picked_obj->type == OBJ_FACE)
                     {
                         Plane proj_plane;
@@ -1384,7 +1385,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         snap_to_scale(&length, key_status& AUX_CONTROL);
                         if (length != 0)
                         {
-                            if (IS_FLAT(face))
+                            if (IS_FLAT(face) || app_state == STATE_DRAWING_EXTRUDE)
                             {
                                 // Move the picked face by a delta in XYZ up its own normal
                                 move_obj

@@ -141,6 +141,10 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 change_state(STATE_STARTING_EXTRUDE);
                 break;
 
+            case IDB_EXTRUDE_LOCAL:
+                change_state(STATE_STARTING_EXTRUDE_LOCAL);
+                break;
+
             case IDB_TEXT:
                 display_help_state(STATE_STARTING_TEXT);    // get the prompt up
                 curr_text = calloc(1, sizeof(Text));

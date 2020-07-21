@@ -50,6 +50,7 @@ has_dims(Object *obj)
         case FACE_FLAT:
             // If we are extruding, then we show a height on the dims.
             // Otherwise flat faces don't have anything.
+            // TODO local extrude test here too
             f = (Face *)obj;
             if ((app_state == STATE_STARTING_EXTRUDE || app_state == STATE_DRAWING_EXTRUDE) && f->paired)
                 return TRUE;
@@ -364,6 +365,7 @@ get_dims_string(Object *obj, char buf[64])
 
     case OBJ_FACE:
         f = (Face *)obj;
+        // TODO local extrude test here too
         if ((app_state == STATE_STARTING_EXTRUDE || app_state == STATE_DRAWING_EXTRUDE) && f->paired)
         {
             float x = fabsf(dot(f->normal.A, f->normal.B, f->normal.C, 1, 0, 0));

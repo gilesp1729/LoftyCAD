@@ -717,6 +717,7 @@ left_down(AUX_EVENTREC *event)
     case STATE_STARTING_BEZIER:
     case STATE_STARTING_ARC:
     case STATE_STARTING_EXTRUDE:
+    case STATE_STARTING_EXTRUDE_LOCAL:
     case STATE_STARTING_TEXT:
         // We can't always determine plane in which the new edge will be drawn.
         // This only works with a mouse move within a face, and we will often have
@@ -896,6 +897,7 @@ left_down(AUX_EVENTREC *event)
     case STATE_DRAWING_ARC:
     case STATE_DRAWING_BEZIER:
     case STATE_DRAWING_EXTRUDE:
+    case STATE_DRAWING_EXTRUDE_LOCAL:
     case STATE_DRAWING_TEXT:
     case STATE_DRAWING_SCALE:
     case STATE_DRAWING_ROTATE:
@@ -1090,6 +1092,7 @@ left_up(AUX_EVENTREC *event)
         break;
 
     case STATE_DRAWING_EXTRUDE:
+    case STATE_DRAWING_EXTRUDE_LOCAL:
     case STATE_DRAWING_SCALE:
     case STATE_DRAWING_ROTATE:
         ReleaseCapture();
@@ -1104,7 +1107,7 @@ left_up(AUX_EVENTREC *event)
     case STATE_STARTING_CIRCLE:
     case STATE_STARTING_ARC:
     case STATE_STARTING_BEZIER:
-    case STATE_STARTING_EXTRUDE:
+    case STATE_STARTING_EXTRUDE_LOCAL:
     case STATE_STARTING_TEXT:
     case STATE_STARTING_SCALE:
     case STATE_STARTING_ROTATE:

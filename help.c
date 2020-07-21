@@ -22,6 +22,7 @@ char *state_key[STATE_MAX] =
     "Drawing_Edge",
     "Drawing_Extrude",
     "Drawing_Text",
+    "Drawing_Extrude",
     "Drawing_Scale",
     "Drawing_Rotate",
 
@@ -32,6 +33,7 @@ char *state_key[STATE_MAX] =
     "Drawing_Edge",
     "Drawing_Extrude",
     "Drawing_Text",
+    "Drawing_Extrude",
     "Drawing_Scale",
     "Drawing_Rotate"
 };
@@ -53,7 +55,8 @@ struct
     { (HINSTANCE)1, MAKEINTRESOURCE(IDC_EDGE3), NULL },
     { (HINSTANCE)1, MAKEINTRESOURCE(IDC_EDGE2), NULL },
     { (HINSTANCE)1, MAKEINTRESOURCE(IDC_FACE3), NULL },
-    { (HINSTANCE)1, MAKEINTRESOURCE(IDC_FACE4), NULL }, 
+    { (HINSTANCE)1, MAKEINTRESOURCE(IDC_FACE4), NULL },
+    { (HINSTANCE)1, MAKEINTRESOURCE(IDC_FACE5), NULL },
     { (HINSTANCE)1, MAKEINTRESOURCE(IDC_RESIZE1), NULL },
     { (HINSTANCE)1, MAKEINTRESOURCE(IDC_RESIZE2), NULL },
 
@@ -64,6 +67,7 @@ struct
     { (HINSTANCE)1, MAKEINTRESOURCE(IDC_EDGE2), NULL },
     { (HINSTANCE)1, MAKEINTRESOURCE(IDC_FACE3), NULL },
     { (HINSTANCE)1, MAKEINTRESOURCE(IDC_FACE4), NULL }, 
+    { (HINSTANCE)1, MAKEINTRESOURCE(IDC_FACE5), NULL },
     { (HINSTANCE)1, MAKEINTRESOURCE(IDC_RESIZE1), NULL },
     { (HINSTANCE)1, MAKEINTRESOURCE(IDC_RESIZE2), NULL },
 };
