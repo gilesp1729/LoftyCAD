@@ -486,6 +486,27 @@ gen_view_list_vol(Volume *vol)
     return TRUE;
 }
 
+// Find the edge's endpoints in the face's already existing set of local normals.
+// Return TRUE if both are found.
+BOOL
+find_local_norms(Edge* edge, Face* face, PlaneRef** ln0, PlaneRef** ln1)
+{
+    PlaneRef *p;
+    int i;
+
+    *ln0 = NULL;
+    *ln1 = NULL;
+    for (i = 0; i < face->n_local; i++)
+    {
+        p = &face->local_norm[i];
+        if (p->refpt == edge->endpoints[0])
+            *ln0 = p;
+        if (p->refpt == edge->endpoints[1])
+            *ln1 = p;
+    }
+    return *ln0 != NULL && *ln1 != NULL;
+}
+
 // Interpolate a bezier edge be at t using the bezctl points, giving a Point p.
 // The edge must have had its bezctl points placed into the correct order first.
 Point*
@@ -514,13 +535,16 @@ gen_view_list_face(Face* face)
     Edge* e, *e0, *e1;
     Point* last_point;
     Point* p, * v, * w, *s0, *s1;
-    ArcEdge* ae0, *ae1;
+    ArcEdge* ae, *ae0, *ae1;
     BezierEdge* be, * be0, * be2;
     ListHead* list, **elists, **slists;
     ListHead internal = { NULL, NULL };
     int first_arc;
     BOOL first_arc_forward;
     PlaneRef* lnorm;
+    PlaneRef *ln0, *ln1;
+    Plane outward;
+    BOOL inward;
 
     //char buf[256];
 
@@ -937,6 +961,136 @@ gen_view_list_face(Face* face)
         e1 = face->edges[first_arc + 2];
         ae0 = (ArcEdge*)e0;
         ae1 = (ArcEdge*)e1;
+
+        // Calculate local normals for the dominant (first) arc and its opposite number.
+        // First work out which way they should point (whether arcs are concave or convex)
+        // assuming both arcs are the same sense. Local norms are radial from the centre.
+        lnorm = face->local_norm;
+        face->n_local = 0;
+        v = (Point*)elists[0]->head;
+        normal3(v, (Point*)slists[0]->head->next, (Point *)v->hdr.next, &outward);
+
+        // Trial run on the first point to find inwardness
+        lnorm->A = v->x - ae0->centre->x;
+        lnorm->B = v->y - ae0->centre->y;
+        lnorm->C = v->z - ae0->centre->z;
+        normalise_plane((Plane*)lnorm);
+        inward = pldot(&outward, (Plane*)lnorm) < 0;
+
+        // Apply this correction to all four corners, leaving the centres
+        // of the fisrt_arc and its pair unchanged. The side edges get bumped out
+        // by the average of the vectors (they will be parallel for bodies of
+        // revolution)
+        lnorm->A = e0->endpoints[0]->x - ae0->centre->x;
+        lnorm->B = e0->endpoints[0]->y - ae0->centre->y;
+        lnorm->C = e0->endpoints[0]->z - ae0->centre->z;
+        normalise_plane((Plane*)lnorm);
+        if (inward)
+        {
+            lnorm->A = -lnorm->A;
+            lnorm->B = -lnorm->B;
+            lnorm->C = -lnorm->C;
+        }
+        lnorm->refpt = e0->endpoints[0];
+        lnorm++;
+
+        lnorm->A = e0->endpoints[1]->x - ae0->centre->x;
+        lnorm->B = e0->endpoints[1]->y - ae0->centre->y;
+        lnorm->C = e0->endpoints[1]->z - ae0->centre->z;
+        normalise_plane((Plane*)lnorm);
+        if (inward)
+        {
+            lnorm->A = -lnorm->A;
+            lnorm->B = -lnorm->B;
+            lnorm->C = -lnorm->C;
+        }
+        lnorm->refpt = e0->endpoints[1];
+        lnorm++;
+
+        lnorm->A = e1->endpoints[0]->x - ae1->centre->x;
+        lnorm->B = e1->endpoints[0]->y - ae1->centre->y;
+        lnorm->C = e1->endpoints[0]->z - ae1->centre->z;
+        normalise_plane((Plane*)lnorm);
+        if (inward)
+        {
+            lnorm->A = -lnorm->A;
+            lnorm->B = -lnorm->B;
+            lnorm->C = -lnorm->C;
+        }
+        lnorm->refpt = e1->endpoints[0];
+        lnorm++;
+
+        lnorm->A = e1->endpoints[1]->x - ae1->centre->x;
+        lnorm->B = e1->endpoints[1]->y - ae1->centre->y;
+        lnorm->C = e1->endpoints[1]->z - ae1->centre->z;
+        normalise_plane((Plane*)lnorm);
+        if (inward)
+        {
+            lnorm->A = -lnorm->A;
+            lnorm->B = -lnorm->B;
+            lnorm->C = -lnorm->C;
+        }
+        lnorm->refpt = e1->endpoints[1];
+        lnorm++;
+
+        // Go through the other two (side) edges and find the points we have already moved.
+        // Apply that vector to the centre (for arcs) or the control points (for beziers)
+        face->n_local = lnorm - face->local_norm;
+        e = face->edges[1 - first_arc];
+        switch (e->type)
+        {
+        case EDGE_ARC:
+            ae = (ArcEdge*)e;
+            if (find_local_norms(e, face, &ln0, &ln1))
+            {
+                // Average the vectors and use that to move the centre
+                lnorm->A = (ln0->A + ln1->A) / 2;
+                lnorm->B = (ln0->B + ln1->B) / 2;
+                lnorm->C = (ln0->C + ln1->C) / 2;
+                lnorm->refpt = ae->centre;
+                lnorm++;
+            }
+
+            // Do the other side edge similarly
+            e = face->edges[3 - first_arc];
+            ae = (ArcEdge*)e;
+            if (find_local_norms(e, face, &ln0, &ln1))
+            {
+                lnorm->A = (ln0->A + ln1->A) / 2;
+                lnorm->B = (ln0->B + ln1->B) / 2;
+                lnorm->C = (ln0->C + ln1->C) / 2;
+                lnorm->refpt = ae->centre;
+                lnorm++;
+            }
+            break;
+
+        case EDGE_BEZIER:
+            be = (BezierEdge*)e;
+            if (find_local_norms(e, face, &ln0, &ln1))
+            {
+                // Move each control point by the same vector as its corresponding endpoint.
+                *lnorm = *ln0;
+                lnorm->refpt = be->ctrlpoints[0];
+                lnorm++;
+                *lnorm = *ln1;
+                lnorm->refpt = be->ctrlpoints[1];
+                lnorm++;
+            }
+
+            e = face->edges[3 - first_arc];
+            be = (BezierEdge*)e;
+            if (find_local_norms(e, face, &ln0, &ln1))
+            {
+                *lnorm = *ln0;
+                lnorm->refpt = be->ctrlpoints[0];
+                lnorm++;
+                *lnorm = *ln1;
+                lnorm->refpt = be->ctrlpoints[1];
+                lnorm++;
+            }
+            break;
+        }
+        face->n_local = lnorm - face->local_norm;
 
         // Create internal arc edges:
         // - centre interpolated between boundary arc edge centres
