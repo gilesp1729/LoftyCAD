@@ -1,21 +1,26 @@
 # LoftyCAD
 Simple CAD for 3D printers for Windows. It came out of dissatisfactions with SketchUp, and with free 3D CAD programs in general.
 
-# LoftyCAD goals
+# LoftyCAD philosophy and goals
 # General
 LoftyCAD is a hierarchical CSG 3D-modelling program. It is open-source, actively maintained, and free to all.
 Simple to use like Sketchup, but with some improvements:
 In particular, it will:
-- Retain the identity of 3D shapes, do not merge irreversibly with others
+- Retain the identity of 3D shapes, and not merge irreversibly with others
 - Produce a single triangle mesh from merged objects, using CSG operations (union, intersection, difference)
 - Not produce non-manifold triangle meshes requiring repairs (OK, some apps complain, but I've never seen one fail to slice)
 - Write STL and other triangle mesh files directly
+- Allow you to control your data locally (not subscription or web-based)
 
 # Interface
-- Sketch-up-like (draw a 2D face followed by extrusion)
-- Allows rects, polygons, circles, arcs, beziers and the extruded right prisms from them
-- Allows extrusion of text and fonts
+- Sketch-up-like (draw a 2D-2.5D face followed by extrusion)
 - Volume-face-edge-point hierarchy with controlled locking
+- Allows rect edges, polygons, circles, arcs, Beziers and the extruded right prisms from them
+- Allows curved surfaces (cylinders, barrel arcs, and Bezier surfaces
+- Allows extrusion of curved surfaces, either parallel or along local normals
+- Allows extrusion of text and fonts
+- Copy and paste objects
+- Reflect and rotate objects
 - Group objects and transform (scale and rotate)
 - Show dimensions when selected and when drawing/moving/scaling
 - Allow dimensions to snap points and also sensible other places (perp to lines, etc)
@@ -23,14 +28,14 @@ In particular, it will:
 - Allow multiple materials
 
 # Files handled
+- Native (LCD) format is human-readable
 - Export triangle meshes as STL, AMF, OBJ, OFF
 - Import STL, AMF, OBJ, OFF to groups containing meshes as volumes
 - Always output full normals
 
 # Works in progress
 - Allow manipulation of triangle meshes: smooth extrusion, refinement, and more
-- Bezier surfaces (compound curves)
-- Axially symmetric objects (volumes of revolution)
+- Axially symmetric objects (bodies of revolution)
 - Lofting (a nod to the original Lofty, which is LoftyCAD's spiritual ancestor)
 
 # Installing LoftyCAD from the prebuilt installer
@@ -41,9 +46,9 @@ LoftyCAD uses the excellent CGAL computational geometry library to merge and int
 
 # Material Girl branch:
 # This branch is the live development branch and will become the master in due course. Features described above refer to this branch and may not be present in the deprecated master branch.
-- This branch requires CGAL 5.0 and VS2019.
-- CGAL 5.0 is a header-only library and requires no build steps (other than cmake to make all the .slns and vsprojs)
-- A bug was found in CGAL 5.0 (issue #4522 raised with CGAL). The workaround is to do non-in-place polygon mesh operations, which may affect rendering performance. The bug was reported fixed in CGAL 5.0.2.
+- This branch requires CGAL 5.0 (at least) and VS2019.
+- The 32-bit version must be used, since LoftyCAD is a 32-bit program for now.
+- CGAL from 5.0 is a header-only library and requires no build steps (other than cmake to make all the .slns and vsprojs)
 
 # Master branch:
 # No further development will be done on the master branch.
