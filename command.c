@@ -881,6 +881,7 @@ Command(int message, int wParam, int lParam)
 
         case ID_EDIT_SELECTNONE:
             clear_selection(&selection);
+            curr_path = NULL;
             update_drawing();
             break;
 
@@ -903,80 +904,53 @@ Command(int message, int wParam, int lParam)
             break;
 
         case ID_HELP_GETTINGSTARTED:
-            if (!view_help)
-            {
-                ShowWindow(hWndHelp, SW_SHOW);
-                view_help = TRUE;
-                hMenu = GetSubMenu(GetMenu(auxGetHWND()), 3);
-                CheckMenuItem(hMenu, ID_VIEW_HELP, MF_CHECKED);
-            }
+            display_help_window();
             display_help("Exploring");
             break;
 
         case ID_HELP_DRAWINGFACES:
-            if (!view_help)
-            {
-                ShowWindow(hWndHelp, SW_SHOW);
-                view_help = TRUE;
-                hMenu = GetSubMenu(GetMenu(auxGetHWND()), 3);
-                CheckMenuItem(hMenu, ID_VIEW_HELP, MF_CHECKED);
-            }
+            display_help_window();
             display_help("Drawing_Face");
             break;
 
         case ID_HELP_DRAWINGTEXT:
-            if (!view_help)
-            {
-                ShowWindow(hWndHelp, SW_SHOW);
-                view_help = TRUE;
-                hMenu = GetSubMenu(GetMenu(auxGetHWND()), 3);
-                CheckMenuItem(hMenu, ID_VIEW_HELP, MF_CHECKED);
-            }
+            display_help_window();
             display_help("Drawing_Text");
             break;
 
         case ID_HELP_EXTRUDING:
-            if (!view_help)
-            {
-                ShowWindow(hWndHelp, SW_SHOW);
-                view_help = TRUE;
-                hMenu = GetSubMenu(GetMenu(auxGetHWND()), 3);
-                CheckMenuItem(hMenu, ID_VIEW_HELP, MF_CHECKED);
-            }
+            display_help_window();
             display_help("Drawing_Extrude");
             break;
 
         case ID_HELP_LOCKINGANDGROUPING:
-            if (!view_help)
-            {
-                ShowWindow(hWndHelp, SW_SHOW);
-                view_help = TRUE;
-                hMenu = GetSubMenu(GetMenu(auxGetHWND()), 3);
-                CheckMenuItem(hMenu, ID_VIEW_HELP, MF_CHECKED);
-            }
+            display_help_window();
             display_help("Locking_Grouping");
             break;
 
         case ID_HELP_CSGOPERATIONS:
-            if (!view_help)
-            {
-                ShowWindow(hWndHelp, SW_SHOW);
-                view_help = TRUE;
-                hMenu = GetSubMenu(GetMenu(auxGetHWND()), 3);
-                CheckMenuItem(hMenu, ID_VIEW_HELP, MF_CHECKED);
-            }
+            display_help_window();
             display_help("CSG_Operations");
             break;
 
         case ID_HELP_IMPORTANDEXPORT:
-            if (!view_help)
-            {
-                ShowWindow(hWndHelp, SW_SHOW);
-                view_help = TRUE;
-                hMenu = GetSubMenu(GetMenu(auxGetHWND()), 3);
-                CheckMenuItem(hMenu, ID_VIEW_HELP, MF_CHECKED);
-            }
+            display_help_window();
             display_help("Import_Export");
+            break;
+
+        case ID_HELP_SCALING:
+            display_help_window();
+            display_help("Drawing_Scale");
+            break;
+
+        case ID_HELP_ROTATING:
+            display_help_window();
+            display_help("Drawing_Rotate");
+            break;
+
+        case ID_HELP_DIMENSIONS:
+            display_help_window();
+            display_help("Dimensions");
             break;
 
         case ID_MATERIALS_NEW:

@@ -12,7 +12,8 @@ typedef enum
     DRAW_TOP_LEVEL_ONLY = 4,
     DRAW_HIGHLIGHT_LOCKED = 8,
     DRAW_HIGHLIGHT_HALO = 16,
-    DRAW_WITH_DIMENSIONS = 32
+    DRAW_WITH_DIMENSIONS = 32,
+    DRAW_PATH = 64
 } PRESENTATION;
 
 void SetMaterial(int mat);

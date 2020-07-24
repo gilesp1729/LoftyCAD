@@ -122,6 +122,7 @@
     <ClCompile Include="htmlbrowser.c" />
     <ClCompile Include="import.c" />
     <ClCompile Include="list.c" />
+    <ClCompile Include="maker.c" />
     <ClCompile Include="mesh.cpp" />
     <ClCompile Include="mover.c" />
     <ClCompile Include="neighbourhood.c" />

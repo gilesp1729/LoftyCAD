@@ -118,6 +118,7 @@ extern Plane *facing_plane;
 extern PLANE facing_index;
 extern Plane centre_facing_plane;
 extern Text *curr_text;
+extern Group* curr_path;
 extern SCALED scaled_dirn;
 extern SCALED scaled;
 extern float total_angle;
@@ -230,7 +231,8 @@ void Pick_all_in_rect(GLint x_pick, GLint y_pick, GLint width, GLint height);
 void CALLBACK Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick);
 void CALLBACK Position(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick);
 HWND init_help_window(void);
-void display_help(char *key);
+void display_help_window(void);
+void display_help(char* key);
 void display_help_state(STATE state);
 void change_state(STATE new_state);
 void display_cursor(STATE new_state);
@@ -240,6 +242,7 @@ BOOL is_selected_parent(Object *obj);
 BOOL remove_from_selection(Object *obj);
 void clear_selection(ListHead *sel_list);
 
+// Context menu (contextmenu.c)
 char *obj_description(Object *obj, char *descr, int descr_len, BOOL verbose);
 void populate_treeview(void);
 void CALLBACK right_click(AUX_EVENTREC *event);
@@ -248,6 +251,11 @@ void update_drawing(void);
 void contextmenu(Object *picked_obj, POINT pt);
 void load_materials_menu(HMENU hMenu, BOOL show_all_checks, int which_check);
 void enable_rendered_view_items(void);
+
+// Face and volume building (maker.c)
+Group* group_connected_edges(Edge * edge);
+Face* make_face(Group * group);
+void insert_chamfer_round(Point * pt, Face * parent, float size, EDGE edge_type, BOOL restricted);
 
 // Forwards for window procedures and similar
 int CALLBACK Command(int message, int wParam, int lParam);

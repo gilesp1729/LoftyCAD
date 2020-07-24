@@ -321,6 +321,12 @@ serialise_tree(Group *tree, char *filename)
         fprintf_s(f, "\n");
     }
 
+    // Write current path.
+    if (curr_path != NULL)
+    {
+        fprintf_s(f, "PATH %d\n", curr_path->hdr.ID);
+    }
+
     fclose(f);
 }
 
@@ -1052,6 +1058,15 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
                 ASSERT(id > 0 && object[id] != NULL, "Bad selection ID");
                 link_single(object[id], &selection);
             }
+        }
+        else if (strcmp(tok, "PATH") == 0)
+        {
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            if (tok == NULL)
+                break;
+            id = atoi(tok) + id_offset;
+            ASSERT(id > 0 && object[id] != NULL && object[id]->type == OBJ_GROUP, "Bad path group ID");
+            curr_path = (Group *)object[id];
         }
     }
 

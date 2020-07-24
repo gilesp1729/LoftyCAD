@@ -241,7 +241,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
     Volume *vol;
     Group *group;
     float dx, dy, dz;
-    BOOL push_name, locked;
+    BOOL push_name, locked, constr_edge;
     // This object is selected. Color it and all its components.
     BOOL selected = pres & DRAW_SELECTED;
     // This object is highlighted because the mouse is hovering on it.
@@ -338,9 +338,10 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             return;
         if ((selected || highlighted) && !push_name)
             return;
+        constr_edge = (pres & DRAW_PATH) != 0 || (edge->type & EDGE_CONSTRUCTION) != 0;
 
         // Disable blending here so highlight shows up with multiply-blending
-        if (selected || highlighted || in_halo)
+        if (selected || highlighted || in_halo || (pres & DRAW_PATH) != 0)
         {
             glDisable(GL_BLEND);
         }
@@ -356,7 +357,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         {
         case EDGE_STRAIGHT:
             glBegin(GL_LINES);
-            color(obj, edge->type & EDGE_CONSTRUCTION, pres, locked);
+            color(obj, constr_edge, pres, locked);
             glVertex3_trans(edge->endpoints[0]->x, edge->endpoints[0]->y, edge->endpoints[0]->z);
             glVertex3_trans(edge->endpoints[1]->x, edge->endpoints[1]->y, edge->endpoints[1]->z);
             glEnd();
@@ -372,7 +373,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             ae = (ArcEdge *)edge;
             gen_view_list_arc(ae);
             glBegin(GL_LINE_STRIP);
-            color(obj, edge->type & EDGE_CONSTRUCTION, pres, locked);
+            color(obj, constr_edge, pres, locked);
             for (p = (Point *)edge->view_list.head; p != NULL; p = (Point *)p->hdr.next)
                 glVertex3_trans(p->x, p->y, p->z);
 
@@ -390,7 +391,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             be = (BezierEdge *)edge;
             gen_view_list_bez(be);
             glBegin(GL_LINE_STRIP);
-            color(obj, edge->type & EDGE_CONSTRUCTION, pres, locked);
+            color(obj, constr_edge, pres, locked);
             for (p = (Point *)edge->view_list.head; p != NULL; p = (Point *)p->hdr.next)
                 glVertex3_trans(p->x, p->y, p->z);
 
@@ -1686,6 +1687,13 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
             if (app_state >= STATE_STARTING_EDGE)
                 pres |= DRAW_HIGHLIGHT_LOCKED;
             draw_object(curr_obj, pres, parent != NULL ? parent->lock : LOCK_NONE);
+        }
+
+        // Draw edges in current path. They are never transformed.
+        if (curr_path != NULL)
+        {
+            pres = DRAW_PATH;
+            draw_object((Object *)curr_path, pres, curr_path->hdr.lock);
         }
 
         // Draw highlighted object(s).

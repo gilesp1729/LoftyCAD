@@ -114,6 +114,21 @@ HWND init_help_window(void)
     return hWnd;
 }
 
+// Show the help window if it currently isn't shown.
+void 
+display_help_window()
+{
+    HMENU hMenu;
+
+    if (!view_help)
+    {
+        ShowWindow(hWndHelp, SW_SHOW);
+        view_help = TRUE;
+        hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
+        CheckMenuItem(hMenu, ID_VIEW_HELP, MF_CHECKED);
+    }
+}
+
 // Display text or an HTML page in the help window relevant to the current action.
 void
 display_help(char *key)

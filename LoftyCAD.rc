@@ -123,6 +123,9 @@ BEGIN
         MENUITEM "Drawing Faces",               ID_HELP_DRAWINGFACES
         MENUITEM "Drawing Text",                ID_HELP_DRAWINGTEXT
         MENUITEM "Extruding",                   ID_HELP_EXTRUDING
+        MENUITEM "Scaling",                     ID_HELP_SCALING
+        MENUITEM "Rotating",                    ID_HELP_ROTATING
+        MENUITEM "Dimensions",                  ID_HELP_DIMENSIONS
         MENUITEM "Locking and Grouping",        ID_HELP_LOCKINGANDGROUPING
         MENUITEM "CSG Operations",              ID_HELP_CSGOPERATIONS
         MENUITEM "Import and Export",           ID_HELP_IMPORTANDEXPORT
@@ -459,6 +462,22 @@ BEGIN
         MENUITEM "Reflect",                     ID_OBJ_REFLECTSELECTED
         MENUITEM "Rotate 90",                   ID_OBJ_ROTATESELECTED90
         MENUITEM "Group Selected",              ID_OBJ_GROUPSELECTED
+    END
+END
+
+IDR_CONTEXT_EDGEGROUP MENU
+BEGIN
+    POPUP "EGroup"
+    BEGIN
+        MENUITEM "Object type",                 ID_OBJ_OBJECTTYPE, INACTIVE
+        MENUITEM SEPARATOR
+        MENUITEM "Reflect",                     ID_OBJ_REFLECT
+        MENUITEM "Rotate 90",                   ID_OBJ_ROTATE90
+        MENUITEM SEPARATOR
+        MENUITEM "Make Face from Edge Group",   ID_OBJ_MAKEFACE
+        MENUITEM "Make Path from Edge Group",   ID_OBJ_MAKEPATH
+        MENUITEM "Make Body of Revolution",     ID_OBJ_MAKEBODYREV
+        MENUITEM "Ungroup",                     ID_OBJ_UNGROUP
     END
 END
 
