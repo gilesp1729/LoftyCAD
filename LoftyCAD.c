@@ -137,7 +137,7 @@ char curr_filename[256] = { 0, };
 
 // Grid (for snapping points) and unit tolerance (for display of dims)
 // When grid snapping is turned off, points are still snapped to the tolerance.
-// grid_snap must be a power of 10; tolerance must be a power of 10, and less
+// grid_snap should be a power of 10; tolerance must be less
 // than or equal to the grid scale. (e.g. 1, 0.1)
 #define INITIAL_GRID 1.0f
 #define INITIAL_TOL 0.1f
@@ -1387,6 +1387,7 @@ int WINAPI
 prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     char buf[16];
+    float new_val;
 
     switch (msg)
     {
@@ -1394,7 +1395,7 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         SendDlgItemMessage(hWnd, IDC_PREFS_TITLE, WM_SETTEXT, 0, (LPARAM)object_tree.title);
         sprintf_s(buf, 16, "%.0f", half_size);
         SendDlgItemMessage(hWnd, IDC_PREFS_HALFSIZE, WM_SETTEXT, 0, (LPARAM)buf);
-        sprintf_s(buf, 16, "%.1f", grid_snap);
+        sprintf_s(buf, 16, "%.2f", grid_snap);
         SendDlgItemMessage(hWnd, IDC_PREFS_GRID, WM_SETTEXT, 0, (LPARAM)buf);
         sprintf_s(buf, 16, "%.2f", tolerance);
         SendDlgItemMessage(hWnd, IDC_PREFS_TOL, WM_SETTEXT, 0, (LPARAM)buf);
@@ -1416,28 +1417,46 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             zTrans = -2.0f * half_size;
             Position(FALSE, 0, 0, 0, 0);
 
+            SendDlgItemMessage(hWnd, IDC_PREFS_TOL, WM_GETTEXT, 16, (LPARAM)buf);
+            new_val = (float)atof(buf);
+            if(!nz(new_val - tolerance))
+            {
+                // The snapping tol and chamfer rad are fixed fractions of the tolerance. Don't change them.
+                snap_tol = 3 * tolerance;
+                chamfer_rad = 3.5f * tolerance;
+                tol_log = (int)ceilf(log10f(1.0f / tolerance));
+
+                // Fix up all the flattened curves.
+                adjust_stepsizes((Object *)&object_tree, new_val);
+                clear_move_copy_flags((Object*)&object_tree);
+                invalidate_all_view_lists((Object *)&object_tree, (Object *)&object_tree, 0, 0, 0);
+
+                tolerance = new_val;
+                drawing_changed = TRUE;
+
+                if (view_rendered)
+                {
+                    // regenerate surface mesh, in case we're viewing rendered
+                    xform_list.head = NULL;
+                    xform_list.tail = NULL;
+                    if (object_tree.mesh != NULL)
+                        mesh_destroy(object_tree.mesh);
+                    object_tree.mesh = NULL;
+                    object_tree.mesh_valid = FALSE;
+                    gen_view_list_tree_volumes(&object_tree);
+                    gen_view_list_tree_surfaces(&object_tree, &object_tree);
+                }
+            }
+
+            // These don't change the drawing until something else is added.
             SendDlgItemMessage(hWnd, IDC_PREFS_GRID, WM_GETTEXT, 16, (LPARAM)buf);
             grid_snap = (float)atof(buf);
-
-            // TODO1 check grid scale and tolerance are powers of 10
-            // The snapping tol and chamfer rad are fixed fractions ofthe tolerance. Don't change them.
-            SendDlgItemMessage(hWnd, IDC_PREFS_TOL, WM_GETTEXT, 16, (LPARAM)buf);
-            tolerance = (float)atof(buf);
-            snap_tol = 3 * tolerance;
-            chamfer_rad = 3.5f * tolerance;
-            tol_log = (int)log10f(1.0f / tolerance);
-            // TODO1 check angle snap divides 360
-
             SendDlgItemMessage(hWnd, IDC_PREFS_ANGLE, WM_GETTEXT, 16, (LPARAM)buf);
             angle_snap = atoi(buf);
-
             SendDlgItemMessage(hWnd, IDC_PREFS_ROUNDRAD, WM_GETTEXT, 16, (LPARAM)buf);
             round_rad = (float)atof(buf);
 
-            drawing_changed = TRUE;   // TODO test for a real change
-            // Note: we can't undo this. Don't write a checkpoint.
-
-            EndDialog(hWnd, 1);
+            EndDialog(hWnd, drawing_changed);
             break;
 
         case IDCANCEL:

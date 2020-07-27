@@ -1453,7 +1453,7 @@ gen_view_list_face(Face* face)
         s1 = (Point *)slists[1]->head->next;
         u_step = 1.0 / side_nsteps;
         v_step = 1.0 / bez_nsteps;
-        for (i = 1, u = u_step; u < 1.0; u += u_step, i++)
+        for (i = 1, u = u_step; u < 1.0 - SMALL_COORD; u += u_step, i++)
         {
             double v, bu[4], bv[4];
             double u1 = 1 - u;
@@ -1467,7 +1467,7 @@ gen_view_list_face(Face* face)
             bu[2] = 3 * u * u * u1;
             bu[3] = u * u * u;
 
-            for (v = v_step; v < 1.0; v += v_step)
+            for (v = v_step; v < 1.0 - SMALL_COORD; v += v_step)
             {
                 double v1 = 1 - v;
                 double px = 0, py = 0, pz = 0;
@@ -1664,6 +1664,71 @@ update_view_list_2D(Face *face)
     face->n_view2D = i;
 }
 
+// Adjust all the step sizes in curved edges in the tree at top level,
+// to reflect a new tolerance setting. Stuff in groups is not changed.
+void
+adjust_stepsizes(Object *obj, float new_tol)
+{
+    // Multiplier for nsteps in arc and bezier view lists
+    float factor = sqrtf(tolerance / new_tol);
+    int i;
+    Edge* e;
+    ArcEdge* ae;
+    BezierEdge* be;
+    Face* face;
+    Volume* vol;
+    Group* group;
+
+    switch (obj->type)
+    {
+    case OBJ_EDGE:
+        e = (Edge*)obj;
+        if (!e->stepping)
+            break;
+        switch (e->type)
+        {
+        case EDGE_ARC:
+            ae = (ArcEdge*)e;
+
+            // Protect against doing this twice for shared edges.
+            if (ae->centre->moved)
+                break;
+            e->nsteps *= factor;
+            e->stepsize /= factor;
+            ae->centre->moved = TRUE;
+            break;
+
+        case EDGE_BEZIER:
+            be = (BezierEdge*)e;
+            if (be->ctrlpoints[0]->moved)
+                break;
+            e->nsteps *= factor;
+            e->stepsize /= factor;
+            be->ctrlpoints[0]->moved = TRUE;
+            break;
+        }
+        break;
+
+    case OBJ_FACE:
+        face = (Face*)obj;
+        for (i = 0; i < face->n_edges; i++)
+            adjust_stepsizes((Object *)face->edges[i], new_tol);
+        break;
+
+    case OBJ_VOLUME:
+        vol = (Volume*)obj;
+        for (face = (Face*)vol->faces.head; face != NULL; face = (Face*)face->hdr.next)
+            adjust_stepsizes((Object *)face, new_tol);
+        break;
+
+    case OBJ_GROUP:
+        group = (Group*)obj;
+        for (obj = group->obj_list.head; obj != NULL; obj = obj->next)
+            adjust_stepsizes(obj, new_tol);
+        break;
+    }
+}
+
 void
 free_view_list_face(Face *face)
 {
@@ -1809,12 +1874,13 @@ iterate_bez
     Point *p;
     Edge *e = (Edge *)be;
     double t;
+    int i;
 
     // Number of steps has been given in advance, so work out the stepsize
     e->stepsize = 1.0f / e->nsteps;
 
     // the first point has already been output, so start at stepsize
-    for (t = e->stepsize; t < 1.0001f; t += e->stepsize)
+    for (i = 0, t = e->stepsize; t < 1.0001f; i++, t += e->stepsize)
     {
         double mt = 1.0f - t;
         double c0 = mt * mt * mt;

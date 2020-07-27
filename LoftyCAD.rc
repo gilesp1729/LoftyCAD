@@ -540,8 +540,8 @@ BEGIN
     EDITTEXT        IDC_PREFS_GRID,88,52,40,14,ES_AUTOHSCROLL
     EDITTEXT        IDC_PREFS_TOL,88,71,40,14,ES_AUTOHSCROLL
     LTEXT           "(drawing region is approximately twice this)",IDC_STATIC,135,35,144,8
-    LTEXT           "(must be a power of 10)",IDC_STATIC,135,54,81,8
-    LTEXT           "(must be a power of 10, and < grid snap)",IDC_STATIC,134,73,138,8
+    LTEXT           "",IDC_STATIC,135,54,8,8
+    LTEXT           "(must be <= grid snap)",IDC_STATIC,134,73,78,8
     PUSHBUTTON      "Cancel",IDCANCEL,314,128,50,14
     LTEXT           "Angle snap",IDC_STATIC,49,92,37,8
     EDITTEXT        IDC_PREFS_ANGLE,88,90,40,14,ES_AUTOHSCROLL

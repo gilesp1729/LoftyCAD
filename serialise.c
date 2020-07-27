@@ -457,9 +457,13 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
             half_size = (float)atof(tok);
             tok = strtok_s(NULL, " \t\n", &nexttok);
             grid_snap = (float)atof(tok);
+
             tok = strtok_s(NULL, " \t\n", &nexttok);
             tolerance = (float)atof(tok);
-            tol_log = (int)log10f(1.0f / tolerance);
+            snap_tol = 3 * tolerance;
+            chamfer_rad = 3.5f * tolerance;
+            tol_log = (int)ceilf(log10f(1.0f / tolerance));
+
             tok = strtok_s(NULL, " \t\n", &nexttok);
             angle_snap = atoi(tok);
             tok = strtok_s(NULL, " \t\n", &nexttok);

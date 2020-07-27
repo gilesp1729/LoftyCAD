@@ -23,6 +23,7 @@ void gen_view_list_arc(ArcEdge *ae);
 void gen_view_list_bez(BezierEdge *be);
 void free_view_list_face(Face *face);
 void free_view_list_edge(Edge *edge);
+void adjust_stepsizes(Object* obj, float new_tol);
 
 // Surface meshes
 BOOL gen_view_list_vol(Volume *vol);
