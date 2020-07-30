@@ -446,6 +446,7 @@ BEGIN
         MENUITEM "Reflect",                     ID_OBJ_REFLECT
         MENUITEM "Rotate 90",                   ID_OBJ_ROTATE90
         MENUITEM SEPARATOR
+        MENUITEM "Make Path from Edge",         ID_OBJ_MAKEPATH
         MENUITEM "Always show dimensions",      ID_OBJ_ALWAYSSHOWDIMS
         MENUITEM "Enter dimensions...",         ID_OBJ_ENTERDIMENSIONS
         MENUITEM SEPARATOR

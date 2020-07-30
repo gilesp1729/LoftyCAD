@@ -1693,7 +1693,7 @@ adjust_stepsizes(Object *obj, float new_tol)
             // Protect against doing this twice for shared edges.
             if (ae->centre->moved)
                 break;
-            e->nsteps *= factor;
+            e->nsteps = (int)(e->stepsize * factor + 0.99f);
             e->stepsize /= factor;
             ae->centre->moved = TRUE;
             break;
@@ -1702,7 +1702,7 @@ adjust_stepsizes(Object *obj, float new_tol)
             be = (BezierEdge*)e;
             if (be->ctrlpoints[0]->moved)
                 break;
-            e->nsteps *= factor;
+            e->nsteps = (int)(e->stepsize * factor + 0.99f);
             e->stepsize /= factor;
             be->ctrlpoints[0]->moved = TRUE;
             break;

@@ -89,8 +89,8 @@ Plane centre_facing_plane;
 // The current text structure, either a new one about to be assigned to a face, or on a face being edited.
 Text *curr_text;
 
-// The current path (an edge group) used for rotating bodies of revolution, cloning, or lofting.
-Group* curr_path = NULL;
+// The current path (an edge or an edge group) used for rotating bodies of revolution, cloning, or lofting.
+Object* curr_path = NULL;
 
 // Dominant direction for a scaling operation
 SCALED scaled_dirn;

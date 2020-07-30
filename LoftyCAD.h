@@ -118,7 +118,7 @@ extern Plane *facing_plane;
 extern PLANE facing_index;
 extern Plane centre_facing_plane;
 extern Text *curr_text;
-extern Group* curr_path;
+extern Object* curr_path;
 extern SCALED scaled_dirn;
 extern SCALED scaled;
 extern float total_angle;
@@ -256,6 +256,7 @@ void enable_rendered_view_items(void);
 Group* group_connected_edges(Edge * edge);
 Face* make_face(Group * group);
 void insert_chamfer_round(Point * pt, Face * parent, float size, EDGE edge_type, BOOL restricted);
+Volume* make_body_of_revolution(Group * group);
 
 // Forwards for window procedures and similar
 int CALLBACK Command(int message, int wParam, int lParam);

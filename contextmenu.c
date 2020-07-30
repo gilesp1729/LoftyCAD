@@ -47,6 +47,7 @@ contextmenu(Object *picked_obj, POINT pt)
     BOOL hole;
     OPERATION op, old_op;
     Group *group;
+    Volume* vol;
     Face *face;
     Point *p, *nextp;
     int i;
@@ -348,8 +349,18 @@ contextmenu(Object *picked_obj, POINT pt)
         break;
 
     case ID_OBJ_MAKEPATH:
-        curr_path = (Group*)picked_obj;
+        curr_path = picked_obj;
         group_changed = TRUE;
+        break;
+
+    case ID_OBJ_MAKEBODYREV:
+        vol = make_body_of_revolution((Group*)picked_obj);
+        if (vol != NULL)
+        {
+            link_group((Object*)vol, &object_tree);
+            clear_selection(&selection);
+            group_changed = TRUE;
+        }
         break;
 
     case ID_OBJ_GROUPSELECTED:

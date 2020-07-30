@@ -82,7 +82,7 @@ snap_ray_edge(GLint x, GLint y, Edge *edge, Point *new_point)
     return TRUE;
 }
 
-// Find the shortest distance from a point to an edge.
+// Find the shortest distance from a point to an edge (line segment) or an infinite line (expressed by an edge)
 // Algorithm and notation from D.Sunday, "Lines and Distance of a Point to a Line", http://geomalgorithms.com/a02-_lines.html
 float
 dist_point_to_edge(Point *P, Edge *S)
@@ -115,6 +115,35 @@ dist_point_to_edge(Point *P, Edge *S)
     Pb.z = S->endpoints[0]->z + b * v.z;
 
     return length(P, &Pb);
+}
+
+// The same, but consider the line as infinite, and also return the perpendicular
+// intersection point.
+float
+dist_point_to_perp_line(Point* P, Edge* S, Point* Pb)
+{
+    Point v, w;
+    float c1, c2, b;
+
+    //  Vector v = S.P1 - S.P0;
+    //  Vector w = P - S.P0;
+    v.x = S->endpoints[1]->x - S->endpoints[0]->x;
+    v.y = S->endpoints[1]->y - S->endpoints[0]->y;
+    v.z = S->endpoints[1]->z - S->endpoints[0]->z;
+    w.x = P->x - S->endpoints[0]->x;
+    w.y = P->y - S->endpoints[0]->y;
+    w.z = P->z - S->endpoints[0]->z;
+
+    c1 = pdot(&w, &v);
+    c2 = pdot(&v, &v);
+    b = c1 / c2;
+
+    //Point Pb = S.P0 + b * v;
+    Pb->x = S->endpoints[0]->x + b * v.x;
+    Pb->y = S->endpoints[0]->y + b * v.y;
+    Pb->z = S->endpoints[0]->z + b * v.z;
+
+    return length(P, Pb);
 }
 
 // Intersect a line with a plane (the line is represented as a Plane struct)

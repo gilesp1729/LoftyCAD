@@ -57,12 +57,6 @@ group_connected_edges(Edge* edge)
     // Make passes over the tree, greedy-grouping edges as they are found to connect.
     // If the chain is closed, we should add at least 2 edges per pass, and could add
     // a lot more than that with favourable ordering.
-    //
-    // While here, link the points themselves into another list, 
-    // so a normal can be found early (we may need to reverse
-    // the order if the edges were drawn the wrong way round).
-    // We can do this with edge endpoints because their next/prev
-    // pointers are not used for anything else.
     for (pass = 0; pass < max_passes; pass++)
     {
         BOOL advanced = FALSE;
@@ -487,4 +481,251 @@ insert_chamfer_round(Point* pt, Face* parent, float size, EDGE edge_type, BOOL r
     }
     parent->n_edges++;
     ne->corner = TRUE;      // mark this as a corner edge
+}
+
+// Make a body of revolution by revolving the given edge group around the 
+// current path. Open edge groups are completed with circles at the poles.
+// If successful, the edge group is deleted and the volume is returned.
+Volume *
+make_body_of_revolution(Group* group)
+{
+    ListHead plist = { NULL, NULL };
+    Group* clone;
+    Volume* vol;
+    Face* f;
+    Edge* e, *ne, *na, *o, *path, *prev_ne, *prev_na;
+    ArcEdge* nae;
+    Point* eip, * oip, *old_eip, *pt;
+    Point top_centre, bottom_centre;
+    Plane axis;
+    int idx, initial, final, n_steps;
+    BOOL open = group->hdr.lock == LOCK_POINTS;
+    float r, rad;
+
+    // Some checks first.
+    if (curr_path == NULL)
+        return NULL;
+    if (curr_path->type == OBJ_GROUP)
+        path = (Edge*)(((Group*)curr_path)->obj_list.head);
+    else
+        path = (Edge*)curr_path;
+    ASSERT(path->hdr.type == OBJ_EDGE, "Path needs to be an edge");
+    if (path->hdr.type != OBJ_EDGE)
+        return NULL;
+
+    // Join the edges up by sharing their endpoints.
+    e = (Edge*)group->obj_list.head;
+    ne = (Edge*)group->obj_list.head->next;
+    if (near_pt(e->endpoints[0], ne->endpoints[0], snap_tol))
+    {
+        initial = 1;
+        pt = e->endpoints[0];
+    }
+    else if (near_pt(e->endpoints[0], ne->endpoints[1], snap_tol))
+    {
+        initial = 1;
+        pt = e->endpoints[0];
+    }
+    else if (near_pt(e->endpoints[1], ne->endpoints[0], snap_tol))
+    {
+        initial = 0;
+        pt = e->endpoints[1];
+    }
+    else if (near_pt(e->endpoints[1], ne->endpoints[1], snap_tol))
+    {
+        initial = 0;
+        pt = e->endpoints[1];
+    }
+    else
+    {
+        ASSERT(FALSE, "The edges aren't connected");
+        return NULL;
+    }
+
+    // Start remembering the radii to the axis, as well as the top and
+    // bottom points' centres, in case the group is open and we need to 
+    // put in circle faces to close the volume.
+    rad = dist_point_to_perp_line(e->endpoints[initial], path, &top_centre);
+
+    for (; e->hdr.next != NULL; e = ne)
+    {
+        ne = (Edge*)e->hdr.next;
+
+        if (e->hdr.next->type != OBJ_EDGE)
+            return NULL;
+
+        // Strip construction edges, as we can't consistently create them
+        e->type &= ~EDGE_CONSTRUCTION;
+
+        if (near_pt(ne->endpoints[0], pt, snap_tol))
+        {
+            ne->endpoints[0] = pt;       // share the point
+            final = 1;
+        }
+        else if (near_pt(ne->endpoints[1], pt, snap_tol))
+        {
+            ne->endpoints[1] = pt;
+            final = 0;
+        }
+        else
+        {
+            return FALSE;
+        }
+        pt = ne->endpoints[final];
+        r = dist_point_to_perp_line(pt, path, &bottom_centre);
+        if (r > rad)
+            rad = r;
+    }
+
+    // If closed, share the last point back to the beginning.
+    if (!open)
+    {
+        ASSERT(near_pt(((Edge*)group->obj_list.head)->endpoints[initial], pt, snap_tol), "The edges don't close at the starting point");
+        ne->endpoints[final] = ((Edge*)group->obj_list.head)->endpoints[initial];
+    }
+    r = dist_point_to_perp_line(ne->endpoints[final], path, &bottom_centre);
+    if (r > rad)
+        rad = r;
+
+    idx = initial;
+
+#if 0
+    // Determine the normal
+    polygon_normal((Point*)plist.head, &group_norm);
+#endif
+
+    // Work out the number of steps in all the arcs. They must all be the
+    // same, so use the worst case (from the largest radius to the axis)
+    n_steps = (int)(2 * PI / (2.0 * acos(1.0 - tolerance / rad)));
+
+    // The plane derived from the path used as an axis
+    axis.A = path->endpoints[1]->x - path->endpoints[0]->x;
+    axis.B = path->endpoints[1]->y - path->endpoints[0]->y;
+    axis.C = path->endpoints[1]->z - path->endpoints[0]->z;
+    normalise_plane(&axis);
+
+    // Clone the edge list in the same location
+    clone = (Group *)copy_obj((Object*)group, 0, 0, 0);
+    clear_move_copy_flags((Object*)group);
+    e = (Edge*)group->obj_list.head;
+    o = (Edge *)clone->obj_list.head;
+
+    // Add the first pair of edges (a circle and a zero-width straight)
+    // and put the closing circle face in if the group is open.
+    eip = e->endpoints[idx];
+    oip = o->endpoints[idx];
+    prev_ne = edge_new(EDGE_STRAIGHT);
+    prev_ne->endpoints[0] = eip;
+    prev_ne->endpoints[1] = oip;
+    prev_na = edge_new(EDGE_ARC);
+    prev_na->endpoints[0] = oip;
+    prev_na->endpoints[1] = eip;
+    prev_na->nsteps = n_steps;
+    prev_na->stepping = TRUE;
+    nae = (ArcEdge*)prev_na;
+    nae->centre = point_new(0, 0, 0);
+    dist_point_to_perp_line(oip, path, nae->centre);
+    // TODO: Set nae->clockwise somehow?
+    nae->clockwise = FALSE;
+    nae->normal = axis;
+    nae->normal.refpt = *nae->centre;
+    old_eip = eip;
+
+    if (open)
+    {
+       // Face* circle = face_new(FACE_CIRCLE, &norm);
+
+
+
+    }
+
+    idx = 1 - idx;      // point to far end of edge in group
+
+    vol = vol_new();
+
+    // Proceed down the edge group adding arc edges and barrel faces to the volume
+    for 
+    (
+        e = (Edge *)group->obj_list.head, o = (Edge*)clone->obj_list.head;
+        e != NULL; 
+        e = (Edge*)e->hdr.next, o = (Edge*)o->hdr.next
+    )
+    {
+        Plane n = { 0, };
+        FACE ftype = (e->type == EDGE_STRAIGHT) ? FACE_RECT : FACE_CYLINDRICAL;
+
+        eip = e->endpoints[idx];
+        oip = o->endpoints[idx];
+        ne = edge_new(EDGE_STRAIGHT);
+        ne->endpoints[0] = eip;
+        ne->endpoints[1] = oip;
+        na = edge_new(EDGE_ARC);
+        na->endpoints[0] = oip;
+        na->endpoints[1] = eip;
+        na->nsteps = n_steps;
+        na->stepping = TRUE;
+        nae = (ArcEdge*)na;
+        nae->centre = point_new(0, 0, 0);
+        dist_point_to_perp_line(oip, path, nae->centre);
+        // TODO: Set nae->clockwise somehow?
+        nae->clockwise = FALSE;
+        nae->normal = axis;
+        nae->normal.refpt = *nae->centre;
+
+        f = face_new(ftype, n);
+        f->edges[0] = ne;
+        f->edges[1] = e;
+        f->edges[2] = prev_ne;
+        f->edges[3] = o;
+        f->n_edges = 4;
+        f->initial_point = oip;
+        f->vol = vol;
+        link((Object*)f, &vol->faces);
+
+        ftype = (e->type == EDGE_STRAIGHT) ? FACE_CYLINDRICAL : FACE_BARREL;
+        f = face_new(ftype, n);
+        f->edges[0] = prev_na;
+        f->edges[1] = o;
+        f->edges[2] = na;
+        f->edges[3] = e;
+        f->n_edges = 4;
+        f->initial_point = old_eip;
+        f->vol = vol;
+        link((Object*)f, &vol->faces);
+
+        delink_group((Object*)e, group);
+        delink_group((Object*)o, clone);
+
+        // Find the far end of the next pair of edges
+        ne = (Edge *)e->hdr.next;
+        if (ne == NULL)
+            break;
+
+        if (e->endpoints[idx] = ne->endpoints[0])
+            idx = 1;
+        else
+            idx = 0;
+
+        prev_ne = ne;
+        prev_na = na;
+        old_eip = eip;
+    }
+
+    // Add the last circle if group was open
+    if (open)
+    {
+        // Face* circle = face_new(FACE_CIRCLE, &norm);
+
+
+
+    }
+
+    // Finally, remove the old edge groups
+    ASSERT(group->obj_list.head == NULL, "Edge group is not empty");
+    ASSERT(clone->obj_list.head == NULL, "Edge group is not empty");
+    delink_group((Object*)group, &object_tree);
+    purge_obj((Object*)group);
+    purge_obj((Object*)clone);
+
+    return vol;
 }

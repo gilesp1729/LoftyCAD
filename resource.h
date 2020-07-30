@@ -267,6 +267,7 @@
 #define ID_HELP_SCALING                 32913
 #define ID_HELP_ROTATING                32914
 #define ID_HELP_DIMENSIONS              32915
+#define ID_EDGE_MAKEPATHFROMEDGE        32916
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -275,7 +276,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        164
-#define _APS_NEXT_COMMAND_VALUE         32916
+#define _APS_NEXT_COMMAND_VALUE         32917
 #define _APS_NEXT_CONTROL_VALUE         1038
 #define _APS_NEXT_SYMED_VALUE           110
 #endif

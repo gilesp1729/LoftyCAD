@@ -1693,7 +1693,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
         if (curr_path != NULL)
         {
             pres = DRAW_PATH;
-            draw_object((Object *)curr_path, pres, curr_path->hdr.lock);
+            draw_object(curr_path, pres, curr_path->lock);
         }
 
         // Draw highlighted object(s).
