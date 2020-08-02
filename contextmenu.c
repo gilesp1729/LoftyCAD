@@ -354,7 +354,7 @@ contextmenu(Object *picked_obj, POINT pt)
         break;
 
     case ID_OBJ_MAKEBODYREV:
-        vol = make_body_of_revolution((Group*)picked_obj);
+        vol = make_body_of_revolution((Group*)picked_obj, FALSE);  // TODO allow holes here
         if (vol != NULL)
         {
             link_group((Object*)vol, &object_tree);

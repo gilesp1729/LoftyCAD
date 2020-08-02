@@ -41,6 +41,7 @@ float distance_point_plane(Plane *plane, Point *p);
 BOOL snap_ray_edge(GLint x, GLint y, Edge *edge, Point *new_point);
 float dist_point_to_edge(Point *P, Edge *S);
 float dist_point_to_perp_line(Point* P, Edge* S, Point* Pb);
+float dist_point_to_perp_plane(Point* P, Plane* S, Point* Pb);
 void normal_list(Point *list, Plane *norm);
 void polygon_normal(Point* list, Plane* norm);
 BOOL polygon_planar(Point* list, Plane* norm);

@@ -1124,21 +1124,21 @@ gen_view_list_face(Face* face)
             // Don't add this edge to the object tree.
             e->hdr.ID = 0;
             objid--;
-            ae->centre = point_newv
-            (
-                t * ae1->centre->x + (1 - t) * ae0->centre->x,
-                t * ae1->centre->y + (1 - t) * ae0->centre->y,
-                t * ae1->centre->z + (1 - t) * ae0->centre->z
-            );
+            ae->centre = point_newv(0, 0, 0);
             e->endpoints[0] = point_newpv(s0);
             e->endpoints[1] = point_newpv(s1);
+            dist_point_to_perp_plane(e->endpoints[0], &ae0->normal, ae->centre);
 
             // make sure it points in the same direction as the first_arc
             ae->clockwise = first_arc_forward ? ae0->clockwise : !ae0->clockwise;
-            if (ae->clockwise)
-                normal3(e->endpoints[1], ae->centre, e->endpoints[0], &ae->normal);
-            else
-                normal3(e->endpoints[0], ae->centre, e->endpoints[1], &ae->normal);
+            ae->normal = ae0->normal;
+            ae->normal.refpt = *ae->centre;
+            if (!first_arc_forward)
+            {
+                ae->normal.A = -ae->normal.A;
+                ae->normal.B = -ae->normal.B;
+                ae->normal.C = -ae->normal.C;
+            }
 
             // Make sure it has the same number of steps as the first_arc
             e->stepsize = 0;

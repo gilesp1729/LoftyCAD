@@ -486,20 +486,22 @@ insert_chamfer_round(Point* pt, Face* parent, float size, EDGE edge_type, BOOL r
 // Make a body of revolution by revolving the given edge group around the 
 // current path. Open edge groups are completed with circles at the poles.
 // If successful, the edge group is deleted and the volume is returned.
+// A negative volume (hole) may be generated.
 Volume *
-make_body_of_revolution(Group* group)
+make_body_of_revolution(Group* group, BOOL negative)
 {
     ListHead plist = { NULL, NULL };
     Group* clone;
     Volume* vol;
     Face* f;
-    Edge* e, *ne, *na, *o, *path, *prev_ne, *prev_na;
+    Edge* e, *ne, *na, *o, *path, *prev_ne, *prev_na, *first_ne, *first_na;
     ArcEdge* nae;
-    Point* eip, * oip, *old_eip, *pt;
+    Point* eip, * oip, *old_eip, *old_oip, *pt;
     Point top_centre, bottom_centre;
-    Plane axis;
+    Plane axis, group_norm, top_axis, outward;
     int idx, initial, final, n_steps;
     BOOL open = group->hdr.lock == LOCK_POINTS;
+    BOOL wind_reverse;
     float r, rad;
 
     // Some checks first.
@@ -547,6 +549,10 @@ make_body_of_revolution(Group* group)
     // put in circle faces to close the volume.
     rad = dist_point_to_perp_line(e->endpoints[initial], path, &top_centre);
 
+    // Connect up all the edges by sharing their common points, and remember
+    // the points in a list so we can easily find their normal and hence their
+    // winding direction
+    link_tail((Object*)e->endpoints[initial], &plist);
     for (; e->hdr.next != NULL; e = ne)
     {
         ne = (Edge*)e->hdr.next;
@@ -560,11 +566,13 @@ make_body_of_revolution(Group* group)
         if (near_pt(ne->endpoints[0], pt, snap_tol))
         {
             ne->endpoints[0] = pt;       // share the point
+            link_tail((Object*)ne->endpoints[0], &plist);
             final = 1;
         }
         else if (near_pt(ne->endpoints[1], pt, snap_tol))
         {
             ne->endpoints[1] = pt;
+            link_tail((Object*)ne->endpoints[1], &plist);
             final = 0;
         }
         else
@@ -589,20 +597,29 @@ make_body_of_revolution(Group* group)
 
     idx = initial;
 
-#if 0
-    // Determine the normal
+    // Determine the normal of the group points
     polygon_normal((Point*)plist.head, &group_norm);
-#endif
-
-    // Work out the number of steps in all the arcs. They must all be the
-    // same, so use the worst case (from the largest radius to the axis)
-    n_steps = (int)(2 * PI / (2.0 * acos(1.0 - tolerance / rad)));
 
     // The plane derived from the path used as an axis
     axis.A = path->endpoints[1]->x - path->endpoints[0]->x;
     axis.B = path->endpoints[1]->y - path->endpoints[0]->y;
     axis.C = path->endpoints[1]->z - path->endpoints[0]->z;
     normalise_plane(&axis);
+
+    // Determine winding direction of the faces we are about to generate. It depends on
+    // the direction of the axis and the group normal (and also on whether we want
+    // a positive volume or a hole)
+    plcross(&group_norm, &axis, &outward);
+
+    // Find if the outward vector really points outward (away from the axis)
+    // and hence determine which way to wind the faces' edge ordering.
+    e = (Edge*)group->obj_list.head;
+    top_axis.A = e->endpoints[initial]->x - top_centre.x;
+    wind_reverse = (pldot(&outward, &top_axis) < 0) ^ negative;
+
+    // Work out the number of steps in all the arcs. They must all be the
+    // same, so use the worst case (from the largest radius to the axis)
+    n_steps = (int)(2 * PI / (2.0 * acos(1.0 - tolerance / rad)));
 
     // Clone the edge list in the same location
     clone = (Group *)copy_obj((Object*)group, 0, 0, 0);
@@ -625,11 +642,14 @@ make_body_of_revolution(Group* group)
     nae = (ArcEdge*)prev_na;
     nae->centre = point_new(0, 0, 0);
     dist_point_to_perp_line(oip, path, nae->centre);
-    // TODO: Set nae->clockwise somehow?
     nae->clockwise = FALSE;
     nae->normal = axis;
     nae->normal.refpt = *nae->centre;
+
     old_eip = eip;
+    old_oip = oip;
+    first_ne = prev_ne;
+    first_na = prev_na;
 
     if (open)
     {
@@ -642,6 +662,7 @@ make_body_of_revolution(Group* group)
     idx = 1 - idx;      // point to far end of edge in group
 
     vol = vol_new();
+    vol->hdr.lock = LOCK_FACES;
 
     // Proceed down the edge group adding arc edges and barrel faces to the volume
     for 
@@ -656,45 +677,81 @@ make_body_of_revolution(Group* group)
 
         eip = e->endpoints[idx];
         oip = o->endpoints[idx];
-        ne = edge_new(EDGE_STRAIGHT);
-        ne->endpoints[0] = eip;
-        ne->endpoints[1] = oip;
-        na = edge_new(EDGE_ARC);
-        na->endpoints[0] = oip;
-        na->endpoints[1] = eip;
-        na->nsteps = n_steps;
-        na->stepping = TRUE;
-        nae = (ArcEdge*)na;
-        nae->centre = point_new(0, 0, 0);
-        dist_point_to_perp_line(oip, path, nae->centre);
-        // TODO: Set nae->clockwise somehow?
-        nae->clockwise = FALSE;
-        nae->normal = axis;
-        nae->normal.refpt = *nae->centre;
+
+        // If were rejoining to the initial point, use the first arc edge we generated
+        if (e->hdr.next == NULL && !open)
+        {
+            ne = first_ne;
+            na = first_na;
+        }
+        else
+        {
+            ne = edge_new(EDGE_STRAIGHT);
+            ne->endpoints[0] = eip;
+            ne->endpoints[1] = oip;
+            na = edge_new(EDGE_ARC);
+            na->endpoints[0] = oip;
+            na->endpoints[1] = eip;
+            na->nsteps = n_steps;
+            na->stepping = TRUE;
+            nae = (ArcEdge*)na;
+            nae->centre = point_new(0, 0, 0);
+            dist_point_to_perp_line(oip, path, nae->centre);
+            nae->clockwise = FALSE;
+            nae->normal = axis;
+            nae->normal.refpt = *nae->centre;
+        }
 
         f = face_new(ftype, n);
-        f->edges[0] = ne;
-        f->edges[1] = e;
-        f->edges[2] = prev_ne;
-        f->edges[3] = o;
         f->n_edges = 4;
-        f->initial_point = oip;
+        if (wind_reverse)
+        {
+            f->edges[0] = ne;
+            f->edges[1] = o;
+            f->edges[2] = prev_ne;
+            f->edges[3] = e;
+            f->initial_point = eip;
+        }
+        else
+        {
+            f->edges[0] = ne;
+            f->edges[1] = e;
+            f->edges[2] = prev_ne;
+            f->edges[3] = o;
+            f->initial_point = oip;
+        }
         f->vol = vol;
         link((Object*)f, &vol->faces);
 
         ftype = (e->type == EDGE_STRAIGHT) ? FACE_CYLINDRICAL : FACE_BARREL;
         f = face_new(ftype, n);
-        f->edges[0] = prev_na;
-        f->edges[1] = o;
-        f->edges[2] = na;
-        f->edges[3] = e;
         f->n_edges = 4;
-        f->initial_point = old_eip;
+        if (wind_reverse)
+        {
+            f->edges[0] = prev_na;
+            f->edges[1] = e;
+            f->edges[2] = na;
+            f->edges[3] = o;
+            f->initial_point = old_oip;
+        }
+        else
+        {
+            f->edges[0] = prev_na;
+            f->edges[1] = o;
+            f->edges[2] = na;
+            f->edges[3] = e;
+            f->initial_point = old_eip;
+        }
         f->vol = vol;
         link((Object*)f, &vol->faces);
 
         delink_group((Object*)e, group);
         delink_group((Object*)o, clone);
+
+        prev_ne = ne;
+        prev_na = na;
+        old_eip = eip;
+        old_oip = oip;
 
         // Find the far end of the next pair of edges
         ne = (Edge *)e->hdr.next;
@@ -705,10 +762,6 @@ make_body_of_revolution(Group* group)
             idx = 1;
         else
             idx = 0;
-
-        prev_ne = ne;
-        prev_na = na;
-        old_eip = eip;
     }
 
     // Add the last circle if group was open

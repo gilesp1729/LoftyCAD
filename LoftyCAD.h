@@ -256,7 +256,7 @@ void enable_rendered_view_items(void);
 Group* group_connected_edges(Edge * edge);
 Face* make_face(Group * group);
 void insert_chamfer_round(Point * pt, Face * parent, float size, EDGE edge_type, BOOL restricted);
-Volume* make_body_of_revolution(Group * group);
+Volume* make_body_of_revolution(Group * group, BOOL negative);
 
 // Forwards for window procedures and similar
 int CALLBACK Command(int message, int wParam, int lParam);
