@@ -612,6 +612,7 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
                 ae->normal.B = (float)atof(tok);
                 tok = strtok_s(NULL, " \t\n", &nexttok);
                 ae->normal.C = (float)atof(tok);
+                ae->normal.refpt = *ae->centre;
 
                 if (version >= 0.2)
                 {

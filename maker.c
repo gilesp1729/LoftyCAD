@@ -496,7 +496,8 @@ make_body_of_revolution(Group* group, BOOL negative)
     Face* f;
     Edge* e, *ne, *na, *o, *path, *prev_ne, *prev_na, *first_ne, *first_na;
     ArcEdge* nae;
-    Point* eip, * oip, *old_eip, *old_oip, *pt;
+    Point* eip, * oip, * old_eip, * old_oip, * first_eip, * first_oip;
+    Point *pt;
     Point top_centre, bottom_centre;
     Plane axis, group_norm, top_axis, outward;
     int idx, initial, final, n_steps;
@@ -650,6 +651,8 @@ make_body_of_revolution(Group* group, BOOL negative)
     old_oip = oip;
     first_ne = prev_ne;
     first_na = prev_na;
+    first_eip = eip;
+    first_oip = oip;
 
     if (open)
     {
@@ -683,6 +686,8 @@ make_body_of_revolution(Group* group, BOOL negative)
         {
             ne = first_ne;
             na = first_na;
+            eip = first_eip;
+            oip = first_oip;
         }
         else
         {
@@ -758,7 +763,7 @@ make_body_of_revolution(Group* group, BOOL negative)
         if (ne == NULL)
             break;
 
-        if (e->endpoints[idx] = ne->endpoints[0])
+        if (e->endpoints[idx] == ne->endpoints[0])
             idx = 1;
         else
             idx = 0;
