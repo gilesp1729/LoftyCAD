@@ -1543,27 +1543,33 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         {
                         case PLANE_XY:
                             total_angle += da;
-                            xform->rz = cleanup_angle_and_snap(total_angle, key_status & AUX_SHIFT);
+                            xform->rz = 
+                                effective_angle = cleanup_angle_and_snap(total_angle, key_status & AUX_SHIFT);
                             break;
                         case PLANE_MINUS_XY:
                             total_angle -= da;
-                            xform->rz = cleanup_angle_and_snap(total_angle, key_status & AUX_SHIFT);
+                            xform->rz = 
+                                effective_angle = cleanup_angle_and_snap(total_angle, key_status & AUX_SHIFT);
                             break;
                         case PLANE_XZ:
                             total_angle += da;
-                            xform->ry = cleanup_angle_and_snap(total_angle, key_status & AUX_SHIFT);
+                            xform->ry = 
+                                effective_angle = cleanup_angle_and_snap(total_angle, key_status & AUX_SHIFT);
                             break;
                         case PLANE_MINUS_XZ:
                             total_angle -= da;
-                            xform->ry = cleanup_angle_and_snap(total_angle, key_status & AUX_SHIFT);
+                            xform->ry = 
+                                effective_angle = cleanup_angle_and_snap(total_angle, key_status & AUX_SHIFT);
                             break;
                         case PLANE_YZ:
                             total_angle += da;
-                            xform->rx = cleanup_angle_and_snap(total_angle, key_status & AUX_SHIFT);
+                            xform->rx = 
+                                effective_angle = cleanup_angle_and_snap(total_angle, key_status & AUX_SHIFT);
                             break;
                         case PLANE_MINUS_YZ:
                             total_angle -= da;
-                            xform->rx = cleanup_angle_and_snap(total_angle, key_status & AUX_SHIFT);
+                            xform->rx = 
+                                effective_angle = cleanup_angle_and_snap(total_angle, key_status & AUX_SHIFT);
                             break;
                         }
 
@@ -1607,6 +1613,12 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                             alpha = cleanup_angle_and_snap(total_angle, key_status & AUX_SHIFT);
                             break;
                         }
+                        {
+                            char buf[64];
+                            sprintf_s(buf, 64, "DA %f TA %f alpha %f", da, total_angle, alpha);
+                            Log(buf);
+                            Log("\r\n");
+                        }
 
                         if (alpha != effective_angle)
                         {
@@ -1622,9 +1634,9 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                             clear_move_copy_flags(picked_obj);
 
                             effective_angle = alpha;
-                            curr_obj = picked_obj;  // for highlighting
-                            picked_point = new_point;
                         }
+                        curr_obj = picked_obj;  // for highlighting
+                        picked_point = new_point;
                     }
                     invalidate_all_view_lists(picked_obj, picked_obj, 0, 0, 0);
 

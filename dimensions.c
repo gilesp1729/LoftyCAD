@@ -365,8 +365,13 @@ get_dims_string(Object *obj, char buf[64])
 
     case OBJ_FACE:
         f = (Face *)obj;
+        if (app_state == STATE_DRAWING_ROTATE)
+        {
+            sprintf_s(buf, 64, "%sdeg",
+                display_rounded(buf, cleanup_angle_and_snap(effective_angle, key_status & AUX_SHIFT)));
+        }
         // TODO local extrude test here too
-        if ((app_state == STATE_STARTING_EXTRUDE || app_state == STATE_DRAWING_EXTRUDE) && f->paired)
+        else if ((app_state == STATE_STARTING_EXTRUDE || app_state == STATE_DRAWING_EXTRUDE) && f->paired)
         {
             float x = fabsf(dot(f->normal.A, f->normal.B, f->normal.C, 1, 0, 0));
             float y = fabsf(dot(f->normal.A, f->normal.B, f->normal.C, 0, 1, 0));
@@ -441,10 +446,10 @@ get_dims_string(Object *obj, char buf[64])
                 }
             }
         }
-        else if (app_state == STATE_STARTING_ROTATE || app_state == STATE_DRAWING_ROTATE)
+        else if (app_state == STATE_DRAWING_ROTATE)
         {
             sprintf_s(buf, 64, "%sdeg", 
-                      display_rounded(buf, cleanup_angle_and_snap(total_angle, key_status & AUX_SHIFT)));
+                      display_rounded(buf, cleanup_angle_and_snap(effective_angle, key_status & AUX_SHIFT)));
         }
         else if (((Face *)v->faces.tail)->type == FACE_CIRCLE)    // Cylinders
         {
