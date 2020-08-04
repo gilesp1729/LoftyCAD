@@ -427,6 +427,7 @@ void free_bucket(Point ***bucket);
 Object *copy_obj(Object *obj, float xoffset, float yoffset, float zoffset);
 void move_obj(Object *obj, float xoffset, float yoffset, float zoffset);
 void extrude_local(Face* face, float length);
+void centroid_face(Face* face, Point* cent);
 void calc_halo_params(Face* face, ListHead *halo);
 void move_halo_around_face(Face* face, float xoffset, float yoffset, float zoffset);
 BOOL find_corner_edges(Object* obj, Object* parent, ListHead *halo);
@@ -437,6 +438,7 @@ Face *clone_face_reverse(Face *face);
 // Rotate-90 and reflect object in place (note: this is not the same as a transform)
 void find_obj_pivot(Object* obj, float* xc, float* yc, float* zc);
 void rotate_obj_90_facing(Object* obj, float xc, float yc, float zc);
+void rotate_obj_free_facing(Object* obj, float alpha, float xc, float yc, float zc);
 void reflect_obj_facing(Object* obj, float xc, float yc, float zc);
 
 // Find object in tree, at a location, or as child of another object

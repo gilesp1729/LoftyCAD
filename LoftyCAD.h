@@ -122,6 +122,7 @@ extern Object* curr_path;
 extern SCALED scaled_dirn;
 extern SCALED scaled;
 extern float total_angle;
+extern float effective_angle;
 extern float halo_rad;
 extern BOOL suppress_drawing;
 

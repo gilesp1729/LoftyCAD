@@ -622,10 +622,12 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         if (!extrudible(highlight_obj))
                             highlight_obj = NULL;
                     }
+#if 0 // TODO: Do something about this (and the ablove too)
                     if (app_state == STATE_STARTING_ROTATE || app_state == STATE_STARTING_SCALE)
                     {
                         highlight_obj = NULL;
                     }
+#endif
                 }
             }
 
@@ -1519,7 +1521,9 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                     break;
 
                 case STATE_DRAWING_ROTATE:
-                    if (picked_obj != NULL && (picked_obj->type == OBJ_VOLUME || picked_obj->type == OBJ_GROUP))
+                    if (picked_obj == NULL)
+                        break;
+                    if (picked_obj->type == OBJ_VOLUME || picked_obj->type == OBJ_GROUP)
                     {
                         float da;
                         Transform *xform;
@@ -1567,8 +1571,62 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         picked_point = new_point;
                         xform->enable_rotation = TRUE;
                         evaluate_transform(xform);
-                        invalidate_all_view_lists(picked_obj, picked_obj, 0, 0, 0);
                     }
+                    else  // we're rotating in-place
+                    {
+                        float da;
+                        float alpha;
+
+                        intersect_ray_plane(pt.x, pt.y, &centre_facing_plane, &new_point);
+                        da = RADF * angle3(&picked_point, &centre_facing_plane.refpt, &new_point, &centre_facing_plane);
+
+                        switch (facing_index)       // this matches the centre facing plane
+                        {
+                        case PLANE_XY:
+                            total_angle += da;
+                            alpha = cleanup_angle_and_snap(total_angle, key_status & AUX_SHIFT);
+                            break;
+                        case PLANE_MINUS_XY:
+                            total_angle -= da;
+                            alpha = cleanup_angle_and_snap(total_angle, key_status & AUX_SHIFT);
+                            break;
+                        case PLANE_XZ:
+                            total_angle += da;
+                            alpha = cleanup_angle_and_snap(total_angle, key_status & AUX_SHIFT);
+                            break;
+                        case PLANE_MINUS_XZ:
+                            total_angle -= da;
+                            alpha = cleanup_angle_and_snap(total_angle, key_status & AUX_SHIFT);
+                            break;
+                        case PLANE_YZ:
+                            total_angle += da;
+                            alpha = cleanup_angle_and_snap(total_angle, key_status & AUX_SHIFT);
+                            break;
+                        case PLANE_MINUS_YZ:
+                            total_angle -= da;
+                            alpha = cleanup_angle_and_snap(total_angle, key_status & AUX_SHIFT);
+                            break;
+                        }
+
+                        if (alpha != effective_angle)
+                        {
+                            // When alpha changes, rotate the object in-place
+                            rotate_obj_free_facing
+                            (
+                                picked_obj,
+                                effective_angle - alpha,
+                                centre_facing_plane.refpt.x,
+                                centre_facing_plane.refpt.y,
+                                centre_facing_plane.refpt.z
+                            );
+                            clear_move_copy_flags(picked_obj);
+
+                            effective_angle = alpha;
+                            curr_obj = picked_obj;  // for highlighting
+                            picked_point = new_point;
+                        }
+                    }
+                    invalidate_all_view_lists(picked_obj, picked_obj, 0, 0, 0);
 
                     break;
 

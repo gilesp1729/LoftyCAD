@@ -96,8 +96,10 @@ Object* curr_path = NULL;
 SCALED scaled_dirn;
 SCALED scaled;
 
-// Total angle accumulator for a rotation operation
+// Total angle and effective angle accumulator for a rotation operation
 float total_angle;
+float effective_angle;
+
 
 // Standard planes
 Plane plane_XY = { 0, };
@@ -826,9 +828,25 @@ left_down(AUX_EVENTREC *event)
         case OBJ_POINT:
             // Find the parent
             picked_obj = find_top_level_parent(&object_tree, picked_obj);
-            if (picked_obj->type < OBJ_VOLUME)
+            if (picked_obj->type == OBJ_FACE)
+            {
+                // We're rotating or scaling a face in-place.
+                vol = NULL;
+                centre_facing_plane = *facing_plane;
+                centroid_face((Face*)picked_obj, &centre_facing_plane.refpt);
+                intersect_ray_plane(left_mouseX, left_mouseY, &centre_facing_plane, &picked_point);
                 break;
-            // fall through
+            }
+            else if (picked_obj->type < OBJ_FACE)
+            {
+                // Edges not supported for in-place
+                ReleaseCapture();
+                left_mouse = FALSE;
+                change_state(STATE_NONE);
+                trackball_MouseDown(event);
+                break;
+            }
+            // fall through for volumes/groups
         case OBJ_GROUP:  
         case OBJ_VOLUME:
             // Note group and volume have box immediately following header (mandatory)
@@ -841,10 +859,10 @@ left_down(AUX_EVENTREC *event)
             break;
         }
 
-        // For scaling,determine the dominant direction (it doesn't change during the
-        // scaling operation). Drop out if we have coincident points or we don't have
-        // the right sort of parent.
-        if (vol == NULL || nz(length(&picked_point, &centre_facing_plane.refpt)))
+        // For scaling, determine the dominant direction (it doesn't change during the
+        // scaling operation). Drop out if we have coincident points and can't get an
+        // angle or a dominant direction.
+        if (nz(length(&picked_point, &centre_facing_plane.refpt)))
         {
             ReleaseCapture();
             left_mouse = FALSE;
@@ -858,7 +876,10 @@ left_down(AUX_EVENTREC *event)
         {
         case PLANE_XY:
         case PLANE_MINUS_XY:
-            total_angle = vol->xform != NULL ? vol->xform->rz : 0;
+            total_angle = 0;
+            if (vol != NULL && vol->xform != NULL)
+                total_angle = vol->xform->rz;
+            effective_angle = total_angle;
             d1.x = fabsf(picked_point.x - centre_facing_plane.refpt.x);
             d1.y = fabsf(picked_point.y - centre_facing_plane.refpt.y);
             if (d1.x > d1.y)
@@ -869,7 +890,9 @@ left_down(AUX_EVENTREC *event)
 
         case PLANE_XZ:
         case PLANE_MINUS_XZ:
-            total_angle = vol->xform != NULL ? vol->xform->ry : 0;
+            if (vol != NULL && vol->xform != NULL)
+                total_angle = vol->xform->ry;
+            effective_angle = total_angle;
             d1.x = fabsf(picked_point.x - centre_facing_plane.refpt.x);
             d1.z = fabsf(picked_point.z - centre_facing_plane.refpt.z);
             if (d1.x > d1.z)
@@ -880,7 +903,9 @@ left_down(AUX_EVENTREC *event)
 
         case PLANE_YZ:
         case PLANE_MINUS_YZ:
-            total_angle = vol->xform != NULL ? vol->xform->rx : 0;
+            if (vol != NULL && vol->xform != NULL)
+                total_angle = vol->xform->rx;
+            effective_angle = total_angle;
             d1.y = fabsf(picked_point.y - centre_facing_plane.refpt.y);
             d1.z = fabsf(picked_point.z - centre_facing_plane.refpt.z);
             if (d1.y > d1.z)

@@ -806,6 +806,164 @@ rotate_obj_90_facing(Object* obj, float xc, float yc, float zc)
     }
 }
 
+// 2x2 rotation helper
+static void
+mat_mult_2x2_xy(double m[4], float x0, float y0, float* x, float* y)
+{
+    *x = (float)(m[0] * x0 + m[1] * y0);
+    *y = (float)(m[2] * x0 + m[3] * y0);
+}
+
+// Rotate a coordinate, in the facing plane, by angle alpha in the positive direction.
+void
+rotate_coord_free_facing(float* x, float* y, float* z, float alpha, float xc, float yc, float zc)
+{
+    float x0 = *x - xc;
+    float y0 = *y - yc;
+    float z0 = *z - zc;
+    double co = cos(alpha / RAD);
+    double si = sin(alpha / RAD);
+    double m[4] = { co, si, -si, co };
+
+    switch (facing_index)
+    {
+    case PLANE_XY:
+    case PLANE_MINUS_XY:
+        mat_mult_2x2_xy(m, x0, y0, x, y);
+        break;
+
+    case PLANE_XZ:
+    case PLANE_MINUS_XZ:
+        mat_mult_2x2_xy(m, x0, z0, x, z);
+        break;
+
+    case PLANE_YZ:
+    case PLANE_MINUS_YZ:
+        mat_mult_2x2_xy(m, y0, z0, y, z);
+        break;
+    }
+    *x += xc;
+    *y += yc;
+}
+
+// Rotate the direction of a plane, in the facing plane, by angle alpha in the positive direction.
+void
+rotate_plane_free_facing(Plane* pl, float alpha)
+{
+    float A0 = pl->A;
+    float B0 = pl->B;
+    float C0 = pl->C;
+    double co = cos(alpha / RAD);
+    double si = sin(alpha / RAD);
+    double m[4] = { co, si, -si, co };
+
+    switch (facing_index)
+    {
+    case PLANE_XY:
+    case PLANE_MINUS_XY:
+        mat_mult_2x2_xy(m, A0, B0, &pl->A, &pl->B);
+        break;
+
+    case PLANE_XZ:
+    case PLANE_MINUS_XZ:
+        mat_mult_2x2_xy(m, A0, C0, &pl->A, &pl->C);
+        break;
+
+    case PLANE_YZ:
+    case PLANE_MINUS_YZ:
+        mat_mult_2x2_xy(m, B0, C0, &pl->B, &pl->C);
+        break;
+    }
+}
+
+// Rotate any object, in the facing plane, by angle alpha in the positive direction.
+// Make sure to call clear_move_copy_flags afterwards.
+void
+rotate_obj_free_facing(Object* obj, float alpha, float xc, float yc, float zc)
+{
+    int i;
+    Point* p;
+    EDGE type;
+    Edge* edge;
+    ArcEdge* ae;
+    BezierEdge* be;
+    Face* face;
+    //Volume* vol;
+    //Group* grp;
+    //Object* o;
+
+    switch (obj->type)
+    {
+    case OBJ_POINT:
+        p = (Point*)obj;
+        if (!p->moved)
+        {
+            rotate_coord_free_facing(&p->x, &p->y, &p->z, alpha, xc, yc, zc);
+            p->moved = TRUE;
+        }
+        break;
+
+    case OBJ_EDGE:
+        edge = (Edge*)obj;
+        rotate_obj_free_facing((Object*)edge->endpoints[0], alpha, xc, yc, zc);
+        rotate_obj_free_facing((Object*)edge->endpoints[1], alpha, xc, yc, zc);
+        type = ((Edge*)obj)->type & ~EDGE_CONSTRUCTION;
+        switch (type)
+        {
+        case EDGE_ARC:
+            ae = (ArcEdge*)obj;
+            if (!ae->centre->moved)     // don't do it twice
+                rotate_plane_free_facing(&ae->normal, alpha);
+            rotate_obj_free_facing((Object*)ae->centre, alpha, xc, yc, zc);
+            edge->view_valid = FALSE;
+            break;
+
+        case EDGE_BEZIER:
+            be = (BezierEdge*)obj;
+            rotate_obj_free_facing((Object*)be->ctrlpoints[0], alpha, xc, yc, zc);
+            rotate_obj_free_facing((Object*)be->ctrlpoints[1], alpha, xc, yc, zc);
+            edge->view_valid = FALSE;
+            break;
+        }
+        break;
+
+    case OBJ_FACE:
+        face = (Face*)obj;
+        for (i = 0; i < face->n_edges; i++)
+        {
+            edge = face->edges[i];
+            rotate_obj_free_facing((Object*)edge, alpha, xc, yc, zc);
+        }
+        // don't forget to rotate the normal refpt too
+        rotate_coord_free_facing(&face->normal.refpt.x, &face->normal.refpt.y, &face->normal.refpt.z, alpha, xc, yc, zc);
+        if (face->text != NULL)             // and the text positions
+        {
+            rotate_coord_free_facing(&face->text->origin.x, &face->text->origin.y, &face->text->origin.z, alpha, xc, yc, zc);
+            rotate_coord_free_facing(&face->text->endpt.x, &face->text->endpt.y, &face->text->endpt.z, alpha, xc, yc, zc);
+        }
+        face->view_valid = FALSE;
+        break;
+#if 0  // these are handled by xforms. TODO: do we want to give the choice?
+    case OBJ_VOLUME:
+        vol = (Volume*)obj;
+        for (face = (Face*)vol->faces.head; face != NULL; face = (Face*)face->hdr.next)
+            rotate_obj_free_facing((Object*)face, alpha, xc, yc, zc);
+        if (vol->xform != NULL)
+            rotate_coord_free_facing(&vol->xform->xc, &vol->xform->yc, &vol->xform->zc, alpha, xc, yc, zc);
+        break;
+
+    case OBJ_GROUP:
+        grp = (Group*)obj;
+        for (o = grp->obj_list.head; o != NULL; o = o->next)
+            rotate_obj_free_facing(o, alpha, xc, yc, zc);
+        if (grp->xform != NULL)
+            rotate_coord_free_facing(&grp->xform->xc, &grp->xform->yc, &grp->xform->zc, alpha, xc, yc, zc);
+        break;
+#endif
+    }
+}
+
+
 // Reflect a coordinate in the facing plane.
 void
 reflect_coord_facing(float* x, float* y, float* z, float xc, float yc, float zc)
@@ -1037,6 +1195,26 @@ move_smoothed_point(Point* p, float xoffset, float yoffset, float zoffset)
     move_obj((Object*)p, xoffset * smooth, yoffset * smooth, zoffset * smooth);
 }
 
+// Calculate the centroid of the central face (just do a quick simple average for now)
+void
+centroid_face(Face *face, Point *cent)
+{
+    int i;
+
+    cent->x = cent->y = cent->z = 0;
+    for (i = 0; i < face->n_edges; i++)
+    {
+        Edge* e = face->edges[i];
+
+        cent->x += e->endpoints[0]->x;
+        cent->y += e->endpoints[0]->y;
+        cent->z += e->endpoints[0]->z;
+    }
+    cent->x /= face->n_edges;
+    cent->y /= face->n_edges;
+    cent->z /= face->n_edges;
+}
+
 // Calculate the movement factors for the points in a halo around a face.
 // The points are moved according to a gaussian decay of distance as well as the
 // difference of the normals of faces containing the points. The faces with 
@@ -1057,18 +1235,7 @@ calc_halo_params(Face* face, ListHead* halo)
         return;
 
     // Calculate the centroid of the central face (just do a quick simple average for now)
-    cent.x = cent.y = cent.z = 0;
-    for (i = 0; i < face->n_edges; i++)
-    {
-        Edge* e = face->edges[i];
-
-        cent.x += e->endpoints[0]->x;
-        cent.y += e->endpoints[0]->y;
-        cent.z += e->endpoints[0]->z;
-    }
-    cent.x /= face->n_edges;
-    cent.y /= face->n_edges;
-    cent.z /= face->n_edges;
+    centroid_face(face, &cent);
 
     // Set all points' decay factors to zero.
     for (f = (Face*)vol->faces.head; f != NULL; f = (Face*)f->hdr.next)
