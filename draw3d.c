@@ -622,12 +622,10 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                         if (!extrudible(highlight_obj))
                             highlight_obj = NULL;
                     }
-#if 0 // TODO: Do something about this (and the ablove too)
-                    if (app_state == STATE_STARTING_ROTATE || app_state == STATE_STARTING_SCALE)
+                    else if (app_state == STATE_STARTING_SCALE)
                     {
                         highlight_obj = NULL;
                     }
-#endif
                 }
             }
 
@@ -1458,20 +1456,11 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                     break;
 
                 case STATE_DRAWING_SCALE:
-                    if (picked_obj != NULL && (picked_obj->type == OBJ_VOLUME || picked_obj->type == OBJ_GROUP))
+                    if (picked_obj != NULL)
                     {
                         Transform *xform;
 
                         intersect_ray_plane(pt.x, pt.y, &centre_facing_plane, &new_point);
-                        xform = ((Volume *)picked_obj)->xform;  // works for groups too, as the struct layout is the same
-                        if (xform == NULL)
-                        {
-                            ((Volume *)picked_obj)->xform = xform = xform_new();
-                            xform->xc = centre_facing_plane.refpt.x;
-                            xform->yc = centre_facing_plane.refpt.y;
-                            xform->zc = centre_facing_plane.refpt.z;
-                        }
-
                         // Find dominant direction in plane, or do both if SHIFT key down
                         d1.x = 0;  // shhh compiler
                         d1.y = 0;
@@ -1504,12 +1493,30 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                             break;
                         }
 
-                        if ((scaled & DIRN_X) && !nz(d1.x))
-                            xform->sx *= fabsf(new_point.x - centre_facing_plane.refpt.x) / d1.x;
-                        if ((scaled & DIRN_Y) && !nz(d1.y))
-                            xform->sy *= fabsf(new_point.y - centre_facing_plane.refpt.y) / d1.y;
-                        if ((scaled & DIRN_Z) && !nz(d1.z))
-                            xform->sz *= fabsf(new_point.z - centre_facing_plane.refpt.z) / d1.z;
+                        if (picked_obj->type == OBJ_VOLUME || picked_obj->type == OBJ_GROUP)
+                        {
+                            xform = ((Volume*)picked_obj)->xform;  // works for groups too, as the struct layout is the same
+                            if (xform == NULL)
+                            {
+                                ((Volume*)picked_obj)->xform = xform = xform_new();
+                                xform->xc = centre_facing_plane.refpt.x;
+                                xform->yc = centre_facing_plane.refpt.y;
+                                xform->zc = centre_facing_plane.refpt.z;
+                            }
+
+                            if ((scaled & DIRN_X) && !nz(d1.x))
+                                xform->sx *= fabsf(new_point.x - centre_facing_plane.refpt.x) / d1.x;
+                            if ((scaled & DIRN_Y) && !nz(d1.y))
+                                xform->sy *= fabsf(new_point.y - centre_facing_plane.refpt.y) / d1.y;
+                            if ((scaled & DIRN_Z) && !nz(d1.z))
+                                xform->sz *= fabsf(new_point.z - centre_facing_plane.refpt.z) / d1.z;
+                        }
+                        else  // scaling in-place
+                        {
+                            break;   // TODO: if we can come up with a way to do it
+
+                        }
+
 
                         curr_obj = picked_obj;  // for highlighting
                         picked_point = new_point;
