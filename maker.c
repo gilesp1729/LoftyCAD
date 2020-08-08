@@ -616,14 +616,16 @@ make_body_of_revolution(Group* group, BOOL negative)
     // and hence determine which way to wind the faces' edge ordering.
     e = (Edge*)group->obj_list.head;
     top_axis.A = e->endpoints[initial]->x - top_centre.x;
+    top_axis.B = e->endpoints[initial]->y - top_centre.y;
+    top_axis.C = e->endpoints[initial]->z - top_centre.z;
     wind_reverse = (pldot(&outward, &top_axis) < 0) ^ negative;
 
     // Work out the number of steps in all the arcs. They must all be the
     // same, so use the worst case (from the largest radius to the axis)
     n_steps = (int)(2 * PI / (2.0 * acos(1.0 - tolerance / rad)));
 
-    // Clone the edge list in the same location
-    clone = (Group *)copy_obj((Object*)group, 0, 0, 0);
+    // Clone the edge list in the same location, and fix any edges' nsteps.
+    clone = (Group *)copy_obj((Object*)group, 0, 0, 0, TRUE);
     clear_move_copy_flags((Object*)group);
     e = (Edge*)group->obj_list.head;
     o = (Edge *)clone->obj_list.head;
@@ -666,6 +668,7 @@ make_body_of_revolution(Group* group, BOOL negative)
 
     vol = vol_new();
     vol->hdr.lock = LOCK_FACES;
+    vol->op = negative ? OP_INTERSECTION : OP_UNION;
 
     // Proceed down the edge group adding arc edges and barrel faces to the volume
     for 

@@ -995,7 +995,7 @@ gen_view_list_face(Face* face)
         inward = pldot(&outward, (Plane*)lnorm) < 0;
 
         // Apply this correction to all four corners, leaving the centres
-        // of the fisrt_arc and its pair unchanged. The side edges get bumped out
+        // of the first_arc and its pair unchanged. The side edges get bumped out
         // by the average of the vectors (they will be parallel for bodies of
         // revolution)
         lnorm->A = e0->endpoints[0]->x - ae0->centre->x;
@@ -1133,7 +1133,6 @@ gen_view_list_face(Face* face)
             ae->clockwise = first_arc_forward ? ae0->clockwise : !ae0->clockwise;
             ae->normal = ae0->normal;
             ae->normal.refpt = *ae->centre;
-            if (!first_arc_forward)
             if (!first_arc_forward)
             {
                 ae->normal.A = -ae->normal.A;

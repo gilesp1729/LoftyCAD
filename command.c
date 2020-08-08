@@ -835,7 +835,7 @@ Command(int message, int wParam, int lParam)
 
             for (obj = clipboard.head; obj != NULL; obj = obj->next)
             {
-                Object * new_obj = copy_obj(obj->prev, clip_xoffset, clip_yoffset, clip_zoffset);
+                Object * new_obj = copy_obj(obj->prev, clip_xoffset, clip_yoffset, clip_zoffset, FALSE);
 
                 clear_move_copy_flags(obj->prev);
                 link_tail_group(new_obj, &object_tree);

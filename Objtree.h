@@ -424,7 +424,7 @@ void free_bucket_points(Point ***bucket);
 void free_bucket(Point ***bucket);
 
 // Copy and move object (mover.c)
-Object *copy_obj(Object *obj, float xoffset, float yoffset, float zoffset);
+Object *copy_obj(Object *obj, float xoffset, float yoffset, float zoffset, BOOL cloning);
 void move_obj(Object *obj, float xoffset, float yoffset, float zoffset);
 void extrude_local(Face* face, float length);
 void centroid_face(Face* face, Point* cent);

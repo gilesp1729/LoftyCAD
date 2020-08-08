@@ -84,10 +84,12 @@ clear_move_copy_flags(Object* obj)
     }
 }
 
-// Copy any object, with an offset on all its point coordinates.
+// Copy any object, with an offset on all its point coordinates. Optionally if cloning,
+// fix any arc/bez stepsize and number of steps on both source and dest edges
+// (like clone_face_reverse does).
 // Make sure to call clear_move_copy_flags afterwards.
 Object*
-copy_obj(Object* obj, float xoffset, float yoffset, float zoffset)
+copy_obj(Object* obj, float xoffset, float yoffset, float zoffset, BOOL cloning)
 {
     int i;
     Object* new_obj = NULL;
@@ -132,24 +134,42 @@ copy_obj(Object* obj, float xoffset, float yoffset, float zoffset)
             // Copy the points
             edge = (Edge*)obj;
             new_edge = (Edge*)new_obj;
-            new_edge->endpoints[0] = (Point*)copy_obj((Object*)edge->endpoints[0], xoffset, yoffset, zoffset);
-            new_edge->endpoints[1] = (Point*)copy_obj((Object*)edge->endpoints[1], xoffset, yoffset, zoffset);
+            new_edge->endpoints[0] = (Point*)copy_obj((Object*)edge->endpoints[0], xoffset, yoffset, zoffset, cloning);
+            new_edge->endpoints[1] = (Point*)copy_obj((Object*)edge->endpoints[1], xoffset, yoffset, zoffset, cloning);
             type = ((Edge*)obj)->type & ~EDGE_CONSTRUCTION;
             switch (type)
             {
             case EDGE_ARC:
                 ae = (ArcEdge*)edge;
                 nae = (ArcEdge*)new_edge;
-                nae->centre = (Point*)copy_obj((Object*)ae->centre, xoffset, yoffset, zoffset);
+                nae->centre = (Point*)copy_obj((Object*)ae->centre, xoffset, yoffset, zoffset, cloning);
                 nae->clockwise = ae->clockwise;
                 nae->normal = ae->normal;
+                if (cloning)
+                {
+                    new_edge->nsteps = edge->nsteps;
+                    new_edge->stepsize = edge->stepsize;
+                    edge->stepping = 1;
+                    new_edge->stepping = 1;
+                    edge->view_valid = FALSE;
+                    new_edge->view_valid = FALSE;
+                 }
                 break;
 
             case EDGE_BEZIER:
                 be = (BezierEdge*)edge;
                 nbe = (BezierEdge*)new_edge;
-                nbe->ctrlpoints[0] = (Point*)copy_obj((Object*)be->ctrlpoints[0], xoffset, yoffset, zoffset);
-                nbe->ctrlpoints[1] = (Point*)copy_obj((Object*)be->ctrlpoints[1], xoffset, yoffset, zoffset);
+                nbe->ctrlpoints[0] = (Point*)copy_obj((Object*)be->ctrlpoints[0], xoffset, yoffset, zoffset, cloning);
+                nbe->ctrlpoints[1] = (Point*)copy_obj((Object*)be->ctrlpoints[1], xoffset, yoffset, zoffset, cloning);
+                if (cloning)
+                {
+                    new_edge->nsteps = edge->nsteps;
+                    new_edge->stepsize = edge->stepsize;
+                    edge->stepping = 1;
+                    new_edge->stepping = 1;
+                    edge->view_valid = FALSE;
+                    new_edge->view_valid = FALSE;
+                }
                 break;
             }
         }
@@ -185,7 +205,7 @@ copy_obj(Object* obj, float xoffset, float yoffset, float zoffset)
         for (i = 0; i < face->n_edges; i++)
         {
             edge = face->edges[i];
-            new_edge = (Edge*)copy_obj((Object*)edge, xoffset, yoffset, zoffset);
+            new_edge = (Edge*)copy_obj((Object*)edge, xoffset, yoffset, zoffset, cloning);
             new_face->edges[i] = new_edge;
         }
 
@@ -210,7 +230,7 @@ copy_obj(Object* obj, float xoffset, float yoffset, float zoffset)
         new_obj->lock = obj->lock;
         for (face = (Face*)vol->faces.head; face != NULL; face = (Face*)face->hdr.next)
         {
-            new_face = (Face*)copy_obj((Object*)face, xoffset, yoffset, zoffset);
+            new_face = (Face*)copy_obj((Object*)face, xoffset, yoffset, zoffset, cloning);
             new_face->vol = new_vol;
             link_tail((Object*)new_face, &new_vol->faces);
         }
@@ -230,7 +250,7 @@ copy_obj(Object* obj, float xoffset, float yoffset, float zoffset)
         new_grp = group_new();
         for (o = grp->obj_list.head; o != NULL; o = o->next)
         {
-            new_obj = copy_obj(o, xoffset, yoffset, zoffset);
+            new_obj = copy_obj(o, xoffset, yoffset, zoffset, cloning);
             link_tail_group(new_obj, new_grp);
         }
         new_obj = (Object*)new_grp;
@@ -307,7 +327,7 @@ Face
         for (i = 0; i < face->contours[c].n_edges; i++)
         {
             e = (Object*)face->edges[ei + i];
-            ne = copy_obj(e, 0, 0, 0);
+            ne = copy_obj(e, 0, 0, 0, TRUE);
             if (i == 0)
                 idx = 0;
             else
@@ -341,14 +361,6 @@ Face
                 nae->normal.A = -ae->normal.A;
                 nae->normal.B = -ae->normal.B;
                 nae->normal.C = -ae->normal.C;
-                // fall through
-            case EDGE_BEZIER:
-                // Since the arc/bezier and its clone now belong to extruded faces,
-                // fix their stepsize
-                ((Edge*)ne)->stepsize = ((Edge*)e)->stepsize;
-                ((Edge*)ne)->nsteps = ((Edge*)e)->nsteps;
-                ((Edge*)e)->stepping = TRUE;
-                ((Edge*)ne)->stepping = TRUE;
                 break;
             }
         }
