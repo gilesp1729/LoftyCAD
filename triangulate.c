@@ -1133,12 +1133,6 @@ gen_view_list_face(Face* face)
             ae->clockwise = first_arc_forward ? ae0->clockwise : !ae0->clockwise;
             ae->normal = ae0->normal;
             ae->normal.refpt = *ae->centre;
-            if (!first_arc_forward)
-            {
-                ae->normal.A = -ae->normal.A;
-                ae->normal.B = -ae->normal.B;
-                ae->normal.C = -ae->normal.C;
-            }
 
             // Make sure it has the same number of steps as the first_arc
             e->stepsize = 0;
