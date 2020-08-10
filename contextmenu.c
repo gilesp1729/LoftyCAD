@@ -354,6 +354,7 @@ contextmenu(Object *picked_obj, POINT pt)
         break;
 
     case ID_OBJ_MAKEBODYREV:
+        // TODO: Some sort of UI to support negative BOR (holes)
         vol = make_body_of_revolution((Group*)picked_obj, FALSE);
         if (vol != NULL)
         {
