@@ -599,6 +599,13 @@ make_body_of_revolution(Group* group, BOOL negative)
     idx = initial;
 
     // Determine the normal of the group points
+    // If group is open, we need to add in top_centre and bottom_centre 
+    if (open)
+    {
+        link_tail((Object*)pt, &plist);
+        link_tail((Object*)&bottom_centre, &plist);
+        link_tail((Object*)&top_centre, &plist);
+    }
     polygon_normal((Point*)plist.head, &group_norm);
 
     // The plane derived from the path used as an axis
@@ -783,8 +790,16 @@ make_body_of_revolution(Group* group, BOOL negative)
             norm.C = -norm.C;
         }
         circle = face_new(FACE_CIRCLE, norm);
-        circle->edges[0] = first_ne;
-        circle->edges[1] = first_na;
+        if (wind_reverse)
+        {
+            circle->edges[0] = first_na;
+            circle->edges[1] = first_ne;
+        }
+        else
+        {
+            circle->edges[0] = first_ne;
+            circle->edges[1] = first_na;
+        }
         circle->n_edges = 2;
         circle->initial_point = first_eip;
         circle->vol = vol;
@@ -795,8 +810,16 @@ make_body_of_revolution(Group* group, BOOL negative)
         norm.C = -norm.C;
         norm.refpt = bottom_centre;
         circle = face_new(FACE_CIRCLE, norm);
-        circle->edges[0] = na;
-        circle->edges[1] = ne;
+        if (wind_reverse)
+        {
+            circle->edges[0] = ne;
+            circle->edges[1] = na;
+        }
+        else
+        {
+            circle->edges[0] = na;
+            circle->edges[1] = ne;
+        }
         circle->n_edges = 2;
         circle->initial_point = eip;
         circle->vol = vol;

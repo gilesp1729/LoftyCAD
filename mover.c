@@ -254,6 +254,7 @@ copy_obj(Object* obj, float xoffset, float yoffset, float zoffset, BOOL cloning)
             link_tail_group(new_obj, new_grp);
         }
         new_obj = (Object*)new_grp;
+        new_obj->lock = obj->lock;
         if (grp->xform != NULL)
         {
             new_grp->xform = xform_new();
