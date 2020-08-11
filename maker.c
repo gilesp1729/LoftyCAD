@@ -656,15 +656,8 @@ make_body_of_revolution(Group* group, BOOL negative)
     first_eip = eip;
     first_oip = oip;
 
-    if (open)
-    {
-       // Face* circle = face_new(FACE_CIRCLE, &norm);
-
-
-
-    }
-
     idx = 1 - idx;      // point to far end of edge in group
+    ne = na = NULL;     // shhh compiler
 
     vol = vol_new();
     vol->hdr.lock = LOCK_FACES;
@@ -762,23 +755,52 @@ make_body_of_revolution(Group* group, BOOL negative)
         old_oip = oip;
 
         // Find the far end of the next pair of edges
-        ne = (Edge *)e->hdr.next;
-        if (ne == NULL)
+        if (e->hdr.next == NULL)
             break;
 
+        ne = (Edge*)e->hdr.next;
         if (e->endpoints[idx] == ne->endpoints[0])
             idx = 1;
         else
             idx = 0;
     }
 
-    // Add the last circle if group was open
+    // Add the first and last circles if group was open
     if (open)
     {
-        // Face* circle = face_new(FACE_CIRCLE, &norm);
+        Face* circle;
+        Plane norm;
 
+        norm.A = top_centre.x - bottom_centre.x;
+        norm.B = top_centre.y - bottom_centre.y;
+        norm.C = top_centre.z - bottom_centre.z;
+        norm.refpt = top_centre;
+        normalise_plane(&norm);
+        if (negative)
+        {
+            norm.A = -norm.A;
+            norm.B = -norm.B;
+            norm.C = -norm.C;
+        }
+        circle = face_new(FACE_CIRCLE, norm);
+        circle->edges[0] = first_ne;
+        circle->edges[1] = first_na;
+        circle->n_edges = 2;
+        circle->initial_point = first_eip;
+        circle->vol = vol;
+        link((Object*)circle, &vol->faces);
 
-
+        norm.A = -norm.A;
+        norm.B = -norm.B;
+        norm.C = -norm.C;
+        norm.refpt = bottom_centre;
+        circle = face_new(FACE_CIRCLE, norm);
+        circle->edges[0] = na;
+        circle->edges[1] = ne;
+        circle->n_edges = 2;
+        circle->initial_point = eip;
+        circle->vol = vol;
+        link((Object*)circle, &vol->faces);
     }
 
     // Finally, remove the old edge groups
