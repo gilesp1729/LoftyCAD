@@ -458,6 +458,28 @@ insert_chamfer_round(Point* pt, Face* parent, float size, EDGE edge_type, BOOL r
     ne->corner = TRUE;      // mark this as a corner edge
 }
 
+// Helper to find the greatest radius to the path within the points of
+// an edge's view list.
+float
+dist_view_list_to_path(Edge* e, Edge* path)
+{
+    float r;
+    float rad = 0;
+    Point* p;
+    Point dummy;
+
+    if (e->type == EDGE_ARC || e->type == EDGE_BEZIER)
+    {
+        for (p = (Point *)e->view_list.head; p != NULL; p = (Point *)p->hdr.next)
+        {
+            r = dist_point_to_perp_line(p, path, &dummy);
+            if (r > rad)
+                rad = r;
+        }
+    }
+    return rad;
+}
+
 // Make a body of revolution by revolving the given edge group around the 
 // current path. Open edge groups are completed with circles at the poles.
 // If successful, the edge group is deleted and the volume is returned.
@@ -535,6 +557,9 @@ make_body_of_revolution(Group* group, BOOL negative)
     // bottom points' centres, in case the group is open and we need to 
     // put in circle faces to close the volume.
     rad = dist_point_to_perp_line(e->endpoints[initial], path, &top_centre);
+    r = dist_view_list_to_path(e, path);
+    if (r > rad)
+        rad = r;
 
     // Connect up all the edges by sharing their common points, and remember
     // the points in a list so we can easily find their normal and hence their
@@ -568,6 +593,9 @@ make_body_of_revolution(Group* group, BOOL negative)
         }
         pt = ne->endpoints[final];
         r = dist_point_to_perp_line(pt, path, &bottom_centre);
+        if (r > rad)
+            rad = r;
+        r = dist_view_list_to_path(ne, path);
         if (r > rad)
             rad = r;
     }
@@ -614,7 +642,7 @@ make_body_of_revolution(Group* group, BOOL negative)
     wind_reverse = (pldot(&outward, &top_axis) < 0) ^ negative;
 
     // Work out the number of steps in all the arcs. They must all be the
-    // same, so use the worst case (from the largest radius to the axis)
+    // same, so use the worst case (from the largest radius to the axis gathered above)
     n_steps = (int)(2 * PI / (2.0 * acos(1.0 - tolerance / rad)));
 
     // Clone the edge list in the same location, and fix any edges' nsteps.
