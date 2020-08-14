@@ -40,6 +40,7 @@ clear_move_copy_flags(Object* obj)
         case EDGE_ARC:
             ae = (ArcEdge*)obj;
             clear_move_copy_flags((Object*)ae->centre);
+            clear_move_copy_flags((Object*)&ae->normal.refpt);
             break;
 
         case EDGE_BEZIER:
@@ -145,10 +146,12 @@ copy_obj(Object* obj, float xoffset, float yoffset, float zoffset, BOOL cloning)
                 nae->centre = (Point*)copy_obj((Object*)ae->centre, xoffset, yoffset, zoffset, cloning);
                 nae->clockwise = ae->clockwise;
                 nae->normal = ae->normal;
+                move_obj((Object *)&nae->normal.refpt, xoffset, yoffset, zoffset);
+                new_edge->nsteps = edge->nsteps;
+                new_edge->stepsize = edge->stepsize;
+                new_edge->stepping = edge->stepping;
                 if (cloning)
                 {
-                    new_edge->nsteps = edge->nsteps;
-                    new_edge->stepsize = edge->stepsize;
                     edge->stepping = 1;
                     new_edge->stepping = 1;
                     edge->view_valid = FALSE;
@@ -424,6 +427,7 @@ move_obj(Object* obj, float xoffset, float yoffset, float zoffset)
         case EDGE_ARC:
             ae = (ArcEdge*)obj;
             move_obj((Object*)ae->centre, xoffset, yoffset, zoffset);
+            move_obj((Object*)&ae->normal.refpt, xoffset, yoffset, zoffset);
             edge->view_valid = FALSE;
             break;
 
@@ -772,6 +776,7 @@ rotate_obj_90_facing(Object* obj, float xc, float yc, float zc)
             if (!ae->centre->moved)     // don't do it twice
                 rotate_plane_90_facing(&ae->normal);
             rotate_obj_90_facing((Object*)ae->centre, xc, yc, zc);
+            rotate_obj_90_facing((Object*)&ae->normal.refpt, xc, yc, zc);
             edge->view_valid = FALSE;
             break;
 
@@ -928,6 +933,7 @@ rotate_obj_free_facing(Object* obj, float alpha, float xc, float yc, float zc)
             if (!ae->centre->moved)     // don't do it twice
                 rotate_plane_free_facing(&ae->normal, alpha);
             rotate_obj_free_facing((Object*)ae->centre, alpha, xc, yc, zc);
+            rotate_obj_free_facing((Object*)&ae->normal.refpt, alpha, xc, yc, zc);
             edge->view_valid = FALSE;
             break;
 
@@ -1075,6 +1081,7 @@ reflect_obj_facing(Object* obj, float xc, float yc, float zc)
                 ae->clockwise = !ae->clockwise;     // keep the sense of the arc when reflected
             }
             reflect_obj_facing((Object*)ae->centre, xc, yc, zc);
+            reflect_obj_facing((Object*)&ae->normal.refpt, xc, yc, zc);
             edge->view_valid = FALSE;
             break;
 

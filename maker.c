@@ -124,39 +124,14 @@ group_connected_edges(Edge* edge)
             }
         }
 
-        // Every pass should advance at least one of the ends. If we can't close,
-        // return the edges unchanged to the object tree and return NULL.
+        // Every pass should advance at least one of the ends. Break out if we can't.
         if (!advanced)
             break;
-    }
-
-    // If only the first edge has been grouped, return it to the object tree,
-    // discard the group and return NULL.
-    if (end0.edge == end1.edge)
-    {
-        delink_group((Object*)end0.edge, group);
-        link_tail_group((Object*)end0.edge, &object_tree);
-        purge_obj((Object*)group);
     }
 
     // Return an open edge group.
     group->hdr.lock = LOCK_POINTS;
     return group;
-
-#if 0
-    // We have not been able to close the chain. Ungroup everything we've grouped
-    // so far and return.
-    for (obj = group->obj_list.head; obj != NULL; obj = nextobj)
-    {
-        nextobj = obj->next;
-        delink_group(obj, group);
-        link_tail_group(obj, &object_tree);
-    }
-    purge_obj((Object*)group);
-
-    return NULL;
-#endif
-
 }
 
 // Make a face object out of a closed group of connected edges, sharing points as we go.
@@ -516,33 +491,44 @@ make_body_of_revolution(Group* group, BOOL negative)
     if (path->hdr.type != OBJ_EDGE)
         return NULL;
 
-    // Join the edges up by sharing their endpoints.
+    // Join the edges up by sharing their endpoints and find the initial point index. 
+    // If there is only one edge, arbitrarily use endpoint 0 for the initial point.
     e = (Edge*)group->obj_list.head;
     ne = (Edge*)group->obj_list.head->next;
-    if (near_pt(e->endpoints[0], ne->endpoints[0], snap_tol))
+    if (ne != NULL)
     {
-        initial = 1;
-        pt = e->endpoints[0];
-    }
-    else if (near_pt(e->endpoints[0], ne->endpoints[1], snap_tol))
-    {
-        initial = 1;
-        pt = e->endpoints[0];
-    }
-    else if (near_pt(e->endpoints[1], ne->endpoints[0], snap_tol))
-    {
-        initial = 0;
-        pt = e->endpoints[1];
-    }
-    else if (near_pt(e->endpoints[1], ne->endpoints[1], snap_tol))
-    {
-        initial = 0;
-        pt = e->endpoints[1];
+        if (near_pt(e->endpoints[0], ne->endpoints[0], snap_tol))
+        {
+            initial = 1;
+            pt = e->endpoints[0];
+        }
+        else if (near_pt(e->endpoints[0], ne->endpoints[1], snap_tol))
+        {
+            initial = 1;
+            pt = e->endpoints[0];
+        }
+        else if (near_pt(e->endpoints[1], ne->endpoints[0], snap_tol))
+        {
+            initial = 0;
+            pt = e->endpoints[1];
+        }
+        else if (near_pt(e->endpoints[1], ne->endpoints[1], snap_tol))
+        {
+            initial = 0;
+            pt = e->endpoints[1];
+        }
+        else
+        {
+            ASSERT(FALSE, "The edges aren't connected");
+            return NULL;
+        }
     }
     else
     {
-        ASSERT(FALSE, "The edges aren't connected");
-        return NULL;
+        ne = e;
+        initial = 0;
+        pt = e->endpoints[1];
+        final = 1;
     }
 
     // Start remembering the radii to the axis, as well as the top and

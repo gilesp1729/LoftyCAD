@@ -1021,3 +1021,131 @@ eof_error:
     fclose(f);
     return FALSE;
 }
+
+#if 0
+// Read a file of Bezier points to a group.
+// Flexible format. Lines are assumed to contain one or more XYZ points (each of 3 floats).
+// Any line that is blank, has non-numeric text, or contains fewer than 3 numbers is discarded.
+// Groups of 16 are gathered into Bezier faces. The resulting volume may or may not be
+// manifold (mainly used for renditions of the famous Utah Teapot)
+BOOL
+read_bezpts_to_group(Group* group, char* filename)
+{
+    FILE* f;
+    char* tok;
+    char* nexttok = NULL;
+    int i;
+    Point* points = NULL;
+    Face* tf;
+    Volume* vol = NULL;
+    Plane norm;
+    Point pt[3];
+    Point* p0, * p1, * p2;
+    int n_tri = 0;
+    short attrib;
+
+    fopen_s(&f, filename, "rt");
+    if (f == NULL)
+        return FALSE;
+
+    // Search for "solid ". If not found, assume it's a binary STL file.
+    if (fread_s(buf, 512, 1, 6, f) != 6)
+        goto error_return;
+    if (strncmp(buf, "solid ", 6) == 0)
+    {
+        if (fgets(buf, 512, f) == NULL)
+            goto error_return;
+        tok = strtok_s(buf, "\n", &nexttok);  // rest of line till \n
+        if (tok != NULL)
+            strcpy_s(group->title, 256, tok);
+        vol = vol_new();
+        vol->hdr.lock = LOCK_FACES;
+    }
+
+
+
+
+
+
+    // Read in the rest of the file.
+    while (TRUE)
+    {
+        if (fgets(buf, 512, f) == NULL)
+            break;
+
+        tok = strtok_s(buf, " \t\n", &nexttok);
+        if (strcmp(tok, "facet") == 0)
+        {
+            tok = strtok_s(NULL, " \t\n", &nexttok);  // absorb "normal"
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            norm.A = (float)atof(tok);
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            norm.B = (float)atof(tok);
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            norm.C = (float)atof(tok);
+            i = 0;
+        }
+        else if (strcmp(tok, "vertex") == 0)
+        {
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            pt[i].x = (float)atof(tok);
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            pt[i].y = (float)atof(tok);
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            pt[i].z = (float)atof(tok);
+            i++;
+        }
+        else if (strcmp(tok, "endfacet") == 0)
+        {
+            if (i != 3)
+                goto error_return;
+
+            p0 = find_point_coord(&pt[0], vol->point_bucket);
+            p1 = find_point_coord(&pt[1], vol->point_bucket);
+            p2 = find_point_coord(&pt[2], vol->point_bucket);
+            if (near_pt(&pt[0], &pt[1], SMALL_COORD))
+                continue;
+            if (near_pt(&pt[1], &pt[2], SMALL_COORD))
+                continue;
+            if (near_pt(&pt[2], &pt[0], SMALL_COORD))
+                continue;
+
+            tf = face_new(FACE_FLAT, norm);
+            tf->edges[0] = find_edge(p0, p1);
+            tf->edges[1] = find_edge(p1, p2);
+            tf->edges[2] = find_edge(p2, p0);
+            tf->n_edges = 3;
+            if
+                (
+                    tf->edges[0]->endpoints[1] == tf->edges[1]->endpoints[0]
+                    ||
+                    tf->edges[0]->endpoints[1] == tf->edges[1]->endpoints[1]
+                    )
+                tf->initial_point = tf->edges[0]->endpoints[0];
+            else
+                tf->initial_point = tf->edges[0]->endpoints[1];
+
+            if (vol == NULL)
+                goto error_return;      // have not seen "solid" at the beginning
+
+            tf->vol = vol;
+            link((Object*)tf, &vol->faces);
+            n_tri++;
+        }
+        else if (strcmp(tok, "endsolid") == 0)
+        {
+            break;
+        }
+    }
+
+    link_group((Object*)vol, group);
+    empty_bucket(vol->point_bucket);
+    fclose(f);
+    return TRUE;
+
+error_return:
+    fclose(f);
+    return FALSE;
+}
+
+#endif // 0

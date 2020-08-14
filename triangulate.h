@@ -16,7 +16,6 @@ BOOL intersects_bbox(Bbox *box1, Bbox *box2);
 
 // Regenerate a view list
 void invalidate_all_view_lists(Object *parent, Object *obj, float dx, float dy, float dz);
-void gen_view_list_vol_surface(Volume *vol);
 void gen_view_list_face(Face *face);
 void update_view_list_2D(Face *face);
 void gen_view_list_arc(ArcEdge *ae);

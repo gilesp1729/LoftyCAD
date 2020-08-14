@@ -452,6 +452,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         else        
         {
             // Draw individual faces
+            gen_view_list_vol(vol);
             if (vol->xform != NULL)
                 link((Object *)vol->xform, &xform_list);
             for (face = (Face *)vol->faces.head; face != NULL; face = (Face *)face->hdr.next)
