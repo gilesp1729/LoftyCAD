@@ -9,6 +9,7 @@ GLUtesselator *rtess = NULL;
 
 // Catch CGAL errors of various kinds
 char err[256];
+int exception;
 
 // Clear a bounding box to empty
 void
@@ -296,7 +297,10 @@ inform_mesh_error(Object* obj)
     char buf[64];
 
     hide_hint();
-    return MessageBox(auxGetHWND(), err, obj_description(obj, buf, 64, FALSE), MB_OKCANCEL | MB_ICONEXCLAMATION);
+    if (exception > 0)
+        return MessageBox(auxGetHWND(), err, obj_description(obj, buf, 64, FALSE), MB_OKCANCEL | MB_ICONEXCLAMATION);
+    else
+        return MessageBox(auxGetHWND(), "Could not merge object (mesh is probably OK)", obj_description(obj, buf, 64, FALSE), MB_OK | MB_ICONINFORMATION);
 }
 
 

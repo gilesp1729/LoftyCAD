@@ -155,8 +155,8 @@ copy_obj(Object* obj, float xoffset, float yoffset, float zoffset, BOOL cloning)
                     edge->stepping = 1;
                     new_edge->stepping = 1;
                     edge->view_valid = FALSE;
-                    new_edge->view_valid = FALSE;
-                 }
+                }
+                new_edge->view_valid = FALSE;
                 break;
 
             case EDGE_BEZIER:
@@ -164,15 +164,16 @@ copy_obj(Object* obj, float xoffset, float yoffset, float zoffset, BOOL cloning)
                 nbe = (BezierEdge*)new_edge;
                 nbe->ctrlpoints[0] = (Point*)copy_obj((Object*)be->ctrlpoints[0], xoffset, yoffset, zoffset, cloning);
                 nbe->ctrlpoints[1] = (Point*)copy_obj((Object*)be->ctrlpoints[1], xoffset, yoffset, zoffset, cloning);
+                new_edge->nsteps = edge->nsteps;
+                new_edge->stepsize = edge->stepsize;
+                new_edge->stepping = edge->stepping;
                 if (cloning)
                 {
-                    new_edge->nsteps = edge->nsteps;
-                    new_edge->stepsize = edge->stepsize;
                     edge->stepping = 1;
                     new_edge->stepping = 1;
                     edge->view_valid = FALSE;
-                    new_edge->view_valid = FALSE;
                 }
+                new_edge->view_valid = FALSE;
                 break;
             }
         }

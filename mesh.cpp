@@ -11,6 +11,7 @@ typedef void(*VertexCB_D)(void* arg, Vertex_index* v, double x, double y, double
 extern "C"
 {
     extern char err[];
+    extern int exception;
 
     // Destroy a mesh.
     void
@@ -106,16 +107,19 @@ extern "C"
                 delete mesh1;
                 *mesh1_ptr = out;
             }
+            exception = 0;
         }
         catch (PMP::Corefinement::Self_intersection_exception& e)
         {
             rc = 0;
             strcpy_s(err, 256, "CGAL: Self-intersection detected");
+            exception = 1;
         }
         catch (CGAL::Failure_exception& e)
         {
             rc = 0;
             strcpy_s(err, 256, e.what());
+            exception = 2;
         }
         return rc;
     }
@@ -173,16 +177,19 @@ extern "C"
                 delete mesh1;
                 *mesh1_ptr = out;
             }
+            exception = 0;
         }
         catch (PMP::Corefinement::Self_intersection_exception& e)
         {
             rc = 0;
             strcpy_s(err, 256, "CGAL: Self-intersection detected");
+            exception = 1;
         }
         catch (CGAL::Failure_exception& e)
         {
             rc = 0;
             strcpy_s(err, 256, e.what());
+            exception = 0;
         }
 
         return rc;
@@ -241,16 +248,19 @@ extern "C"
                 delete mesh1;
                 *mesh1_ptr = out;
             }
+            exception = 0;
         }
         catch (PMP::Corefinement::Self_intersection_exception& e)
         {
             rc = 0;
             strcpy_s(err, 256, "CGAL: Self-intersection detected");
+            exception = 1;
         }
         catch (CGAL::Failure_exception& e)
         {
             rc = 0;
             strcpy_s(err, 256, e.what());
+            exception = 2;
         }
 
         return rc;

@@ -148,8 +148,9 @@ export_object_tree(Group *tree, char *filename, int file_index)
     if (tree->mesh == NULL || !tree->mesh_valid)
         return;
 
-    // TODO: Make this a message box
-    ASSERT(tree->mesh_complete, "Mesh incomplete - writing unmerged objects");
+    // TODO: Send this to a new status bar down the bottom, as well as the debug log
+    if (!tree->mesh_complete)
+        Log("Mesh incomplete - writing unmerged objects\r\n");
 
     switch (file_index)
     {
