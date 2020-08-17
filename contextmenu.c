@@ -117,6 +117,18 @@ contextmenu(Object *picked_obj, POINT pt)
             hole = face->extrude_height < 0;
             EnableMenuItem(hMenu, ID_OPERATION_UNION, hole ? MF_GRAYED : MF_ENABLED);
             EnableMenuItem(hMenu, ID_OPERATION_DIFFERENCE, hole ? MF_GRAYED : MF_ENABLED);
+
+            // Don't allow unlocking of some components to keep view lists integrity.
+            switch (((Volume*)parent)->max_facetype)
+            {
+            case FACE_BARREL:
+            case FACE_BEZIER:
+                EnableMenuItem(hMenu, ID_LOCKING_EDGES, MF_GRAYED);
+                // fall through
+            case FACE_CYLINDRICAL:
+                EnableMenuItem(hMenu, ID_LOCKING_POINTS, MF_GRAYED);
+                EnableMenuItem(hMenu, ID_LOCKING_UNLOCKED, MF_GRAYED);
+            }
             break;
 
         case OBJ_GROUP:
