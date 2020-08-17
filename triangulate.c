@@ -594,6 +594,7 @@ gen_view_list_face(Face* face)
 
     switch (face->type & ~FACE_CONSTRUCTION)
     {
+    case FACE_TRI:
     case FACE_RECT:
     case FACE_CIRCLE:
     case FACE_FLAT:

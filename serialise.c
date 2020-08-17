@@ -20,15 +20,15 @@ static unsigned int maxobjid = 0;
 // of shared objects.
 static unsigned int save_count = 1;
 
-// Marks whetther a material has been written out.
+// Marks whether a material has been written out.
 static BOOL mat_written[MAX_MATERIAL] = { 0, };
 
-// names of things that make the serialised format a little easier to read.
+// Names of things that make the serialised format a little easier to read.
 // Agree with enums in objtree.h
 char *objname[] = { "(none)", "POINT", "EDGE", "FACE", "VOLUME", "ENDGROUP" };
 char *locktypes[] = { "N", "P", "E", "F", "V", "G" };
 char *edgetypes[] = { "STRAIGHT", "ARC", "BEZIER" };
-char *facetypes[] = { "RECT", "CIRCLE", "FLAT", "CYLINDRICAL", "BARREL", "BEZIER" };
+char *facetypes[] = { "TRI", "RECT", "CIRCLE", "CYLINDRICAL", "FLAT", "BARREL", "BEZIER" };
 char *optypes[] = { "UNION", "INTER", "DIFF", "NONE" };
 
 // Serialise an object. Children go out before their parents, in general.
@@ -714,6 +714,10 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
                 type = FACE_CIRCLE;
                 dims = TRUE;
             }
+            else if (strcmp(tok, "TRI") == 0)
+            {
+                type = FACE_TRI;
+            }
             else if (strcmp(tok, "FLAT") == 0)
             {
                 type = FACE_FLAT;
@@ -894,6 +898,7 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
         {
             Volume *vol;
             Face *last_face = NULL;
+            Face* face;
 
             tok = strtok_s(NULL, " \t\n", &nexttok);
             id = atoi(tok) + id_offset;
@@ -932,9 +937,12 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
                 fid = atoi(tok) + id_offset;
                 ASSERT(fid > 0 && object[fid] != NULL, "Bad face ID");
 
-                ((Face *)object[fid])->vol = vol;
+                face = (Face*)object[fid];
+                face->vol = vol;
                 link_tail(object[fid], &vol->faces);
-                last_face = (Face *)object[fid];
+                if ((face->type & ~FACE_CONSTRUCTION) > vol->max_facetype)
+                    vol->max_facetype = face->type & ~FACE_CONSTRUCTION;
+                last_face = face;
             }
 
             calc_extrude_heights(vol);

@@ -5,10 +5,10 @@
 #include <CommCtrl.h>
 #include <CommDlg.h>
 
-// Externs from serialise.c
-extern char *locktypes[];
-extern char *edgetypes[];
-extern char *facetypes[];
+// The names follow the ones from serialise.c, but cased differently to be more readable.
+char* edge_names[] = { "Straight", "Arc", "Bezier" };
+char* face_names[] = { "Triangle", "Rect", "Circle", "Cylindrical", "Flat", "Barrel", "Bezier" };
+char* vol_names[] = { "Triangle Mesh", "Rect Prism", "Circle", "Cylinder", "Flat Prism", "Volume of Revolution", "Bezier Surface" };
 
 // Indexed by enum OPERATION
 char *op_string[OP_MAX] = { "U", "^", "-", " " };
@@ -69,7 +69,7 @@ char* ip_string(Face *f, char* buf, int len)
 }
 
 // Descriptive string for an object, to be used in the treeview, and elsewhere there is a
-// need to echo out an object's description.
+// need to echo out an object's full description.
 char *obj_description(Object *obj, char *descr, int descr_len, BOOL verbose)
 {
     char buf[64], buf2[64], buf3[64];
@@ -93,9 +93,9 @@ char *obj_description(Object *obj, char *descr, int descr_len, BOOL verbose)
 
     case OBJ_EDGE:
         edge = (Edge *)obj;
-        sprintf_s(descr, descr_len, "Edge %d %s%s %s %s %s",
+        sprintf_s(descr, descr_len, "%s Edge %d %s %s %s %s",
+                  edge_names[edge->type & ~EDGE_CONSTRUCTION],
                   obj->ID,
-                  edgetypes[edge->type & ~EDGE_CONSTRUCTION],
                   (edge->type & EDGE_CONSTRUCTION) ? "(C)" : "",
                   verbose ? get_dims_string(obj, buf) : "",
                   verbose && edge->type == EDGE_ARC ? (((ArcEdge*)edge)->clockwise ? "C" : "AC") : "",
@@ -105,9 +105,9 @@ char *obj_description(Object *obj, char *descr, int descr_len, BOOL verbose)
 
     case OBJ_FACE:
         face = (Face *)obj;
-        sprintf_s(descr, descr_len, "Face %d %s%s %s %s %s",
+        sprintf_s(descr, descr_len, "%s Face %d %s %s %s %s",
+                  face_names[face->type & ~FACE_CONSTRUCTION],
                   obj->ID,
-                  facetypes[face->type & ~FACE_CONSTRUCTION],
                   (face->type & FACE_CONSTRUCTION) ? "(C)" : "",
                   verbose ? get_dims_string(obj, buf) : "",
                   verbose ? ip_string(face, buf2, 64) : "",
@@ -117,9 +117,10 @@ char *obj_description(Object *obj, char *descr, int descr_len, BOOL verbose)
 
     case OBJ_VOLUME:
         vol = (Volume *)obj;
-        sprintf_s(descr, descr_len, "%s Volume %d %s %s", 
-                op_string[vol->op], 
-                obj->ID, 
+        sprintf_s(descr, descr_len, "%s %s %d %s %s", 
+                op_string[vol->op],
+                vol_names[vol->max_facetype],
+                obj->ID,
                 verbose ? get_dims_string(obj, buf) : "",
                 verbose ? xform_string(vol->xform, buf2, 64) : ""
                 );
@@ -139,6 +140,61 @@ char *obj_description(Object *obj, char *descr, int descr_len, BOOL verbose)
                     obj->ID, 
                     grp->title,
                     xform_string(grp->xform, buf, 64)
+            );
+        break;
+    }
+
+    return descr;
+}
+
+// Like obj_description, but the very brief kind.
+char* brief_description(Object* obj, char* descr, int descr_len)
+{
+    Point* p;
+    Face* face;
+    Edge* edge;
+    Volume* vol;
+    Group* grp;
+
+    switch (obj->type)
+    {
+    case OBJ_POINT:
+        p = (Point*)obj;
+        sprintf_s(descr, descr_len, "Point %d", obj->ID);
+        break;
+
+    case OBJ_EDGE:
+        edge = (Edge*)obj;
+        sprintf_s(descr, descr_len, "%s Edge %d",
+            edge_names[edge->type & ~EDGE_CONSTRUCTION],
+            obj->ID
+        );
+        break;
+
+    case OBJ_FACE:
+        face = (Face*)obj;
+        sprintf_s(descr, descr_len, "%s Face %d",
+            face_names[face->type & ~FACE_CONSTRUCTION],
+            obj->ID
+        );
+        break;
+
+    case OBJ_VOLUME:
+        vol = (Volume*)obj;
+        sprintf_s(descr, descr_len, "%s %d",
+            vol_names[vol->max_facetype],
+            obj->ID
+        );
+        break;
+
+    case OBJ_GROUP:
+        grp = (Group*)obj;
+        if (grp->title[0] == '\0')
+            sprintf_s(descr, descr_len, "Group %d", obj->ID);
+        else
+            sprintf_s(descr, descr_len, "Group %d: %s",
+                obj->ID,
+                grp->title
             );
         break;
     }

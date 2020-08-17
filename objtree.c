@@ -159,6 +159,7 @@ Face *face_new(FACE face_type, Plane norm)
     // Have a stab at allocating the edge array
     switch (face_type & ~FACE_CONSTRUCTION)
     {
+    case FACE_TRI:
     case FACE_RECT:
     case FACE_CIRCLE:
         face->hdr.show_dims = face_type & FACE_CONSTRUCTION;

@@ -30,14 +30,15 @@ typedef enum
     EDGE_CONSTRUCTION = 0x8000      // OR this in to indicate a construction edge
 } EDGE;
 
-// What kind of face this is
+// What kind of face this is. The order is important, as it determines the type
+// of volume that is shown (based on the maximum face type found in it)
 typedef enum
 {
+    FACE_TRI,                       // There are 3 edges.
     FACE_RECT,                      // There are 4 edges, and they are constrained (initially) to be rectangular.
     FACE_CIRCLE,                    // A complete circle, lying in one plane.
-    FACE_FLAT,                      // Any number of edges making a closed face, lying generally in one plane.
-                                    // Only flat faces (up to here) may be extruded.
     FACE_CYLINDRICAL,               // A simply-curved face bounded by an opposing pair of arcs, the other pair straights.
+    FACE_FLAT,                      // Any number of edges making a closed face, lying generally in one plane.
     FACE_BARREL,                    // A compound-curved face bounded by one opposing pair of arcs, the other pair arcs or beziers.
     FACE_BEZIER,                    // A compound-curved face bounded by two opposing pairs of beziers.
     FACE_CONSTRUCTION = 0x8000      // OR this in to indicate a construction face
@@ -340,6 +341,7 @@ typedef struct Volume
     struct Transform *xform;        // Transform to be applied to volume
     OPERATION       op;             // Operation to use when combining volume with tree
                                     // NOTE THE ABOVE MUST FOLLOW immediately after header
+    FACE            max_facetype;   // The highest order face that this volume contains
     int             material;       // Material index (0 is the default)
     BOOL            measured;       // If TRUE, all faces are paired, and the volume has dimensions (l/w/h)
     struct Point    ***point_bucket;  // Bucket structure of Points whose coordinates are copied from 
@@ -375,7 +377,7 @@ extern ListHead free_list_edge;
 extern ListHead free_list_pt;
 extern ListHead free_list_obj;
 
-// Flatness test
+// Flatness test for faces based on their type
 #define IS_FLAT(face)       \
     (       \
         ((face)->type & ~FACE_CONSTRUCTION) == FACE_RECT     \
@@ -383,6 +385,8 @@ extern ListHead free_list_obj;
         ((face)->type & ~FACE_CONSTRUCTION) == FACE_CIRCLE    \
         || \
         ((face)->type & ~FACE_CONSTRUCTION) == FACE_FLAT    \
+        || \
+        ((face)->type & ~FACE_CONSTRUCTION) == FACE_TRI    \
     )
 
 // Prototypes for object functions: 

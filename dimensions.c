@@ -47,6 +47,7 @@ has_dims(Object *obj)
         case FACE_CIRCLE:
             return TRUE;
 
+        case FACE_TRI:
         case FACE_FLAT:
             // If we are extruding, then we show a height on the dims.
             // Otherwise flat faces don't have anything.

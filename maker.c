@@ -260,7 +260,7 @@ make_face(Group* group)
     if (n_edges != 4)
     {
         // More than 4 edges cannot be a curved face, so make it flat
-        face_type = FACE_FLAT;
+        face_type = (n_edges == 3) ? FACE_TRI : FACE_FLAT;
     }
     else if (polygon_planar((Point*)plist.head, &norm))
     {
@@ -744,6 +744,8 @@ make_body_of_revolution(Group* group, BOOL negative)
         }
         f->vol = vol;
         link((Object*)f, &vol->faces);
+        if (ftype > vol->max_facetype)
+            vol->max_facetype = ftype;
 
         ftype = (e->type == EDGE_STRAIGHT) ? FACE_CYLINDRICAL : FACE_BARREL;
         f = face_new(ftype, n);
@@ -766,6 +768,8 @@ make_body_of_revolution(Group* group, BOOL negative)
         }
         f->vol = vol;
         link((Object*)f, &vol->faces);
+        if (ftype > vol->max_facetype)
+            vol->max_facetype = ftype;
 
         delink_group((Object*)e, group);
         delink_group((Object*)o, clone);

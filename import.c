@@ -164,7 +164,7 @@ read_stl_to_group(Group *group, char *filename)
             if (near_pt(&pt[2], &pt[0], SMALL_COORD))
                 continue;
 
-            tf = face_new(FACE_FLAT, norm);
+            tf = face_new(FACE_TRI, norm);
             tf->edges[0] = find_edge(p0, p1);
             tf->edges[1] = find_edge(p1, p2);
             tf->edges[2] = find_edge(p2, p0);
@@ -247,7 +247,7 @@ binary_stl:
         p1 = find_point_coord(&pt[1], vol->point_bucket);
         p2 = find_point_coord(&pt[2], vol->point_bucket);
 
-        tf = face_new(FACE_FLAT, norm);
+        tf = face_new(FACE_TRI, norm);
         tf->edges[0] = find_edge(p0, p1);
         tf->edges[1] = find_edge(p1, p2);
         tf->edges[2] = find_edge(p2, p0);
@@ -340,7 +340,7 @@ read_gts_to_group(Group *group, char *filename)
     for (i = 0; i < nfaces; i++)
     {
         Plane dummy = { 0, };
-        Face *tf = face_new(FACE_FLAT, dummy);
+        Face *tf = face_new(FACE_TRI, dummy);
         int e1, e2, e3;
 
         nexttok = NULL;
@@ -536,7 +536,7 @@ read_obj_to_group(Group* group, char* filename)
     while (1)
     {
         Plane dummy = { 0, };
-        Face* tf = face_new(FACE_FLAT, dummy);
+        Face* tf = face_new(FACE_TRI, dummy);
         int p1, p2, p3;
 
         // We already have 'f' on entry to this loop
@@ -656,7 +656,7 @@ read_off_to_group(Group *group, char *filename)
     for (i = 0; i < nfaces; i++)
     {
         Plane dummy = { 0, };
-        Face *tf = face_new(FACE_FLAT, dummy);
+        Face *tf = face_new(FACE_TRI, dummy);
         int np, p1, p2, p3;
 
         nexttok = NULL;
@@ -834,7 +834,7 @@ read_amf_triangle(Group* group, FILE* f)
 
     read_till("</triangle", f);
 
-    tf = face_new(FACE_FLAT, dummy);
+    tf = face_new(FACE_TRI, dummy);
     tf->edges[0] = find_edge(points[p1], points[p2]);
     tf->edges[1] = find_edge(points[p2], points[p3]);
     tf->edges[2] = find_edge(points[p3], points[p1]);

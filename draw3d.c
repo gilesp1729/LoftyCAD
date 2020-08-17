@@ -1275,6 +1275,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                                 face->text = NULL;
                             }
                             face->view_valid = FALSE;
+                            vol->max_facetype = face->type;
 
                             // Clone the face with coincident edges/points, but in the
                             // opposite sense (and with an opposite normal)
@@ -1315,6 +1316,8 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
                                     side_type = FACE_RECT;
                                     if (e->type == EDGE_ARC || e->type == EDGE_BEZIER)
                                         side_type = FACE_CYLINDRICAL;
+                                    if (side_type > vol->max_facetype)
+                                        vol->max_facetype = side_type;
                                     ASSERT(e->type == o->type, "Opposite edge types don't match");
                                     norm.A = norm.B = norm.C = 0; 
                                     side = face_new(side_type, norm);
@@ -1999,9 +2002,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
     {
         HDC hdc = auxGetHDC();
         GLint vp[4];
-        char *title;
-        char numstr[16];
-        int numlen;
+        char buf[64];
 
         glMatrixMode(GL_MODELVIEW);
         glPushMatrix();
@@ -2017,42 +2018,15 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
         glColor3f(0.4f, 0.4f, 0.4f);
         glRasterPos2f((float)pt.x + 10, (float)vp[3] - pt.y - 12);
 
-        numlen = sprintf_s(numstr, 16, "%d", highlight_obj->ID);
-        switch (highlight_obj->type)
-        {
-        case OBJ_POINT:
-            glCallLists(6, GL_UNSIGNED_BYTE, "Point "); 
-            break;
-        case OBJ_EDGE:
-            glCallLists(5, GL_UNSIGNED_BYTE, "Edge ");
-            break;
-        case OBJ_FACE:
-            glCallLists(5, GL_UNSIGNED_BYTE, "Face ");
-            break;
-        case OBJ_VOLUME:
-            glCallLists(7, GL_UNSIGNED_BYTE, "Volume ");
-            break;
-        case OBJ_GROUP:
-            title = ((Group *)highlight_obj)->title;
-            if (title[0] == '\0')
-                glCallLists(6, GL_UNSIGNED_BYTE, "Group "); 
-            else
-                glCallLists(strlen(title), GL_UNSIGNED_BYTE, title);
-            break;
-        }
-        glCallLists(numlen, GL_UNSIGNED_BYTE, numstr);
+        brief_description(highlight_obj, buf, 64);
+        glCallLists(strlen(buf), GL_UNSIGNED_BYTE, buf);
 
         // Echo the parent group if there is one.
         if (highlight_obj->parent_group != NULL && highlight_obj->parent_group->hdr.ID != 0)
         {
             glCallLists(2, GL_UNSIGNED_BYTE, " (");
-            numlen = sprintf_s(numstr, 16, "%d", highlight_obj->parent_group->hdr.ID);
-            title = highlight_obj->parent_group->title;
-            if (title[0] == '\0')
-                glCallLists(6, GL_UNSIGNED_BYTE, "Group ");
-            else
-                glCallLists(strlen(title), GL_UNSIGNED_BYTE, title);
-            glCallLists(numlen, GL_UNSIGNED_BYTE, numstr);
+            brief_description((Object *)highlight_obj->parent_group, buf, 64);
+            glCallLists(strlen(buf), GL_UNSIGNED_BYTE, buf);
             glCallLists(1, GL_UNSIGNED_BYTE, ")");
         }
 

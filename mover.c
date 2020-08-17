@@ -247,6 +247,7 @@ copy_obj(Object* obj, float xoffset, float yoffset, float zoffset, BOOL cloning)
             new_vol->xform->zc += zoffset;
         }
         new_vol->op = vol->op;
+        new_vol->max_facetype = vol->max_facetype;
         break;
 
     case OBJ_GROUP:
