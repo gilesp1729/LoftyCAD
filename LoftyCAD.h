@@ -125,6 +125,7 @@ extern float total_angle;
 extern float effective_angle;
 extern float halo_rad;
 extern BOOL suppress_drawing;
+extern BOOL dl_valid;
 
 extern char curr_filename[];
 extern float grid_snap;

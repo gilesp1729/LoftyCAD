@@ -24,6 +24,9 @@ Material materials[MAX_MATERIAL];
 // Flag to turn drawing off while building display lists (protect the xform_list)
 BOOL suppress_drawing = FALSE;
 
+// Flag to indicate object tree DL is valid and can be replayed.
+BOOL dl_valid = FALSE;
+
 // Set material and lighting up for the rendered view
 void
 SetMaterial(int mat)
@@ -560,6 +563,9 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
 
     if (suppress_drawing)
         return;
+
+    if (app_state != STATE_NONE)
+        dl_valid = FALSE;
 
     if (!picking)
     {
@@ -1729,16 +1735,32 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
     glMultMatrixf(&(matRot[0][0]));
 
     // Draw the object tree. 
-    pres = 0;
-    if (picking && app_state == STATE_DRAGGING_SELECT)
-        pres = DRAW_TOP_LEVEL_ONLY;
-    if (app_state >= STATE_STARTING_EDGE)
-        pres |= DRAW_HIGHLIGHT_LOCKED;
-    glInitNames();
-    curr_drawn_no++;
-    xform_list.head = NULL;
-    xform_list.tail = NULL;
-    draw_object((Object *)&object_tree, pres, LOCK_NONE);  // locks come from objects
+    if (dl_valid)
+    {
+        glCallList(3000);
+    }
+    else
+    {
+        if (!picking)
+            glNewList(3000, GL_COMPILE_AND_EXECUTE);
+
+        pres = 0;
+        if (picking && app_state == STATE_DRAGGING_SELECT)
+            pres = DRAW_TOP_LEVEL_ONLY;
+        if (app_state >= STATE_STARTING_EDGE)
+            pres |= DRAW_HIGHLIGHT_LOCKED;
+        glInitNames();
+        curr_drawn_no++;
+        xform_list.head = NULL;
+        xform_list.tail = NULL;
+        draw_object((Object*)&object_tree, pres, LOCK_NONE);  // locks come from objects
+
+        if (!picking)
+        {
+            glEndList();
+            dl_valid = TRUE;
+        }
+    }
 
     if (!view_rendered)
     {

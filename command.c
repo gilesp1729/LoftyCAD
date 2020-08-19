@@ -377,6 +377,7 @@ Command(int message, int wParam, int lParam)
                 view_rendered = FALSE;
                 glEnable(GL_BLEND);
                 CheckMenuItem(hMenu, ID_VIEW_RENDEREDVIEW, MF_UNCHECKED);
+                dl_valid = FALSE;
             }
             else
             {
