@@ -27,6 +27,12 @@ BOOL suppress_drawing = FALSE;
 // Flag to indicate object tree DL is valid and can be replayed.
 BOOL dl_valid = FALSE;
 
+#define TIME_DRAWING
+#ifdef TIME_DRAWING
+LARGE_INTEGER draw_clock_start, draw_clock_end, draw_clock, clock_freq;
+int num_draws = 0;
+#endif
+
 // Set material and lighting up for the rendered view
 void
 SetMaterial(int mat)
@@ -181,6 +187,7 @@ color_as(OBJECT obj_type, float color_decay, BOOL construction, PRESENTATION pre
             r = g = b = 1.0f;
         break;
     }
+
     glColor4f(r, g, b, a);
 }
 
@@ -272,7 +279,9 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         if ((selected || highlighted) && !push_name)
             return;
 
-        glPushName(push_name ? (GLuint)obj : 0);
+        if (push_name)
+            glPushName((GLuint)obj);
+
         if (selected || highlighted)
         {
             // Draw a square blob in the facing plane, so it's more easily seen
@@ -285,6 +294,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             case PLANE_MINUS_XY:
                 dx = 1;         // TODO - scale this unit so it is not too large when zoomed in
                 dy = 1;
+                dz = 0;
                 glVertex3_trans(p->x - dx, p->y - dy, p->z);
                 glVertex3_trans(p->x + dx, p->y - dy, p->z);
                 glVertex3_trans(p->x + dx, p->y + dy, p->z);
@@ -330,7 +340,9 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
                 glEnd();
             }
         }
-        glPopName();
+        if (push_name)
+            glPopName();
+
         break;
 
     case OBJ_EDGE:
@@ -355,7 +367,9 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             edge->drawn = curr_drawn_no;
         }
 
-        glPushName(push_name ? (GLuint)obj : 0);
+        if (push_name)
+            glPushName((GLuint)obj);
+
         switch (edge->type & ~EDGE_CONSTRUCTION)
         {
         case EDGE_STRAIGHT:
@@ -364,7 +378,8 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             glVertex3_trans(edge->endpoints[0]->x, edge->endpoints[0]->y, edge->endpoints[0]->z);
             glVertex3_trans(edge->endpoints[1]->x, edge->endpoints[1]->y, edge->endpoints[1]->z);
             glEnd();
-            glPopName();
+            if (push_name)
+                glPopName();
             if (draw_components)
             {
                 draw_object((Object *)edge->endpoints[0], (pres & ~DRAW_WITH_DIMENSIONS), parent_lock);
@@ -381,7 +396,8 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
                 glVertex3_trans(p->x, p->y, p->z);
 
             glEnd();
-            glPopName();
+            if (push_name)
+                glPopName();
             if (draw_components)
             {
                 draw_object((Object *)ae->centre, (pres & ~DRAW_WITH_DIMENSIONS), parent_lock);
@@ -399,7 +415,8 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
                 glVertex3_trans(p->x, p->y, p->z);
 
             glEnd();
-            glPopName();
+            if (push_name)
+                glPopName();
             if (draw_components)
             {
                 draw_object((Object *)edge->endpoints[0], (pres & ~DRAW_WITH_DIMENSIONS), parent_lock);
@@ -1735,6 +1752,14 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
     glMultMatrixf(&(matRot[0][0]));
 
     // Draw the object tree. 
+#ifdef TIME_DRAWING
+    if (num_draws == 0)  // only once
+    {
+        QueryPerformanceFrequency(&clock_freq);
+        clock_freq.QuadPart /= 1000000;   // bring to usecs
+    }
+    QueryPerformanceCounter(&draw_clock_start);
+#endif
     if (dl_valid)
     {
         glCallList(3000);
@@ -1761,6 +1786,19 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
             dl_valid = TRUE;
         }
     }
+#ifdef TIME_DRAWING
+    QueryPerformanceCounter(&draw_clock_end);
+    draw_clock.QuadPart += draw_clock_end.QuadPart - draw_clock_start.QuadPart;
+    num_draws++;
+    if (num_draws % 100 == 0)
+    {
+        char buf[64];
+
+        sprintf_s(buf, 64, "100 draws: %lld us\r\n", draw_clock.QuadPart / clock_freq.QuadPart);
+        Log(buf);
+        draw_clock.QuadPart = 0;
+    }
+#endif
 
     if (!view_rendered)
     {
