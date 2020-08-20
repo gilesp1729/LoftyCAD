@@ -269,7 +269,8 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
     BOOL show_dims = obj->show_dims || (pres & DRAW_WITH_DIMENSIONS);
     // We're picking, or else drawing highlighted or selected objects. 
     // We cannot optimise multiple objects as they need individual names pushed.
-    BOOL no_optimise = selected || highlighted || in_halo || snapping || (pres & DRAW_PICKING);
+    BOOL picking = (pres & DRAW_PICKING);
+    BOOL no_optimise = selected || highlighted || in_halo || snapping || picking;
 
     BOOL draw_components = !highlighted || !snapping;
 
@@ -282,7 +283,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         push_name = snapping || parent_lock < obj->type;
         locked = parent_lock >= obj->type;
         p = (Point *)obj;
-        if ((selected || highlighted) && !push_name)
+        if ((selected || highlighted || picking) && !push_name)
             return;
 
         if (push_name)
@@ -357,7 +358,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         edge = (Edge *)obj;
         if ((edge->type & EDGE_CONSTRUCTION) && !view_constr)
             return;
-        if ((selected || highlighted) && !push_name)
+        if ((selected || highlighted || picking) && !push_name)
             return;
         constr_edge = (pres & DRAW_PATH) != 0 || (edge->type & EDGE_CONSTRUCTION) != 0;
 
