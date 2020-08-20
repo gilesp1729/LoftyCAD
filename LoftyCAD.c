@@ -649,7 +649,7 @@ void
 update_drawing(void)
 {
     drawing_changed = TRUE;
-    dl_valid = FALSE;
+    invalidate_dl();
     write_checkpoint(&object_tree, curr_filename);
     xform_list.head = NULL;
     xform_list.tail = NULL;
@@ -1327,7 +1327,7 @@ micro_move_selection(float x, float y, BOOL inhibit_snap)
         clear_move_copy_flags(obj->prev);
 
     micro_moved = TRUE;
-    dl_valid = FALSE;
+    invalidate_dl();
 }
 
 // U/D/L/R arrow keys move selection by one unit in the facing plane,

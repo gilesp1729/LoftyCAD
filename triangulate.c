@@ -262,7 +262,7 @@ gen_view_list_tree_volumes(Group *tree)
         tree->mesh = NULL;
         tree->mesh_valid = FALSE;
     }
-    dl_valid = FALSE;
+    invalidate_dl();
     return rc;
 }
 

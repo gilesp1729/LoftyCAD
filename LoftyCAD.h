@@ -125,7 +125,6 @@ extern float total_angle;
 extern float effective_angle;
 extern float halo_rad;
 extern BOOL suppress_drawing;
-extern BOOL dl_valid;
 
 extern char curr_filename[];
 extern float grid_snap;
@@ -232,6 +231,7 @@ Object * Pick(GLint x_pick, GLint y_pick, BOOL force_pick);
 void Pick_all_in_rect(GLint x_pick, GLint y_pick, GLint width, GLint height);
 void CALLBACK Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick);
 void CALLBACK Position(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick);
+void invalidate_dl(void);
 HWND init_help_window(void);
 void display_help_window(void);
 void display_help(char* key);

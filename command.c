@@ -377,7 +377,7 @@ Command(int message, int wParam, int lParam)
                 view_rendered = FALSE;
                 glEnable(GL_BLEND);
                 CheckMenuItem(hMenu, ID_VIEW_RENDEREDVIEW, MF_UNCHECKED);
-                dl_valid = FALSE;
+                invalidate_dl();
             }
             else
             {
@@ -567,7 +567,10 @@ Command(int message, int wParam, int lParam)
             SetWindowText(auxGetHWND(), "LoftyCAD");
 
             if (LOWORD(wParam) == ID_FILE_NEW)
+            {
+                invalidate_dl();
                 break;
+            }
 
             memset(&ofn, 0, sizeof(OPENFILENAME));
             ofn.lStructSize = sizeof(OPENFILENAME);

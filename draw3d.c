@@ -24,13 +24,16 @@ Material materials[MAX_MATERIAL];
 // Flag to turn drawing off while building display lists (protect the xform_list)
 BOOL suppress_drawing = FALSE;
 
-// Flag to indicate object tree DL is valid and can be replayed.
-BOOL dl_valid = FALSE;
+// Flags to indicate object tree DL is valid and can be replayed. There is one for picking
+// and another for drawing pixels.
+BOOL draw_dl_valid = FALSE;
+BOOL pick_dl_valid = FALSE;
 
 #define TIME_DRAWING
 #ifdef TIME_DRAWING
-LARGE_INTEGER draw_clock_start, draw_clock_end, draw_clock, clock_freq;
+LARGE_INTEGER draw_clock_start, draw_clock_end, draw_clock, pick_clock, clock_freq;
 int num_draws = 0;
+int num_picks = 0;
 #endif
 
 // Set material and lighting up for the rendered view
@@ -211,7 +214,7 @@ draw_triangle(void *arg, int mat, float x[3], float y[3], float z[3])
     float A, B, C, length;
 
     SetMaterial(mat);
-    glBegin(GL_POLYGON);
+    //glBegin(GL_POLYGON);
     cross(x[1] - x[0], y[1] - y[0], z[1] - z[0], x[2] - x[0], y[2] - y[0], z[2] - z[0], &A, &B, &C);
     length = (float)sqrt(A * A + B * B + C * C);
     if (!nz(length))
@@ -223,7 +226,7 @@ draw_triangle(void *arg, int mat, float x[3], float y[3], float z[3])
     }
     for (i = 0; i < 3; i++)
         glVertex3d(x[i], y[i], z[i]);
-    glEnd();
+    //glEnd();
 }
 
 // Send a coordinate to glVertex3f, after transforming it by the transforms in the list.
@@ -258,12 +261,15 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
     BOOL highlighted = pres & DRAW_HIGHLIGHT;
     // This object is highlighted because it is in the halo.
     BOOL in_halo = pres & DRAW_HIGHLIGHT_HALO;
-    // We're picking, so only draw the top level, not the components (to save select buffer space)
+    // We're picking for an extended selection, so only draw the top level, not the components (to save select buffer space)
     BOOL top_level_only = pres & DRAW_TOP_LEVEL_ONLY;
     // We're drawing, so we want to see the snap targets even if they are locked. But only under the mouse.
     BOOL snapping = pres & DRAW_HIGHLIGHT_LOCKED;
     // Whether to show dimensions (all the time if highlighted or selected, but don't pass to components)
     BOOL show_dims = obj->show_dims || (pres & DRAW_WITH_DIMENSIONS);
+    // We're picking, or else drawing highlighted or selected objects. 
+    // We cannot optimise multiple objects as they need individual names pushed.
+    BOOL no_optimise = selected || highlighted || in_halo || snapping || (pres & DRAW_PICKING);
 
     BOOL draw_components = !highlighted || !snapping;
 
@@ -463,15 +469,60 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         vol = (Volume *)obj;
         if (view_rendered)
         {
-            // Draw from the triangulated mesh for the volume.
-            // TODO: is this ever reached? The object tree group should have drawn it.
+            // Draw from the triangulated mesh for the volume. (only for incomplete meshes)
             ASSERT(vol->mesh_valid, "Mesh is not up to date");
             color(obj, FALSE, pres, FALSE);
+            glBegin(GL_TRIANGLES);
             mesh_foreach_face_coords_mat(vol->mesh, draw_triangle, NULL);
+            glEnd();
         }
-        else        
+        else if (vol->max_facetype == FACE_TRI && !no_optimise) // special cases for speed
         {
-            // Draw individual faces
+            ListHead elist = { NULL, NULL };
+
+            gen_view_list_vol(vol);
+            if (vol->xform != NULL)
+                link((Object*)vol->xform, &xform_list);
+
+            // Output triangle faces, putting their edges in a queue to do later
+            locked = parent_lock > OBJ_FACE;
+            glBegin(GL_TRIANGLES);
+            for (face = (Face*)vol->faces.head; face != NULL; face = (Face*)face->hdr.next)
+            {
+                color((Object*)face, face->type & FACE_CONSTRUCTION, pres, locked);
+                for (i = 0, p = (Point*)face->view_list.head; i < 3 && p != NULL; i++, p = (Point*)p->hdr.next)
+                    glVertex3_trans(p->x, p->y, p->z);
+                if (draw_components)
+                {
+                    for (i = 0; i < face->n_edges; i++)
+                    {
+                        edge = face->edges[i];
+                        if (edge->drawn == curr_drawn_no)
+                            continue;
+                        edge->drawn = curr_drawn_no;
+                        link_tail((Object*)edge, &elist);
+                    }
+                }
+            }
+            glEnd();
+
+            // Draw all the edges
+            locked = parent_lock >= OBJ_EDGE;
+            glBegin(GL_LINES);
+            for (edge = (Edge*)elist.head; edge != NULL; edge = (Edge*)edge->hdr.next)
+            {
+                color((Object*)edge, edge->type & FACE_CONSTRUCTION, pres, locked);
+                glVertex3_trans(edge->endpoints[0]->x, edge->endpoints[0]->y, edge->endpoints[0]->z);
+                glVertex3_trans(edge->endpoints[1]->x, edge->endpoints[1]->y, edge->endpoints[1]->z);
+            }
+            glEnd();
+
+            if (vol->xform != NULL)
+                delink((Object*)vol->xform, &xform_list);
+        }
+        else
+        {
+            // Draw individual faces with names pushed
             gen_view_list_vol(vol);
             if (vol->xform != NULL)
                 link((Object *)vol->xform, &xform_list);
@@ -490,8 +541,11 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         {
             // The object tree is a group, but it is never merged.
             if (group->mesh != NULL && group->mesh_valid && !group->mesh_merged)
+            {
+                glBegin(GL_TRIANGLES);
                 mesh_foreach_face_coords_mat(group->mesh, draw_triangle, NULL);
-
+                glEnd();
+            }
             if (!group->mesh_complete)
             {
                 for (o = group->obj_list.head; o != NULL; o = o->next)
@@ -582,7 +636,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
         return;
 
     if (app_state != STATE_NONE)
-        dl_valid = FALSE;
+        invalidate_dl();
 
     if (!picking)
     {
@@ -1753,50 +1807,84 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
 
     // Draw the object tree. 
 #ifdef TIME_DRAWING
-    if (num_draws == 0)  // only once
+    if (num_draws * num_picks == 0)  // only once
     {
         QueryPerformanceFrequency(&clock_freq);
         clock_freq.QuadPart /= 1000000;   // bring to usecs
     }
     QueryPerformanceCounter(&draw_clock_start);
 #endif
-    if (dl_valid)
+    if (picking)
     {
-        glCallList(3000);
+        if (pick_dl_valid)
+        {
+            glCallList(3001);
+        }
+        else
+        {
+            glNewList(3001, GL_COMPILE_AND_EXECUTE);
+            pres = DRAW_PICKING;
+            if (app_state == STATE_DRAGGING_SELECT)
+                pres |= DRAW_TOP_LEVEL_ONLY;
+            if (app_state >= STATE_STARTING_EDGE)
+                pres |= DRAW_HIGHLIGHT_LOCKED;
+            glInitNames();
+            curr_drawn_no++;
+            xform_list.head = NULL;
+            xform_list.tail = NULL;
+            draw_object((Object*)&object_tree, pres, LOCK_NONE);  // locks come from objects
+            glEndList();
+            pick_dl_valid = TRUE;
+        }
+    }
+    else  // not picking, just drawing
+    {
+        if (draw_dl_valid)
+        {
+            glCallList(3000);
+        }
+        else
+        {
+            glNewList(3000, GL_COMPILE_AND_EXECUTE);
+            pres = 0;
+            if (app_state >= STATE_STARTING_EDGE)
+                pres |= DRAW_HIGHLIGHT_LOCKED;
+            glInitNames();
+            curr_drawn_no++;
+            xform_list.head = NULL;
+            xform_list.tail = NULL;
+            draw_object((Object*)&object_tree, pres, LOCK_NONE);  // locks come from objects
+            glEndList();
+            draw_dl_valid = TRUE;
+        }
+    }
+
+#ifdef TIME_DRAWING
+    QueryPerformanceCounter(&draw_clock_end);
+    if (picking)
+    {
+        num_picks++;
+        pick_clock.QuadPart += draw_clock_end.QuadPart - draw_clock_start.QuadPart;
     }
     else
     {
-        if (!picking)
-            glNewList(3000, GL_COMPILE_AND_EXECUTE);
-
-        pres = 0;
-        if (picking && app_state == STATE_DRAGGING_SELECT)
-            pres = DRAW_TOP_LEVEL_ONLY;
-        if (app_state >= STATE_STARTING_EDGE)
-            pres |= DRAW_HIGHLIGHT_LOCKED;
-        glInitNames();
-        curr_drawn_no++;
-        xform_list.head = NULL;
-        xform_list.tail = NULL;
-        draw_object((Object*)&object_tree, pres, LOCK_NONE);  // locks come from objects
-
-        if (!picking)
-        {
-            glEndList();
-            dl_valid = TRUE;
-        }
+        num_draws++;
+        draw_clock.QuadPart += draw_clock_end.QuadPart - draw_clock_start.QuadPart;
     }
-#ifdef TIME_DRAWING
-    QueryPerformanceCounter(&draw_clock_end);
-    draw_clock.QuadPart += draw_clock_end.QuadPart - draw_clock_start.QuadPart;
-    num_draws++;
-    if (num_draws % 100 == 0)
+
+    if (num_draws == 100)
     {
         char buf[64];
 
-        sprintf_s(buf, 64, "100 draws: %lld us\r\n", draw_clock.QuadPart / clock_freq.QuadPart);
+        sprintf_s(buf, 64, "100 draws: %lld us (%d picks: %lld us)\r\n", 
+                draw_clock.QuadPart / clock_freq.QuadPart,
+                num_picks,
+                pick_clock.QuadPart / clock_freq.QuadPart);
         Log(buf);
         draw_clock.QuadPart = 0;
+        pick_clock.QuadPart = 0;
+        num_picks = 0;
+        num_draws = 0;
     }
 #endif
 
@@ -2098,4 +2186,11 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
     glFlush();
     if (!picking)
         auxSwapBuffers();
+}
+
+// Mark DL's as invalid. The next draw will regenerate them.
+void invalidate_dl(void)
+{
+    draw_dl_valid = FALSE;
+    pick_dl_valid = FALSE;
 }
