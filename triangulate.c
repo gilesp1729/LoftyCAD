@@ -297,7 +297,6 @@ inform_mesh_error(Object* obj)
 {
     char buf[64];
 
-    hide_hint();
     if (exception > 0)
         return MessageBox(auxGetHWND(), err, obj_description(obj, buf, 64, FALSE), MB_OKCANCEL | MB_ICONEXCLAMATION);
     else
@@ -314,7 +313,6 @@ gen_view_list_tree_surfaces_op(OPERATION op, Group *tree, Group *parent_tree)
     Face *f;
     Volume *vol;
     Group *group;
-    POINT pt = { wWidth / 2, wHeight / 2 };
     char buf[64];
 
     for (obj = tree->obj_list.head; obj != NULL; obj = obj->next)
@@ -353,7 +351,7 @@ gen_view_list_tree_surfaces_op(OPERATION op, Group *tree, Group *parent_tree)
             }
             else
             {
-                show_hint_at(pt, obj_description(obj, buf, 64, FALSE), FALSE);
+                show_status(obj_description(obj, buf, 64, FALSE));
                 process_messages();
 
                 // Merge volume mesh to tree mesh
@@ -403,7 +401,7 @@ gen_view_list_tree_surfaces_op(OPERATION op, Group *tree, Group *parent_tree)
                 }
                 else
                 {
-                    show_hint_at(pt, obj_description(obj, buf, 64, FALSE), FALSE);
+                    show_status(obj_description(obj, buf, 64, FALSE));
                     process_messages();
 
                     // Merge group mesh to tree mesh
@@ -454,7 +452,7 @@ gen_view_list_tree_surfaces(Group *tree, Group *parent_tree)
         &&
         gen_view_list_tree_surfaces_op(OP_INTERSECTION, tree, parent_tree);
 
-    hide_hint();
+    show_status("");
     suppress_drawing = FALSE;
     return rc;
 }

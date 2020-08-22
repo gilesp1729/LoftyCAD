@@ -560,14 +560,6 @@ show_dims_at(POINT pt, Object *obj, BOOL accept_input)
     show_hint_at(pt, buf, accept_input);
 }
 
-#if 0
-// show a string on an object.
-void
-show_hint_on(Object *obj, char buf[64])
-{
-}
-#endif
-
 // Show dimensions on an object during drawing.
 void
 show_dims_on(Object *obj, PRESENTATION pres, LOCK parent_lock)

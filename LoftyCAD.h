@@ -169,6 +169,9 @@ extern Material materials[MAX_MATERIAL];
 // base of menu ID's for materials
 #define ID_MATERIAL_BASE 70000
 
+// ID of status bar window
+#define ID_STATUSBAR    99940
+
 
 // Debug stuff
 

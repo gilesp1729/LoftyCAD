@@ -35,6 +35,7 @@ HWND hWndDebug;
 HWND hWndHelp;
 HWND hWndTree;
 HWND hWndDims;
+HWND hwndStatus;
 BOOL view_tools = TRUE;
 BOOL view_debug = FALSE;
 BOOL view_help = TRUE;
@@ -330,10 +331,9 @@ Position(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
 void CALLBACK
 Reshape(int width, int height)
 {
+    SendMessage(hwndStatus, WM_SIZE, 0, 0);
     trackball_Resize(width, height);
-
     glViewport(0, 0, (GLint)width, (GLint)height);
-
     Position(FALSE, 0, 0, 0, 0);
 }
 
@@ -1507,12 +1507,14 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
     HMENU hMenu;
     POINT pt = { 0, 0 };
     RECT rect;
+    int parts[2];
 
 	// Initialize global strings
 	LoadString(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
 	LoadString(hInstance, IDC_LOFTYCAD, szWindowClass, MAX_LOADSTRING);
 
-        wWidth = wHeight = GetSystemMetrics(SM_CYFULLSCREEN);
+        wWidth = GetSystemMetrics(SM_CYFULLSCREEN);
+        wHeight = wWidth - GetSystemMetrics(SM_CYMENU);  // leave a little room for the status bar
         auxInitPosition(0, 0, wWidth, wHeight);
         auxInitDisplayMode(AUX_DEPTH16 | AUX_RGB | AUX_DOUBLE);
         auxInitWindow("LoftyCAD", TRUE, (HMENU)MAKEINTRESOURCE(IDC_LOFTYCAD), TRUE);
@@ -1611,6 +1613,13 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
         // Bring main window back to the front
         SetWindowPos(auxGetHWND(), HWND_TOP, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOREPOSITION);
 
+        // Status bar goes at the bottom (and moves with the window - WM_SIZE with 0,0 redraws)
+        hwndStatus = CreateWindow(STATUSCLASSNAME, NULL, WS_CHILD | WS_VISIBLE, 0, wHeight - 10, wWidth, 10, auxGetHWND(), NULL, hInst, 0);
+        parts[0] = 150;
+        parts[1] = -1;
+        SendMessage(hwndStatus, SB_SETPARTS, 2, (LPARAM)parts);
+        ShowWindow(hwndStatus, SW_SHOW);
+
         hMenu = GetSubMenu(GetMenu(auxGetHWND()), 0);
         CheckMenuItem(hMenu, ID_PREFERENCES_SNAPTOGRID, snapping_to_grid ? MF_CHECKED : MF_UNCHECKED);
         CheckMenuItem(hMenu, ID_PREFERENCES_SNAPTOANGLE, snapping_to_angle ? MF_CHECKED : MF_UNCHECKED);
@@ -1694,5 +1703,11 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
             }
         }
         return (int)msg.wParam;
+}
+
+// Show status in the status bar.
+void show_status(char* string)
+{
+    SendMessage(hwndStatus, SB_SETTEXT, 0, (LPARAM)string);
 }
 

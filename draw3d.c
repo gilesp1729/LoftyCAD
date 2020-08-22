@@ -512,7 +512,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             glBegin(GL_LINES);
             for (edge = (Edge*)elist.head; edge != NULL; edge = (Edge*)edge->hdr.next)
             {
-                color((Object*)edge, edge->type & FACE_CONSTRUCTION, pres, locked);
+                color((Object*)edge, edge->type & EDGE_CONSTRUCTION, pres, locked);
                 glVertex3_trans(edge->endpoints[0]->x, edge->endpoints[0]->y, edge->endpoints[0]->z);
                 glVertex3_trans(edge->endpoints[1]->x, edge->endpoints[1]->y, edge->endpoints[1]->z);
             }
