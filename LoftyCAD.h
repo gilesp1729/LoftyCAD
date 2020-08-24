@@ -90,6 +90,8 @@ extern HWND hWndDebug;
 extern HWND hWndTree;
 extern HWND hWndDims;
 extern HWND hWndHelp;
+extern HWND hwndStatus;
+extern HWND hwndProg;
 extern BOOL view_tools;
 extern BOOL view_debug;
 extern BOOL view_tree;
@@ -235,6 +237,13 @@ void Pick_all_in_rect(GLint x_pick, GLint y_pick, GLint width, GLint height);
 void CALLBACK Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick);
 void CALLBACK Position(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick);
 void invalidate_dl(void);
+BOOL is_selected_direct(Object * obj, Object * *prev_in_list);
+BOOL is_selected_parent(Object * obj);
+BOOL remove_from_selection(Object * obj);
+void clear_selection(ListHead * sel_list);
+
+
+// Help dialog (help.c)
 HWND init_help_window(void);
 void display_help_window(void);
 void display_help(char* key);
@@ -242,10 +251,13 @@ void display_help_state(STATE state);
 void change_state(STATE new_state);
 void display_cursor(STATE new_state);
 
-BOOL is_selected_direct(Object *obj, Object **prev_in_list);
-BOOL is_selected_parent(Object *obj);
-BOOL remove_from_selection(Object *obj);
-void clear_selection(ListHead *sel_list);
+// Status and progress bar (progress.c)
+void show_status(char* heading, char* string);
+void set_progress_range(int n);
+void set_progress(int n);
+void bump_progress(void);
+void clear_status_and_progress(void);
+int accum_render_count(Group * group);
 
 // Context menu (contextmenu.c)
 char *obj_description(Object *obj, char *descr, int descr_len, BOOL verbose);

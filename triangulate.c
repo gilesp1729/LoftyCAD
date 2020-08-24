@@ -351,7 +351,8 @@ gen_view_list_tree_surfaces_op(OPERATION op, Group *tree, Group *parent_tree)
             }
             else
             {
-                show_status(obj_description(obj, buf, 64, FALSE));
+                show_status("Merging volume: ", obj_description(obj, buf, 64, FALSE));
+                bump_progress();
                 process_messages();
 
                 // Merge volume mesh to tree mesh
@@ -401,7 +402,8 @@ gen_view_list_tree_surfaces_op(OPERATION op, Group *tree, Group *parent_tree)
                 }
                 else
                 {
-                    show_status(obj_description(obj, buf, 64, FALSE));
+                    show_status("Merging group: ", obj_description(obj, buf, 64, FALSE));
+                    bump_progress();
                     process_messages();
 
                     // Merge group mesh to tree mesh
@@ -440,6 +442,10 @@ gen_view_list_tree_surfaces(Group *tree, Group *parent_tree)
     if (tree == parent_tree && parent_tree->mesh_valid)
         return TRUE;
 
+    // Start up the progress bar
+    if (tree == parent_tree)
+        set_progress_range(accum_render_count(tree));
+
     suppress_drawing = TRUE;
     parent_tree->mesh_complete = TRUE;
 
@@ -452,8 +458,10 @@ gen_view_list_tree_surfaces(Group *tree, Group *parent_tree)
         &&
         gen_view_list_tree_surfaces_op(OP_INTERSECTION, tree, parent_tree);
 
-    show_status("");
     suppress_drawing = FALSE;
+    if (tree == parent_tree)
+        clear_status_and_progress();
+
     return rc;
 }
 

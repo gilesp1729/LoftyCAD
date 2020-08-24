@@ -361,6 +361,7 @@ typedef struct Group
     struct Transform *xform;        // Transform to be applied to group
     OPERATION       op;             // Operation to use when combining group with tree
                                     // NOTE THE ABOVE MUST FOLLOW immediately after header
+    int             n_members;      // The number of top-level objects in the group.
     char            title[256];     // A name for the group
     Mesh            *mesh;          // Mesh for the complete group
     BOOL            mesh_valid;     // If TRUE, the mesh is up to date (but not necessarily complete)

@@ -36,6 +36,7 @@ HWND hWndHelp;
 HWND hWndTree;
 HWND hWndDims;
 HWND hwndStatus;
+HWND hwndProg;
 BOOL view_tools = TRUE;
 BOOL view_debug = FALSE;
 BOOL view_help = TRUE;
@@ -331,7 +332,7 @@ Position(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
 void CALLBACK
 Reshape(int width, int height)
 {
-    SendMessage(hwndStatus, WM_SIZE, 0, 0);
+    SendMessage(hwndStatus, WM_SIZE, 0, 0);     // redraw the status bar
     trackball_Resize(width, height);
     glViewport(0, 0, (GLint)width, (GLint)height);
     Position(FALSE, 0, 0, 0, 0);
@@ -1507,7 +1508,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
     HMENU hMenu;
     POINT pt = { 0, 0 };
     RECT rect;
-    int parts[2];
+    int parts[3];
 
 	// Initialize global strings
 	LoadString(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
@@ -1554,12 +1555,12 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 
         // Toolbar, and get the bottom to position other windows against
         hWndToolbar = CreateDialog
-            (
+        (
             hInst,
             MAKEINTRESOURCE(IDD_TOOLBAR),
             auxGetHWND(),
             toolbar_dialog
-            );
+        );
 
         SetWindowPos(hWndToolbar, HWND_NOTOPMOST, wWidth, 0, 0, 0, SWP_NOSIZE);
         if (view_tools)
@@ -1569,12 +1570,12 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 
         // Debug log
         hWndDebug = CreateDialog
-            (
+        (
             hInst,
             MAKEINTRESOURCE(IDD_DEBUG),
             auxGetHWND(),
             debug_dialog
-            );
+        );
 
         SetWindowPos(hWndDebug, HWND_NOTOPMOST, wWidth, toolbar_bottom, 0, 0, SWP_NOSIZE);
         if (view_debug)
@@ -1585,12 +1586,12 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 
         // Tree view of object tree
         hWndTree = CreateDialog
-            (
+        (
             hInst,
             MAKEINTRESOURCE(IDD_TREEVIEW),
             auxGetHWND(),
             treeview_dialog
-            );
+        );
 
         SetWindowPos(hWndTree, HWND_NOTOPMOST, wWidth + 150, 0, 0, 0, SWP_NOSIZE);
         if (view_tree)
@@ -1599,13 +1600,13 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
         // Dimensions window. It looks like a tooltip, but displays and allows input of dimensions.
         // It is used both modeless (as here) and also modal (when typing in dimensions)
         hWndDims = CreateDialogParam
-            (
+        (
             hInst,
             MAKEINTRESOURCE(IDD_DIMENSIONS),
             auxGetHWND(),
             dimensions_dialog,
             (LPARAM)NULL
-            );
+        );
 
         SetWindowPos(hWndDims, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOSIZE);
         ShowWindow(hWndDims, SW_HIDE);
@@ -1614,11 +1615,39 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
         SetWindowPos(auxGetHWND(), HWND_TOP, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOREPOSITION);
 
         // Status bar goes at the bottom (and moves with the window - WM_SIZE with 0,0 redraws)
-        hwndStatus = CreateWindow(STATUSCLASSNAME, NULL, WS_CHILD | WS_VISIBLE, 0, wHeight - 10, wWidth, 10, auxGetHWND(), NULL, hInst, 0);
-        parts[0] = 150;
-        parts[1] = -1;
-        SendMessage(hwndStatus, SB_SETPARTS, 2, (LPARAM)parts);
+        hwndStatus = CreateWindow
+        (
+            STATUSCLASSNAME, 
+            NULL, 
+            WS_CHILD | WS_VISIBLE, 
+            0, wHeight - 10, wWidth, 10, 
+            auxGetHWND(), 
+            NULL, 
+            hInst, 
+            0
+        );
+        parts[0] = 250;
+        parts[1] = 450;
+        parts[2] = -1;
+        SendMessage(hwndStatus, SB_SETPARTS, 3, (LPARAM)parts);
         ShowWindow(hwndStatus, SW_SHOW);
+
+        // Progress bar: a child of the status bar, so it stays together and on top.
+        // Put it in the second part of the status bar
+        GetClientRect(hwndStatus, &rect);
+        rect.top += 2;
+        hwndProg = CreateWindow
+        (
+            PROGRESS_CLASS, 
+            NULL,
+            WS_CHILD | WS_VISIBLE,
+            250, rect.top, 200, rect.bottom - rect.top,
+            hwndStatus,
+            NULL,
+            hInst,
+            0
+        );
+        ShowWindow(hwndProg, SW_SHOW);
 
         hMenu = GetSubMenu(GetMenu(auxGetHWND()), 0);
         CheckMenuItem(hMenu, ID_PREFERENCES_SNAPTOGRID, snapping_to_grid ? MF_CHECKED : MF_UNCHECKED);
@@ -1703,11 +1732,5 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
             }
         }
         return (int)msg.wParam;
-}
-
-// Show status in the status bar.
-void show_status(char* string)
-{
-    SendMessage(hwndStatus, SB_SETTEXT, 0, (LPARAM)string);
 }
 

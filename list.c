@@ -61,6 +61,7 @@ void link_group(Object *new_obj, Group *group)
     ASSERT(group->hdr.type == OBJ_GROUP, "Trying to link, but it's not a group");
     link(new_obj, &group->obj_list);
     new_obj->parent_group = group;
+    group->n_members++;
 }
 
 void delink_group(Object *obj, Group *group)
@@ -68,6 +69,7 @@ void delink_group(Object *obj, Group *group)
     ASSERT(group->hdr.type == OBJ_GROUP, "Trying to delink, but it's not a group");
     ASSERT(obj->parent_group == group, "Delinking from wrong group");
     delink(obj, &group->obj_list);
+    group->n_members--;
     obj->parent_group = NULL;
 }
 
@@ -76,6 +78,7 @@ void link_tail_group(Object *new_obj, Group *group)
     ASSERT(group->hdr.type == OBJ_GROUP, "Trying to link, but it's not a group");
     link_tail(new_obj, &group->obj_list);
     new_obj->parent_group = group;
+    group->n_members++;
 }
 
 // Link objects into a singly linked list, chained through the next pointer.
