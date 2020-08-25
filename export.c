@@ -155,9 +155,11 @@ export_object_tree(Group *tree, char *filename, int file_index)
     switch (file_index)
     {
     case 1: // Export to an STL file
+    single_stl_output:
         fopen_s(&stl, filename, "wt");
         if (stl == NULL)
             return;
+        show_status("Exporting ", filename);
         fprintf_s(stl, "solid %s\n", tree->title);
 
         num_exported_tri = 0;
@@ -180,6 +182,7 @@ export_object_tree(Group *tree, char *filename, int file_index)
 
         fprintf_s(stl, "endsolid %s\n", tree->title);
         fclose(stl);
+        clear_status_and_progress();
         break;
 
     case 2: // export each visible material to separate STL files
@@ -189,6 +192,10 @@ export_object_tree(Group *tree, char *filename, int file_index)
             if (materials[i].valid && !materials[i].hidden)
                 candidates[k++] = i;
         }
+        
+        // If there's only one material, use the existing mesh and go write it out
+        if (k == 1)
+            goto single_stl_output;
 
         // Remove ".STL" and append the material number to the base filename
         dot = strrchr(filename, '.');
@@ -230,6 +237,7 @@ export_object_tree(Group *tree, char *filename, int file_index)
         fopen_s(&amf, filename, "wt");
         if (amf == NULL)
             return;
+        show_status("Exporting ", filename);
 
         // make a temp filename for the AMF volumes
         dot = strrchr(filename, '\\');
@@ -275,14 +283,16 @@ export_object_tree(Group *tree, char *filename, int file_index)
                 materials[candidates[j]].hidden = TRUE;
             materials[candidates[i]].hidden = FALSE;
 
-            xform_list.head = NULL;
-            xform_list.tail = NULL;
-            if (object_tree.mesh != NULL)
-                mesh_destroy(object_tree.mesh);
-            object_tree.mesh = NULL;
-            object_tree.mesh_valid = FALSE;
-            gen_view_list_tree_surfaces(&object_tree, &object_tree);
-
+            if (k > 1)                      // don't bother re-rendering, if there's only one material
+            {
+                xform_list.head = NULL;
+                xform_list.tail = NULL;
+                if (object_tree.mesh != NULL)
+                    mesh_destroy(object_tree.mesh);
+                object_tree.mesh = NULL;
+                object_tree.mesh_valid = FALSE;
+                gen_view_list_tree_surfaces(&object_tree, &object_tree);
+            }
             if (!object_tree.mesh_valid)    // nothing for this material
                 continue;
 
@@ -317,7 +327,7 @@ export_object_tree(Group *tree, char *filename, int file_index)
         fprintf_s(amf, "    </mesh>\n");
         fprintf_s(amf, "  </object>\n");
 
-        // write the materials (leave out material 0)
+        // write out any materials beyond material 0
         for (i = 1; i < k; i++)
         {
             fprintf(amf, "  <material id=\"%d\">\n", candidates[i]);
@@ -333,21 +343,26 @@ export_object_tree(Group *tree, char *filename, int file_index)
         fclose(amf);
         fclose(amfv);
         DeleteFile(tmp);
+        clear_status_and_progress();
 
-        // reinstate all the non-hidden materials and mark the surface mesh for regeneration
-        for (i = 0; i < k; i++)
-            materials[candidates[i]].hidden = FALSE;
+        if (k > 1)
+        {
+            // reinstate all the non-hidden materials and mark the surface mesh for regeneration
+            for (i = 0; i < k; i++)
+                materials[candidates[i]].hidden = FALSE;
 
-        if (object_tree.mesh != NULL)
-            mesh_destroy(object_tree.mesh);
-        object_tree.mesh = NULL;
-        object_tree.mesh_valid = FALSE;
+            if (object_tree.mesh != NULL)
+                mesh_destroy(object_tree.mesh);
+            object_tree.mesh = NULL;
+            object_tree.mesh_valid = FALSE;
+        }
         break;
 
     case 4: // export to an OBJ file
         fopen_s(&objf, filename, "wt");
         if (objf == NULL)
             return;
+        show_status("Exporting ", filename);
 
         // make a temp filename for the OBJ volumes
         dot = strrchr(filename, '\\');
@@ -408,14 +423,16 @@ export_object_tree(Group *tree, char *filename, int file_index)
                 materials[candidates[j]].hidden = TRUE;
             materials[candidates[i]].hidden = FALSE;
 
-            xform_list.head = NULL;
-            xform_list.tail = NULL;
-            if (object_tree.mesh != NULL)
-                mesh_destroy(object_tree.mesh);
-            object_tree.mesh = NULL;
-            object_tree.mesh_valid = FALSE;
-            gen_view_list_tree_surfaces(&object_tree, &object_tree);
-
+            if (k > 1)
+            {
+                xform_list.head = NULL;
+                xform_list.tail = NULL;
+                if (object_tree.mesh != NULL)
+                    mesh_destroy(object_tree.mesh);
+                object_tree.mesh = NULL;
+                object_tree.mesh_valid = FALSE;
+                gen_view_list_tree_surfaces(&object_tree, &object_tree);
+            }
             if (!object_tree.mesh_valid)    // nothing for this material
                 continue;
 
@@ -444,6 +461,7 @@ export_object_tree(Group *tree, char *filename, int file_index)
 
         fclose(objf);
         fclose(objv);
+        clear_status_and_progress();
         DeleteFile(tmp);
 
         if (k == 1)
@@ -475,6 +493,8 @@ export_object_tree(Group *tree, char *filename, int file_index)
         fopen_s(&off, filename, "wt");
         if (off == NULL)
             return;
+        show_status("Exporting ", filename);
+
         fprintf_s(off, "OFF\n");
 
         num_exported_tri = 0;
@@ -497,6 +517,7 @@ export_object_tree(Group *tree, char *filename, int file_index)
         sprintf_s(buf, 64, "Mesh: %d triangles\r\n", num_exported_tri);
         Log(buf);
         fclose(off);
+        clear_status_and_progress();
         break;
     }
 }
