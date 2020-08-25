@@ -16,9 +16,10 @@ In particular, it will:
 - Sketch-up-like (draw a 2D-2.5D face followed by extrusion)
 - Volume-face-edge-point hierarchy with controlled locking
 - Allows rect edges, polygons, circles, arcs, Beziers and the extruded right prisms from them
-- Allows curved surfaces (cylinders, barrel arcs, and Bezier surfaces
+- Allows curved surfaces (cylinders, barrel arcs, and Bezier surfaces)
 - Allows extrusion of curved surfaces, either parallel or along local normals
 - Allows extrusion of text and fonts
+- Axially symmetric objects (bodies of revolution)
 - Copy and paste objects
 - Reflect and rotate objects
 - Group objects and transform (scale and rotate)
@@ -30,12 +31,13 @@ In particular, it will:
 # Files handled
 - Native (LCD) format is human-readable
 - Export triangle meshes as STL, AMF, OBJ, OFF
+- Export multi-material model to separate STL meshes
+- Export multi-material model to AMF and OBJ along with material definitions
 - Import STL, AMF, OBJ, OFF to groups containing meshes as volumes
 - Always output full normals
 
 # Works in progress
 - Allow manipulation of triangle meshes: smooth extrusion, refinement, and more
-- Axially symmetric objects (bodies of revolution)
 - Lofting (a nod to the original Lofty, which is LoftyCAD's spiritual ancestor)
 
 # Installing LoftyCAD from the prebuilt installer
