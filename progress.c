@@ -6,6 +6,13 @@
 
 // Status bar and progress bar routines.
 
+// One megabyte.
+#define MB (1024 * 1024)
+
+// File progress statics.
+int file_size;
+int file_prog;
+
 // Show status in the status bar. Set to blank strings to clear it.
 void show_status(char* heading, char* string)
 {
@@ -73,4 +80,29 @@ int accum_render_count(Group* tree)
     }
 
     return count;
+}
+
+// How big is this file? Set up the progress bar for reading, in case it's a big one.
+void start_file_progress(FILE *f, char *header, char *filename)
+{
+    fseek(f, 0, SEEK_END);
+    file_size = ftell(f);
+    file_prog = 0;
+    fseek(f, 0, SEEK_SET);
+    show_status(header, filename);
+
+    // Count in MB.
+    set_progress_range(file_size / MB);
+}
+
+// Step the progress when file size grows by 1MB.
+void step_file_progress(FILE* f)
+{
+    int fp = ftell(f);
+
+    if (fp / MB > file_prog)
+    {
+        file_prog = fp / MB;
+        set_progress(file_prog);
+    }
 }

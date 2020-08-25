@@ -403,6 +403,9 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
     if (f == NULL)
         return FALSE;
 
+    // How big is this file? Set up the progress bar for reading, in case it's a big one.
+    start_file_progress(f, "Reading ", filename);
+
     // initialise the object array
     object = (Object **)calloc(objsize, sizeof(Object *));
     stkptr = 0;
@@ -435,6 +438,8 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
 
         if (fgets(buf, MAXLINE, f) == NULL)
             break;
+
+        step_file_progress(f);
 
         tok = strtok_s(buf, " \t\n", &nexttok);
         if (strcmp(tok, "LOFTYCAD") == 0)
@@ -1088,6 +1093,7 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
         save_count = 1;
     free(object);
     fclose(f);
+    clear_status_and_progress();
 
     return TRUE;
 }

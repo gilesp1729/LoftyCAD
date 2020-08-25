@@ -258,6 +258,8 @@ void set_progress(int n);
 void bump_progress(void);
 void clear_status_and_progress(void);
 int accum_render_count(Group * group);
+void start_file_progress(FILE * f, char* header, char* filename);
+void step_file_progress(FILE * f);
 
 // Context menu (contextmenu.c)
 char *obj_description(Object *obj, char *descr, int descr_len, BOOL verbose);

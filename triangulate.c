@@ -341,6 +341,10 @@ gen_view_list_tree_surfaces_op(OPERATION op, Group *tree, Group *parent_tree)
             if (!parent_tree->mesh_valid)
             {
                 // First one: copy vol->mesh into tree->mesh
+                show_status("Copying volume: ", obj_description(obj, buf, 64, FALSE));
+                bump_progress();
+                process_messages();
+
                 parent_tree->mesh = mesh_copy(vol->mesh);
                 parent_tree->mesh_valid = TRUE;
                 vol->mesh_merged = TRUE;
@@ -392,6 +396,10 @@ gen_view_list_tree_surfaces_op(OPERATION op, Group *tree, Group *parent_tree)
                 if (!parent_tree->mesh_valid)
                 {
                     // First one: copy vol->mesh into tree->mesh
+                    show_status("Copying group: ", obj_description(obj, buf, 64, FALSE));
+                    bump_progress();
+                    process_messages();
+
                     parent_tree->mesh = mesh_copy(group->mesh);
                     parent_tree->mesh_valid = TRUE;
                     group->mesh_merged = TRUE;

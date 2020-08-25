@@ -92,6 +92,8 @@ read_stl_to_group(Group *group, char *filename)
     if (f == NULL)
         return FALSE;
 
+    start_file_progress(f, "Importing ", filename);
+
     // Search for "solid ". If not found, assume it's a binary STL file.
     if (fread_s(buf, 512, 1, 6, f) != 6)
         goto error_return;
@@ -111,6 +113,8 @@ read_stl_to_group(Group *group, char *filename)
         fopen_s(&f, filename, "rb");        // make sure it's binary!
         if (fread_s(buf, 512, 1, 80, f) != 80)
             goto error_return;
+        start_file_progress(f, "Importing ", filename);
+
         strncpy_s(group->title, 80, buf, _TRUNCATE);
         group->title[79] = '\0';    // in case there's no NULL char
         if (fread_s(&n_tri, 4, 1, 4, f) != 4)
@@ -126,6 +130,8 @@ read_stl_to_group(Group *group, char *filename)
     {
         if (fgets(buf, 512, f) == NULL)
             break;
+
+        step_file_progress(f);
 
         tok = strtok_s(buf, " \t\n", &nexttok);
         if (strcmp(tok, "facet") == 0)
@@ -195,16 +201,20 @@ read_stl_to_group(Group *group, char *filename)
     link_group((Object *)vol, group);
     empty_bucket(vol->point_bucket);
     fclose(f);
+    clear_status_and_progress();
     return TRUE;
 
 error_return:
     fclose(f);
+    clear_status_and_progress();
     return FALSE;
 
 binary_stl:
     i = 0;
     while (TRUE)
     {
+        step_file_progress(f);
+
         if (fread_s(&norm.A, 4, 1, 4, f) != 4)
             goto binary_eof;
         if (fread_s(&norm.B, 4, 1, 4, f) != 4)
@@ -271,120 +281,9 @@ binary_eof:
     link_group((Object *)vol, group);
     empty_bucket(vol->point_bucket);
     fclose(f);
+    clear_status_and_progress();
     return TRUE;
 }
-
-#if 0
-// Read a GTS file
-BOOL
-read_gts_to_group(Group *group, char *filename)
-{
-    FILE *f;
-    char *tok;
-    char *nexttok = NULL;
-    int i, npoints, nedges, nfaces;
-    Point **points;
-    Edge **edges;
-    Volume *vol;
-
-    fopen_s(&f, filename, "rt");
-    if (f == NULL)
-        return FALSE;
-
-    if (fgets(buf, 512, f) == NULL)     // npoints, nedges, nfaces
-        return FALSE;
-    tok = strtok_s(buf, " \t\n", &nexttok);
-    npoints = atoi(tok);
-    tok = strtok_s(NULL, " \t\n", &nexttok);
-    nedges = atoi(tok);
-    tok = strtok_s(NULL, " \t\n", &nexttok);
-    nfaces = atoi(tok);
-
-    points = malloc((npoints + 1) * sizeof(Point *));   // point array (note indexed from 1)
-    edges = malloc((nedges + 1) * sizeof(Edge *));      // edge array similarly
-
-    for (i = 0; i < npoints; i++)
-    {
-        Point *p = point_new(0, 0, 0);
-
-        nexttok = NULL;
-        if (fgets(buf, 512, f) == NULL)
-            goto error;
-        tok = strtok_s(buf, " \t\n", &nexttok);
-        p->x = (float)atof(tok);
-        tok = strtok_s(NULL, " \t\n", &nexttok);
-        p->y = (float)atof(tok);
-        tok = strtok_s(NULL, " \t\n", &nexttok);
-        p->z = (float)atof(tok);
-        points[i + 1] = p;
-    }
-
-    for (i = 0; i < nedges; i++)
-    {
-        Edge *e = edge_new(EDGE_STRAIGHT);
-        int p1, p2;
-
-        nexttok = NULL;
-        if (fgets(buf, 512, f) == NULL)
-            goto error;
-        tok = strtok_s(buf, " \t\n", &nexttok);
-        p1 = atoi(tok);
-        tok = strtok_s(NULL, " \t\n", &nexttok);
-        p2 = atoi(tok);
-        e->endpoints[0] = points[p1];
-        e->endpoints[1] = points[p2];
-        edges[i + 1] = e;
-    }
-
-    vol = vol_new();
-    for (i = 0; i < nfaces; i++)
-    {
-        Plane dummy = { 0, };
-        Face *tf = face_new(FACE_TRI, dummy);
-        int e1, e2, e3;
-
-        nexttok = NULL;
-        if (fgets(buf, 512, f) == NULL)
-            goto error;
-
-        tok = strtok_s(buf, " \t\n", &nexttok);
-        e1 = atoi(tok);
-        tok = strtok_s(NULL, " \t\n", &nexttok);
-        e2 = atoi(tok);
-        tok = strtok_s(NULL, " \t\n", &nexttok);
-        e3 = atoi(tok);
-
-        tf->edges[0] = edges[e1];
-        tf->edges[1] = edges[e2];
-        tf->edges[2] = edges[e3];
-        tf->n_edges = 3;
-        if 
-        (
-            tf->edges[0]->endpoints[1] == tf->edges[1]->endpoints[0] 
-            || 
-            tf->edges[0]->endpoints[1] == tf->edges[1]->endpoints[1]
-        )
-            tf->initial_point = tf->edges[0]->endpoints[0];
-        else
-            tf->initial_point = tf->edges[0]->endpoints[1];
-
-        tf->vol = vol;
-        link((Object *)tf, &vol->faces);
-    }
-
-    link_group((Object *)vol, group);
-    fclose(f);
-    free(points);
-    free(edges);
-    return TRUE;
-
-error:
-    fclose(f);
-    free(points);
-    free(edges);
-    return FALSE;
-}
-#endif // 0
 
 // Find a material in the list by name, and return its index, or zero if not found.
 int
@@ -418,6 +317,7 @@ read_obj_to_group(Group* group, char* filename)
     fopen_s(&f, filename, "rt");
     if (f == NULL)
         return FALSE;
+    start_file_progress(f, "Importing ", filename);
 
     npoints = 0;
     npoints_alloced = 64;   // start with a small power of 2
@@ -426,6 +326,7 @@ read_obj_to_group(Group* group, char* filename)
     mat = 0;
     while (1)
     {
+        step_file_progress(f);
         if (fgets(buf, 512, f) == NULL)     // skip any comments and blank lines
             goto error;
         tok = strtok_s(buf, " \t\n", &nexttok);
@@ -532,6 +433,7 @@ read_obj_to_group(Group* group, char* filename)
 
     // Start the first volume
     vol = vol_new();
+    vol->hdr.lock = LOCK_FACES;
     vol->material = mat;
     while (1)
     {
@@ -588,6 +490,7 @@ read_obj_to_group(Group* group, char* filename)
                 // switch to new volume for new material
                 link_group((Object*)vol, group);
                 vol = vol_new();
+                vol->hdr.lock = LOCK_FACES;
                 vol->material = mat;
                 continue;
             }
@@ -599,11 +502,13 @@ read_obj_to_group(Group* group, char* filename)
 eof:
     link_group((Object*)vol, group);
     fclose(f);
+    clear_status_and_progress();
     free(points);
     return TRUE;
 
 error:
     fclose(f);
+    clear_status_and_progress();
     free(points);
     return FALSE;
 }
@@ -622,10 +527,11 @@ read_off_to_group(Group *group, char *filename)
     fopen_s(&f, filename, "rt");
     if (f == NULL)
         return FALSE;
+    start_file_progress(f, "Importing ", filename);
 
     if (fgets(buf, 512, f) == NULL)     // skip "OFF"
         return FALSE;
-    if (fgets(buf, 512, f) == NULL)     // npoints, faces, nedges (note order different from GTS)
+    if (fgets(buf, 512, f) == NULL)     // npoints, faces, nedges 
         return FALSE;
     tok = strtok_s(buf, " \t\n", &nexttok);
     npoints = atoi(tok);
@@ -643,6 +549,8 @@ read_off_to_group(Group *group, char *filename)
         nexttok = NULL;
         if (fgets(buf, 512, f) == NULL)
             goto error;
+        step_file_progress(f);
+
         tok = strtok_s(buf, " \t\n", &nexttok);
         p->x = (float)atof(tok);
         tok = strtok_s(NULL, " \t\n", &nexttok);
@@ -653,6 +561,7 @@ read_off_to_group(Group *group, char *filename)
     }
 
     vol = vol_new();
+    vol->hdr.lock = LOCK_FACES;
     for (i = 0; i < nfaces; i++)
     {
         Plane dummy = { 0, };
@@ -662,6 +571,7 @@ read_off_to_group(Group *group, char *filename)
         nexttok = NULL;
         if (fgets(buf, 512, f) == NULL)
             goto error;
+        step_file_progress(f);
 
         tok = strtok_s(buf, " \t\n", &nexttok);
         np = atoi(tok);
@@ -702,11 +612,13 @@ read_off_to_group(Group *group, char *filename)
 
     link_group((Object *)vol, group);
     fclose(f);
+    clear_status_and_progress();
     free(points);
     return TRUE;
 
 error:
     fclose(f);
+    clear_status_and_progress();
     free(points);
     return FALSE;
 }
@@ -734,6 +646,7 @@ next_token(FILE* f)
     {
         if (fgets(buf, 512, f) == NULL)
             return FALSE;
+        step_file_progress(f);
         tok = strtok_s(buf, " >\n", &nexttok);
     }
     return TRUE;
@@ -874,6 +787,7 @@ read_amf_volume(Group* group, FILE* f)
     }
 
     vol = vol_new();
+    vol->hdr.lock = LOCK_FACES;
     vol->material = mat;
 
     // read each triangle until end of volume encountered
@@ -984,6 +898,7 @@ read_amf_to_group(Group* group, char* filename)
     fopen_s(&f, filename, "rt");
     if (f == NULL)
         return FALSE;
+    start_file_progress(f, "Importing ", filename);
 
     // Find last valid existing material, and use that to offset material ID's in file.
     // Material ID's in AMF are always numbered from 1 on (never 0)
@@ -1015,137 +930,12 @@ read_amf_to_group(Group* group, char* filename)
         ;
 
     fclose(f);
+    clear_status_and_progress();
     return TRUE;
 
 eof_error:
     fclose(f);
+    clear_status_and_progress();
     return FALSE;
 }
 
-#if 0
-// Read a file of Bezier points to a group.
-// Flexible format. Lines are assumed to contain one or more XYZ points (each of 3 floats).
-// Any line that is blank, has non-numeric text, or contains fewer than 3 numbers is discarded.
-// Groups of 16 are gathered into Bezier faces. The resulting volume may or may not be
-// manifold (mainly used for renditions of the famous Utah Teapot)
-BOOL
-read_bezpts_to_group(Group* group, char* filename)
-{
-    FILE* f;
-    char* tok;
-    char* nexttok = NULL;
-    int i;
-    Point* points = NULL;
-    Face* tf;
-    Volume* vol = NULL;
-    Plane norm;
-    Point pt[3];
-    Point* p0, * p1, * p2;
-    int n_tri = 0;
-    short attrib;
-
-    fopen_s(&f, filename, "rt");
-    if (f == NULL)
-        return FALSE;
-
-    // Search for "solid ". If not found, assume it's a binary STL file.
-    if (fread_s(buf, 512, 1, 6, f) != 6)
-        goto error_return;
-    if (strncmp(buf, "solid ", 6) == 0)
-    {
-        if (fgets(buf, 512, f) == NULL)
-            goto error_return;
-        tok = strtok_s(buf, "\n", &nexttok);  // rest of line till \n
-        if (tok != NULL)
-            strcpy_s(group->title, 256, tok);
-        vol = vol_new();
-        vol->hdr.lock = LOCK_FACES;
-    }
-
-
-
-
-
-
-    // Read in the rest of the file.
-    while (TRUE)
-    {
-        if (fgets(buf, 512, f) == NULL)
-            break;
-
-        tok = strtok_s(buf, " \t\n", &nexttok);
-        if (strcmp(tok, "facet") == 0)
-        {
-            tok = strtok_s(NULL, " \t\n", &nexttok);  // absorb "normal"
-            tok = strtok_s(NULL, " \t\n", &nexttok);
-            norm.A = (float)atof(tok);
-            tok = strtok_s(NULL, " \t\n", &nexttok);
-            norm.B = (float)atof(tok);
-            tok = strtok_s(NULL, " \t\n", &nexttok);
-            norm.C = (float)atof(tok);
-            i = 0;
-        }
-        else if (strcmp(tok, "vertex") == 0)
-        {
-            tok = strtok_s(NULL, " \t\n", &nexttok);
-            pt[i].x = (float)atof(tok);
-            tok = strtok_s(NULL, " \t\n", &nexttok);
-            pt[i].y = (float)atof(tok);
-            tok = strtok_s(NULL, " \t\n", &nexttok);
-            pt[i].z = (float)atof(tok);
-            i++;
-        }
-        else if (strcmp(tok, "endfacet") == 0)
-        {
-            if (i != 3)
-                goto error_return;
-
-            p0 = find_point_coord(&pt[0], vol->point_bucket);
-            p1 = find_point_coord(&pt[1], vol->point_bucket);
-            p2 = find_point_coord(&pt[2], vol->point_bucket);
-            if (near_pt(&pt[0], &pt[1], SMALL_COORD))
-                continue;
-            if (near_pt(&pt[1], &pt[2], SMALL_COORD))
-                continue;
-            if (near_pt(&pt[2], &pt[0], SMALL_COORD))
-                continue;
-
-            tf = face_new(FACE_FLAT, norm);
-            tf->edges[0] = find_edge(p0, p1);
-            tf->edges[1] = find_edge(p1, p2);
-            tf->edges[2] = find_edge(p2, p0);
-            tf->n_edges = 3;
-            if
-                (
-                    tf->edges[0]->endpoints[1] == tf->edges[1]->endpoints[0]
-                    ||
-                    tf->edges[0]->endpoints[1] == tf->edges[1]->endpoints[1]
-                    )
-                tf->initial_point = tf->edges[0]->endpoints[0];
-            else
-                tf->initial_point = tf->edges[0]->endpoints[1];
-
-            if (vol == NULL)
-                goto error_return;      // have not seen "solid" at the beginning
-
-            tf->vol = vol;
-            link((Object*)tf, &vol->faces);
-            n_tri++;
-        }
-        else if (strcmp(tok, "endsolid") == 0)
-        {
-            break;
-        }
-    }
-
-    link_group((Object*)vol, group);
-    empty_bucket(vol->point_bucket);
-    fclose(f);
-    return TRUE;
-
-error_return:
-    fclose(f);
-    return FALSE;
-}
-
-#endif // 0
