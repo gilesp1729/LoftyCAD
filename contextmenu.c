@@ -11,7 +11,7 @@ right_click(AUX_EVENTREC *event)
 {
     POINT pt;
 
-    if (view_rendered)
+    if (view_rendered || view_printer)
         return;
 
     picked_obj = Pick(event->data[0], event->data[1], FALSE);

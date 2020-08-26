@@ -140,6 +140,11 @@
 #define IDC_MATERIAL_GREEN              1035
 #define IDC_MATERIAL_BLUE               1036
 #define IDC_MATERIAL_SHINY              1037
+#define IDC_PRINTER_FULL                1038
+#define IDC_PRINTER_LAYER               1039
+#define IDC_PRINTER_UPTO                1040
+#define IDC_PRINTER_Z                   1042
+#define IDD_PRINT_PREVIEW               1544
 #define ID_FILE_NEW                     32774
 #define ID_FILE_OPEN                    32775
 #define ID_FILE_SAVE                    32776
@@ -268,6 +273,10 @@
 #define ID_HELP_ROTATING                32914
 #define ID_HELP_DIMENSIONS              32915
 #define ID_EDGE_MAKEPATHFROMEDGE        32916
+#define ID_VIEW_PRINTERBEDVIEW          32917
+#define ID_VIEW_PRINTER                 32918
+#define ID_VIEW_PRINTBED                32919
+#define ID_VIEW_SLICEDPRINTPREVIEW      32920
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -276,8 +285,8 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        164
-#define _APS_NEXT_COMMAND_VALUE         32917
-#define _APS_NEXT_CONTROL_VALUE         1038
+#define _APS_NEXT_COMMAND_VALUE         32921
+#define _APS_NEXT_CONTROL_VALUE         1043
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif

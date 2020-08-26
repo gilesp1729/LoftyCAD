@@ -90,6 +90,8 @@ BEGIN
         MENUITEM SEPARATOR
         MENUITEM "Construction Edges",          ID_VIEW_CONSTRUCTIONEDGES
         MENUITEM "&Rendered View",              ID_VIEW_RENDEREDVIEW
+        MENUITEM "Sliced Print Pre&view",       ID_VIEW_PRINTER
+        MENUITEM "&Print Bed Dimensions",       ID_VIEW_PRINTBED
         POPUP "&Blend mode"
         BEGIN
             MENUITEM "&Opaque",                     32874
@@ -661,6 +663,18 @@ BEGIN
     LTEXT           "R",IDC_STATIC,70,87,8,8
 END
 
+IDD_PRINT_PREVIEW DIALOGEX 0, 0, 179, 191
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+EXSTYLE WS_EX_TOPMOST
+CAPTION "Print Preview"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    CONTROL         "Show full G-code",IDC_PRINTER_FULL,"Button",BS_AUTORADIOBUTTON,13,38,71,10
+    CONTROL         "Show layer Z",IDC_PRINTER_LAYER,"Button",BS_AUTORADIOBUTTON,13,51,59,10
+    CONTROL         "Show up to layer Z",IDC_PRINTER_UPTO,"Button",BS_AUTORADIOBUTTON,13,64,78,10
+    EDITTEXT        IDC_PRINTER_Z,102,56,40,14,ES_AUTOHSCROLL
+END
+
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -736,6 +750,14 @@ BEGIN
         RIGHTMARGIN, 303
         TOPMARGIN, 7
         BOTTOMMARGIN, 170
+    END
+
+    IDD_PRINT_PREVIEW, DIALOG
+    BEGIN
+        LEFTMARGIN, 6
+        RIGHTMARGIN, 170
+        TOPMARGIN, 8
+        BOTTOMMARGIN, 187
     END
 END
 #endif    // APSTUDIO_INVOKED

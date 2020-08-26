@@ -86,6 +86,7 @@ extern BOOL	left_mouse;
 extern BOOL	right_mouse;
 
 extern HWND hWndToolbar;
+extern HWND hWndPrintPreview;
 extern HWND hWndDebug;
 extern HWND hWndTree;
 extern HWND hWndDims;
@@ -97,6 +98,8 @@ extern BOOL view_debug;
 extern BOOL view_tree;
 extern BOOL view_help;
 extern BOOL view_rendered;
+extern BOOL view_printer;
+extern BOOL view_printbed;
 extern BOOL view_constr;
 extern BOOL view_halo;
 extern BOOL view_ortho;
@@ -193,6 +196,10 @@ extern Material materials[MAX_MATERIAL];
 #undef DEBUG_WRITE_VOL_MESH
 #undef DEBUG_FREELISTS
 
+// Timing defines
+#undef TIME_DRAWING
+
+
 
 #ifdef BREAK_ON_ASSERT
 #ifdef _DEBUG
@@ -284,6 +291,7 @@ int WINAPI help_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 int WINAPI debug_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 int WINAPI font_hook(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 int WINAPI toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+int WINAPI printer_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 int WINAPI dimensions_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 int WINAPI prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 int WINAPI treeview_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);

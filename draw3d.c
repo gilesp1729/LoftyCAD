@@ -29,7 +29,6 @@ BOOL suppress_drawing = FALSE;
 BOOL draw_dl_valid = FALSE;
 BOOL pick_dl_valid = FALSE;
 
-#define TIME_DRAWING
 #ifdef TIME_DRAWING
 LARGE_INTEGER draw_clock_start, draw_clock_end, draw_clock, pick_clock, clock_freq;
 int num_draws = 0;
@@ -644,7 +643,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
         // handle mouse movement actions.
         // Highlight pick targets (use highlight_obj for this)
         // If rendering, don't do any picks in here (enables smooth orbiting and spinning)
-        if (!left_mouse && !right_mouse && !view_rendered)
+        if (!left_mouse && !right_mouse && !view_rendered && !view_printer)
         {
             auxGetMouseLoc(&pt.x, &pt.y);
             highlight_obj = Pick(pt.x, pt.y, FALSE);
@@ -1889,7 +1888,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
     }
 #endif
 
-    if (!view_rendered)
+    if (!view_rendered && !view_printer)
     {
         // Draw selection. Watch for highlighted objects appearing in the selection list.
         // Pass lock state of parent to determine what is shown.
@@ -2096,26 +2095,65 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
         }
     }
     
+    // Draw axes and optional print bed view on 10mm grid.
     if (!picking)
     {
+        double axis = 100;
+
         SetMaterial(0);
 
-        // Draw axes XYZ in RGB. 
+        if (view_printbed)
+        {
+            double xmin = -100;
+            double ymin = -100;
+            double xmax = 100;
+            double ymax = 100;
+            double xinc = 10;
+            double yinc = 10;
+            double x, y;
+
+            // Draw print bed. By default, just a 200x200mm square centred at the origin.
+            glPushName(0);
+            glBegin(GL_LINE_LOOP);
+            glColor3d(0.8, 0.8, 0.8);
+            glVertex3d(xmin, ymin, 0.0);
+            glVertex3d(xmin, ymax, 0.0);
+            glVertex3d(xmax, ymax, 0.0);
+            glVertex3d(xmax, ymin, 0.0);
+            glEnd();
+
+            glBegin(GL_LINES);
+            glColor3d(0.8, 0.8, 0.8);
+            for (x = xmin + xinc; x < xmax - 0.001; x += xinc)
+            {
+                glVertex3d(x, ymin, 0.0);
+                glVertex3d(x, ymax, 0.0);
+            }
+            for (y = ymin + yinc; y < ymax - 0.001; y += yinc)
+            {
+                glVertex3d(xmin, y, 0.0);
+                glVertex3d(xmax, y, 0.0);
+            }
+            glEnd();
+            axis = 15;
+        }
+
+        // Draw axes XYZ in RGB (large for tool view, small for print bed view)
         glPushName(0);
         glBegin(GL_LINES);
         glColor3d(1.0, 0.4, 0.4);
         glVertex3d(0.0, 0.0, 0.0);
-        glVertex3d(100.0, 0.0, 0.0);
+        glVertex3d(axis, 0.0, 0.0);
         glEnd();
         glBegin(GL_LINES);
         glColor3d(0.4, 1.0, 0.4);
         glVertex3d(0.0, 0.0, 0.0);
-        glVertex3d(0.0, 100.0, 0.0);
+        glVertex3d(0.0, axis, 0.0);
         glEnd();
         glBegin(GL_LINES);
         glColor3d(0.4, 0.4, 1.0);
         glVertex3d(0.0, 0.0, 0.0);
-        glVertex3d(0.0, 0.0, 100.0);
+        glVertex3d(0.0, 0.0, axis);
         glEnd();
         glPopName();
     }

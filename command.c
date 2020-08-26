@@ -293,13 +293,13 @@ Command(int message, int wParam, int lParam)
             hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
             if (view_tools)
             {
-                ShowWindow(hWndToolbar, SW_HIDE);
+                ShowWindow(view_printer ? hWndPrintPreview : hWndToolbar, SW_HIDE);
                 view_tools = FALSE;
                 CheckMenuItem(hMenu, ID_VIEW_TOOLS, MF_UNCHECKED);
             }
             else
             {
-                ShowWindow(hWndToolbar, SW_SHOW);
+                ShowWindow(view_printer ? hWndPrintPreview : hWndToolbar, SW_SHOW);
                 view_tools = TRUE;
                 CheckMenuItem(hMenu, ID_VIEW_TOOLS, MF_CHECKED);
             }
@@ -392,6 +392,44 @@ Command(int message, int wParam, int lParam)
                 CheckMenuItem(hMenu, ID_VIEW_RENDEREDVIEW, MF_CHECKED);
             }
             enable_rendered_view_items();
+            break;
+
+        case ID_VIEW_PRINTER:
+            hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
+            if (view_printer)
+            {
+                view_printer = FALSE;
+                CheckMenuItem(hMenu, ID_VIEW_PRINTER, MF_UNCHECKED);
+                ShowWindow(hWndPrintPreview, SW_HIDE);
+                if (view_tools)
+                    ShowWindow(hWndToolbar, SW_SHOW);
+            }
+            else
+            {
+                view_printer = TRUE;
+                view_printbed = TRUE;
+                CheckMenuItem(hMenu, ID_VIEW_PRINTER, MF_CHECKED);
+                CheckMenuItem(hMenu, ID_VIEW_PRINTBED, MF_CHECKED);
+                ShowWindow(hWndToolbar, SW_HIDE);
+                if (view_tools)
+                    ShowWindow(hWndPrintPreview, SW_SHOW);
+            }
+            invalidate_dl();
+            break;
+
+        case ID_VIEW_PRINTBED:
+            hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
+            if (view_printbed)
+            {
+                view_printbed = FALSE;
+                CheckMenuItem(hMenu, ID_VIEW_PRINTBED, MF_UNCHECKED);
+            }
+            else
+            {
+                view_printbed = TRUE;
+                CheckMenuItem(hMenu, ID_VIEW_PRINTBED, MF_CHECKED);
+            }
+            invalidate_dl();
             break;
 
 #ifdef DEBUG_HIGHLIGHTING_ENABLED

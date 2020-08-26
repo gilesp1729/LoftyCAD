@@ -279,6 +279,33 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     return 0;
 }
 
+// Window proc for the toolbar dialog box.
+int WINAPI
+printer_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    HMENU hMenu;
+
+    switch (msg)
+    {
+    case WM_INITDIALOG:
+
+        break;
+
+    case WM_COMMAND:
+
+        break;
+
+    case WM_CLOSE:
+        view_tools = FALSE;
+        ShowWindow(hWnd, SW_HIDE);
+        hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
+        CheckMenuItem(hMenu, ID_VIEW_TOOLS, view_tools ? MF_CHECKED : MF_UNCHECKED);
+        break;
+    }
+
+    return 0;
+}
+
 // Wndproc for debug log dialog. Contains one large edit box.
 int WINAPI
 debug_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)

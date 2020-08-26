@@ -24,9 +24,10 @@ typedef enum
 // What kind of edge this is
 typedef enum
 {
-    EDGE_STRAIGHT = 0, 
-    EDGE_ARC = 1,
-    EDGE_BEZIER = 2,
+    EDGE_STRAIGHT = 0,              // Straight line between two endpoints
+    EDGE_ARC = 1,                   // Circular arc with centre
+    EDGE_BEZIER = 2,                // Cubic Bezier curve
+    EDGE_ZPOLY = 3,                 // Polyline at constant Z (comes from slicing)
     EDGE_CONSTRUCTION = 0x8000      // OR this in to indicate a construction edge
 } EDGE;
 
@@ -221,6 +222,15 @@ typedef struct BezierEdge
     struct Point    *bezcurve[2];   // On-curve intermediate points used to calculate internal control
                                     // points, to help with Bezier surface interpolation
 } BezierEdge;
+
+typedef struct ZPolyEdge
+{
+    struct Edge     edge;           // Edge (most of which is not used)
+    float           z;              // The Z-value of the points in the edge
+    struct Point2D* view_list;      // Array of 2D points for the view list, to save space of a real Point.
+    int             n_view;         // Number of points in the view list.
+    int             n_viewalloc;    // Alloced size of view list (in units of sizeof(Point2D))
+} ZPolyEdge;
 
 // The largest of the edge structures (only used for allocation size)
 #define FreeEdge ArcEdge

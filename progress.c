@@ -89,7 +89,7 @@ void start_file_progress(FILE *f, char *header, char *filename)
     file_size = ftell(f);
     file_prog = 0;
     fseek(f, 0, SEEK_SET);
-    show_status(header, filename);
+    show_status(header, filename);    // TODO: Strip directory (just show the filename) so it fits in bar
 
     // Count in MB.
     set_progress_range(file_size / MB);

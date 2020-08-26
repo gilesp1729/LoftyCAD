@@ -31,6 +31,7 @@ BOOL	right_mouse = FALSE;
 
 // Toolbars
 HWND hWndToolbar;
+HWND hWndPrintPreview;
 HWND hWndDebug;
 HWND hWndHelp;
 HWND hWndTree;
@@ -126,6 +127,12 @@ BOOL view_ortho = FALSE;
 
 // TRUE if viewing rendered representation
 BOOL view_rendered = FALSE;
+
+// TRUE if viewing printer preview (sliced objects)
+BOOL view_printer = FALSE;
+
+// TRUE to display the print bed dimensions with the axes (in any view)
+BOOL view_printbed = FALSE;
 
 // TRUE to display construction edges
 BOOL view_constr = TRUE;
@@ -665,8 +672,8 @@ left_down(AUX_EVENTREC *event)
     Point d1;
     Volume *vol = NULL;
 
-    // If rendered, don't do anything here except orbit.
-    if (view_rendered)
+    // If viewing rendered or the printer, don't do anything here except orbit.
+    if (view_rendered || view_printer)
     {
         trackball_MouseDown(event);
         return;
@@ -1200,7 +1207,7 @@ left_click(AUX_EVENTREC *event)
     hide_hint();
 
     // If rendering, don't do any of this
-    if (view_rendered)
+    if (view_rendered || view_printer)
         return;
 
     // If we have just clicked on an arc centre, do nothing here
@@ -1567,6 +1574,18 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
             ShowWindow(hWndToolbar, SW_SHOW);
         GetWindowRect(hWndToolbar, &rect);
         toolbar_bottom = rect.bottom;
+
+        // Print bed view toolbar
+        hWndPrintPreview = CreateDialog
+        (
+            hInst,
+            MAKEINTRESOURCE(IDD_PRINT_PREVIEW),
+            auxGetHWND(),
+            printer_dialog
+        );
+
+        SetWindowPos(hWndPrintPreview, HWND_NOTOPMOST, wWidth, 0, 0, 0, SWP_NOSIZE);
+        ShowWindow(hWndPrintPreview, SW_HIDE);
 
         // Debug log
         hWndDebug = CreateDialog
