@@ -293,13 +293,13 @@ Command(int message, int wParam, int lParam)
             hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
             if (view_tools)
             {
-                ShowWindow(view_printer ? hWndPrintPreview : hWndToolbar, SW_HIDE);
+                ShowWindow(hWndPropSheet, SW_HIDE);
                 view_tools = FALSE;
                 CheckMenuItem(hMenu, ID_VIEW_TOOLS, MF_UNCHECKED);
             }
             else
             {
-                ShowWindow(view_printer ? hWndPrintPreview : hWndToolbar, SW_SHOW);
+                ShowWindow(hWndPropSheet, SW_SHOW);
                 view_tools = TRUE;
                 CheckMenuItem(hMenu, ID_VIEW_TOOLS, MF_CHECKED);
             }
@@ -392,29 +392,6 @@ Command(int message, int wParam, int lParam)
                 CheckMenuItem(hMenu, ID_VIEW_RENDEREDVIEW, MF_CHECKED);
             }
             enable_rendered_view_items();
-            break;
-
-        case ID_VIEW_PRINTER:
-            hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
-            if (view_printer)
-            {
-                view_printer = FALSE;
-                CheckMenuItem(hMenu, ID_VIEW_PRINTER, MF_UNCHECKED);
-                ShowWindow(hWndPrintPreview, SW_HIDE);
-                if (view_tools)
-                    ShowWindow(hWndToolbar, SW_SHOW);
-            }
-            else
-            {
-                view_printer = TRUE;
-                view_printbed = TRUE;
-                CheckMenuItem(hMenu, ID_VIEW_PRINTER, MF_CHECKED);
-                CheckMenuItem(hMenu, ID_VIEW_PRINTBED, MF_CHECKED);
-                ShowWindow(hWndToolbar, SW_HIDE);
-                if (view_tools)
-                    ShowWindow(hWndPrintPreview, SW_SHOW);
-            }
-            invalidate_dl();
             break;
 
         case ID_VIEW_PRINTBED:

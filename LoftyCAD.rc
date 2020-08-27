@@ -90,7 +90,6 @@ BEGIN
         MENUITEM SEPARATOR
         MENUITEM "Construction Edges",          ID_VIEW_CONSTRUCTIONEDGES
         MENUITEM "&Rendered View",              ID_VIEW_RENDEREDVIEW
-        MENUITEM "Sliced Print Pre&view",       ID_VIEW_PRINTER
         MENUITEM "&Print Bed Dimensions",       ID_VIEW_PRINTBED
         POPUP "&Blend mode"
         BEGIN

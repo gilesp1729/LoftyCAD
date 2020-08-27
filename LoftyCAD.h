@@ -85,6 +85,7 @@ extern int key_status;
 extern BOOL	left_mouse;
 extern BOOL	right_mouse;
 
+extern HWND hWndPropSheet;
 extern HWND hWndToolbar;
 extern HWND hWndPrintPreview;
 extern HWND hWndDebug;

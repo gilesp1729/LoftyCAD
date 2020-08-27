@@ -30,6 +30,7 @@ BOOL	left_mouse = FALSE;
 BOOL	right_mouse = FALSE;
 
 // Toolbars
+HWND hWndPropSheet;
 HWND hWndToolbar;
 HWND hWndPrintPreview;
 HWND hWndDebug;
@@ -1516,6 +1517,8 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
     POINT pt = { 0, 0 };
     RECT rect;
     int parts[3];
+    PROPSHEETPAGE psp[2];
+    PROPSHEETHEADER psh;
 
 	// Initialize global strings
 	LoadString(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
@@ -1559,7 +1562,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 
         auxIdleFunc(DrawCB);
         auxMainLoop(DrawCB);
-
+#if 0
         // Toolbar, and get the bottom to position other windows against
         hWndToolbar = CreateDialog
         (
@@ -1586,6 +1589,48 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 
         SetWindowPos(hWndPrintPreview, HWND_NOTOPMOST, wWidth, 0, 0, 0, SWP_NOSIZE);
         ShowWindow(hWndPrintPreview, SW_HIDE);
+#else
+        // Property sheet for the tools and preview tools
+        psp[0].dwSize = sizeof(PROPSHEETPAGE);
+        psp[0].dwFlags = PSP_USETITLE;
+        psp[0].hInstance = hInst;
+        psp[0].pszTemplate = MAKEINTRESOURCE(IDD_TOOLBAR);
+        psp[0].pszIcon = NULL;
+        psp[0].pfnDlgProc = toolbar_dialog;
+        psp[0].pszTitle = "Drawing Tools";
+        psp[0].lParam = 0;
+        psp[0].pfnCallback = NULL;
+        
+        psp[1].dwSize = sizeof(PROPSHEETPAGE);
+        psp[1].dwFlags = PSP_USETITLE;
+        psp[1].hInstance = hInst;
+        psp[1].pszTemplate = MAKEINTRESOURCE(IDD_PRINT_PREVIEW);
+        psp[1].pszIcon = NULL;
+        psp[1].pfnDlgProc = printer_dialog;
+        psp[1].pszTitle = "Printer Preview";
+        psp[1].lParam = 0;
+        psp[1].pfnCallback = NULL;
+
+        psh.dwSize = sizeof(PROPSHEETHEADER);
+        psh.dwFlags = PSH_PROPSHEETPAGE | PSH_MODELESS | PSH_NOAPPLYNOW | PSH_NOCONTEXTHELP;
+        psh.hwndParent = auxGetHWND();
+        psh.hInstance = hInst;
+        psh.pszIcon = NULL;
+        psh.pszCaption = "Tools";
+        psh.nPages = sizeof(psp) / sizeof(PROPSHEETPAGE);
+        psh.nStartPage = 0;
+        psh.ppsp = (LPCPROPSHEETPAGE)&psp;
+        psh.pfnCallback = NULL;
+
+        hWndPropSheet = PropertySheet(&psh);
+        SetWindowPos(hWndPropSheet, HWND_NOTOPMOST, wWidth, 0, 0, 0, SWP_NOSIZE);
+        ShowWindow(GetDlgItem(hWndPropSheet, IDOK), SW_HIDE);
+        ShowWindow(GetDlgItem(hWndPropSheet, IDCANCEL), SW_HIDE);
+        if (view_tools)
+            ShowWindow(hWndPropSheet, SW_SHOW);
+        GetWindowRect(hWndPropSheet, &rect);
+        toolbar_bottom = rect.bottom;
+#endif
 
         // Debug log
         hWndDebug = CreateDialog

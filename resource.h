@@ -144,6 +144,7 @@
 #define IDC_PRINTER_LAYER               1039
 #define IDC_PRINTER_UPTO                1040
 #define IDC_PRINTER_Z                   1042
+#define IDC_TAB1                        1043
 #define IDD_PRINT_PREVIEW               1544
 #define ID_FILE_NEW                     32774
 #define ID_FILE_OPEN                    32775
@@ -286,7 +287,7 @@
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        164
 #define _APS_NEXT_COMMAND_VALUE         32921
-#define _APS_NEXT_CONTROL_VALUE         1043
+#define _APS_NEXT_CONTROL_VALUE         1044
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif

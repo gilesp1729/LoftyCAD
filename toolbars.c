@@ -75,10 +75,12 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     HMENU hMenu;
     CHOOSEFONT cf;
     LOGFONT lf;
+    PSHNOTIFY *notify;
 
     switch (msg)
     {
     case WM_INITDIALOG:
+        hWndToolbar = hWnd;
         LoadAndDisplayIcon(hWnd, IDI_EDGE, IDB_EDGE, IDS_EDGE);
         LoadAndDisplayIcon(hWnd, IDI_RECT, IDB_RECT, IDS_RECT);
         LoadAndDisplayIcon(hWnd, IDI_CIRCLE, IDB_CIRCLE, IDS_CIRCLE);
@@ -274,6 +276,23 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
         CheckMenuItem(hMenu, ID_VIEW_TOOLS, view_tools ? MF_CHECKED : MF_UNCHECKED);
         break;
+
+    case WM_NOTIFY:
+        notify = (PSHNOTIFY*)lParam;
+        switch (notify->hdr.code)
+        {
+        case PSN_SETACTIVE:
+
+            break;
+
+        case PSN_RESET:
+            view_tools = FALSE;
+            ShowWindow(hWndPropSheet, SW_HIDE);
+            hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
+            CheckMenuItem(hMenu, ID_VIEW_TOOLS, view_tools ? MF_CHECKED : MF_UNCHECKED);
+            break;
+        }
+        break;
     }
 
     return 0;
@@ -284,22 +303,34 @@ int WINAPI
 printer_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     HMENU hMenu;
+    PSHNOTIFY* notify;
 
     switch (msg)
     {
     case WM_INITDIALOG:
-
+        hWndPrintPreview = hWnd;
         break;
 
     case WM_COMMAND:
 
         break;
 
-    case WM_CLOSE:
-        view_tools = FALSE;
-        ShowWindow(hWnd, SW_HIDE);
-        hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
-        CheckMenuItem(hMenu, ID_VIEW_TOOLS, view_tools ? MF_CHECKED : MF_UNCHECKED);
+
+    case WM_NOTIFY:
+        notify = (PSHNOTIFY*)lParam;
+        switch (notify->hdr.code)
+        {
+        case PSN_SETACTIVE:
+
+            break;
+
+        case PSN_RESET:
+            view_tools = FALSE;
+            ShowWindow(hWndPropSheet, SW_HIDE);
+            hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
+            CheckMenuItem(hMenu, ID_VIEW_TOOLS, view_tools ? MF_CHECKED : MF_UNCHECKED);
+            break;
+        }
         break;
     }
 
