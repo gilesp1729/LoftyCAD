@@ -1017,14 +1017,10 @@ read_gcode_to_group(Group* group, char* filename)
 
                     edge->z = next_z;
                     cur_z = next_z;
+                    edge->n_view = 0;
                     edge->n_viewalloc = 32;
                     edge->view_list = malloc(edge->n_viewalloc * sizeof(Point2D));
                     link_tail_group((Object*)edge, group);
-
-                    // Add the first point
-                    edge->view_list[0].x = cur_x;
-                    edge->view_list[0].y = cur_y;
-                    edge->n_view = 1;
                 }
 
                 // If X/Y have been given with a positive E, add a line to the current edge
@@ -1036,9 +1032,22 @@ read_gcode_to_group(Group* group, char* filename)
                         edge->n_viewalloc *= 2;    // Grow the allocation
                         edge->view_list = realloc(edge->view_list, edge->n_viewalloc * sizeof(Point2D));
                     }
+                    if (edge->n_view == 0)
+                    {
+                        // Add the first point
+                        edge->view_list[0].x = cur_x;
+                        edge->view_list[0].y = cur_y;
+                        edge->n_view = 1;
+                    }
                     edge->view_list[edge->n_view].x = next_x;
                     edge->view_list[edge->n_view].y = next_y;
                     edge->n_view++;
+                    cur_x = next_x;
+                    cur_y = next_y;
+                }
+                else if (have_x && have_y)
+                {
+                    // Just a move to the position
                     cur_x = next_x;
                     cur_y = next_y;
                 }
