@@ -249,6 +249,9 @@ populate_treeview_object(Object *obj, Object *parent, HTREEITEM hItem, char *tag
 
     case OBJ_EDGE:
         edge = (Edge *)obj;
+        if (edge->type == EDGE_ZPOLY)
+            break;
+
         tvi.pszText = obj_description(obj, descr, 128, TRUE);
         tvi.cchTextMax = strlen(tvi.pszText);
         tvi.lParam = (LPARAM)obj;

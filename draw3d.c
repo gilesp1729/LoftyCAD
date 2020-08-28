@@ -246,6 +246,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
     int i;
     Face *face;
     Edge *edge;
+    ZPolyEdge* zedge;
     ArcEdge *ae;
     BezierEdge *be;
     Point *p;
@@ -430,6 +431,24 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
                 draw_object((Object *)be->ctrlpoints[0], (pres & ~DRAW_WITH_DIMENSIONS), parent_lock);
                 draw_object((Object *)be->ctrlpoints[1], (pres & ~DRAW_WITH_DIMENSIONS), parent_lock);
             }
+            break;
+
+        case EDGE_ZPOLY:
+            zedge = (ZPolyEdge*)edge;
+
+            // TEMP: draw these as a line strip, until we can do something better
+            glBegin(GL_LINE_STRIP);
+            color(obj, constr_edge, pres, locked);
+            for (i = 0; i < zedge->n_view; i++)
+            {
+                Point2D* p = &zedge->view_list[i];
+
+                glVertex3_trans(p->x, p->y, zedge->z);
+            }
+            glEnd();
+            if (push_name)
+                glPopName();
+
             break;
         }
         break;

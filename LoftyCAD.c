@@ -1622,7 +1622,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
         psh.ppsp = (LPCPROPSHEETPAGE)&psp;
         psh.pfnCallback = NULL;
 
-        hWndPropSheet = PropertySheet(&psh);
+        hWndPropSheet = (HWND)PropertySheet(&psh);
         SetWindowPos(hWndPropSheet, HWND_NOTOPMOST, wWidth, 0, 0, 0, SWP_NOSIZE);
         ShowWindow(GetDlgItem(hWndPropSheet, IDOK), SW_HIDE);
         ShowWindow(GetDlgItem(hWndPropSheet, IDCANCEL), SW_HIDE);

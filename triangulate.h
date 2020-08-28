@@ -73,6 +73,7 @@ BOOL read_stl_to_group(Group *group, char *filename);
 BOOL read_amf_to_group(Group* group, char* filename);
 BOOL read_obj_to_group(Group* group, char* filename);
 BOOL read_off_to_group(Group* group, char* filename);
+BOOL read_gcode_to_group(Group* group, char* filename);
 
 extern GLUtesselator *rtess;
 extern ListHead xform_list;

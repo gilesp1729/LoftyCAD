@@ -116,7 +116,7 @@ Command(int message, int wParam, int lParam)
     char buf[64];
     int i;
     BOOL rc;
-    char* filetypes[5] = {"lcd", "stl", "amf", "obj", "off"};
+    char* filetypes[6] = {"lcd", "stl", "amf", "obj", "off", "gcode"};
 
     // Check for micro moves
     if (micro_moved)
@@ -136,12 +136,12 @@ Command(int message, int wParam, int lParam)
 
         // If an LCD file, open it. If one of the recognised import formats, import it to a group.
         pdot = strrchr(new_filename, '.');
-        for (i = 0; i < 5; i++)
+        for (i = 0; i < 6; i++)
         {
             if (_stricmp(pdot + 1, filetypes[i]) == 0)
                 break;
         }
-        if (i == 5)
+        if (i == 6)
             break;   // not recognised, just forget it
 
         if (i == 0)
@@ -237,11 +237,18 @@ Command(int message, int wParam, int lParam)
         case 4:
             rc = read_off_to_group(group, new_filename);
             break;
+        case 5:
+            rc = read_gcode_to_group(group, new_filename);
+            break;
         }
         if (rc)
         {
-            link_group((Object*)group, &object_tree);
-            update_drawing();
+            if (i < 5)
+            {
+                link_group((Object*)group, &object_tree);
+                update_drawing();
+            }
+            // TODO do something with the gcode group
         }
         else
         {
@@ -691,6 +698,7 @@ Command(int message, int wParam, int lParam)
                 "AMF Files (*.AMF)\0*.AMF\0"
                 "OBJ Files (*.OBJ)\0*.OBJ\0"
                 "Geomview Object File Format Files (*.OFF)\0*.OFF\0"
+                "G-code Files (*.GCODE)\0*.GCODE\0"
                 "All Files\0*.*\0\0";
             ofn.nFilterIndex = 1;
             ofn.lpstrDefExt = "lcd";
@@ -720,11 +728,18 @@ Command(int message, int wParam, int lParam)
                 case 5:
                     rc = read_off_to_group(group, new_filename);
                     break;
+                case 6:
+                    rc = read_gcode_to_group(group, new_filename);
+                    break;
                 }
                 if (rc)
                 {
-                    link_group((Object *)group, &object_tree);
-                    update_drawing();
+                    // TEMP: if (ofn.nFilterIndex < 6)
+                    {
+                        link_group((Object*)group, &object_tree);
+                        update_drawing();
+                    }
+                    // TODO do something with the gcode group
                 }
                 else
                 {

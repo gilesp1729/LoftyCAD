@@ -939,3 +939,148 @@ eof_error:
     return FALSE;
 }
 
+// Read a G-code file and store it as an edge group of Z-poly edges.
+// It does not go into the object tree.
+BOOL
+read_gcode_to_group(Group* group, char* filename)
+{
+    FILE* f;
+    float cur_x = 0;
+    float cur_y = 0;
+    float cur_z = 0;
+    float next_x, next_y, next_z, ext;
+    BOOL have_x, have_y, have_z, have_e;
+    ZPolyEdge* edge = NULL;
+
+    nexttok = NULL;
+    fopen_s(&f, filename, "rt");
+    if (f == NULL)
+        return FALSE;
+    start_file_progress(f, "Importing ", filename);
+
+    while (TRUE)
+    {
+        if (fgets(buf, 512, f) == NULL)
+            break;
+
+        step_file_progress(f);
+
+        tok = strtok_s(buf, " \t\n", &nexttok);
+        if (tok == NULL || tok[0] == ';')    // Skip blank lines or whole-line comments
+            continue;
+        if (tok[0] == 'N')                  // Skip line numbers at the start of the line
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+        if (tok[0] == 'G')                  // Process G-codes
+        {
+            int code = atoi(&tok[1]);
+
+            switch (code)
+            {
+            case 0:                         // move or draw XYZ
+            case 1:
+                have_x = have_y = have_z = have_e = FALSE;
+                while (TRUE)
+                {
+                    // Gather up the options (XYZEF..) till EOL
+                    tok = strtok_s(NULL, " \t\n", &nexttok);
+                    if (tok == NULL)
+                        break;
+                    switch (tok[0])
+                    {
+                    case 'X':
+                        have_x = TRUE;
+                        next_x = (float)atof(&tok[1]);
+                        break;
+                    case 'Y':
+                        have_y = TRUE;
+                        next_y = (float)atof(&tok[1]);
+                        break;
+                    case 'Z':
+                        have_z = TRUE;
+                        next_z = (float)atof(&tok[1]);
+                        break;
+                    case 'E':
+                        have_e = TRUE;
+                        ext = (float)atof(&tok[1]);
+                        break;
+                    default:                // here for F and other stuff we ignore
+                        break;
+                    }
+                }
+
+                // If Z has changed, create a new edge in the group
+                if (have_z && next_z != cur_z && (edge == NULL || edge->n_view > 1))
+                {
+                    edge = (ZPolyEdge *)edge_new(EDGE_ZPOLY);
+                    objid--;
+                    edge->edge.hdr.ID = 0;      // not for the object list
+
+                    edge->z = next_z;
+                    cur_z = next_z;
+                    edge->n_viewalloc = 32;
+                    edge->view_list = malloc(edge->n_viewalloc * sizeof(Point2D));
+                    link_tail_group((Object*)edge, group);
+
+                    // Add the first point
+                    edge->view_list[0].x = cur_x;
+                    edge->view_list[0].y = cur_y;
+                    edge->n_view = 1;
+                }
+
+                // If X/Y have been given with a positive E, add a line to the current edge
+                if (have_x && have_y && have_e && ext > 0)
+                {
+                    ASSERT(edge != NULL, "We should have an edge by now");
+                    if (edge->n_view >= edge->n_viewalloc)
+                    {
+                        edge->n_viewalloc *= 2;    // Grow the allocation
+                        edge->view_list = realloc(edge->view_list, edge->n_viewalloc * sizeof(Point2D));
+                    }
+                    edge->view_list[edge->n_view].x = next_x;
+                    edge->view_list[edge->n_view].y = next_y;
+                    edge->n_view++;
+                    cur_x = next_x;
+                    cur_y = next_y;
+                }
+                break;
+
+            case 92:                        // set position XYZE (usually used just for E)
+                while (TRUE)
+                {
+                    tok = strtok_s(NULL, " \t\n", &nexttok);
+                    if (tok == NULL)
+                        break;
+                    switch (tok[0])
+                    {
+                    case 'X':
+                        cur_x = (float)atof(&tok[1]);
+                        break;
+                    case 'Y':
+                        cur_y = (float)atof(&tok[1]);
+                        break;
+                    case 'Z':
+                        cur_z = (float)atof(&tok[1]);
+                        break;
+                    case 'E':
+                        ext = (float)atof(&tok[1]);
+                        break;
+                    default:   
+                        break;
+                    }
+                }
+                break;
+            }
+        }
+    }
+
+    fclose(f);
+    clear_status_and_progress();
+    return TRUE;
+
+#if 0 // unused?
+eof_error:
+    fclose(f);
+    clear_status_and_progress();
+    return FALSE;
+#endif
+}

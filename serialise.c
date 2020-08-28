@@ -58,6 +58,9 @@ serialise_obj(Object *obj, FILE *f)
 
     case OBJ_EDGE:
         type = ((Edge *)obj)->type & ~EDGE_CONSTRUCTION;
+        if (type == EDGE_ZPOLY)
+            return;                  // don't serialise these
+
         constr = ((Edge *)obj)->type & EDGE_CONSTRUCTION;
         fprintf_s(f, "BEGIN %d\n", obj->ID);
         e = (Edge *)obj;
