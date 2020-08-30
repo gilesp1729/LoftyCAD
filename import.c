@@ -966,8 +966,47 @@ read_gcode_to_group(Group* group, char* filename)
         step_file_progress(f);
 
         tok = strtok_s(buf, " \t\n", &nexttok);
-        if (tok == NULL || tok[0] == ';')    // Skip blank lines or whole-line comments
+
+        // Skip blank lines or whole-line comments, but gather up some geometry from
+        // comments put there by Slic3r. e.g. ; bed_shape = 0x0, 250x0, 250x210, 0x210
+        if (tok == NULL)
             continue;
+        if (tok[0] == ';')
+        {
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            if (tok == NULL)
+                continue;
+            if (strcmp(tok, "bed_shape") == 0)
+            {
+                // Suck up the '=' sign and get the corner coords
+                tok = strtok_s(NULL, " \t\n", &nexttok);
+                if (tok[0] != '=')
+                    continue;
+                tok = strtok_s(NULL, "x, \t\n", &nexttok);      // 0x0
+                bed_xmin = (float)atof(tok);
+                tok = strtok_s(NULL, "x, \t\n", &nexttok);
+                bed_ymin = (float)atof(tok);
+
+                tok = strtok_s(NULL, ", \t\n", &nexttok);       // 250x0 (skip)
+                tok = strtok_s(NULL, "x, \t\n", &nexttok);      // 250x210
+                bed_xmax = (float)atof(tok);
+                tok = strtok_s(NULL, "x, \t\n", &nexttok);
+                bed_ymax = (float)atof(tok);
+
+                group->xoffset = (bed_xmax - bed_xmin) / 2;
+                group->yoffset = (bed_ymax - bed_ymin) / 2;
+            }
+            else if (strcmp(tok, "layer_height") == 0)          // layer_height = 0.2 (e.g.)
+            {
+                tok = strtok_s(NULL, " \t\n", &nexttok);
+                if (tok[0] != '=')
+                    continue;
+                tok = strtok_s(NULL, " \t\n", &nexttok);
+                layer_height = (float)atof(tok);
+            }
+            continue;
+        }
+
         if (tok[0] == 'N')                  // Skip line numbers at the start of the line
             tok = strtok_s(NULL, " \t\n", &nexttok);
         if (tok[0] == 'G')                  // Process G-codes

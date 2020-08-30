@@ -238,6 +238,7 @@ Command(int message, int wParam, int lParam)
             rc = read_off_to_group(group, new_filename);
             break;
         case 5:
+            group->hdr.lock = LOCK_GROUP;
             rc = read_gcode_to_group(group, new_filename);
             break;
         }
@@ -729,6 +730,7 @@ Command(int message, int wParam, int lParam)
                     rc = read_off_to_group(group, new_filename);
                     break;
                 case 6:
+                    group->hdr.lock = LOCK_GROUP;
                     rc = read_gcode_to_group(group, new_filename);
                     break;
                 }

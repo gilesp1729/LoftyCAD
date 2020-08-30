@@ -147,6 +147,13 @@ float halo_rad = 50;
 // Current filename
 char curr_filename[256] = { 0, };
 
+// Print bed dimensions defaults
+float bed_xmin = 0;
+float bed_ymin = 0;
+float bed_xmax = 200;
+float bed_ymax = 200;
+float layer_height = 0.3f;
+
 // Grid (for snapping points) and unit tolerance (for display of dims)
 // When grid snapping is turned off, points are still snapped to the tolerance.
 // grid_snap should be a power of 10; tolerance must be less

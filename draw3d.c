@@ -437,15 +437,19 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             zedge = (ZPolyEdge*)edge;
 
             // TEMP: draw these as a line strip, until we can do something better
-            glBegin(GL_LINE_STRIP);
             color(obj, constr_edge, pres, locked);
+#if 0
+            glBegin(GL_LINE_STRIP);
             for (i = 0; i < zedge->n_view; i++)
             {
                 Point2D* p = &zedge->view_list[i];
 
-                glVertex3_trans(p->x, p->y, zedge->z);
+                glVertex3_trans(p->x, p->y, zedge->z);  // TODo subtract group x/yoffset
             }
             glEnd();
+#else
+            spaghetti(zedge);
+#endif
             if (push_name)
                 glPopName();
 
@@ -2123,10 +2127,12 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
 
         if (view_printbed)
         {
-            double xmin = -100;
-            double ymin = -100;
-            double xmax = 100;
-            double ymax = 100;
+            double xoffset = (bed_xmax - bed_xmin) / 2;
+            double yoffset = (bed_ymax - bed_ymin) / 2;
+            double xmin = bed_xmin - xoffset;
+            double ymin = bed_ymin - yoffset;
+            double xmax = bed_xmax - xoffset;
+            double ymax = bed_ymax - yoffset;
             double xinc = 10;
             double yinc = 10;
             double x, y;

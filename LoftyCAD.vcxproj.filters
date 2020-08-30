@@ -176,6 +176,9 @@
     <ClCompile Include="progress.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="gcode.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="LoftyCAD.rc">

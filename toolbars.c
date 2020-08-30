@@ -282,7 +282,7 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         switch (notify->hdr.code)
         {
         case PSN_SETACTIVE:
-
+            view_printer = FALSE;
             break;
 
         case PSN_RESET:
@@ -321,7 +321,8 @@ printer_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         switch (notify->hdr.code)
         {
         case PSN_SETACTIVE:
-
+            view_printer = TRUE;
+            view_printbed = TRUE;
             break;
 
         case PSN_RESET:

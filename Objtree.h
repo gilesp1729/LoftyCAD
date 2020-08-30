@@ -46,6 +46,10 @@ typedef enum
 } FACE;
 
 // Locking level. They must agree with the object types, and be ascending.
+// For edge groups these have special meanings: 
+// LOCK_POINTS = open edge group 
+// LOCK_EDGES = closed edge group
+// LOCK_GROUP = ZPoly edge group (used for G-code visualisations)
 typedef enum
 {
     LOCK_NONE = OBJ_NONE,          // Fully unlocked
@@ -130,12 +134,19 @@ typedef struct Point
     struct Point    *bucket_next;   // Next point in sorting bucket (used for searching points by coordinate)
 } Point;
 
-// 2D point struct.
+// Compact 2D and 3D point structs.
 typedef struct Point2D
 {
     float x;
     float y;
 } Point2D;
+
+typedef struct Point3D
+{
+    float x;
+    float y;
+    float z;
+} Point3D;
 
 // Plane definitions
 typedef struct Plane
@@ -372,6 +383,8 @@ typedef struct Group
     OPERATION       op;             // Operation to use when combining group with tree
                                     // NOTE THE ABOVE MUST FOLLOW immediately after header
     int             n_members;      // The number of top-level objects in the group.
+    float           xoffset;        // Offset of G-code group to origin (used to translate between
+    float           yoffset;        // LCD and printer coordinates)
     char            title[256];     // A name for the group
     Mesh            *mesh;          // Mesh for the complete group
     BOOL            mesh_valid;     // If TRUE, the mesh is up to date (but not necessarily complete)

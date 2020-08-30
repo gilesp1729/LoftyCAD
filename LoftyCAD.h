@@ -131,6 +131,11 @@ extern float total_angle;
 extern float effective_angle;
 extern float halo_rad;
 extern BOOL suppress_drawing;
+extern float bed_xmin;
+extern float bed_ymin;
+extern float bed_xmax;
+extern float bed_ymax;
+extern float layer_height;
 
 extern char curr_filename[];
 extern float grid_snap;
@@ -239,7 +244,7 @@ extern BOOL debug_view_bbox;
 extern BOOL debug_view_normals;
 extern BOOL debug_view_viewlist;
 
-// Some forwards
+// Some forwards (mostly draw3d.c)
 Object * Pick(GLint x_pick, GLint y_pick, BOOL force_pick);
 void Pick_all_in_rect(GLint x_pick, GLint y_pick, GLint width, GLint height);
 void CALLBACK Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick);
@@ -250,6 +255,8 @@ BOOL is_selected_parent(Object * obj);
 BOOL remove_from_selection(Object * obj);
 void clear_selection(ListHead * sel_list);
 
+// Visualistion of G-code (gcode.c)
+void spaghetti(ZPolyEdge * zedge);
 
 // Help dialog (help.c)
 HWND init_help_window(void);
