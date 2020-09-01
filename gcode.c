@@ -61,36 +61,48 @@ endcap(Point2D* curr, Point2D *d0, Point2D *d1, float z, Endcap* cap)
     for (i = 0; i < NPTS; i++)
     {
         c[i].x = -d0->y * xcap[i];
-
-
-
-
+        c[i].y = d0->x * xcap[i];
+        c[i].z = zcap[i];
     }
 
-
-
-    // The first point is on the ZPolyEdge.
-    cap->pts[0].x = curr->x - xoffset;
-    cap->pts[0].y = curr->y - yoffset;
-    cap->pts[0].z = z;
-
-
-
-
-
-
-
+    for (i = 0; i < NPTS; i++)
+    {
+        cap->pts[i].x = curr->x - xoffset + c[i].x * layer_height;
+        cap->pts[i].y = curr->y - yoffset + c[i].y * layer_height;
+        cap->pts[i].z = z + c[i].z * layer_height;
+    }
 }
 
 // Put out faces (quads) between two endcaps.
 void
 tube(Endcap* e0, Endcap* e1)
 {
+    int i, j, o; 
+    Plane norm;
 
+    for (i = 0; i < NPTS; i++)
+    {
+        j = i + 1;          // next point
+        if (j == NPTS)
+            j = 0;
 
+        o = i - (NPTS / 2) + 1;     // opposite point for facet normal
+        if (o < 0)
+            o += NPTS;
 
+        norm.A = e0->pts[i].x - e0->pts[o].x;
+        norm.B = e0->pts[i].y - e0->pts[o].y;
+        norm.C = e0->pts[i].z - e0->pts[o].z;
+        normalise_plane(&norm);
+        glNormal3f(norm.A, norm.B, norm.C);
 
+        glVertex3f(e0->pts[i].x, e0->pts[i].y, e0->pts[i].z);
+        glVertex3f(e0->pts[j].x, e0->pts[j].y, e0->pts[j].z);
+        glVertex3f(e1->pts[j].x, e1->pts[j].y, e1->pts[j].z);
+        glVertex3f(e1->pts[i].x, e1->pts[i].y, e1->pts[i].z);
+    }
 }
+
 
 // Put out faces for the line segments of the ZPolyEdge view_list. 
 void
@@ -101,7 +113,7 @@ spaghetti(ZPolyEdge *zedge)
     Point2D d0, d1;
     float bend;
 
-    glBegin(GL_QUAD_STRIP);
+    glBegin(GL_QUADS);
 
     for (i = 1; i < zedge->n_view; i++)
     {
@@ -125,11 +137,12 @@ spaghetti(ZPolyEdge *zedge)
 
         // Calculate the next endcap. If the included angle between this segment and the next
         // is less than 90, close off the tube and start again (to prevent miter spikes)
-        if (bend < 0)
+
+        if (1|| bend < 0)  // TEMP force all through here
         {
             endcap(&zedge->view_list[i], &d0, NULL, zedge->z, &endcap1);
             tube(&endcap0, &endcap1);
-            endcap(&zedge->view_list[i + 1], &d1, NULL, zedge->z, &endcap0);
+            endcap(&zedge->view_list[i], &d1, NULL, zedge->z, &endcap0);
         }
         else
         {

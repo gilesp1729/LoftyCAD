@@ -951,6 +951,7 @@ read_gcode_to_group(Group* group, char* filename)
     float next_x, next_y, next_z, ext;
     BOOL have_x, have_y, have_z, have_e;
     ZPolyEdge* edge = NULL;
+    BOOL new_edge = FALSE;
 
     nexttok = NULL;
     fopen_s(&f, filename, "rt");
@@ -1047,25 +1048,28 @@ read_gcode_to_group(Group* group, char* filename)
                     }
                 }
 
-                // If Z has changed, create a new edge in the group
-                if (have_z && next_z != cur_z && (edge == NULL || edge->n_view > 1))
-                {
-                    edge = (ZPolyEdge *)edge_new(EDGE_ZPOLY);
-                    objid--;
-                    edge->edge.hdr.ID = 0;      // not for the object list
-
-                    edge->z = next_z;
-                    cur_z = next_z;
-                    edge->n_view = 0;
-                    edge->n_viewalloc = 32;
-                    edge->view_list = malloc(edge->n_viewalloc * sizeof(Point2D));
-                    link_tail_group((Object*)edge, group);
-                }
-
                 // If X/Y have been given with a positive E, add a line to the current edge
                 if (have_x && have_y && have_e && ext > 0)
                 {
-                    ASSERT(edge != NULL, "We should have an edge by now");
+                    if (new_edge || (have_z && next_z != cur_z))
+                    {
+                        new_edge = FALSE;
+                        edge = (ZPolyEdge*)edge_new(EDGE_ZPOLY);
+                        objid--;
+                        edge->edge.hdr.ID = 0;      // not for the object list
+
+                        edge->z = next_z;
+                        cur_z = next_z;
+                        edge->n_view = 0;
+                        edge->n_viewalloc = 32;
+                        edge->view_list = malloc(edge->n_viewalloc * sizeof(Point2D));
+                        link_tail_group((Object*)edge, group);
+
+                        // TEMP
+                        if (group->n_members > 5)
+                            return TRUE;
+                    }
+
                     if (edge->n_view >= edge->n_viewalloc)
                     {
                         edge->n_viewalloc *= 2;    // Grow the allocation
@@ -1089,6 +1093,7 @@ read_gcode_to_group(Group* group, char* filename)
                     // Just a move to the position
                     cur_x = next_x;
                     cur_y = next_y;
+                    new_edge = TRUE;
                 }
                 break;
 

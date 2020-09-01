@@ -274,7 +274,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
 
     BOOL draw_components = !highlighted || !snapping;
 
-    if (!view_rendered)
+    if (!view_rendered && !view_printer)
         glEnable(GL_BLEND);
 
     switch (obj->type)
@@ -438,18 +438,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
 
             // TEMP: draw these as a line strip, until we can do something better
             color(obj, constr_edge, pres, locked);
-#if 0
-            glBegin(GL_LINE_STRIP);
-            for (i = 0; i < zedge->n_view; i++)
-            {
-                Point2D* p = &zedge->view_list[i];
-
-                glVertex3_trans(p->x, p->y, zedge->z);  // TODo subtract group x/yoffset
-            }
-            glEnd();
-#else
             spaghetti(zedge);
-#endif
             if (push_name)
                 glPopName();
 
@@ -1804,7 +1793,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
 
         // Only clear pixel buffer stuff if not picking (reduces flashing)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        if (view_rendered)
+        if (view_rendered || view_printer)
         {
             glEnable(GL_DEPTH_TEST);
             glEnable(GL_LIGHTING);
