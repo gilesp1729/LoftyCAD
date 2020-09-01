@@ -1066,8 +1066,8 @@ read_gcode_to_group(Group* group, char* filename)
                         link_tail_group((Object*)edge, group);
 
                         // TEMP
-                        if (group->n_members > 5)
-                            return TRUE;
+                        //if (group->n_members > 5)
+                        //    return TRUE;
                     }
 
                     if (edge->n_view >= edge->n_viewalloc)

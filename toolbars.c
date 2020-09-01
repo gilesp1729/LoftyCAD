@@ -270,19 +270,14 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
         break;
 
-    case WM_CLOSE:
-        view_tools = FALSE;
-        ShowWindow(hWnd, SW_HIDE);
-        hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
-        CheckMenuItem(hMenu, ID_VIEW_TOOLS, view_tools ? MF_CHECKED : MF_UNCHECKED);
-        break;
-
     case WM_NOTIFY:
         notify = (PSHNOTIFY*)lParam;
         switch (notify->hdr.code)
         {
         case PSN_SETACTIVE:
             view_printer = FALSE;
+            glEnable(GL_BLEND);
+            invalidate_dl();
             break;
 
         case PSN_RESET:
@@ -318,17 +313,20 @@ printer_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
     case WM_NOTIFY:
         notify = (PSHNOTIFY*)lParam;
+        hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
         switch (notify->hdr.code)
         {
         case PSN_SETACTIVE:
             view_printer = TRUE;
+            glDisable(GL_BLEND);
+            invalidate_dl();
             view_printbed = TRUE;
+            CheckMenuItem(hMenu, ID_VIEW_PRINTBED, MF_CHECKED);
             break;
 
         case PSN_RESET:
             view_tools = FALSE;
             ShowWindow(hWndPropSheet, SW_HIDE);
-            hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
             CheckMenuItem(hMenu, ID_VIEW_TOOLS, view_tools ? MF_CHECKED : MF_UNCHECKED);
             break;
         }

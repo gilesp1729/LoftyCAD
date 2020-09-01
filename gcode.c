@@ -43,26 +43,62 @@ dot2d(Point2D* d0, Point2D* d1)
     return d0->x * d1->x + d0->y * d1->y;
 }
 
-// Make an endcap circle at curr.  The normalised directions are given since
-// we always have them (saving doing repeated sqrts to get them). If a direction is NULL, 
-// it will be a closed endcap perpendicular to the edge.
+// Make an endcap circle at curr.  The line is in (normalised) direction d0. 
+// The next line is in direction d1. If d1 is not NULL, the endcap is mitered
+// between the two directions.
 void
 endcap(Point2D* curr, Point2D *d0, Point2D *d1, float z, Endcap* cap)
 {
     Point3D c[NPTS];
+    Point2D adj_d0;
     int i;
+    float lensq, corr;
 
     // X/Y offsets are subtracted here.
     float xoffset = (float)(bed_xmax - bed_xmin) / 2;
     float yoffset = (float)(bed_ymax - bed_ymin) / 2;
 
     // The endcap is a polygon, anti-clockwise as seen looking along direction d0.
-    c[0].x = c[0].y = c[0].z = 0;
-    for (i = 0; i < NPTS; i++)
+    if (d1 == NULL)
     {
-        c[i].x = -d0->y * xcap[i];
-        c[i].y = d0->x * xcap[i];
-        c[i].z = zcap[i];
+        for (i = 0; i < NPTS; i++)
+        {
+            c[i].x = -d0->y * xcap[i];
+            c[i].y = d0->x * xcap[i];
+            c[i].z = zcap[i];
+        }
+    }
+    else
+    {
+        // Adjust direction for the turn between d0 and d1. Cope with near-parallel cases.
+        adj_d0.x = (d1->x - d0->x) / 2;
+        adj_d0.y = (d1->y - d0->y) / 2;
+        lensq = adj_d0.x * adj_d0.x + adj_d0.y * adj_d0.y;
+        if (lensq < 0.01)
+        {
+            // Same direction or near - just use the standard endcap
+            for (i = 0; i < NPTS; i++)
+            {
+                c[i].x = -d0->y * xcap[i];
+                c[i].y = d0->x * xcap[i];
+                c[i].z = zcap[i];
+            }
+        }
+        else
+        {
+            // Adjust size of endcap to cope with increasing angle between the lines.
+            // This works up to 90 degrees (protected by caller)
+            corr = sqrtf(1 - lensq);
+            lensq = sqrtf(lensq);
+            adj_d0.x /= (lensq * corr);
+            adj_d0.y /= (lensq * corr);
+            for (i = 0; i < NPTS; i++)
+            {
+                c[i].x = adj_d0.x * xcap[i];
+                c[i].y = adj_d0.y * xcap[i];
+                c[i].z = zcap[i];
+            }
+        }
     }
 
     for (i = 0; i < NPTS; i++)
@@ -138,7 +174,7 @@ spaghetti(ZPolyEdge *zedge)
         // Calculate the next endcap. If the included angle between this segment and the next
         // is less than 90, close off the tube and start again (to prevent miter spikes)
 
-        if (1|| bend < 0)  // TEMP force all through here
+        if (bend < -0.01)
         {
             endcap(&zedge->view_list[i], &d0, NULL, zedge->z, &endcap1);
             tube(&endcap0, &endcap1);
