@@ -299,6 +299,7 @@ printer_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     HMENU hMenu;
     PSHNOTIFY* notify;
+    char buf[16];
 
     switch (msg)
     {
@@ -310,6 +311,30 @@ printer_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         LoadAndDisplayIcon(hWnd, IDI_BOTTOM, IDB_MINUS_XY, IDS_MINUS_XY);
         LoadAndDisplayIcon(hWnd, IDI_BACK, IDB_MINUS_YZ, IDS_MINUS_YZ);
         LoadAndDisplayIcon(hWnd, IDI_RIGHT, IDB_MINUS_XZ, IDS_MINUS_XZ);
+
+        sprintf_s(buf, 16, "%.2f", print_zmin);
+        SendDlgItemMessage(hWnd, IDC_PRINTER_ZFROM, WM_SETTEXT, 0, (LPARAM)buf);
+        sprintf_s(buf, 16, "%.2f", print_zmax);
+        SendDlgItemMessage(hWnd, IDC_PRINTER_ZTO, WM_SETTEXT, 0, (LPARAM)buf);
+
+        if (print_zmin <= 0 && print_zmax >= 9999)
+        {
+            SendDlgItemMessage(hWnd, IDC_PRINTER_ZFROM, WM_ENABLE, 0, 0);
+            SendDlgItemMessage(hWnd, IDC_PRINTER_ZTO, WM_ENABLE, 0, 0);
+            SendDlgItemMessage(hWnd, IDC_PRINTER_FULL, BM_CLICK, 0, 0);
+        }
+        else if (print_zmin == print_zmax)
+        {
+            SendDlgItemMessage(hWnd, IDC_PRINTER_ZFROM, WM_ENABLE, 1, 0);
+            SendDlgItemMessage(hWnd, IDC_PRINTER_ZTO, WM_ENABLE, 0, 0);
+            SendDlgItemMessage(hWnd, IDC_PRINTER_LAYER, BM_CLICK, 0, 0);
+        }
+        else
+        {
+            SendDlgItemMessage(hWnd, IDC_PRINTER_ZFROM, WM_ENABLE, 1, 0);
+            SendDlgItemMessage(hWnd, IDC_PRINTER_ZTO, WM_ENABLE, 1, 0);
+            SendDlgItemMessage(hWnd, IDC_PRINTER_UPTO, BM_CLICK, 0, 0);
+        }
         break;
 
     case WM_COMMAND:
@@ -317,6 +342,32 @@ printer_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         {
             switch (LOWORD(wParam))
             {
+            case IDC_PRINTER_FULL:
+                SendDlgItemMessage(hWnd, IDC_PRINTER_ZFROM, WM_ENABLE, 0, 0);
+                SendDlgItemMessage(hWnd, IDC_PRINTER_ZTO, WM_ENABLE, 0, 0);
+                print_zmin = 0;
+                print_zmax = 9999;
+                invalidate_dl();
+                break;
+
+            case IDC_PRINTER_LAYER:
+                SendDlgItemMessage(hWnd, IDC_PRINTER_ZFROM, WM_ENABLE, 1, 0);
+                SendDlgItemMessage(hWnd, IDC_PRINTER_ZTO, WM_ENABLE, 0, 0);
+                SendDlgItemMessage(hWnd, IDC_PRINTER_ZFROM, WM_GETTEXT, 16, (LPARAM)buf);
+                print_zmin = print_zmax = (float)atof(buf);
+                invalidate_dl();
+                break;
+
+            case IDC_PRINTER_UPTO:
+                SendDlgItemMessage(hWnd, IDC_PRINTER_ZFROM, WM_ENABLE, 1, 0);
+                SendDlgItemMessage(hWnd, IDC_PRINTER_ZTO, WM_ENABLE, 1, 0);
+                SendDlgItemMessage(hWnd, IDC_PRINTER_ZFROM, WM_GETTEXT, 16, (LPARAM)buf);
+                print_zmin = (float)atof(buf);
+                SendDlgItemMessage(hWnd, IDC_PRINTER_ZTO, WM_GETTEXT, 16, (LPARAM)buf);
+                print_zmax = (float)atof(buf);
+                invalidate_dl();
+                break;
+
             case IDB_XY:
                 facing_plane = &plane_XY;
                 facing_index = PLANE_XY;
@@ -378,8 +429,22 @@ printer_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 break;
             }
         }
+        else if (HIWORD(wParam) == EN_KILLFOCUS)
+        {
+            if (LOWORD(wParam) == IDC_PRINTER_ZFROM)
+            {
+                SendDlgItemMessage(hWnd, IDC_PRINTER_ZFROM, WM_GETTEXT, 16, (LPARAM)buf);
+                print_zmin = (float)atof(buf);
+                invalidate_dl();
+            }
+            else if (LOWORD(wParam) == IDC_PRINTER_ZTO)
+            {
+                SendDlgItemMessage(hWnd, IDC_PRINTER_ZTO, WM_GETTEXT, 16, (LPARAM)buf);
+                print_zmax = (float)atof(buf);
+                invalidate_dl();
+            }
+        }
         break;
-
 
     case WM_NOTIFY:
         notify = (PSHNOTIFY*)lParam;

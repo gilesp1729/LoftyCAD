@@ -78,6 +78,7 @@ char *obj_description(Object *obj, char *descr, int descr_len, BOOL verbose)
     Edge *edge;
     Volume *vol;
     Group *grp;
+    char tmpbuf[256];
 
     switch (obj->type)
     {
@@ -135,12 +136,16 @@ char *obj_description(Object *obj, char *descr, int descr_len, BOOL verbose)
                     verbose ? xform_string(grp->xform, buf, 64) : ""
                     );
         else
-            sprintf_s(descr, descr_len, "%s Group %d: %s %s", 
-                    op_string[grp->op], 
-                    obj->ID, 
-                    grp->title,
-                    xform_string(grp->xform, buf, 64)
+        {
+            sprintf_s(tmpbuf, 256, "%s Group %d: %s %s",
+                op_string[grp->op],
+                obj->ID,
+                grp->title,
+                xform_string(grp->xform, buf, 64)
             );
+            tmpbuf[descr_len - 1] = '\0';
+            strcpy_s(descr, descr_len, tmpbuf);
+        }
         break;
     }
 
@@ -155,6 +160,7 @@ char* brief_description(Object* obj, char* descr, int descr_len)
     Edge* edge;
     Volume* vol;
     Group* grp;
+    char tmpbuf[256];
 
     switch (obj->type)
     {
@@ -192,10 +198,14 @@ char* brief_description(Object* obj, char* descr, int descr_len)
         if (grp->title[0] == '\0')
             sprintf_s(descr, descr_len, "Group %d", obj->ID);
         else
-            sprintf_s(descr, descr_len, "Group %d: %s",
+        {
+            sprintf_s(tmpbuf, 256, "G%d: %s",
                 obj->ID,
                 grp->title
             );
+            tmpbuf[descr_len - 1] = '\0';
+            strcpy_s(descr, descr_len, tmpbuf);
+        }
         break;
     }
 

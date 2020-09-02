@@ -111,9 +111,11 @@ read_stl_to_group(Group *group, char *filename)
     {
         fclose(f);
         fopen_s(&f, filename, "rb");        // make sure it's binary!
+        if (f == NULL)
+            return FALSE;
+
         if (fread_s(buf, 512, 1, 80, f) != 80)
             goto error_return;
-        start_file_progress(f, "Importing ", filename);
 
         strncpy_s(group->title, 80, buf, _TRUNCATE);
         group->title[79] = '\0';    // in case there's no NULL char

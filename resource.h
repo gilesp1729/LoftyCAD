@@ -143,8 +143,9 @@
 #define IDC_PRINTER_FULL                1038
 #define IDC_PRINTER_LAYER               1039
 #define IDC_PRINTER_UPTO                1040
-#define IDC_PRINTER_Z                   1042
-#define IDC_TAB1                        1043
+#define IDC_PRINTER_ZFROM               1042
+#define IDC_PRINTER_ZFROM2              1043
+#define IDC_PRINTER_ZTO                 1043
 #define IDD_PRINT_PREVIEW               1544
 #define ID_FILE_NEW                     32774
 #define ID_FILE_OPEN                    32775
