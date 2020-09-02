@@ -1054,7 +1054,8 @@ Command(int message, int wParam, int lParam)
         else if ((HMENU)wParam == GetSubMenu(GetMenu(auxGetHWND()), 2))
         {
             // View menu
-            EnableMenuItem((HMENU)wParam, ID_VIEW_CONSTRUCTIONEDGES, view_rendered ? MF_GRAYED : MF_ENABLED);
+            EnableMenuItem((HMENU)wParam, ID_VIEW_CONSTRUCTIONEDGES, (view_rendered || view_printer) ? MF_GRAYED : MF_ENABLED);
+            EnableMenuItem((HMENU)wParam, ID_VIEW_RENDEREDVIEW, view_printer ? MF_GRAYED : MF_ENABLED);
 
             hMenu = GetSubMenu((HMENU)wParam, 3);   // Materials pop-out
             load_materials_menu(hMenu, TRUE, 0);         // display materials menu with all check marks

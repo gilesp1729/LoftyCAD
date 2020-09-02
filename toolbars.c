@@ -94,6 +94,7 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         LoadAndDisplayIcon(hWnd, IDI_TEXT, IDB_TEXT, IDS_TEXT);
         LoadAndDisplayIcon(hWnd, IDI_SCALE, IDB_SCALE, IDS_SCALE);
         LoadAndDisplayIcon(hWnd, IDI_ROTATE, IDB_ROTATE, IDS_ROTATE);
+        LoadAndDisplayIcon(hWnd, IDI_RENDERED, IDB_RENDERED, IDS_RENDERED);
 
         LoadAndDisplayIcon(hWnd, IDI_TOP, IDB_XY, IDS_XY);
         LoadAndDisplayIcon(hWnd, IDI_FRONT, IDB_YZ, IDS_YZ);
@@ -101,7 +102,6 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         LoadAndDisplayIcon(hWnd, IDI_BOTTOM, IDB_MINUS_XY, IDS_MINUS_XY);
         LoadAndDisplayIcon(hWnd, IDI_BACK, IDB_MINUS_YZ, IDS_MINUS_YZ);
         LoadAndDisplayIcon(hWnd, IDI_RIGHT, IDB_MINUS_XZ, IDS_MINUS_XZ);
-        LoadAndDisplayIcon(hWnd, IDI_RENDERED, IDB_RENDERED, IDS_RENDERED);
 
         // Tools are disabled when in render view
         enable_rendered_view_items();
@@ -304,10 +304,80 @@ printer_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     {
     case WM_INITDIALOG:
         hWndPrintPreview = hWnd;
+        LoadAndDisplayIcon(hWnd, IDI_TOP, IDB_XY, IDS_XY);
+        LoadAndDisplayIcon(hWnd, IDI_FRONT, IDB_YZ, IDS_YZ);
+        LoadAndDisplayIcon(hWnd, IDI_LEFT, IDB_XZ, IDS_XZ);
+        LoadAndDisplayIcon(hWnd, IDI_BOTTOM, IDB_MINUS_XY, IDS_MINUS_XY);
+        LoadAndDisplayIcon(hWnd, IDI_BACK, IDB_MINUS_YZ, IDS_MINUS_YZ);
+        LoadAndDisplayIcon(hWnd, IDI_RIGHT, IDB_MINUS_XZ, IDS_MINUS_XZ);
         break;
 
     case WM_COMMAND:
+        if (HIWORD(wParam) == BN_CLICKED)
+        {
+            switch (LOWORD(wParam))
+            {
+            case IDB_XY:
+                facing_plane = &plane_XY;
+                facing_index = PLANE_XY;
+#ifdef DEBUG_TOOLBAR_FACING
+                Log("Facing plane XY\r\n");
+#endif
+                trackball_InitQuat(quat_XY);
+                SetWindowPos(auxGetHWND(), HWND_TOP, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOREPOSITION);
+                break;
 
+            case IDB_YZ:
+                facing_plane = &plane_YZ;
+                facing_index = PLANE_YZ;
+#ifdef DEBUG_TOOLBAR_FACING
+                Log("Facing plane YZ\r\n");
+#endif
+                trackball_InitQuat(quat_YZ);
+                SetWindowPos(auxGetHWND(), HWND_TOP, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOREPOSITION);
+                break;
+
+            case IDB_XZ:
+                facing_plane = &plane_XZ;
+                facing_index = PLANE_XZ;
+#ifdef DEBUG_TOOLBAR_FACING
+                Log("Facing plane XZ\r\n");
+#endif
+                trackball_InitQuat(quat_XZ);
+                SetWindowPos(auxGetHWND(), HWND_TOP, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOREPOSITION);
+                break;
+
+            case IDB_MINUS_XY:
+                facing_plane = &plane_mXY;
+                facing_index = PLANE_MINUS_XY;
+#ifdef DEBUG_TOOLBAR_FACING
+                Log("Facing plane -XY\r\n");
+#endif
+                trackball_InitQuat(quat_mXY);
+                SetWindowPos(auxGetHWND(), HWND_TOP, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOREPOSITION);
+                break;
+
+            case IDB_MINUS_YZ:
+                facing_plane = &plane_mYZ;
+                facing_index = PLANE_MINUS_YZ;
+#ifdef DEBUG_TOOLBAR_FACING
+                Log("Facing plane -YZ\r\n");
+#endif
+                trackball_InitQuat(quat_mYZ);
+                SetWindowPos(auxGetHWND(), HWND_TOP, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOREPOSITION);
+                break;
+
+            case IDB_MINUS_XZ:
+                facing_plane = &plane_mXZ;
+                facing_index = PLANE_MINUS_XZ;
+#ifdef DEBUG_TOOLBAR_FACING
+                Log("Facing plane -XZ\r\n");
+#endif
+                trackball_InitQuat(quat_mXZ);
+                SetWindowPos(auxGetHWND(), HWND_TOP, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOREPOSITION);
+                break;
+            }
+        }
         break;
 
 
@@ -318,6 +388,7 @@ printer_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         {
         case PSN_SETACTIVE:
             view_printer = TRUE;
+            view_rendered = FALSE;
             glDisable(GL_BLEND);
             invalidate_dl();
             view_printbed = TRUE;
