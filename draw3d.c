@@ -435,10 +435,8 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
 
         case EDGE_ZPOLY:
             zedge = (ZPolyEdge*)edge;
-
-            // TEMP: draw these as a line strip, until we can do something better
             color(obj, constr_edge, pres, locked);
-            spaghetti(zedge);
+            spaghetti(zedge, print_zmin, print_zmax);
             if (push_name)
                 glPopName();
 
@@ -1785,8 +1783,9 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
         if (zoom_delta != 0)
         {
             zTrans += 0.002f * half_size * zoom_delta;
-            if (zTrans > -0.3f * half_size)
-                zTrans = -0.3f * half_size;
+            // Don't go too far forward, or we'll hit the near clipping plane
+            if (zTrans > -0.1f * half_size)
+                zTrans = -0.1f * half_size;
             Position(FALSE, 0, 0, 0, 0);
             zoom_delta = 0;
         }
@@ -1865,7 +1864,10 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
             curr_drawn_no++;
             xform_list.head = NULL;
             xform_list.tail = NULL;
-            draw_object((Object*)&object_tree, pres, LOCK_NONE);  // locks come from objects
+            if (view_printer)
+                draw_object((Object*)&gcode_tree, pres, LOCK_NONE);  // locks come from objects
+            else
+                draw_object((Object*)&object_tree, pres, LOCK_NONE);  // locks come from objects
             glEndList();
             draw_dl_valid = TRUE;
         }

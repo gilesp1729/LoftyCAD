@@ -940,7 +940,8 @@ eof_error:
 }
 
 // Read a G-code file and store it as an edge group of Z-poly edges.
-// It does not go into the object tree.
+// It does not go into the object tree. There is only one G-code group, 
+// so delete the old one (if it exists) before importing the new one.
 BOOL
 read_gcode_to_group(Group* group, char* filename)
 {
@@ -1054,18 +1055,30 @@ read_gcode_to_group(Group* group, char* filename)
                     if (new_edge || (have_z && next_z != cur_z))
                     {
                         new_edge = FALSE;
-                        edge = (ZPolyEdge*)edge_new(EDGE_ZPOLY);
-                        objid--;
-                        edge->edge.hdr.ID = 0;      // not for the object list
+
+                        // Get a new edge from the free list if there is one available
+                        if (free_list_zedge.head != NULL)
+                        {
+                            edge = (ZPolyEdge*)free_list_zedge.head;
+                            free_list_zedge.head = free_list_zedge.head->next;
+                            if (free_list_zedge.head == NULL)
+                                free_list_zedge.tail = NULL;
+                        }
+                        else
+                        {
+                            edge = (ZPolyEdge*)edge_new(EDGE_ZPOLY);
+                            objid--;
+                            edge->edge.hdr.ID = 0;      // not for the object list
+                            edge->n_viewalloc = 32;
+                            edge->view_list = malloc(edge->n_viewalloc * sizeof(Point2D));
+                        }
 
                         edge->z = next_z;
                         cur_z = next_z;
                         edge->n_view = 0;
-                        edge->n_viewalloc = 32;
-                        edge->view_list = malloc(edge->n_viewalloc * sizeof(Point2D));
                         link_tail_group((Object*)edge, group);
 
-                        // TEMP
+                        // TEMP for debugging first layers
                         //if (group->n_members > 5)
                         //    return TRUE;
                     }
@@ -1088,11 +1101,15 @@ read_gcode_to_group(Group* group, char* filename)
                     cur_x = next_x;
                     cur_y = next_y;
                 }
-                else if (have_x && have_y)
+                else if (have_x || have_y || have_z)
                 {
-                    // Just a move to the position
-                    cur_x = next_x;
-                    cur_y = next_y;
+                    // Just a move to the position. Prepare for a new edge.
+                    if (have_x)
+                        cur_x = next_x;
+                    if (have_y)
+                        cur_y = next_y;
+                    if (have_z)
+                        cur_z = next_z;
                     new_edge = TRUE;
                 }
                 break;

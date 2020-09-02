@@ -112,6 +112,7 @@ extern ListHead selection;
 extern ListHead clipboard;
 extern ListHead saved_list;
 extern Group object_tree;
+extern Group gcode_tree;
 extern BOOL drawing_changed;
 extern Object *curr_obj;
 extern Object *picked_obj;
@@ -136,6 +137,8 @@ extern float bed_ymin;
 extern float bed_xmax;
 extern float bed_ymax;
 extern float layer_height;
+extern float print_zmin;
+extern float print_zmax;
 
 extern char curr_filename[];
 extern float grid_snap;
@@ -256,7 +259,7 @@ BOOL remove_from_selection(Object * obj);
 void clear_selection(ListHead * sel_list);
 
 // Visualistion of G-code (gcode.c)
-void spaghetti(ZPolyEdge * zedge);
+void spaghetti(ZPolyEdge * zedge, float zmin, float zmax);
 
 // Help dialog (help.c)
 HWND init_help_window(void);

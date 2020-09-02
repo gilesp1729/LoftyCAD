@@ -238,24 +238,25 @@ Command(int message, int wParam, int lParam)
             rc = read_off_to_group(group, new_filename);
             break;
         case 5:
-            group->hdr.lock = LOCK_GROUP;
-            rc = read_gcode_to_group(group, new_filename);
+            // These don't go to the object tree, but to the gcode tree. Only one at a time.
+            purge_zpoly_edges(&gcode_tree);
+            rc = read_gcode_to_group(&gcode_tree, new_filename);
+            invalidate_dl();
+            SendMessage(hWndPropSheet, PSM_SETCURSEL, 1, 0);  // select printer tab
             break;
         }
-        if (rc)
+        if (i < 5)
         {
-            if (i < 5)
+            if (rc)
             {
                 link_group((Object*)group, &object_tree);
                 update_drawing();
             }
-            // TODO do something with the gcode group
         }
         else
         {
             purge_obj((Object*)group);
         }
-
         break;
 
     case WM_COMMAND:
@@ -730,22 +731,24 @@ Command(int message, int wParam, int lParam)
                     rc = read_off_to_group(group, new_filename);
                     break;
                 case 6:
-                    group->hdr.lock = LOCK_GROUP;
-                    rc = read_gcode_to_group(group, new_filename);
+                    // These don't go to the object tree, but to the gcode tree. Only one at a time.
+                    purge_zpoly_edges(&gcode_tree);
+                    rc = read_gcode_to_group(&gcode_tree, new_filename);
+                    invalidate_dl();
+                    SendMessage(hWndPropSheet, PSM_SETCURSEL, 1, 0);  // select printer tab
                     break;
                 }
-                if (rc)
+                if (ofn.nFilterIndex < 6)
                 {
-                    // TEMP: if (ofn.nFilterIndex < 6)
+                    if (rc)
                     {
                         link_group((Object*)group, &object_tree);
                         update_drawing();
                     }
-                    // TODO do something with the gcode group
-                }
-                else
-                {
-                    purge_obj((Object *)group);
+                    else
+                    {
+                        purge_obj((Object*)group);
+                    }
                 }
             }
 

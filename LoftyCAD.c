@@ -66,6 +66,9 @@ ListHead saved_list = { NULL, NULL };
 // Top level group of objects to be drawn
 Group object_tree = { 0, };
 
+// Top level group of objects to be drawn in the printer (G-code) view.
+Group gcode_tree = { 0, };
+
 // Set TRUE whenever something is changed and the tree needs to be saved
 BOOL drawing_changed = FALSE;
 
@@ -153,6 +156,10 @@ float bed_ymin = 0;
 float bed_xmax = 200;
 float bed_ymax = 200;
 float layer_height = 0.3f;
+
+// Printer view Z min and max for G-code visualisation
+float print_zmin = 0;
+float print_zmax = 9999;
 
 // Grid (for snapping points) and unit tolerance (for display of dims)
 // When grid snapping is turned off, points are still snapped to the tolerance.
@@ -272,7 +279,9 @@ Init(void)
 
     glEnable(GL_CULL_FACE);    // don't show back facing faces
 
-    object_tree.hdr.type = OBJ_GROUP;  // set up object tree group
+    object_tree.hdr.type = OBJ_GROUP;  // set up object tree groups
+    gcode_tree.hdr.type = OBJ_GROUP;
+    gcode_tree.hdr.lock = LOCK_GROUP;
 }
 
 // Set up frustum and possibly picking matrix. If picking, pass the centre of the

@@ -52,7 +52,7 @@ endcap(Point2D* curr, Point2D *d0, Point2D *d1, float z, Endcap* cap)
     Point3D c[NPTS];
     Point2D adj_d0;
     int i;
-    float lensq, corr;
+    float lensq;
 
     // X/Y offsets are subtracted here.
     float xoffset = (float)(bed_xmax - bed_xmin) / 2;
@@ -71,6 +71,7 @@ endcap(Point2D* curr, Point2D *d0, Point2D *d1, float z, Endcap* cap)
     else
     {
         // Adjust direction for the turn between d0 and d1. Cope with near-parallel cases.
+#if 0
         adj_d0.x = (d1->x - d0->x) / 2;
         adj_d0.y = (d1->y - d0->y) / 2;
         lensq = adj_d0.x * adj_d0.x + adj_d0.y * adj_d0.y;
@@ -99,6 +100,36 @@ endcap(Point2D* curr, Point2D *d0, Point2D *d1, float z, Endcap* cap)
                 c[i].z = zcap[i];
             }
         }
+#else
+        adj_d0.x = (d1->x + d0->x) / 2;
+        adj_d0.y = (d1->y + d0->y) / 2;
+        lensq = adj_d0.x * adj_d0.x + adj_d0.y * adj_d0.y;
+        if (lensq > 0.99)
+        {
+            // Same direction or near - just use the standard endcap
+            for (i = 0; i < NPTS; i++)
+            {
+                c[i].x = -d0->y * xcap[i];
+                c[i].y = d0->x * xcap[i];
+                c[i].z = zcap[i];
+            }
+        }
+        else
+        {
+            // Adjust size of endcap to cope with increasing angle between the lines,
+            // by normalising it to the length of (d0+d1)/2.
+            // This works up to 90 degrees (protected by caller)
+            lensq = sqrtf(lensq);
+            adj_d0.x /= lensq;
+            adj_d0.y /= lensq;
+            for (i = 0; i < NPTS; i++)
+            {
+                c[i].x = -adj_d0.y * xcap[i];
+                c[i].y = adj_d0.x * xcap[i];
+                c[i].z = zcap[i];
+            }
+        }
+#endif
     }
 
     for (i = 0; i < NPTS; i++)
@@ -142,7 +173,7 @@ tube(Endcap* e0, Endcap* e1)
 
 // Put out faces for the line segments of the ZPolyEdge view_list. 
 void
-spaghetti(ZPolyEdge *zedge)
+spaghetti(ZPolyEdge *zedge, float zmin, float zmax)
 {
     int i;
     Endcap endcap0, endcap1;
@@ -154,6 +185,9 @@ spaghetti(ZPolyEdge *zedge)
     for (i = 1; i < zedge->n_view; i++)
     {
         Point2D* p = &zedge->view_list[i];
+
+        if (zedge->z < zmin - (layer_height / 2) || zedge->z > zmax + (layer_height / 2))
+            continue;
 
         // Get the direction cosines of the current and next segments
         dirn(&zedge->view_list[i - 1], &zedge->view_list[i], &d0);
@@ -174,11 +208,12 @@ spaghetti(ZPolyEdge *zedge)
         // Calculate the next endcap. If the included angle between this segment and the next
         // is less than 90, close off the tube and start again (to prevent miter spikes)
 
-        if (bend < -0.01)
+        if (bend < 0.05)
         {
             endcap(&zedge->view_list[i], &d0, NULL, zedge->z, &endcap1);
             tube(&endcap0, &endcap1);
             endcap(&zedge->view_list[i], &d1, NULL, zedge->z, &endcap0);
+            tube(&endcap1, &endcap0);   // join the two caps at the corner  
         }
         else
         {

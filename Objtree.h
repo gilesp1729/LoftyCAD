@@ -400,6 +400,7 @@ extern unsigned int objid;
 extern ListHead free_list_edge;
 extern ListHead free_list_pt;
 extern ListHead free_list_obj;
+extern ListHead free_list_zedge;
 
 // Flatness test for faces based on their type
 #define IS_FLAT(face)       \
@@ -489,6 +490,7 @@ void purge_obj(Object *obj);
 void purge_obj_top(Object *obj, OBJECT type);
 void purge_list(ListHead* list);
 void purge_tree(Group *tree, BOOL preserve_objects, ListHead *saved_list);
+void purge_zpoly_edges(Group* group);
 
 // Extrude heights/dimensions
 BOOL extrudible(Object* obj);

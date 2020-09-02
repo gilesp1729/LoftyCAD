@@ -8,6 +8,9 @@ ListHead free_list_edge = { NULL, NULL };
 ListHead free_list_pt = { NULL, NULL };
 ListHead free_list_obj = { NULL, NULL };
 
+// List head for ZPolyEdge free list. Used by G-code visualisation.
+ListHead free_list_zedge = { NULL, NULL };
+
 #ifdef DEBUG_FREELISTS
 // Some counters
 int n_alloc_obj = 0;
@@ -509,6 +512,23 @@ purge_obj(Object *obj)
 {
     // Pass the type of the top-level object being purged.
     purge_obj_top(obj, obj->type);
+}
+
+// Free the ZPolyEdges attached to their own group. They are recycled in their own
+// free list. The group is left alone to be reused.
+void
+purge_zpoly_edges(Group* group)
+{
+    ASSERT(group->hdr.lock = LOCK_GROUP, "Group is not a ZPolyEdge group");
+    if (free_list_zedge.head == NULL)
+        free_list_zedge.head = group->obj_list.head;
+    else
+        free_list_zedge.tail->next = group->obj_list.head;
+    free_list_zedge.tail = group->obj_list.tail;
+
+    group->n_members = 0;
+    group->obj_list.head = NULL;
+    group->obj_list.tail = NULL;
 }
 
 // Free a list of temporary edges. They and their points have ID's of zero.
