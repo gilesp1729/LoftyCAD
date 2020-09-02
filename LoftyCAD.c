@@ -32,6 +32,7 @@ BOOL	right_mouse = FALSE;
 // Toolbars
 HWND hWndPropSheet;
 HWND hWndToolbar;
+HWND hWndSlicer;
 HWND hWndPrintPreview;
 HWND hWndDebug;
 HWND hWndHelp;
@@ -1533,7 +1534,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
     POINT pt = { 0, 0 };
     RECT rect;
     int parts[3];
-    PROPSHEETPAGE psp[2];
+    PROPSHEETPAGE psp[3];
     PROPSHEETHEADER psh;
 
 	// Initialize global strings
@@ -1620,12 +1621,22 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
         psp[1].dwSize = sizeof(PROPSHEETPAGE);
         psp[1].dwFlags = PSP_USETITLE;
         psp[1].hInstance = hInst;
-        psp[1].pszTemplate = MAKEINTRESOURCE(IDD_PRINT_PREVIEW);
+        psp[1].pszTemplate = MAKEINTRESOURCE(IDD_SLICER);
         psp[1].pszIcon = NULL;
-        psp[1].pfnDlgProc = printer_dialog;
-        psp[1].pszTitle = "Printer Preview";
+        psp[1].pfnDlgProc = slicer_dialog;
+        psp[1].pszTitle = "Slic3r";
         psp[1].lParam = 0;
         psp[1].pfnCallback = NULL;
+
+        psp[2].dwSize = sizeof(PROPSHEETPAGE);
+        psp[2].dwFlags = PSP_USETITLE;
+        psp[2].hInstance = hInst;
+        psp[2].pszTemplate = MAKEINTRESOURCE(IDD_PRINT_PREVIEW);
+        psp[2].pszIcon = NULL;
+        psp[2].pfnDlgProc = printer_dialog;
+        psp[2].pszTitle = "Printer Preview";
+        psp[2].lParam = 0;
+        psp[2].pfnCallback = NULL;
 
         psh.dwSize = sizeof(PROPSHEETHEADER);
         psh.dwFlags = PSH_PROPSHEETPAGE | PSH_MODELESS | PSH_NOAPPLYNOW | PSH_NOCONTEXTHELP;

@@ -87,6 +87,7 @@ extern BOOL	right_mouse;
 
 extern HWND hWndPropSheet;
 extern HWND hWndToolbar;
+extern HWND hWndSlicer;
 extern HWND hWndPrintPreview;
 extern HWND hWndDebug;
 extern HWND hWndTree;
@@ -302,6 +303,7 @@ int WINAPI help_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 int WINAPI debug_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 int WINAPI font_hook(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 int WINAPI toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+int WINAPI slicer_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 int WINAPI printer_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 int WINAPI dimensions_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 int WINAPI prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
