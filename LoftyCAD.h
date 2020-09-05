@@ -187,6 +187,18 @@ extern Material materials[MAX_MATERIAL];
 // ID of status bar window
 #define ID_STATUSBAR    99940
 
+// Slicer stuff
+#define NUM_SLICER_LOCATIONS    4
+#define NUM_CONFIG_LOCATIONS    2
+#define MAX_SLICERS             8
+extern char slicer_exe[MAX_SLICERS][MAX_PATH];
+extern char slicer_config[MAX_SLICERS][MAX_PATH];
+extern int slicer_index;
+extern int config_index;
+extern int num_slicers;
+extern int num_configs;
+
+
 
 // Debug stuff
 
@@ -259,8 +271,12 @@ BOOL is_selected_parent(Object * obj);
 BOOL remove_from_selection(Object * obj);
 void clear_selection(ListHead * sel_list);
 
-// Visualistion of G-code (gcode.c)
+// Visualisation of G-code (gcode.c)
 void spaghetti(ZPolyEdge * zedge, float zmin, float zmax);
+
+// Slic3r interation (slicer.c)
+BOOL load_slic3r_exe_and_config();
+BOOL find_slic3r_exe_and_config();
 
 // Help dialog (help.c)
 HWND init_help_window(void);

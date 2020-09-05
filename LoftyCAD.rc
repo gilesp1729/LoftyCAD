@@ -532,29 +532,37 @@ BEGIN
     PUSHBUTTON      "Cancel",IDCANCEL,147,7,26,10
 END
 
-IDD_PREFS DIALOGEX 0, 0, 371, 149
+IDD_PREFS DIALOGEX 0, 0, 371, 239
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Preferences"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
-    DEFPUSHBUTTON   "OK",IDOK,257,128,50,14
-    LTEXT           "Title",IDC_STATIC,68,15,15,8
-    LTEXT           "Half-size",IDC_STATIC,54,34,29,8
-    LTEXT           "Grid snap",IDC_STATIC,53,54,32,8
-    LTEXT           "Flatness tolerance",IDC_STATIC,24,73,60,8
-    EDITTEXT        IDC_PREFS_TITLE,88,12,269,14,ES_AUTOHSCROLL
-    EDITTEXT        IDC_PREFS_HALFSIZE,88,32,40,14,ES_AUTOHSCROLL
-    EDITTEXT        IDC_PREFS_GRID,88,52,40,14,ES_AUTOHSCROLL
-    EDITTEXT        IDC_PREFS_TOL,88,71,40,14,ES_AUTOHSCROLL
-    LTEXT           "(drawing region is approximately twice this)",IDC_STATIC,135,35,144,8
-    LTEXT           "",IDC_STATIC,135,54,8,8
-    LTEXT           "(must be <= grid snap)",IDC_STATIC,134,73,78,8
-    PUSHBUTTON      "Cancel",IDCANCEL,314,128,50,14
-    LTEXT           "Angle snap",IDC_STATIC,49,92,37,8
-    EDITTEXT        IDC_PREFS_ANGLE,88,90,40,14,ES_AUTOHSCROLL
-    LTEXT           "(in degrees)",IDC_STATIC,134,92,41,8
-    LTEXT           "Rounded corner radius",IDC_STATIC,9,111,75,8
-    EDITTEXT        IDC_PREFS_ROUNDRAD,88,109,40,14,ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK",IDOK,257,218,50,14
+    LTEXT           "Title",IDC_STATIC,68,21,15,8
+    LTEXT           "Half-size",IDC_STATIC,54,40,29,8
+    LTEXT           "Grid snap",IDC_STATIC,53,60,32,8
+    LTEXT           "Flatness tolerance",IDC_STATIC,24,79,60,8
+    EDITTEXT        IDC_PREFS_TITLE,88,18,269,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_PREFS_HALFSIZE,88,38,40,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_PREFS_GRID,88,58,40,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_PREFS_TOL,88,77,40,14,ES_AUTOHSCROLL
+    LTEXT           "(drawing region is approximately twice this)",IDC_STATIC,135,41,144,8
+    LTEXT           "",IDC_STATIC,135,60,8,8
+    LTEXT           "(must be <= grid snap)",IDC_STATIC,134,79,78,8
+    PUSHBUTTON      "Cancel",IDCANCEL,314,218,50,14
+    LTEXT           "Angle snap",IDC_STATIC,49,98,37,8
+    EDITTEXT        IDC_PREFS_ANGLE,88,96,40,14,ES_AUTOHSCROLL
+    LTEXT           "(in degrees)",IDC_STATIC,134,98,41,8
+    LTEXT           "Rounded corner radius",IDC_STATIC,9,117,75,8
+    EDITTEXT        IDC_PREFS_ROUNDRAD,88,115,40,14,ES_AUTOHSCROLL
+    LTEXT           "Slic3r executable",IDC_STATIC,28,172,58,8
+    EDITTEXT        IDC_PREFS_SLICER_EXE,87,169,269,14,ES_AUTOHSCROLL
+    LTEXT           "Slic3r config directory",IDC_STATIC,13,192,75,8
+    EDITTEXT        IDC_PREFS_SLICER_CONFIG,87,190,269,14,ES_AUTOHSCROLL
+    PUSHBUTTON      "Find Slic3r",IDC_PREFS_FIND_SLICER,87,147,50,14
+    LTEXT           "(change Slic3r settings in the GUI, from the Slic3r toolbar tab)",IDC_STATIC,142,150,203,8
+    GROUPBOX        "Slic3r management",IDC_STATIC,7,138,357,74
+    GROUPBOX        "Drawing preferences",IDC_STATIC,7,7,357,129
 END
 
 IDD_HELP DIALOGEX 0, 0, 311, 274
@@ -739,7 +747,7 @@ BEGIN
         LEFTMARGIN, 7
         RIGHTMARGIN, 364
         TOPMARGIN, 7
-        BOTTOMMARGIN, 142
+        BOTTOMMARGIN, 232
     END
 
     IDD_HELP, DIALOG

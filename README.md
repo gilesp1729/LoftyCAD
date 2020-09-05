@@ -30,13 +30,15 @@ In particular, it will:
 
 # Files handled
 - Native (LCD) format is human-readable
-- Export triangle meshes as STL, AMF, OBJ, OFF
+- Export triangle meshes in STL, AMF, OBJ, or OFF formats
 - Export multi-material model to separate STL meshes
 - Export multi-material model to AMF and OBJ along with material definitions
-- Import STL, AMF, OBJ, OFF to groups containing meshes as volumes
 - Always output full normals
+- Import STL, AMF, OBJ, and OFF to groups containing meshes as volumes
+- Import G-code files and visualise G-code
 
 # Works in progress
+- Integrate with Slic3r (or PrusaSlicer) and directly print to a connected printer
 - Allow manipulation of triangle meshes: smooth extrusion, refinement, and more
 - Lofting (a nod to the original Lofty, which is LoftyCAD's spiritual ancestor)
 
@@ -54,8 +56,4 @@ LoftyCAD uses the excellent CGAL computational geometry library to merge and int
 
 # Master branch:
 # No further development will be done on the master branch.
-Build CGAL 4.12 from its build instructions, noting that:
-- The 32-bit version must be used, since LoftyCAD is a 32-bit program for now.
-- The prerequisites are cmake, Boost, GMP and MPFR. They are precompiled.
-- Qt and libQGLViewer are not required, nor are any of the examples or demos.
-- CGAL and Boost should be checked out to directories alongside LoftyCAD, and their environment variables set up accordingly. Make sure CGAL_DIR points to the CGAL install directory.
+Requires 32-bit CGAL 4.12 checked out to directories alongside, and built from its build instructions.

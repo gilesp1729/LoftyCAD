@@ -116,6 +116,8 @@
 #define IDC_PREFS_ANGLE                 1009
 #define IDC_CONTEXT_HELP                1009
 #define IDC_PREFS_ROUNDRAD              1010
+#define IDC_PREFS_SLICER_EXE            1011
+#define IDC_PREFS_SLICER_CONFIG         1012
 #define IDC_TREEVIEW                    1013
 #define IDC_STATIC_BUILD                1014
 #define IDC_SCALE_X                     1015
@@ -145,7 +147,6 @@
 #define IDC_PRINTER_UPTO                1040
 #define IDC_PRINTER_ZFROM               1042
 #define IDC_PRINTER_ZTO                 1043
-#define IDB_SLICE                       1044
 #define IDB_SLICER_SLICE                1044
 #define IDC_CHECK1                      1045
 #define IDC_SLICER_PRINTER              1046
@@ -153,6 +154,8 @@
 #define IDC_SLICER_FILAMENT             1048
 #define IDC_SLICER_LAYERHEIGHT          1049
 #define IDC_SLICER_INFILL               1050
+#define IDC_BUTTON1                     1052
+#define IDC_PREFS_FIND_SLICER           1052
 #define IDD_PRINT_PREVIEW               1544
 #define IDD_SLICER                      1545
 #define ID_FILE_NEW                     32774
@@ -296,7 +299,7 @@
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        164
 #define _APS_NEXT_COMMAND_VALUE         32921
-#define _APS_NEXT_CONTROL_VALUE         1051
+#define _APS_NEXT_CONTROL_VALUE         1053
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif

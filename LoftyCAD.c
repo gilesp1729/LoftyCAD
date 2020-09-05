@@ -1746,9 +1746,12 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 
         // recent files list
         hMenu = GetSubMenu(hMenu, 9);  // zero-based item position, separators count
-        //AppendMenu(hMenu, MF_STRING, 0, "New file here"); 
         load_MRU_to_menu(hMenu);
 
+        // Load in any Slic3r info.
+        load_slic3r_exe_and_config();
+
+        // Prep menus.
         hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
         CheckMenuItem(hMenu, ID_VIEW_TOOLS, view_tools ? MF_CHECKED : MF_UNCHECKED);
         CheckMenuItem(hMenu, ID_VIEW_HELP, view_help ? MF_CHECKED : MF_UNCHECKED);
