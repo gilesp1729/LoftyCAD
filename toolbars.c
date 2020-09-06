@@ -478,12 +478,13 @@ slicer_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     HMENU hMenu;
     PSHNOTIFY* notify;
-    char buf[16];
+    //char buf[16];
 
     switch (msg)
     {
     case WM_INITDIALOG:
         hWndSlicer = hWnd;
+
 
         break;
 

@@ -66,7 +66,10 @@ load_slic3r_exe_and_config()
 
     // Haven't got anything stored - try and find some.
     if (!rc)
+    {
+        RegCloseKey(hkey);
         return find_slic3r_exe_and_config();
+    }
 
     // Look for configs and the indices
     for (i = 0; i < MAX_SLICERS; i++)
@@ -80,14 +83,55 @@ load_slic3r_exe_and_config()
     }
 
     // Read the indices (they are DWORDs rather than strings)
+    len = 4;
     RegQueryValueEx(hkey, "SlicerIndex", 0, NULL, (LPBYTE)&slicer_index, &len);
+    len = 4;
     RegQueryValueEx(hkey, "ConfigIndex", 0, NULL, (LPBYTE)&config_index, &len);
+    RegCloseKey(hkey);
 
     return TRUE;
 }
 
+// Save slicer stuff to registry.
+void
+save_slic3r_exe_and_config()
+{
+    int i;
+    char location[32];
+    HKEY hkey;
+
+    RegCreateKeyEx(HKEY_CURRENT_USER, "Software\\LoftyCAD\\Slic3r", 0, NULL, 0, KEY_ALL_ACCESS, NULL, &hkey, NULL);
+
+    for (i = 0; i < num_slicers; i++)
+    {
+        sprintf_s(location, 32, "Location%d", i);
+        RegSetValueEx(hkey, location, 0, REG_SZ, slicer_exe[i], strlen(slicer_exe[i]) + 1);
+    }
+    for (; i < MAX_SLICERS; i++)        // clear out any old ones beyond the num
+    {
+        sprintf_s(location, 32, "Location%d", i);
+        RegDeleteKeyValue(hkey, NULL, location);
+    }
+
+    for (i = 0; i < num_configs; i++)
+    {
+        sprintf_s(location, 32, "ConfigDir%d", i);
+        RegSetValueEx(hkey, location, 0, REG_SZ, slicer_config[i], strlen(slicer_config[i]) + 1);
+    }
+    for (; i < MAX_SLICERS; i++)        // clear out any old ones beyond the num
+    {
+        sprintf_s(location, 32, "ConfigDir%d", i);
+        RegDeleteKeyValue(hkey, NULL, location);
+    }
+
+    RegSetValueEx(hkey, "SlicerIndex", 0, REG_DWORD, (LPBYTE)&slicer_index, 4);
+    RegSetValueEx(hkey, "ConfigIndex", 0, REG_DWORD, (LPBYTE)&config_index, 4);
+    RegCloseKey(hkey);
+}
+
+
 // Find Slic3r executable and config directories in standard places (for Slic3r and PrusaSlicer).
-// Return FALSE if an exe was not found.
+// Return FALSE if an exe was not found. 
 
 // exe - could be anywhere, but look in list of locations under Program Files.
 // config - look in <user>\AppData\Roaming\Slic3r[PE]
@@ -144,7 +188,7 @@ find_slic3r_exe_and_config()
             f = CreateFile(filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
             if (f != INVALID_HANDLE_VALUE)
             {
-                // Found one - store it away
+                // Found one - store it away filename and all.
                 strcpy_s(slicer_exe[num_slicers++], MAX_PATH, filename);
                 rc = TRUE;
                 CloseHandle(f);
@@ -161,25 +205,23 @@ find_slic3r_exe_and_config()
 
     for (i = 0; i < NUM_CONFIG_LOCATIONS; i++)
     {
-        strcpy_s(filename, MAX_PATH, appdata);
-        strcat_s(filename, MAX_PATH, config_locations[i]);
+        strcpy_s(location, MAX_PATH, appdata);
+        strcat_s(location, MAX_PATH, config_locations[i]);
 
         // slic3r.ini must be present.
+        strcpy_s(filename, MAX_PATH, location);
         strcat_s(filename, MAX_PATH, "\\slic3r.ini");
         f = CreateFile(filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
         if (f != INVALID_HANDLE_VALUE)
         {
-            // Found it
-            strcpy_s(slicer_config[num_configs++], MAX_PATH, filename);
+            // Found it. Just the directory is stored.
+            strcpy_s(slicer_config[num_configs++], MAX_PATH, location);
             CloseHandle(f);
         }
     }
 
     // Put the stuff we have found into the registry. Assume the selected index is 0 for now.
-
-
-
-
+    save_slic3r_exe_and_config();
 
     return rc;
 }

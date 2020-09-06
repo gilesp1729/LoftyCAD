@@ -276,6 +276,7 @@ void spaghetti(ZPolyEdge * zedge, float zmin, float zmax);
 
 // Slic3r interation (slicer.c)
 BOOL load_slic3r_exe_and_config();
+void save_slic3r_exe_and_config();
 BOOL find_slic3r_exe_and_config();
 
 // Help dialog (help.c)

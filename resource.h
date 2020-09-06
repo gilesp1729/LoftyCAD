@@ -154,8 +154,8 @@
 #define IDC_SLICER_FILAMENT             1048
 #define IDC_SLICER_LAYERHEIGHT          1049
 #define IDC_SLICER_INFILL               1050
-#define IDC_BUTTON1                     1052
-#define IDC_PREFS_FIND_SLICER           1052
+#define IDC_BUTTON1                     1054
+#define IDC_PREFS_FIND_SLICERS          1054
 #define IDD_PRINT_PREVIEW               1544
 #define IDD_SLICER                      1545
 #define ID_FILE_NEW                     32774
@@ -299,7 +299,7 @@
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        164
 #define _APS_NEXT_COMMAND_VALUE         32921
-#define _APS_NEXT_CONTROL_VALUE         1053
+#define _APS_NEXT_CONTROL_VALUE         1055
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif

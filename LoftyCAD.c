@@ -1440,7 +1440,10 @@ int WINAPI
 prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     char buf[16];
+    char location[MAX_PATH];
     float new_val;
+    int i;
+    static BOOL slicer_changed, index_changed, config_changed;
 
     switch (msg)
     {
@@ -1457,6 +1460,22 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         sprintf_s(buf, 16, "%.2f", round_rad);
         SendDlgItemMessage(hWnd, IDC_PREFS_ROUNDRAD, WM_SETTEXT, 0, (LPARAM)buf);
         SetFocus(GetDlgItem(hWnd, IDC_PREFS_TITLE));
+
+        index_changed = FALSE;
+        slicer_changed = FALSE;
+        config_changed = FALSE;
+
+        // Load up slicer exe and config to combo boxes.
+    load_combo:
+        SendDlgItemMessage(hWnd, IDC_PREFS_SLICER_EXE, CB_RESETCONTENT, 0, 0);
+        SendDlgItemMessage(hWnd, IDC_PREFS_SLICER_CONFIG, CB_RESETCONTENT, 0, 0);
+        for (i = 0; i < num_slicers; i++)
+            SendDlgItemMessage(hWnd, IDC_PREFS_SLICER_EXE, CB_INSERTSTRING, i, (LPARAM)slicer_exe[i]);
+        for (i = 0; i < num_configs; i++)
+            SendDlgItemMessage(hWnd, IDC_PREFS_SLICER_CONFIG, CB_INSERTSTRING, i, (LPARAM)slicer_config[i]);
+        SendDlgItemMessage(hWnd, IDC_PREFS_SLICER_EXE, CB_SETCURSEL, slicer_index, 0);
+        SendDlgItemMessage(hWnd, IDC_PREFS_SLICER_CONFIG, CB_SETCURSEL, config_index, 0);
+        index_changed = FALSE;
         break;
 
     case WM_COMMAND:
@@ -1509,11 +1528,85 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             SendDlgItemMessage(hWnd, IDC_PREFS_ROUNDRAD, WM_GETTEXT, 16, (LPARAM)buf);
             round_rad = (float)atof(buf);
 
+            // Slicer changes, in and of themselves, don't change the drawing. But save
+            // any changes in the registry (even on cancel, as the internal lists have changed)
+            if (index_changed)
+                save_slic3r_exe_and_config();
+
             EndDialog(hWnd, drawing_changed);
             break;
 
         case IDCANCEL:
+            if (index_changed)
+                save_slic3r_exe_and_config();
+
             EndDialog(hWnd, 0);
+            break;
+
+        case IDC_PREFS_FIND_SLICERS:
+            find_slic3r_exe_and_config();
+            index_changed = TRUE;
+            goto load_combo;
+
+        case IDC_PREFS_SLICER_EXE:
+            switch (HIWORD(wParam))
+            {
+            case CBN_SELCHANGE:
+                slicer_index = SendDlgItemMessage(hWnd, IDC_PREFS_SLICER_EXE, CB_GETCURSEL, 0, 0);
+                index_changed = TRUE;
+                break;
+
+            case CBN_EDITCHANGE:
+                slicer_changed = TRUE;
+                break;
+
+            case CBN_KILLFOCUS:
+                if (slicer_changed)
+                {
+                    SendDlgItemMessage(hWnd, IDC_PREFS_SLICER_EXE, WM_GETTEXT, MAX_PATH, (LPARAM)location);
+                    i = SendDlgItemMessage(hWnd, IDC_PREFS_SLICER_EXE, CB_ADDSTRING, 0, (LPARAM)location);
+                    if (i >= MAX_SLICERS)
+                        i = MAX_SLICERS - 1;
+                    if (i >= num_slicers)
+                        num_slicers = i + 1;
+                    strcpy_s(slicer_exe[i], MAX_PATH, location);
+                    slicer_index = i;
+                    index_changed = TRUE;
+                    slicer_changed = FALSE;
+                }
+                break;
+            }
+            break;
+
+        case IDC_PREFS_SLICER_CONFIG:
+            switch (HIWORD(wParam))
+            {
+            case CBN_SELCHANGE:
+                config_index = SendDlgItemMessage(hWnd, IDC_PREFS_SLICER_CONFIG, CB_GETCURSEL, 0, 0);
+                index_changed = TRUE;
+                break;
+
+            case CBN_EDITCHANGE:
+                config_changed = TRUE;
+                break;
+
+            case CBN_KILLFOCUS:
+                if (config_changed)
+                {
+                    SendDlgItemMessage(hWnd, IDC_PREFS_SLICER_CONFIG, WM_GETTEXT, MAX_PATH, (LPARAM)location);
+                    i = SendDlgItemMessage(hWnd, IDC_PREFS_SLICER_CONFIG, CB_ADDSTRING, 0, (LPARAM)location);
+                    if (i >= MAX_SLICERS)
+                        i = MAX_SLICERS - 1;
+                    if (i >= num_configs)
+                        num_configs = i + 1;
+                    strcpy_s(slicer_config[i], MAX_PATH, location);
+                    config_index = i;
+                    index_changed = TRUE;
+                    config_changed = FALSE;
+                }
+                break;
+            }
+            break;
         }
     }
 
