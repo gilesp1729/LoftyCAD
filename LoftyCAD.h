@@ -278,6 +278,8 @@ void spaghetti(ZPolyEdge * zedge, float zmin, float zmax);
 BOOL load_slic3r_exe_and_config();
 void save_slic3r_exe_and_config();
 BOOL find_slic3r_exe_and_config();
+void read_slic3r_config(char* key, int dlg_item);
+BOOL get_slic3r_config_section(char* key, char* preset);
 
 // Help dialog (help.c)
 HWND init_help_window(void);

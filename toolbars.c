@@ -484,8 +484,9 @@ slicer_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     {
     case WM_INITDIALOG:
         hWndSlicer = hWnd;
-
-
+        read_slic3r_config("printer", IDC_SLICER_PRINTER);
+        read_slic3r_config("print", IDC_SLICER_PRINTSETTINGS);
+        read_slic3r_config("filament", IDC_SLICER_FILAMENT);
         break;
 
     case WM_COMMAND:
@@ -506,7 +507,6 @@ slicer_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         switch (notify->hdr.code)
         {
         case PSN_SETACTIVE:
-
 
             break;
 

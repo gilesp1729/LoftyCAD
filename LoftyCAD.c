@@ -1475,7 +1475,6 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             SendDlgItemMessage(hWnd, IDC_PREFS_SLICER_CONFIG, CB_INSERTSTRING, i, (LPARAM)slicer_config[i]);
         SendDlgItemMessage(hWnd, IDC_PREFS_SLICER_EXE, CB_SETCURSEL, slicer_index, 0);
         SendDlgItemMessage(hWnd, IDC_PREFS_SLICER_CONFIG, CB_SETCURSEL, config_index, 0);
-        index_changed = FALSE;
         break;
 
     case WM_COMMAND:
@@ -1531,14 +1530,25 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             // Slicer changes, in and of themselves, don't change the drawing. But save
             // any changes in the registry (even on cancel, as the internal lists have changed)
             if (index_changed)
+            {
                 save_slic3r_exe_and_config();
+                read_slic3r_config("printer", IDC_SLICER_PRINTER);
+                read_slic3r_config("print", IDC_SLICER_PRINTSETTINGS);
+                read_slic3r_config("filament", IDC_SLICER_FILAMENT);
+            }
 
             EndDialog(hWnd, drawing_changed);
             break;
 
         case IDCANCEL:
             if (index_changed)
+            {
                 save_slic3r_exe_and_config();
+                read_slic3r_config("printer", IDC_SLICER_PRINTER, NULL);
+                read_slic3r_config("printer", IDC_SLICER_PRINTER);
+                read_slic3r_config("print", IDC_SLICER_PRINTSETTINGS);
+                read_slic3r_config("filament", IDC_SLICER_FILAMENT);
+            }
 
             EndDialog(hWnd, 0);
             break;
