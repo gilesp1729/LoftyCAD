@@ -1444,6 +1444,7 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     float new_val;
     int i;
     static BOOL slicer_changed, index_changed, config_changed;
+    char printer[64];
 
     switch (msg)
     {
@@ -1532,9 +1533,9 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             if (index_changed)
             {
                 save_slic3r_exe_and_config();
-                read_slic3r_config("printer", IDC_SLICER_PRINTER);
-                read_slic3r_config("print", IDC_SLICER_PRINTSETTINGS);
-                read_slic3r_config("filament", IDC_SLICER_FILAMENT);
+                read_slic3r_config("printer", IDC_SLICER_PRINTER, printer);
+                read_slic3r_config("print", IDC_SLICER_PRINTSETTINGS, printer);
+                read_slic3r_config("filament", IDC_SLICER_FILAMENT, printer);
             }
 
             EndDialog(hWnd, drawing_changed);
@@ -1544,10 +1545,9 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             if (index_changed)
             {
                 save_slic3r_exe_and_config();
-                read_slic3r_config("printer", IDC_SLICER_PRINTER, NULL);
-                read_slic3r_config("printer", IDC_SLICER_PRINTER);
-                read_slic3r_config("print", IDC_SLICER_PRINTSETTINGS);
-                read_slic3r_config("filament", IDC_SLICER_FILAMENT);
+                read_slic3r_config("printer", IDC_SLICER_PRINTER, printer);
+                read_slic3r_config("print", IDC_SLICER_PRINTSETTINGS, printer);
+                read_slic3r_config("filament", IDC_SLICER_FILAMENT, printer);
             }
 
             EndDialog(hWnd, 0);

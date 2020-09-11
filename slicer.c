@@ -161,8 +161,10 @@ save_slic3r_exe_and_config()
         RegDeleteKeyValue(hkey, NULL, location);
     }
 
+    // Save the slicer index and config index.
     RegSetValueEx(hkey, "SlicerIndex", 0, REG_DWORD, (LPBYTE)&slicer_index, 4);
     RegSetValueEx(hkey, "ConfigIndex", 0, REG_DWORD, (LPBYTE)&config_index, 4);
+
     RegCloseKey(hkey);
 }
 
@@ -303,15 +305,14 @@ load_section(char *ini, char* section)
 // given combo box item in hwndSlicer.
 // If a [vendor] section exists in slic3r.ini (e.g. PrusaResearch.ini) go from those model(s)
 // and establish the applicable settings. For vanilla Slic3r, just enumerate the user preset ini files.
-// For print and filament settings, we need to take into account the selected printer compatibility.
+// Sel_printer is written for printer model. (note: not the same as the displayed name)
 void
-read_slic3r_config(char* key, int dlg_item)
+read_slic3r_config(char* key, int dlg_item, char *sel_printer)
 {
     char dir[MAX_PATH], ini[MAX_PATH], vendor[MAX_PATH];
     InhSection* vs;
     char model[64], name[64];
     char buf[256];
-    char* p;
     char* ctxt = NULL;
     HANDLE h;
     FILE* f;
@@ -384,6 +385,7 @@ read_slic3r_config(char* key, int dlg_item)
         }
 
         // Select the preset given in slic3r.ini (the last one worked on in the Slic3r GUI)
+        // TODO: This does not work when the name doesn't match (e.g. MMU 2.0 vs MMU2)
         GetPrivateProfileString("presets", key, "", name, 64, ini);
         i = SendDlgItemMessage(hWndSlicer, dlg_item, CB_FINDSTRINGEXACT, -1, (LPARAM)name);
         if (i != CB_ERR)
@@ -391,20 +393,12 @@ read_slic3r_config(char* key, int dlg_item)
 
         if (vs->n_keyvals != 0)
         {
-            // While we still have it, remember the selected printer model to allow
-            // compat checks on print and filament sections in later calls to this routine.
-            strcpy_s(buf, 64, vs->keyval[i].key);
-            strtok_s(buf, ":", &ctxt);              // skip "model:"
-            if ((p = strtok_s(NULL, "=", &ctxt)) != NULL)
-                strcpy_s(current_model, 64, p);
-
             // Get the names of all the sections so we can later filter them out by key (print or filament)
             GetPrivateProfileSectionNames(sect_names, MAX_SECT_NAME_SIZE, vendor);
         }
         else
         {
             // There's no vendor file, so clear out the list
-            current_model[0] = '\0';
             sect_names[0] = '\0';
         }
 
@@ -412,26 +406,27 @@ read_slic3r_config(char* key, int dlg_item)
     }
     else
     {
-        char* p = sect_names;
+        char *p;
         char key_colon[64];
         int klen;
 
+        // Filter out the section names by key (print:xxxx or filament:xxxx)
         strcpy_s(key_colon, 64, key);
         strcat_s(key_colon, 64, ":");
         klen = strlen(key_colon);
 
-        // Filter out the section names by key
-        while (*p != '\0')
+        for (p = sect_names; *p != '\0'; p += len + 1)
         {
             len = strlen(p);
 
             // key:name --> name, and skip the ones with '*' at front
             if (strncmp(key_colon, p, klen) == 0 && *(p + klen) != '*')
             {
+                // Note: we do not do any compat checking. It's just too hard.
+
+                // Add the name to the list
                 SendDlgItemMessage(hWndSlicer, dlg_item, CB_ADDSTRING, 0, (LPARAM)(p + klen));
             }
-
-            p += len + 1;
         }
 
         // Select the preset given in slic3r.ini (the last one worked on in the Slic3r GUI)

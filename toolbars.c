@@ -478,26 +478,36 @@ slicer_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     HMENU hMenu;
     PSHNOTIFY* notify;
-    //char buf[16];
+    char printer[64];
+    int printer_index;
 
     switch (msg)
     {
     case WM_INITDIALOG:
         hWndSlicer = hWnd;
-        read_slic3r_config("printer", IDC_SLICER_PRINTER);
-        read_slic3r_config("print", IDC_SLICER_PRINTSETTINGS);
-        read_slic3r_config("filament", IDC_SLICER_FILAMENT);
+        read_slic3r_config("printer", IDC_SLICER_PRINTER, printer);
+        read_slic3r_config("print", IDC_SLICER_PRINTSETTINGS, printer);
+        read_slic3r_config("filament", IDC_SLICER_FILAMENT, printer);
         break;
 
     case WM_COMMAND:
-        if (HIWORD(wParam) == BN_CLICKED)
+        switch (LOWORD(wParam))
         {
+        case IDC_SLICER_PRINTER:
+            switch (HIWORD(wParam))
+            {
+            case CBN_SELCHANGE:
+                printer_index = SendDlgItemMessage(hWnd, IDC_SLICER_PRINTER, CB_GETCURSEL, 0, 0);
+                SendDlgItemMessage(hWnd, IDC_SLICER_PRINTER, CB_GETLBTEXT, printer_index, (LPARAM)printer);
+                read_slic3r_config("print", IDC_SLICER_PRINTSETTINGS, printer);
+                read_slic3r_config("filament", IDC_SLICER_FILAMENT, printer);
+                break;
 
+            case CBN_KILLFOCUS:
 
-        }
-        else if (HIWORD(wParam) == EN_KILLFOCUS)
-        {
-
+                break;
+            }
+            break;
         }
         break;
 
