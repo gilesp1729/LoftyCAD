@@ -12,10 +12,13 @@
 #define MAX_KEYVALS         128
 
 // Max size of a section in characters, with null-separated key=value pairs.
-#define MAX_SECT_SIZE       1024
+#define MAX_SECT_SIZE       4096
 
 // Max size of the section name buffer
 #define MAX_SECT_NAME_SIZE  4096
+
+// Max number of section in the vendor ini file
+#define MAX_SECTIONS        1024
 
 // Inheritable string and section structures.
 typedef struct InhString
@@ -68,6 +71,13 @@ char current_model[64];
 
 // Section names in PrusaResearch.ini
 char sect_names[MAX_SECT_NAME_SIZE];
+
+// Cache of inheritable sections already loaded.
+int n_cache = 0;
+InhSection* cache[MAX_SECTIONS];
+
+
+
 
 // Load Slic3r executable and config directories from the reg. Return FALSE if we don't have an exe
 // and leave the fields blank.
@@ -274,9 +284,20 @@ load_section(char *ini, char* section)
     char* p;
     char* v;
     int keyval_len, len;
+    int i;
     int n = 0;
-    InhSection *s = malloc(sizeof(InhSection));
+    InhSection* s;
 
+    // See if the section has already been loaded.
+    for (i = 0; i < n_cache; i++)
+    {
+        if (strcmp(section, cache[i]->sect_name) == 0)
+            return cache[i];
+    }
+
+    // No, make a new one and eventually put it in the cache.
+    s = malloc(sizeof(InhSection));
+    strcpy_s(s->sect_name, 80, section);
     len = GetPrivateProfileSection(section, s->section_string, MAX_SECT_SIZE, ini);
 
     // section: key = value\0key = value\0 ... \0\0
@@ -287,15 +308,44 @@ load_section(char *ini, char* section)
         s->keyval[n].key = p;
         v = strchr(p, '=');
         if (v == NULL)
-            s->keyval[n].value = NULL;       // no '=' found
+            s->keyval[n].value = NULL;       // no '=' found. Should never happen.
         else
         {
             do { v++; } while (*v == ' ');  // skip blanks
             s->keyval[n].value = v;
         }
+
+        // Follow inheritance links. This keyword may take several sect names separated by ';'.
+        if (strncmp(s->keyval[n].key, "inherits", 8) == 0)
+        {
+            char* ctxt = NULL;
+            char* inh = strtok_s(s->keyval[n].value, ";", &ctxt);
+
+            while (inh != NULL)
+            {
+                InhSection* inhs = load_section(ini, inh);
+
+                // Copy the new section's key/value pairs into the current one,
+                // checking for overrides.
+
+
+                // See if there are any more sections to be inherited from.
+                inh = strtok_s(NULL, ";", &ctxt);
+            }
+        }
+        else
+        {
+            // Check if the key is overriding an earlier one.
+
+
+
+        }
         n++;
     }
     s->n_keyvals = n;
+
+    if (n_cache < MAX_SECTIONS - 1)
+        cache[n_cache++] = s;
 
     return s;
 }
@@ -310,14 +360,17 @@ void
 read_slic3r_config(char* key, int dlg_item, char *sel_printer)
 {
     char dir[MAX_PATH], ini[MAX_PATH], vendor[MAX_PATH];
-    InhSection* vs;
-    char model[64], name[64];
+    InhSection* vs, *s;
+    char name[64];
     char buf[256];
     char* ctxt = NULL;
     HANDLE h;
     FILE* f;
     WIN32_FIND_DATA find_data;
     int len, i;
+    char* p;
+    char key_colon[64];
+    int klen;
 
     // Clear the combo
     SendDlgItemMessage(hWndSlicer, dlg_item, CB_RESETCONTENT, 0, 0);
@@ -371,25 +424,30 @@ read_slic3r_config(char* key, int dlg_item, char *sel_printer)
             fclose(f);
         }
                         
-        // Look for [vendor:PrusaResearch] in slic3r.ini and if found, enumerate all the printer models
+        // Look for [vendor:PrusaResearch] in slic3r.ini to find all the installed printer models
         vs = load_section(ini, "vendor:PrusaResearch");
+#if 0
         for (i = 0; i < vs->n_keyvals; i++)
         {
             // We just want the model:xxxx (not its value).
             // Turn it into printer_model:xxxx and look it up in PrusaResearch.ini
             strcpy_s(model, 64, "printer_");
             strcat_s(model, 64, vs->keyval[i].key);
-            *(strchr(model, '=')) = '\0';  // dangerous but it has to be there
+            *(strchr(model, '=')) = '\0';  // dangerous but '=' has to be there
             GetPrivateProfileString(model, "name", "", name, 64, vendor);
             SendDlgItemMessage(hWndSlicer, dlg_item, CB_ADDSTRING, 0, (LPARAM)name);
         }
 
         // Select the preset given in slic3r.ini (the last one worked on in the Slic3r GUI)
         // TODO: This does not work when the name doesn't match (e.g. MMU 2.0 vs MMU2)
+        // TODO:
+        // load all printer sections and do inheritance! Store in cache so we can reuse them
+        // search "printer_model = xxxx" in resulting sections for match on vs contents
         GetPrivateProfileString("presets", key, "", name, 64, ini);
         i = SendDlgItemMessage(hWndSlicer, dlg_item, CB_FINDSTRINGEXACT, -1, (LPARAM)name);
         if (i != CB_ERR)
             SendDlgItemMessage(hWndSlicer, dlg_item, CB_SETCURSEL, i, 0);
+#endif
 
         if (vs->n_keyvals != 0)
         {
@@ -402,13 +460,33 @@ read_slic3r_config(char* key, int dlg_item, char *sel_printer)
             sect_names[0] = '\0';
         }
 
-        free(vs);
+        // Filter out the section names by key (printer:xxxx)
+        strcpy_s(key_colon, 64, key);
+        strcat_s(key_colon, 64, ":");
+        klen = strlen(key_colon);
+
+        for (p = sect_names; *p != '\0'; p += len + 1)
+        {
+            len = strlen(p);
+
+            // key:name --> name, and skip the ones with '*' at front
+            if (strncmp(key_colon, p, klen) == 0 && *(p + klen) != '*')
+            {
+                // TODO: we do not do any compat checking. Check printer_model against vs
+
+                // Load the section so we can get the printer_model string (it may be buried
+                // in an inherited section)
+                s = load_section(vendor, p);
+
+                // Add the name to the list
+                SendDlgItemMessage(hWndSlicer, dlg_item, CB_ADDSTRING, 0, (LPARAM)(p + klen));
+            }
+        }
+
+
     }
-    else
+    else   // print or filament.
     {
-        char *p;
-        char key_colon[64];
-        int klen;
 
         // Filter out the section names by key (print:xxxx or filament:xxxx)
         strcpy_s(key_colon, 64, key);
@@ -422,7 +500,7 @@ read_slic3r_config(char* key, int dlg_item, char *sel_printer)
             // key:name --> name, and skip the ones with '*' at front
             if (strncmp(key_colon, p, klen) == 0 && *(p + klen) != '*')
             {
-                // Note: we do not do any compat checking. It's just too hard.
+                // TODO: we do not do any compat checking. Check only for print (not filament)
 
                 // Add the name to the list
                 SendDlgItemMessage(hWndSlicer, dlg_item, CB_ADDSTRING, 0, (LPARAM)(p + klen));
