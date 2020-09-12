@@ -275,18 +275,57 @@ find_slic3r_exe_and_config()
     return rc;
 }
 
-// Pull apart the long string returned by GetPrivateProfileSection.
+// Helper to test keys match. The actual strings are key=value, but we test up to the '='.
+// We are not allowed to poke '\0' in.
+BOOL
+keys_match(char* kv1, char* kv2)
+{
+    char* e1 = strchr(kv1, '=');
+    char* e2 = strchr(kv2, '=');
+
+    if (e1 == NULL || e2 == NULL)   // Check no '=' signs
+        return FALSE;
+    if (e1 - kv1 != e2 - kv2)       // Check lengths match
+        return FALSE;
+    return strncmp(kv1, kv2, e1 - kv1) == 0;
+}
+
+// Pull apart the long string returned by GetPrivateProfileSection on "key:section"
 // Returns pointers to NULL-separated key = value pairs, as well as pointers to the values (after '=')
 // in an InhSection structure allocated here.
 InhSection *
-load_section(char *ini, char* section)
+load_section(char *ini, char *key, char* sect)
 {
     char* p;
     char* v;
     int keyval_len, len;
-    int i;
+    int i, j, curr_n;
     int n = 0;
     InhSection* s;
+    char section[SECT_NAME_SIZE];
+#define DEBUG_WRITE_INI_SECTION
+#ifdef DEBUG_WRITE_INI_SECTION
+    char dbgini[MAX_PATH];
+    FILE* f;
+#endif // DEBUG_WRITE_INI_SECTION
+
+    // Section is key:sect
+    strcpy_s(section, SECT_NAME_SIZE, key);
+    strcat_s(section, SECT_NAME_SIZE, ":");
+    strcat_s(section, SECT_NAME_SIZE, sect);
+
+#ifdef DEBUG_WRITE_INI_SECTION
+    // Get rid of * from sect
+    strcpy_s(dbgini, MAX_PATH, key);
+    strcat_s(dbgini, MAX_PATH, "_");
+    strcat_s(dbgini, MAX_PATH, sect);
+    for (p = dbgini; *p != '\0'; p++)
+    {
+        if (*p == '*')
+            *p = '_';
+    }
+    fopen_s(&f, dbgini, "wt");
+#endif // DEBUG_WRITE_INI_SECTION
 
     // See if the section has already been loaded.
     for (i = 0; i < n_cache; i++)
@@ -296,7 +335,7 @@ load_section(char *ini, char* section)
     }
 
     // No, make a new one and eventually put it in the cache.
-    s = malloc(sizeof(InhSection));
+    s = calloc(sizeof(InhSection), 1);
     strcpy_s(s->sect_name, 80, section);
     len = GetPrivateProfileSection(section, s->section_string, MAX_SECT_SIZE, ini);
 
@@ -315,7 +354,8 @@ load_section(char *ini, char* section)
             s->keyval[n].value = v;
         }
 
-        // Follow inheritance links. This keyword may take several sect names separated by ';'.
+        // Follow inheritance links. This keyword always occurs first.
+        // It may take several sect names separated by ';'.
         if (strncmp(s->keyval[n].key, "inherits", 8) == 0)
         {
             char* ctxt = NULL;
@@ -323,11 +363,29 @@ load_section(char *ini, char* section)
 
             while (inh != NULL)
             {
-                InhSection* inhs = load_section(ini, inh);
+                InhSection* inhs = load_section(ini, key, inh);
 
                 // Copy the new section's key/value pairs into the current one,
-                // checking for overrides.
+                // checking for overrides if there is more than one inherited section.
+                curr_n = n;
+                for (i = 0; i < inhs->n_keyvals; i++)
+                {
+                    // Copy the pointers. They point to the string in the other InhSection,
+                    // but that's OK, as we will never free it anyway (it will sit in the cache)
+                    s->keyval[n] = inhs->keyval[i];
 
+                    // Check if it conflicts with any existing ones (up to curr_n)
+                    // Warning: potential n-squared loop!
+                    for (j = 0; j < curr_n; j++)
+                    {
+                        if (keys_match(s->keyval[j].key, s->keyval[n].key))
+                        {
+                            s->keyval[j].key[0] = '#';   // make it a comment, so we can see it (later '\0' )
+                            break;
+                        }
+                    }
+                    n++;
+                }
 
                 // See if there are any more sections to be inherited from.
                 inh = strtok_s(NULL, ";", &ctxt);
@@ -336,13 +394,25 @@ load_section(char *ini, char* section)
         else
         {
             // Check if the key is overriding an earlier one.
-
-
-
+            // Warning: potential n-squared loop!
+            for (j = 0; j < n; j++)
+            {
+                if (keys_match(s->keyval[j].key, s->keyval[n].key))
+                {
+                    s->keyval[j].key[0] = '#';   // make it a comment, so we can see it (later '\0' )
+                    break;
+                }
+            }
+            n++;
         }
-        n++;
     }
     s->n_keyvals = n;
+
+#ifdef DEBUG_WRITE_INI_SECTION
+    for (i = 0; i < s->n_keyvals; i++)
+        fputs(s->keyval[i].key, f);
+    fclose(f);
+#endif // DEBUG_WRITE_INI_SECTION
 
     if (n_cache < MAX_SECTIONS - 1)
         cache[n_cache++] = s;
@@ -425,7 +495,7 @@ read_slic3r_config(char* key, int dlg_item, char *sel_printer)
         }
                         
         // Look for [vendor:PrusaResearch] in slic3r.ini to find all the installed printer models
-        vs = load_section(ini, "vendor:PrusaResearch");
+        vs = load_section(ini, "vendor", "PrusaResearch");
 #if 0
         for (i = 0; i < vs->n_keyvals; i++)
         {
@@ -472,22 +542,23 @@ read_slic3r_config(char* key, int dlg_item, char *sel_printer)
             // key:name --> name, and skip the ones with '*' at front
             if (strncmp(key_colon, p, klen) == 0 && *(p + klen) != '*')
             {
-                // TODO: we do not do any compat checking. Check printer_model against vs
-
                 // Load the section so we can get the printer_model string (it may be buried
                 // in an inherited section)
-                s = load_section(vendor, p);
+                s = load_section(vendor, key, p + klen);
+
+                // TODO: we do not do any compat checking. Check printer_model against vs
+
+
+
+
 
                 // Add the name to the list
                 SendDlgItemMessage(hWndSlicer, dlg_item, CB_ADDSTRING, 0, (LPARAM)(p + klen));
             }
         }
-
-
     }
     else   // print or filament.
     {
-
         // Filter out the section names by key (print:xxxx or filament:xxxx)
         strcpy_s(key_colon, 64, key);
         strcat_s(key_colon, 64, ":");
@@ -500,7 +571,11 @@ read_slic3r_config(char* key, int dlg_item, char *sel_printer)
             // key:name --> name, and skip the ones with '*' at front
             if (strncmp(key_colon, p, klen) == 0 && *(p + klen) != '*')
             {
-                // TODO: we do not do any compat checking. Check only for print (not filament)
+                // TODO: we do not do any compat checking. Check only for print (not filament).
+                // Don't load the section yet (too many unused sections will be loaded)
+
+
+
 
                 // Add the name to the list
                 SendDlgItemMessage(hWndSlicer, dlg_item, CB_ADDSTRING, 0, (LPARAM)(p + klen));
