@@ -464,6 +464,8 @@ read_slic3r_config(char* key, int dlg_item, char *sel_printer)
     char* p, *model;
     char key_colon[64];
     int klen;
+    char model_str[SECT_NAME_SIZE];
+    char* e;
 
     // Clear the combo
     SendDlgItemMessage(hWndSlicer, dlg_item, CB_RESETCONTENT, 0, 0);
@@ -550,9 +552,6 @@ read_slic3r_config(char* key, int dlg_item, char *sel_printer)
                 model = find_string_in_section("printer_model", s);
                 for (i = 0; i < vs->n_keyvals; i++)
                 {
-                    char model_str[SECT_NAME_SIZE];
-                    char* e;
-
                     // We just want the model:xxxx key (not its value).
                     strcpy_s(model_str, SECT_NAME_SIZE, vs->keyval[i].key);
                     if ((e = strchr(model_str, '=')) != NULL)
@@ -566,9 +565,30 @@ read_slic3r_config(char* key, int dlg_item, char *sel_printer)
                 }
             }
         }
+
+        // Select the preset given in slic3r.ini (the last one worked on in the Slic3r GUI)
+        GetPrivateProfileString("presets", key, "", name, 64, ini);
+        i = SendDlgItemMessage(hWndSlicer, dlg_item, CB_FINDSTRINGEXACT, -1, (LPARAM)name);
+        sel_printer[0] = '\0';
+        if (i != CB_ERR)
+        {
+            SendDlgItemMessage(hWndSlicer, dlg_item, CB_SETCURSEL, i, 0);
+
+            // Return the selected printer name
+            strcpy_s(sel_printer, 64, name);
+        }
     }
     else   // print or filament.
     {
+        // Build a PRINTER_MODEL_XXX string for the selected printer
+        // TODO: test against non-Prusa slicer (when many things are NULL)
+
+
+        s = load_section(vendor, "printer", sel_printer);
+        model = find_string_in_section("printer_model", s);
+        strcpy_s(model_str, SECT_NAME_SIZE, "PRINTER_MODEL_");
+        strcat_s(model_str, SECT_NAME_SIZE, model);
+
         // Filter out the section names by key (print:xxxx or filament:xxxx)
         strcpy_s(key_colon, 64, key);
         strcat_s(key_colon, 64, ":");
@@ -581,23 +601,30 @@ read_slic3r_config(char* key, int dlg_item, char *sel_printer)
             // key:name --> name, and skip the ones with '*' at front
             if (strncmp(key_colon, p, klen) == 0 && *(p + klen) != '*')
             {
-                // TODO: we do not do any compat checking. Check only for print (not filament).
-                // Don't load the section yet (too many unused sections will be loaded)
+                char compat[1024];
 
-
-
+                // Check compatibility only for print (not filament).
+                // Don't load the section yet (too many unused sections will be loaded).
+                // Instead, just find the compat string which is assumed to be at top level
+                // and do a quick and dirty substring match for the PRINTER_MODEL_XXX string.
+                if (strcmp(key, "print") == 0)
+                {
+                    GetPrivateProfileString(p, "compatible_printers_condition", "", compat, 1024, vendor);
+                    if (strstr(compat, model_str) == NULL)
+                        continue;
+                }
 
                 // Add the name to the list
                 SendDlgItemMessage(hWndSlicer, dlg_item, CB_ADDSTRING, 0, (LPARAM)(p + klen));
             }
         }
-    }
 
-    // Select the preset given in slic3r.ini (the last one worked on in the Slic3r GUI)
-    GetPrivateProfileString("presets", key, "", name, 64, ini);
-    i = SendDlgItemMessage(hWndSlicer, dlg_item, CB_FINDSTRINGEXACT, -1, (LPARAM)name);
-    if (i != CB_ERR)
-        SendDlgItemMessage(hWndSlicer, dlg_item, CB_SETCURSEL, i, 0);
+        // Select the preset given in slic3r.ini (the last one worked on in the Slic3r GUI)
+        GetPrivateProfileString("presets", key, "", name, 64, ini);
+        i = SendDlgItemMessage(hWndSlicer, dlg_item, CB_FINDSTRINGEXACT, -1, (LPARAM)name);
+        if (i != CB_ERR)
+            SendDlgItemMessage(hWndSlicer, dlg_item, CB_SETCURSEL, i, 0);
+    }
 }
 
 
