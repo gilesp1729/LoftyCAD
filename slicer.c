@@ -12,7 +12,7 @@
 #define MAX_KEYVALS         128
 
 // Max size of a section in characters, with null-separated key=value pairs.
-#define MAX_SECT_SIZE       4096
+#define MAX_SECT_SIZE       8192
 
 // Max size of the section name buffer
 #define MAX_SECT_NAME_SIZE  4096
@@ -25,6 +25,7 @@ typedef struct InhString
 {
     char*       key;                    // Pointer to key=value in section string
     char*       value;                  // Pointer to value in section string
+    BOOL        override;               // TRUE is this key has been overridden
 } InhString;
 
 // Section with up to 1024 chars and 64 instances of key=value data. 
@@ -275,6 +276,28 @@ find_slic3r_exe_and_config()
     return rc;
 }
 
+// Helper to find a key in an InhSection and return its value as a pointer.
+char *
+find_string_in_section(char* key, InhSection* s)
+{
+    int i;
+    char* e;
+    char ckey[SECT_NAME_SIZE];
+
+    for (i = 0; i < s->n_keyvals; i++)
+    {
+        if (s->keyval[i].override)
+            continue;
+        e = strchr(s->keyval[i].key, '=');
+        if (e == NULL)
+            continue;
+        strncpy_s(ckey, SECT_NAME_SIZE, s->keyval[i].key, e - s->keyval[i].key);
+        if (strcmp(key, ckey) == 0)
+            return s->keyval[i].value;
+    }
+    return NULL;
+}
+
 // Helper to test keys match. The actual strings are key=value, but we test up to the '='.
 // We are not allowed to poke '\0' in.
 BOOL
@@ -303,7 +326,6 @@ load_section(char *ini, char *key, char* sect)
     int n = 0;
     InhSection* s;
     char section[SECT_NAME_SIZE];
-#define DEBUG_WRITE_INI_SECTION
 #ifdef DEBUG_WRITE_INI_SECTION
     char dbgini[MAX_PATH];
     FILE* f;
@@ -313,6 +335,13 @@ load_section(char *ini, char *key, char* sect)
     strcpy_s(section, SECT_NAME_SIZE, key);
     strcat_s(section, SECT_NAME_SIZE, ":");
     strcat_s(section, SECT_NAME_SIZE, sect);
+
+    // See if the section has already been loaded.
+    for (i = 0; i < n_cache; i++)
+    {
+        if (strcmp(section, cache[i]->sect_name) == 0)
+            return cache[i];
+    }
 
 #ifdef DEBUG_WRITE_INI_SECTION
     // Get rid of * from sect
@@ -326,13 +355,6 @@ load_section(char *ini, char *key, char* sect)
     }
     fopen_s(&f, dbgini, "wt");
 #endif // DEBUG_WRITE_INI_SECTION
-
-    // See if the section has already been loaded.
-    for (i = 0; i < n_cache; i++)
-    {
-        if (strcmp(section, cache[i]->sect_name) == 0)
-            return cache[i];
-    }
 
     // No, make a new one and eventually put it in the cache.
     s = calloc(sizeof(InhSection), 1);
@@ -371,7 +393,8 @@ load_section(char *ini, char *key, char* sect)
                 for (i = 0; i < inhs->n_keyvals; i++)
                 {
                     // Copy the pointers. They point to the string in the other InhSection,
-                    // but that's OK, as we will never free it anyway (it will sit in the cache)
+                    // but that's OK, as we will never free it anyway (it will sit in the cache).
+                    // This copy may be set to override but the original must be left alone.
                     s->keyval[n] = inhs->keyval[i];
 
                     // Check if it conflicts with any existing ones (up to curr_n)
@@ -380,7 +403,7 @@ load_section(char *ini, char *key, char* sect)
                     {
                         if (keys_match(s->keyval[j].key, s->keyval[n].key))
                         {
-                            s->keyval[j].key[0] = '#';   // make it a comment, so we can see it (later '\0' )
+                            s->keyval[j].override = TRUE;
                             break;
                         }
                     }
@@ -399,7 +422,7 @@ load_section(char *ini, char *key, char* sect)
             {
                 if (keys_match(s->keyval[j].key, s->keyval[n].key))
                 {
-                    s->keyval[j].key[0] = '#';   // make it a comment, so we can see it (later '\0' )
+                    s->keyval[j].override = TRUE;
                     break;
                 }
             }
@@ -410,7 +433,7 @@ load_section(char *ini, char *key, char* sect)
 
 #ifdef DEBUG_WRITE_INI_SECTION
     for (i = 0; i < s->n_keyvals; i++)
-        fputs(s->keyval[i].key, f);
+        fprintf(f, "%s%s\n", s->keyval[i].override ? "## " : "", s->keyval[i].key);
     fclose(f);
 #endif // DEBUG_WRITE_INI_SECTION
 
@@ -438,7 +461,7 @@ read_slic3r_config(char* key, int dlg_item, char *sel_printer)
     FILE* f;
     WIN32_FIND_DATA find_data;
     int len, i;
-    char* p;
+    char* p, *model;
     char key_colon[64];
     int klen;
 
@@ -496,29 +519,6 @@ read_slic3r_config(char* key, int dlg_item, char *sel_printer)
                         
         // Look for [vendor:PrusaResearch] in slic3r.ini to find all the installed printer models
         vs = load_section(ini, "vendor", "PrusaResearch");
-#if 0
-        for (i = 0; i < vs->n_keyvals; i++)
-        {
-            // We just want the model:xxxx (not its value).
-            // Turn it into printer_model:xxxx and look it up in PrusaResearch.ini
-            strcpy_s(model, 64, "printer_");
-            strcat_s(model, 64, vs->keyval[i].key);
-            *(strchr(model, '=')) = '\0';  // dangerous but '=' has to be there
-            GetPrivateProfileString(model, "name", "", name, 64, vendor);
-            SendDlgItemMessage(hWndSlicer, dlg_item, CB_ADDSTRING, 0, (LPARAM)name);
-        }
-
-        // Select the preset given in slic3r.ini (the last one worked on in the Slic3r GUI)
-        // TODO: This does not work when the name doesn't match (e.g. MMU 2.0 vs MMU2)
-        // TODO:
-        // load all printer sections and do inheritance! Store in cache so we can reuse them
-        // search "printer_model = xxxx" in resulting sections for match on vs contents
-        GetPrivateProfileString("presets", key, "", name, 64, ini);
-        i = SendDlgItemMessage(hWndSlicer, dlg_item, CB_FINDSTRINGEXACT, -1, (LPARAM)name);
-        if (i != CB_ERR)
-            SendDlgItemMessage(hWndSlicer, dlg_item, CB_SETCURSEL, i, 0);
-#endif
-
         if (vs->n_keyvals != 0)
         {
             // Get the names of all the sections so we can later filter them out by key (print or filament)
@@ -546,14 +546,24 @@ read_slic3r_config(char* key, int dlg_item, char *sel_printer)
                 // in an inherited section)
                 s = load_section(vendor, key, p + klen);
 
-                // TODO: we do not do any compat checking. Check printer_model against vs
+                // Check printer_model against vs
+                model = find_string_in_section("printer_model", s);
+                for (i = 0; i < vs->n_keyvals; i++)
+                {
+                    char model_str[SECT_NAME_SIZE];
+                    char* e;
 
-
-
-
-
-                // Add the name to the list
-                SendDlgItemMessage(hWndSlicer, dlg_item, CB_ADDSTRING, 0, (LPARAM)(p + klen));
+                    // We just want the model:xxxx key (not its value).
+                    strcpy_s(model_str, SECT_NAME_SIZE, vs->keyval[i].key);
+                    if ((e = strchr(model_str, '=')) != NULL)
+                        *e = '\0';
+                    if (strcmp(&model_str[6], model) == 0)      // skip "model:"
+                    {
+                        // Add the name to the list
+                        SendDlgItemMessage(hWndSlicer, dlg_item, CB_ADDSTRING, 0, (LPARAM)(p + klen));
+                        break;
+                    }
+                }
             }
         }
     }
@@ -581,13 +591,13 @@ read_slic3r_config(char* key, int dlg_item, char *sel_printer)
                 SendDlgItemMessage(hWndSlicer, dlg_item, CB_ADDSTRING, 0, (LPARAM)(p + klen));
             }
         }
-
-        // Select the preset given in slic3r.ini (the last one worked on in the Slic3r GUI)
-        GetPrivateProfileString("presets", key, "", name, 64, ini);
-        i = SendDlgItemMessage(hWndSlicer, dlg_item, CB_FINDSTRINGEXACT, -1, (LPARAM)name);
-        if (i != CB_ERR)
-            SendDlgItemMessage(hWndSlicer, dlg_item, CB_SETCURSEL, i, 0);
     }
+
+    // Select the preset given in slic3r.ini (the last one worked on in the Slic3r GUI)
+    GetPrivateProfileString("presets", key, "", name, 64, ini);
+    i = SendDlgItemMessage(hWndSlicer, dlg_item, CB_FINDSTRINGEXACT, -1, (LPARAM)name);
+    if (i != CB_ERR)
+        SendDlgItemMessage(hWndSlicer, dlg_item, CB_SETCURSEL, i, 0);
 }
 
 
