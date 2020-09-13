@@ -177,6 +177,9 @@ save_slic3r_exe_and_config()
     RegSetValueEx(hkey, "ConfigIndex", 0, REG_DWORD, (LPBYTE)&config_index, 4);
 
     RegCloseKey(hkey);
+
+    // Clear the section cache, in case slicer has changed.
+    n_cache = 0;
 }
 
 
@@ -452,7 +455,7 @@ load_section(char *ini, char *key, char* sect)
 void
 read_slic3r_config(char* key, int dlg_item, char *sel_printer)
 {
-    char dir[MAX_PATH], ini[MAX_PATH], vendor[MAX_PATH];
+    char dir[MAX_PATH], ini[MAX_PATH], vendor[MAX_PATH], filename[MAX_PATH];
     InhSection* vs, *s;
     char name[64];
     char buf[256];
@@ -460,7 +463,7 @@ read_slic3r_config(char* key, int dlg_item, char *sel_printer)
     HANDLE h;
     FILE* f;
     WIN32_FIND_DATA find_data;
-    int len, i;
+    int len, i, n;
     char* p, *model;
     char key_colon[64];
     int klen;
@@ -474,15 +477,56 @@ read_slic3r_config(char* key, int dlg_item, char *sel_printer)
     strcpy_s(dir, MAX_PATH, slicer_config[config_index]);
     strcat_s(dir, MAX_PATH, "\\");
     strcat_s(dir, MAX_PATH, key);
-    strcat_s(dir, MAX_PATH, "\\*.ini");
-    h = FindFirstFile(dir, &find_data);
+    strcpy_s(filename, MAX_PATH, dir);
+    strcat_s(filename, MAX_PATH, "\\*.ini");
+    h = FindFirstFile(filename, &find_data);
     if (h != INVALID_HANDLE_VALUE)
     {
         while (1)
         {
-            len = strlen(find_data.cFileName);
-            find_data.cFileName[len - 4] = '\0';    // strip ".ini"
-            SendDlgItemMessage(hWndSlicer, dlg_item, CB_ADDSTRING, 0, (LPARAM)find_data.cFileName);
+            strcpy_s(filename, MAX_PATH, find_data.cFileName);
+            len = strlen(filename);
+            filename[len - 4] = '\0';    // strip ".ini"
+            SendDlgItemMessage(hWndSlicer, dlg_item, CB_ADDSTRING, 0, (LPARAM)filename);
+
+            // Create a InhSection struct for this section so it can be loaded later
+            s = calloc(sizeof(InhSection), 1);
+
+            // Section name is key:sect
+            strcpy_s(s->sect_name, SECT_NAME_SIZE, key);
+            strcat_s(s->sect_name, SECT_NAME_SIZE, ":");
+            strcat_s(s->sect_name, SECT_NAME_SIZE, filename);
+
+            // Open file and read the key=value pairs
+            strcpy_s(filename, MAX_PATH, dir);
+            strcat_s(filename, MAX_PATH, "\\");
+            strcat_s(filename, MAX_PATH, find_data.cFileName);
+            fopen_s(&f, filename, "rt");
+            if (f != NULL)
+            {
+                // Pack all the key=value pairs into a long string
+                p = s->section_string;
+                n = 0;
+                while (1)
+                {
+                    if (fgets(p, 256, f) == NULL)
+                        break;
+                    len = strlen(p);
+                    s->keyval[n].key = p;
+                    s->keyval[n].value = strchr(p, '=');
+                    n++;
+                    p += len;
+                    *(p - 1) = '\0';    // overwrite the '\n' left by fgets
+                }
+                fclose(f);
+                s->n_keyvals = n;
+
+                // Cache the section
+                if (n_cache < MAX_SECTIONS - 1)
+                    cache[n_cache++] = s;
+            }
+
+            // Go back for more files
             if (!FindNextFile(h, &find_data))
                 break;
         }
@@ -581,13 +625,12 @@ read_slic3r_config(char* key, int dlg_item, char *sel_printer)
     else   // print or filament.
     {
         // Build a PRINTER_MODEL_XXX string for the selected printer
-        // TODO: test against non-Prusa slicer (when many things are NULL)
-
-
+        // model will be NULL if there is no vendor file.
         s = load_section(vendor, "printer", sel_printer);
         model = find_string_in_section("printer_model", s);
         strcpy_s(model_str, SECT_NAME_SIZE, "PRINTER_MODEL_");
-        strcat_s(model_str, SECT_NAME_SIZE, model);
+        if (model != NULL)
+            strcat_s(model_str, SECT_NAME_SIZE, model);
 
         // Filter out the section names by key (print:xxxx or filament:xxxx)
         strcpy_s(key_colon, 64, key);
@@ -607,7 +650,7 @@ read_slic3r_config(char* key, int dlg_item, char *sel_printer)
                 // Don't load the section yet (too many unused sections will be loaded).
                 // Instead, just find the compat string which is assumed to be at top level
                 // and do a quick and dirty substring match for the PRINTER_MODEL_XXX string.
-                if (strcmp(key, "print") == 0)
+                if (strcmp(key, "print") == 0 && model != NULL)
                 {
                     GetPrivateProfileString(p, "compatible_printers_condition", "", compat, 1024, vendor);
                     if (strstr(compat, model_str) == NULL)
@@ -627,20 +670,30 @@ read_slic3r_config(char* key, int dlg_item, char *sel_printer)
     }
 }
 
-
-
-
-
-// Build a set of ini files to load to Slic3r command line.
+// Build one of a set of ini files to load to Slic3r command line.
 // Given a preset key (printer, print or filament) as found in [presets] in slic3r.ini :
 // - find any user-created settings under the config directory and return those
 // - if not found, find the section in the [vendor] ini file (if any), following chains of 
 //   inheritance and overriding individual settings as needed.
-// Finally, contatenate the lot and write to the <key>.ini file to be given to the slic3r command.
+// Write to the <key>.ini file to be given to the slic3r command.
 // Any duplicates are removed. FALSE is returned if nothing was found.
 BOOL
 get_slic3r_config_section(char* key, char* preset)
 {
+    InhSection* s;
+    char vendor[MAX_PATH];
+
+    // Find possible vendor file and load the section.
+    // (User preset sections will always be in the cache, and will ignore the filename)
+    strcpy_s(vendor, MAX_PATH, slicer_config[config_index]);
+    strcat_s(vendor, MAX_PATH, "\\vendor\\PrusaResearch.ini");
+    s = load_section(vendor, key, preset);
+
+    // Get the directory of the output file
+
+
+
+
 
 
 

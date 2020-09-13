@@ -274,7 +274,7 @@ void clear_selection(ListHead * sel_list);
 // Visualisation of G-code (gcode.c)
 void spaghetti(ZPolyEdge * zedge, float zmin, float zmax);
 
-// Slic3r interation (slicer.c)
+// Slic3r integration (slicer.c)
 BOOL load_slic3r_exe_and_config();
 void save_slic3r_exe_and_config();
 BOOL find_slic3r_exe_and_config();

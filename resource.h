@@ -148,7 +148,8 @@
 #define IDC_PRINTER_ZFROM               1042
 #define IDC_PRINTER_ZTO                 1043
 #define IDB_SLICER_SLICE                1044
-#define IDC_CHECK1                      1045
+#define IDC_SLICER_SUPPORT              1045
+#define IDB_SLICER_SUPPORT              1045
 #define IDC_SLICER_PRINTER              1046
 #define IDC_SLICER_PRINTSETTINGS        1047
 #define IDC_SLICER_FILAMENT             1048

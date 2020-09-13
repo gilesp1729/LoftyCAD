@@ -508,6 +508,15 @@ slicer_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 break;
             }
             break;
+
+        case IDB_SLICER_SUPPORT:
+        case IDC_SLICER_LAYERHEIGHT:
+        case IDC_SLICER_INFILL:
+        case IDB_SLICER_SLICE:
+
+
+
+            break;
         }
         break;
 
