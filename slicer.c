@@ -179,6 +179,7 @@ save_slic3r_exe_and_config()
     RegCloseKey(hkey);
 
     // Clear the section cache, in case slicer has changed.
+    // TODO: Free the cached entries, or else re-use them (they are all the same size)
     n_cache = 0;
 }
 
@@ -675,10 +676,10 @@ read_slic3r_config(char* key, int dlg_item, char *sel_printer)
 // - find any user-created settings under the config directory and return those
 // - if not found, find the section in the [vendor] ini file (if any), following chains of 
 //   inheritance and overriding individual settings as needed.
-// Write to the <key>.ini file to be given to the slic3r command.
+// Write to the given opened ini file to be given to the slic3r command.
 // Any duplicates are removed. FALSE is returned if nothing was found.
 BOOL
-get_slic3r_config_section(char* key, char* preset)
+get_slic3r_config_section(char* key, char* preset, FILE *ini)
 {
     InhSection* s;
     char vendor[MAX_PATH];
@@ -689,7 +690,6 @@ get_slic3r_config_section(char* key, char* preset)
     strcat_s(vendor, MAX_PATH, "\\vendor\\PrusaResearch.ini");
     s = load_section(vendor, key, preset);
 
-    // Get the directory of the output file
 
 
 

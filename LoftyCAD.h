@@ -279,7 +279,7 @@ BOOL load_slic3r_exe_and_config();
 void save_slic3r_exe_and_config();
 BOOL find_slic3r_exe_and_config();
 void read_slic3r_config(char* key, int dlg_item, char *printer);
-BOOL get_slic3r_config_section(char* key, char* preset);
+BOOL get_slic3r_config_section(char* key, char* preset, FILE *ini);
 
 // Help dialog (help.c)
 HWND init_help_window(void);

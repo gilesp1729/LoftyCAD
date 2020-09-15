@@ -109,6 +109,7 @@ Command(int message, int wParam, int lParam)
     HMENU hMenu;
     OPENFILENAME ofn;
     char window_title[256];
+    char button_title[256];
     char new_filename[256];
     Object* obj;
     Group* group;
@@ -194,6 +195,8 @@ Command(int message, int wParam, int lParam)
                 curr_filename[0] = '\0';
                 object_tree.title[0] = '\0';
                 SetWindowText(auxGetHWND(), "LoftyCAD");
+                SendDlgItemMessage(hWndSlicer, IDB_SLICER_SLICE, WM_SETTEXT, 0, (LPARAM)"Slice Current Model");
+                EnableWindow(GetDlgItem(hWndSlicer, IDB_SLICER_SLICE), FALSE);
 
                 if (deserialise_tree(&object_tree, new_filename, FALSE))
                 {
@@ -203,6 +206,10 @@ Command(int message, int wParam, int lParam)
                     strcat_s(window_title, 256, " - ");
                     strcat_s(window_title, 256, object_tree.title);
                     SetWindowText(auxGetHWND(), window_title);
+                    strcpy_s(button_title, 256, "Export and Slice ");
+                    strcat_s(button_title, 256, curr_filename);
+                    SendDlgItemMessage(hWndSlicer, IDB_SLICER_SLICE, WM_SETTEXT, 0, (LPARAM)button_title);
+                    EnableWindow(GetDlgItem(hWndSlicer, IDB_SLICER_SLICE), TRUE);
                     hMenu = GetSubMenu(GetMenu(auxGetHWND()), 0);
                     hMenu = GetSubMenu(hMenu, 9);
                     insert_filename_to_MRU(hMenu, curr_filename);
@@ -589,6 +596,8 @@ Command(int message, int wParam, int lParam)
             curr_filename[0] = '\0';
             object_tree.title[0] = '\0';
             SetWindowText(auxGetHWND(), "LoftyCAD");
+            SendDlgItemMessage(hWndSlicer, IDB_SLICER_SLICE, WM_SETTEXT, 0, (LPARAM)"Slice Current Model");
+            EnableWindow(GetDlgItem(hWndSlicer, IDB_SLICER_SLICE), FALSE);
 
             if (LOWORD(wParam) == ID_FILE_NEW)
             {
@@ -613,6 +622,11 @@ Command(int message, int wParam, int lParam)
                 strcat_s(window_title, 256, " - ");
                 strcat_s(window_title, 256, object_tree.title);
                 SetWindowText(auxGetHWND(), window_title);
+                strcpy_s(button_title, 256, "Export and Slice ");
+                strcat_s(button_title, 256, curr_filename);
+                SendDlgItemMessage(hWndSlicer, IDB_SLICER_SLICE, WM_SETTEXT, 0, (LPARAM)button_title);
+                EnableWindow(GetDlgItem(hWndSlicer, IDB_SLICER_SLICE), TRUE);
+
                 hMenu = GetSubMenu(GetMenu(auxGetHWND()), 0);
                 hMenu = GetSubMenu(hMenu, 9);
                 insert_filename_to_MRU(hMenu, curr_filename);
@@ -650,6 +664,10 @@ Command(int message, int wParam, int lParam)
                 strcat_s(window_title, 256, " - ");
                 strcat_s(window_title, 256, object_tree.title);
                 SetWindowText(auxGetHWND(), window_title);
+                strcpy_s(button_title, 256, "Export and Slice ");
+                strcat_s(button_title, 256, curr_filename);
+                SendDlgItemMessage(hWndSlicer, IDB_SLICER_SLICE, WM_SETTEXT, 0, (LPARAM)button_title);
+                EnableWindow(GetDlgItem(hWndSlicer, IDB_SLICER_SLICE), TRUE);
                 hMenu = GetSubMenu(GetMenu(auxGetHWND()), 0);
                 hMenu = GetSubMenu(hMenu, 9);
                 insert_filename_to_MRU(hMenu, curr_filename);
@@ -788,6 +806,8 @@ Command(int message, int wParam, int lParam)
                 curr_filename[0] = '\0';
                 object_tree.title[0] = '\0';
                 SetWindowText(auxGetHWND(), "LoftyCAD");
+                SendDlgItemMessage(hWndSlicer, IDB_SLICER_SLICE, WM_SETTEXT, 0, (LPARAM)"Slice Current Model");
+                EnableWindow(GetDlgItem(hWndSlicer, IDB_SLICER_SLICE), FALSE);
 
                 if (!deserialise_tree(&object_tree, new_filename, FALSE))
                 {
@@ -803,6 +823,10 @@ Command(int message, int wParam, int lParam)
                     strcat_s(window_title, 256, " - ");
                     strcat_s(window_title, 256, object_tree.title);
                     SetWindowText(auxGetHWND(), window_title);
+                    strcpy_s(button_title, 256, "Export and Slice ");
+                    strcat_s(button_title, 256, curr_filename);
+                    SendDlgItemMessage(hWndSlicer, IDB_SLICER_SLICE, WM_SETTEXT, 0, (LPARAM)button_title);
+                    EnableWindow(GetDlgItem(hWndSlicer, IDB_SLICER_SLICE), TRUE);
                     xform_list.head = NULL;
                     xform_list.tail = NULL;
                     gen_view_list_tree_volumes(&object_tree);

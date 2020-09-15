@@ -148,13 +148,15 @@
 #define IDC_PRINTER_ZFROM               1042
 #define IDC_PRINTER_ZTO                 1043
 #define IDB_SLICER_SLICE                1044
-#define IDC_SLICER_SUPPORT              1045
 #define IDB_SLICER_SUPPORT              1045
 #define IDC_SLICER_PRINTER              1046
 #define IDC_SLICER_PRINTSETTINGS        1047
 #define IDC_SLICER_FILAMENT             1048
 #define IDC_SLICER_LAYERHEIGHT          1049
 #define IDC_SLICER_INFILL               1050
+#define IDB_SLICER_GUI                  1051
+#define IDB_SLICER_SLICE2               1052
+#define IDB_SLICER_SLICE_EXISTING       1052
 #define IDC_PREFS_FIND_SLICERS          1054
 #define IDC_STATIC_SLICER               1057
 #define IDD_PRINT_PREVIEW               1544

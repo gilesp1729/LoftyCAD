@@ -1881,6 +1881,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
         if (lpCmdLine[0] != '\0')
         {
             char window_title[256];
+            char button_title[256];
             int lens, start;
 
             // Strip quotes.
@@ -1897,6 +1898,10 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
             strcat_s(window_title, 256, " - ");
             strcat_s(window_title, 256, object_tree.title);
             SetWindowText(auxGetHWND(), window_title);
+            strcpy_s(button_title, 256, "Export and Slice ");
+            strcat_s(button_title, 256, curr_filename);
+            SendDlgItemMessage(hWndSlicer, IDB_SLICER_SLICE, WM_SETTEXT, 0, (LPARAM)button_title);
+            EnableWindow(GetDlgItem(hWndSlicer, IDB_SLICER_SLICE), TRUE);
             hMenu = GetSubMenu(GetMenu(auxGetHWND()), 0);
             hMenu = GetSubMenu(hMenu, 9);
             insert_filename_to_MRU(hMenu, curr_filename);
