@@ -77,6 +77,12 @@ char sect_names[MAX_SECT_NAME_SIZE];
 int n_cache = 0;
 InhSection* cache[MAX_SECTIONS];
 
+// Vendor name
+#define VENDOR "PrusaResearch"
+
+// Vendor file (currently the only one known and supported)
+#define VENDOR_INI_FILE "\\vendor\\PrusaResearch.ini"
+
 
 
 
@@ -541,7 +547,7 @@ read_slic3r_config(char* key, int dlg_item, char *sel_printer)
 
     // Find possible vendor file
     strcpy_s(vendor, MAX_PATH, slicer_config[config_index]);
-    strcat_s(vendor, MAX_PATH, "\\vendor\\PrusaResearch.ini");
+    strcat_s(vendor, MAX_PATH, VENDOR_INI_FILE);
 
     // Look for printer, print or filament presets. Printer must be called first.
     if (strcmp(key, "printer") == 0)
@@ -565,7 +571,7 @@ read_slic3r_config(char* key, int dlg_item, char *sel_printer)
         }
                         
         // Look for [vendor:PrusaResearch] in slic3r.ini to find all the installed printer models
-        vs = load_section(ini, "vendor", "PrusaResearch");
+        vs = load_section(ini, "vendor", VENDOR);
         if (vs->n_keyvals != 0)
         {
             // Get the names of all the sections so we can later filter them out by key (print or filament)
@@ -676,34 +682,125 @@ read_slic3r_config(char* key, int dlg_item, char *sel_printer)
 // - find any user-created settings under the config directory and return those
 // - if not found, find the section in the [vendor] ini file (if any), following chains of 
 //   inheritance and overriding individual settings as needed.
-// Write to the given opened ini file to be given to the slic3r command.
-// Any duplicates are removed. FALSE is returned if nothing was found.
+// Write to the given ini file to be given to the slic3r command.
+// FALSE is returned if nothing was found.
 BOOL
-get_slic3r_config_section(char* key, char* preset, FILE *ini)
+get_slic3r_config_section(char* key, char* preset, char *inifile)
 {
     InhSection* s;
+    FILE* ini;
     char vendor[MAX_PATH];
+    int i;
 
     // Find possible vendor file and load the section.
     // (User preset sections will always be in the cache, and will ignore the filename)
     strcpy_s(vendor, MAX_PATH, slicer_config[config_index]);
-    strcat_s(vendor, MAX_PATH, "\\vendor\\PrusaResearch.ini");
+    strcat_s(vendor, MAX_PATH, VENDOR_INI_FILE);
     s = load_section(vendor, key, preset);
+    if (s == NULL || s->n_keyvals == 0)
+        return FALSE;
 
+    fopen_s(&ini, inifile, "wt");
+    if (ini == NULL)
+        return FALSE;
 
-
-
-
-
-
-
+    fprintf_s(ini, "# %s:%s\n", key, preset);
+    for (i = 0; i < s->n_keyvals; i++)
+    {
+        // Clean out comments and overridden settings
+        if (!isalpha(s->keyval[i].key[0]))
+            continue;
+        if (s->keyval[i].override)
+            continue;
+        fprintf_s(ini, "%s\n", s->keyval[i].key);
+    }
+    fclose(ini);
     return TRUE;
 }
 
+// Run the slicer and capture its output.
+BOOL
+run_slicer(char* slicer_exe, char* cmd_line, char* dir)
+{
+    #define BUFSIZE 4096 
 
+    //HANDLE g_hChildStd_IN_Rd = NULL;
+    //HANDLE g_hChildStd_IN_Wr = NULL;
+    HANDLE g_hChildStd_OUT_Rd = NULL;
+    HANDLE g_hChildStd_OUT_Wr = NULL;
 
+    SECURITY_ATTRIBUTES saAttr;
+    TCHAR szCmdline[] = TEXT("child");
+    PROCESS_INFORMATION piProcInfo;
+    STARTUPINFO siStartInfo;
+    BOOL bSuccess = FALSE;
+    DWORD dwRead;
+    CHAR chBuf[BUFSIZE];
 
+    // Set the bInheritHandle flag so pipe handles are inherited. 
+    saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
+    saAttr.bInheritHandle = TRUE;
+    saAttr.lpSecurityDescriptor = NULL;
 
+    // Create a pipe for the child process's STDOUT. 
+    if (!CreatePipe(&g_hChildStd_OUT_Rd, &g_hChildStd_OUT_Wr, &saAttr, 0))
+        return FALSE;
 
-// Slice the object tree and produce a G-code file.
+    // Ensure the read handle to the pipe for STDOUT is not inherited.
+    if (!SetHandleInformation(g_hChildStd_OUT_Rd, HANDLE_FLAG_INHERIT, 0))
+        return FALSE;
 
+    // Set up members of the PROCESS_INFORMATION structure. 
+    ZeroMemory(&piProcInfo, sizeof(PROCESS_INFORMATION));
+
+    // Set up members of the STARTUPINFO structure. 
+    // This structure specifies the STDIN and STDOUT handles for redirection.
+    ZeroMemory(&siStartInfo, sizeof(STARTUPINFO));
+    siStartInfo.cb = sizeof(STARTUPINFO);
+    siStartInfo.hStdError = g_hChildStd_OUT_Wr;
+    siStartInfo.hStdOutput = g_hChildStd_OUT_Wr;
+    siStartInfo.hStdInput = NULL; // g_hChildStd_IN_Rd;
+    siStartInfo.dwFlags |= STARTF_USESTDHANDLES;
+
+    // Create the child process. 
+    bSuccess = CreateProcess
+    (
+        slicer_exe,    // application name
+        cmd_line,      // command line 
+        NULL,          // process security attributes 
+        NULL,          // primary thread security attributes 
+        TRUE,          // handles are inherited 
+        0,             // creation flags 
+        NULL,          // use parent's environment 
+        dir,           // current directory 
+        &siStartInfo,  // STARTUPINFO pointer 
+        &piProcInfo);  // receives PROCESS_INFORMATION 
+
+     // If an error occurs, exit the application. 
+    if (!bSuccess)
+        return FALSE;
+
+    // Close handles to the child process and its primary thread.
+    // Some applications might keep these handles to monitor the status
+    // of the child process, for example. 
+    CloseHandle(piProcInfo.hProcess);
+    CloseHandle(piProcInfo.hThread);
+
+    // Close handles to the stdin and stdout pipes no longer needed by the child process.
+    // If they are not explicitly closed, there is no way to recognize that the child process has ended.
+    CloseHandle(g_hChildStd_OUT_Wr);
+
+    // Read from pipe until process finishes.
+    for (;;)
+    {
+        bSuccess = ReadFile(g_hChildStd_OUT_Rd, chBuf, BUFSIZE, &dwRead, NULL);
+        if (!bSuccess || dwRead == 0) 
+            break;
+        chBuf[dwRead] = '\0';
+        Log(chBuf);
+    }
+
+    return TRUE;
+    // old code
+    // ShellExecute(hWndSlicer, "open", slicer_exe[slicer_index], cmd, dir, SW_SHOW);
+}

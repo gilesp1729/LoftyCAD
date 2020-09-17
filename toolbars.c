@@ -485,7 +485,6 @@ slicer_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     int indx;
     char* slosh, *pdot;
     char inifile[MAX_PATH];
-    FILE* ini;
 
     switch (msg)
     {
@@ -599,30 +598,39 @@ slicer_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             slosh = strrchr(dir, '\\');
             *(slosh + 1) = '\0';
 
-            // Open the ini file for writing and fill it from the selected presets
+            // Open the ini files for writing and fill them from the selected presets.
+            // Separate ini files are used as there many be duplicates between sections
             strcpy_s(inifile, MAX_PATH, dir);
-            strcat_s(inifile, MAX_PATH, "slicer_settings.ini");
-            fopen_s(&ini, inifile, "wt");
-            if (ini == NULL)
-                break;
-
+            strcat_s(inifile, MAX_PATH, "slicer_settings_printer.ini");
             indx = SendDlgItemMessage(hWnd, IDC_SLICER_PRINTER, CB_GETCURSEL, 0, 0);
             SendDlgItemMessage(hWnd, IDC_SLICER_PRINTER, CB_GETLBTEXT, indx, (LPARAM)printer);
-            get_slic3r_config_section("printer", printer, ini);
-            indx = SendDlgItemMessage(hWnd, IDC_SLICER_PRINTSETTINGS, CB_GETCURSEL, 0, 0);
-            SendDlgItemMessage(hWnd, IDC_SLICER_PRINTER, CB_GETLBTEXT, indx, (LPARAM)print);
-            get_slic3r_config_section("print", print, ini);
-            indx = SendDlgItemMessage(hWnd, IDC_SLICER_FILAMENT, CB_GETCURSEL, 0, 0);
-            SendDlgItemMessage(hWnd, IDC_SLICER_PRINTER, CB_GETLBTEXT, indx, (LPARAM)filament);
-            get_slic3r_config_section("filament", filament, ini);
-
-
-
-            // Build slic3r cmd line and run it. Supply a --center X,Y option to centre the
-            // job on the current print bed.
+            get_slic3r_config_section("printer", printer, inifile);
+            
+            // Add load option to slic3r cmd line
             strcpy_s(cmd, 1024, " --load ");
             strcat_s(cmd, 1024, inifile);
-            ShellExecute(hWnd, "open", slicer_exe[slicer_index], cmd, dir, SW_HIDE);
+
+            strcpy_s(inifile, MAX_PATH, dir);
+            strcat_s(inifile, MAX_PATH, "slicer_settings_print.ini");
+            indx = SendDlgItemMessage(hWnd, IDC_SLICER_PRINTSETTINGS, CB_GETCURSEL, 0, 0);
+            SendDlgItemMessage(hWnd, IDC_SLICER_PRINTSETTINGS, CB_GETLBTEXT, indx, (LPARAM)print);
+            get_slic3r_config_section("print", print, inifile);
+            strcat_s(cmd, 1024, " --load ");
+            strcat_s(cmd, 1024, inifile);
+
+            strcpy_s(inifile, MAX_PATH, dir);
+            strcat_s(inifile, MAX_PATH, "slicer_settings_filament.ini");
+            indx = SendDlgItemMessage(hWnd, IDC_SLICER_FILAMENT, CB_GETCURSEL, 0, 0);
+            SendDlgItemMessage(hWnd, IDC_SLICER_FILAMENT, CB_GETLBTEXT, indx, (LPARAM)filament);
+            get_slic3r_config_section("filament", filament, inifile);
+            strcat_s(cmd, 1024, " --load ");
+            strcat_s(cmd, 1024, inifile);
+
+            // Build slic3r cmd line and run it. 
+            // TODO? Supply a --center X,Y option to centre the job on the current print bed.
+            strcat_s(cmd, 1024, " ");
+            strcat_s(cmd, 1024, filename);
+            run_slicer(slicer_exe[slicer_index], cmd, dir);
 
 
 
