@@ -632,15 +632,6 @@ slicer_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             strcat_s(cmd, 1024, filename);
             run_slicer(slicer_exe[slicer_index], cmd, dir);
 
-
-
-
-
-            // Move to print preview
-            
-
-
-
             break;
         }
         break;

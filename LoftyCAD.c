@@ -1682,34 +1682,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 
         auxIdleFunc(DrawCB);
         auxMainLoop(DrawCB);
-#if 0
-        // Toolbar, and get the bottom to position other windows against
-        hWndToolbar = CreateDialog
-        (
-            hInst,
-            MAKEINTRESOURCE(IDD_TOOLBAR),
-            auxGetHWND(),
-            toolbar_dialog
-        );
 
-        SetWindowPos(hWndToolbar, HWND_NOTOPMOST, wWidth, 0, 0, 0, SWP_NOSIZE);
-        if (view_tools)
-            ShowWindow(hWndToolbar, SW_SHOW);
-        GetWindowRect(hWndToolbar, &rect);
-        toolbar_bottom = rect.bottom;
-
-        // Print bed view toolbar
-        hWndPrintPreview = CreateDialog
-        (
-            hInst,
-            MAKEINTRESOURCE(IDD_PRINT_PREVIEW),
-            auxGetHWND(),
-            printer_dialog
-        );
-
-        SetWindowPos(hWndPrintPreview, HWND_NOTOPMOST, wWidth, 0, 0, 0, SWP_NOSIZE);
-        ShowWindow(hWndPrintPreview, SW_HIDE);
-#else
         // Property sheet for the tools and preview tools
         psp[0].dwSize = sizeof(PROPSHEETPAGE);
         psp[0].dwFlags = PSP_USETITLE;
@@ -1760,7 +1733,6 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
             ShowWindow(hWndPropSheet, SW_SHOW);
         GetWindowRect(hWndPropSheet, &rect);
         toolbar_bottom = rect.bottom;
-#endif
 
         // Debug log
         hWndDebug = CreateDialog

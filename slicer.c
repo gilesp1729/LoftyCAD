@@ -718,14 +718,14 @@ get_slic3r_config_section(char* key, char* preset, char *inifile)
     return TRUE;
 }
 
-// Run the slicer and capture its output.
+#define BUFSIZE 4096
+#define PATH_STR "Using an 8.3 path"
+#define OUTPUT_FILE_STR "Exporting G-code to "
+
+// Run the slicer and capture its output. (Courtesy of MS process-read-from-pipe example)
 BOOL
 run_slicer(char* slicer_exe, char* cmd_line, char* dir)
 {
-    #define BUFSIZE 4096 
-
-    //HANDLE g_hChildStd_IN_Rd = NULL;
-    //HANDLE g_hChildStd_IN_Wr = NULL;
     HANDLE g_hChildStd_OUT_Rd = NULL;
     HANDLE g_hChildStd_OUT_Wr = NULL;
 
@@ -736,6 +736,9 @@ run_slicer(char* slicer_exe, char* cmd_line, char* dir)
     BOOL bSuccess = FALSE;
     DWORD dwRead;
     CHAR chBuf[BUFSIZE];
+    char line[256], out_filename[MAX_PATH];
+    char* bufptr, * bufend, *endline;
+    BOOL have_output = FALSE;
 
     // Set the bInheritHandle flag so pipe handles are inherited. 
     saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
@@ -755,11 +758,12 @@ run_slicer(char* slicer_exe, char* cmd_line, char* dir)
 
     // Set up members of the STARTUPINFO structure. 
     // This structure specifies the STDIN and STDOUT handles for redirection.
+    // We only need stdout/err.
     ZeroMemory(&siStartInfo, sizeof(STARTUPINFO));
     siStartInfo.cb = sizeof(STARTUPINFO);
     siStartInfo.hStdError = g_hChildStd_OUT_Wr;
     siStartInfo.hStdOutput = g_hChildStd_OUT_Wr;
-    siStartInfo.hStdInput = NULL; // g_hChildStd_IN_Rd;
+    siStartInfo.hStdInput = NULL;
     siStartInfo.dwFlags |= STARTF_USESTDHANDLES;
 
     // Create the child process. 
@@ -776,31 +780,80 @@ run_slicer(char* slicer_exe, char* cmd_line, char* dir)
         &siStartInfo,  // STARTUPINFO pointer 
         &piProcInfo);  // receives PROCESS_INFORMATION 
 
-     // If an error occurs, exit the application. 
+     // If an error occurs, bail here. 
     if (!bSuccess)
         return FALSE;
 
     // Close handles to the child process and its primary thread.
-    // Some applications might keep these handles to monitor the status
-    // of the child process, for example. 
     CloseHandle(piProcInfo.hProcess);
     CloseHandle(piProcInfo.hThread);
 
-    // Close handles to the stdin and stdout pipes no longer needed by the child process.
-    // If they are not explicitly closed, there is no way to recognize that the child process has ended.
+    // Close handles to the stdout pipes no longer needed by the child process.
     CloseHandle(g_hChildStd_OUT_Wr);
 
-    // Read from pipe until process finishes.
+    // Read from pipe until process finishes. Accumulate characters in a buffer and
+    // log whole lines out up to the last \r\n. Look for the output filename as we go.
+    bufptr = bufend = chBuf;
+    set_progress_range(10);
     for (;;)
     {
-        bSuccess = ReadFile(g_hChildStd_OUT_Rd, chBuf, BUFSIZE, &dwRead, NULL);
+        char* p;
+
+        // Read a small amount at a time (16 chars)
+        bSuccess = ReadFile(g_hChildStd_OUT_Rd, bufend, 16, &dwRead, NULL);
         if (!bSuccess || dwRead == 0) 
             break;
-        chBuf[dwRead] = '\0';
-        Log(chBuf);
+        bufend += dwRead;
+        *bufend = '\0';
+        endline = strrchr(bufptr, '\n');
+        if (endline != NULL)
+        {
+            // Copy the whole line(s) so far, to avoid having to plant \0 in the chBuf
+            endline++;
+            strncpy_s(line, 256, bufptr, endline - bufptr);
+            bufptr = endline;
+
+            // Skip the line that talks about the 8.3 path, as it is not useful
+            if (strstr(line, PATH_STR) == NULL)
+            {
+                Log(line);
+                show_status("", line);
+                bump_progress();
+            }
+
+            // Check for output filename
+            if (!have_output && (p = strstr(line, OUTPUT_FILE_STR)) != NULL)
+            {
+                p += strlen(OUTPUT_FILE_STR);
+                endline = strchr(p, '\r');
+                *endline = '\0';
+                strcpy_s(out_filename, MAX_PATH, p);
+                have_output = TRUE;
+            }
+        }
+    }
+    Log("\r\n");
+    clear_status_and_progress();
+
+    // If we have an output, send it to the print preview. Otherwise, alert via a message box.
+    if (have_output)
+    {
+        purge_zpoly_edges(&gcode_tree);
+        if (!read_gcode_to_group(&gcode_tree, out_filename))
+        {
+            MessageBox(hWndSlicer, "Slic3r output was not found", out_filename, MB_OK | MB_ICONWARNING);
+            return FALSE;
+        }
+        invalidate_dl();
+        SendMessage(hWndPropSheet, PSM_SETCURSEL, 2, 0);  // select printer tab
+    }
+    else
+    {
+        MessageBox(hWndSlicer, chBuf, "Slic3r failure", MB_OK | MB_ICONWARNING);
     }
 
     return TRUE;
+
     // old code
     // ShellExecute(hWndSlicer, "open", slicer_exe[slicer_index], cmd, dir, SW_SHOW);
 }

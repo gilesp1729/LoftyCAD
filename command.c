@@ -249,7 +249,7 @@ Command(int message, int wParam, int lParam)
             purge_zpoly_edges(&gcode_tree);
             rc = read_gcode_to_group(&gcode_tree, new_filename);
             invalidate_dl();
-            SendMessage(hWndPropSheet, PSM_SETCURSEL, 1, 0);  // select printer tab
+            SendMessage(hWndPropSheet, PSM_SETCURSEL, 2, 0);  // select printer tab
             break;
         }
         if (i < 5)
