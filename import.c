@@ -956,6 +956,8 @@ read_gcode_to_group(Group* group, char* filename)
     ZPolyEdge* edge = NULL;
     BOOL new_edge = FALSE;
 
+    group->fil_used[0] = '\0';
+    group->est_print[0] = '\0';
     nexttok = NULL;
     fopen_s(&f, filename, "rt");
     if (f == NULL)
@@ -1007,6 +1009,25 @@ read_gcode_to_group(Group* group, char* filename)
                     continue;
                 tok = strtok_s(NULL, " \t\n", &nexttok);
                 layer_height = (float)atof(tok);
+            }
+            else if (strcmp(tok, "filament") == 0 && group->fil_used[0] == '\0')
+            {
+                // Extract estimated time to print and filament used from comments.
+                tok = strtok_s(NULL, "\n", &nexttok);
+                if (tok != NULL)
+                {
+                    strcpy_s(group->fil_used, 80, "Filament ");
+                    strcat_s(group->fil_used, 80, tok);
+                }
+            }
+            else if (strcmp(tok, "estimated") == 0 && group->est_print[0] == '\0')
+            {
+                tok = strtok_s(NULL, "\n", &nexttok);
+                if (tok != NULL)
+                {
+                    strcpy_s(group->est_print, 80, "Estimated ");
+                    strcat_s(group->est_print, 80, tok);
+                }
             }
             continue;
         }

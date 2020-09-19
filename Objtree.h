@@ -385,6 +385,8 @@ typedef struct Group
     int             n_members;      // The number of top-level objects in the group.
     float           xoffset;        // Offset of G-code group to origin (used to translate between
     float           yoffset;        // LCD and printer coordinates)
+    char            fil_used[80];   // String describing the filament use of aG-code group
+    char            est_print[80];  // String describing the estimated print time of a G-code group
     char            title[256];     // A name for the group
     Mesh            *mesh;          // Mesh for the complete group
     BOOL            mesh_valid;     // If TRUE, the mesh is up to date (but not necessarily complete)

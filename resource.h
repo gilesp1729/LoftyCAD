@@ -155,10 +155,13 @@
 #define IDC_SLICER_LAYERHEIGHT          1049
 #define IDC_SLICER_INFILL               1050
 #define IDB_SLICER_GUI                  1051
-#define IDB_SLICER_SLICE2               1052
 #define IDB_SLICER_SLICE_EXISTING       1052
 #define IDC_PREFS_FIND_SLICERS          1054
 #define IDC_STATIC_SLICER               1057
+#define IDC_PRINT_FILENAME              1059
+#define IDC_PRINT_FIL_USED              1060
+#define IDC_PRINT_FIL_USED2             1061
+#define IDC_PRINT_EST_PRINT             1061
 #define IDD_PRINT_PREVIEW               1544
 #define IDD_SLICER                      1545
 #define ID_FILE_NEW                     32774
@@ -302,7 +305,7 @@
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        164
 #define _APS_NEXT_COMMAND_VALUE         32921
-#define _APS_NEXT_CONTROL_VALUE         1058
+#define _APS_NEXT_CONTROL_VALUE         1060
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif

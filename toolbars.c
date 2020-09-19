@@ -599,14 +599,14 @@ slicer_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             *(slosh + 1) = '\0';
 
             // Open the ini files for writing and fill them from the selected presets.
-            // Separate ini files are used as there many be duplicates between sections
+            // Separate ini files are used as there may be duplicates between sections
             strcpy_s(inifile, MAX_PATH, dir);
             strcat_s(inifile, MAX_PATH, "slicer_settings_printer.ini");
             indx = SendDlgItemMessage(hWnd, IDC_SLICER_PRINTER, CB_GETCURSEL, 0, 0);
             SendDlgItemMessage(hWnd, IDC_SLICER_PRINTER, CB_GETLBTEXT, indx, (LPARAM)printer);
             get_slic3r_config_section("printer", printer, inifile);
             
-            // Add load option to slic3r cmd line
+            // Add load options to slic3r cmd line for settings
             strcpy_s(cmd, 1024, " --load ");
             strcat_s(cmd, 1024, inifile);
 
@@ -626,9 +626,8 @@ slicer_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             strcat_s(cmd, 1024, " --load ");
             strcat_s(cmd, 1024, inifile);
 
-            // Build slic3r cmd line and run it. 
-            // TODO? Supply a --center X,Y option to centre the job on the current print bed.
-            strcat_s(cmd, 1024, " ");
+            // Build slic3r cmd line and run it. Centre it on the current print bed dimensions.
+            strcat_s(cmd, 1024, " --print-center 125,100 ");
             strcat_s(cmd, 1024, filename);
             run_slicer(slicer_exe[slicer_index], cmd, dir);
 

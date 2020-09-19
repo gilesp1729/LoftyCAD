@@ -713,6 +713,12 @@ get_slic3r_config_section(char* key, char* preset, char *inifile)
         if (s->keyval[i].override)
             continue;
         fprintf_s(ini, "%s\n", s->keyval[i].key);
+
+        // TODO: Extract bed min/max.
+
+
+
+
     }
     fclose(ini);
     return TRUE;
@@ -846,6 +852,9 @@ run_slicer(char* slicer_exe, char* cmd_line, char* dir)
         }
         invalidate_dl();
         SendMessage(hWndPropSheet, PSM_SETCURSEL, 2, 0);  // select printer tab
+        SendDlgItemMessage(hWndPrintPreview, IDC_PRINT_FILENAME, WM_SETTEXT, 0, (LPARAM)out_filename);
+        SendDlgItemMessage(hWndPrintPreview, IDC_PRINT_FIL_USED, WM_SETTEXT, 0, (LPARAM)gcode_tree.fil_used);
+        SendDlgItemMessage(hWndPrintPreview, IDC_PRINT_EST_PRINT, WM_SETTEXT, 0, (LPARAM)gcode_tree.est_print);
     }
     else
     {
