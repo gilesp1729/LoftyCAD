@@ -485,6 +485,7 @@ slicer_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     int indx;
     char* slosh, *pdot;
     char inifile[MAX_PATH];
+    char option[80];
 
     switch (msg)
     {
@@ -520,10 +521,8 @@ slicer_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 read_slic3r_config("print", IDC_SLICER_PRINTSETTINGS, printer);
                 read_slic3r_config("filament", IDC_SLICER_FILAMENT, printer);
 
-                // TODO pull out bed shape and set the size and centre of the bed
-
-
-
+                // Pull out bed shape from cached printer section
+                set_bed_shape(printer);
                 break;
 
             case CBN_KILLFOCUS:
@@ -627,7 +626,13 @@ slicer_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             strcat_s(cmd, 1024, inifile);
 
             // Build slic3r cmd line and run it. Centre it on the current print bed dimensions.
-            strcat_s(cmd, 1024, " --print-center 125,100 ");
+            // TODO: Put in other overrides here as options.
+            // PROBLEM - this gets done on defaults before the gcode is read?
+            sprintf_s(option, 80, " --print-center %d,%d ",
+                (int)(bed_xmax - bed_xmin) / 2,
+                (int)(bed_ymax - bed_ymin) / 2);
+
+            strcat_s(cmd, 1024, option);
             strcat_s(cmd, 1024, filename);
             run_slicer(slicer_exe[slicer_index], cmd, dir);
 

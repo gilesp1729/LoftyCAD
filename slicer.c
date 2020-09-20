@@ -33,6 +33,10 @@ typedef struct InhSection
 {
     char        sect_name[SECT_NAME_SIZE];      // The original name of the section from the ini file.
     int         n_keyvals;                      // Number of key/value pairs.
+    float       bed_xmin;                       // The bed size for a printer section
+    float       bed_xmax;
+    float       bed_ymin;
+    float       bed_ymax;
     InhString   keyval[MAX_KEYVALS];            // Key/value pairs inside the section_string.
     char        section_string[MAX_SECT_SIZE];  // Null-separated raw string, returned from GetPrivateProfileSection.
 } InhSection;
@@ -420,6 +424,12 @@ load_section(char *ini, char *key, char* sect)
                     n++;
                 }
 
+                // Copy any bed size inherited from the section we just read
+                s->bed_xmin = inhs->bed_xmin;
+                s->bed_xmax = inhs->bed_xmax;
+                s->bed_ymin = inhs->bed_ymin;
+                s->bed_ymax = inhs->bed_ymax;
+
                 // See if there are any more sections to be inherited from.
                 inh = strtok_s(NULL, ";", &ctxt);
             }
@@ -436,6 +446,27 @@ load_section(char *ini, char *key, char* sect)
                     break;
                 }
             }
+
+            // Extract bed min/max from the section if it exists.
+            if (strncmp(s->keyval[n].key, "bed_shape", 9) == 0)
+            {
+                char* nexttok = NULL;
+                char* tok;
+                char bed_str[256];
+
+                strcpy_s(bed_str, 256, s->keyval[n].value);
+                tok = strtok_s(bed_str, "x, \t\n", &nexttok);      // 0x0
+                s->bed_xmin = (float)atof(tok);
+                tok = strtok_s(NULL, "x, \t\n", &nexttok);
+                s->bed_ymin = (float)atof(tok);
+
+                tok = strtok_s(NULL, ", \t\n", &nexttok);       // 250x0 (skip)
+                tok = strtok_s(NULL, "x, \t\n", &nexttok);      // 250x210
+                s->bed_xmax = (float)atof(tok);
+                tok = strtok_s(NULL, "x, \t\n", &nexttok);
+                s->bed_ymax = (float)atof(tok);
+            }
+
             n++;
         }
     }
@@ -451,6 +482,26 @@ load_section(char *ini, char *key, char* sect)
         cache[n_cache++] = s;
 
     return s;
+}
+
+// Set the bed shape for a printer
+void
+set_bed_shape(char* printer)
+{
+    InhSection* s;
+    char vendor[MAX_PATH];
+    
+    strcpy_s(vendor, MAX_PATH, slicer_config[config_index]);
+    strcat_s(vendor, MAX_PATH, VENDOR_INI_FILE);
+    s = load_section(vendor, "printer", printer);
+
+    if (s->bed_xmax > s->bed_xmin)
+    {
+        bed_xmin = s->bed_xmin;
+        bed_xmax = s->bed_xmax;
+        bed_ymin = s->bed_ymin;
+        bed_ymax = s->bed_ymax;
+    }
 }
 
 // Read Slic3r configuration and populate allowable printers, print settings and filament settings
@@ -475,6 +526,7 @@ read_slic3r_config(char* key, int dlg_item, char *sel_printer)
     char key_colon[64];
     int klen;
     char model_str[SECT_NAME_SIZE];
+    char bed_str[256];
     char* e;
 
     // Clear the combo
@@ -521,6 +573,26 @@ read_slic3r_config(char* key, int dlg_item, char *sel_printer)
                     len = strlen(p);
                     s->keyval[n].key = p;
                     s->keyval[n].value = strchr(p, '=');
+
+                    // Extract bed min/max from the section if it exists.
+                    if (strncmp(s->keyval[n].key, "bed_shape", 9) == 0)
+                    {
+                        char* nexttok = NULL;
+                        char* tok;
+
+                        strcpy_s(bed_str, 256, s->keyval[n].value);
+                        tok = strtok_s(bed_str, "x, \t\n", &nexttok);      // 0x0
+                        s->bed_xmin = (float)atof(tok);
+                        tok = strtok_s(NULL, "x, \t\n", &nexttok);
+                        s->bed_ymin = (float)atof(tok);
+
+                        tok = strtok_s(NULL, ", \t\n", &nexttok);       // 250x0 (skip)
+                        tok = strtok_s(NULL, "x, \t\n", &nexttok);      // 250x210
+                        s->bed_xmax = (float)atof(tok);
+                        tok = strtok_s(NULL, "x, \t\n", &nexttok);
+                        s->bed_ymax = (float)atof(tok);
+                    }
+
                     n++;
                     p += len;
                     *(p - 1) = '\0';    // overwrite the '\n' left by fgets
@@ -627,6 +699,9 @@ read_slic3r_config(char* key, int dlg_item, char *sel_printer)
 
             // Return the selected printer name
             strcpy_s(sel_printer, 64, name);
+
+            // Set the bed shape
+            set_bed_shape(name);
         }
     }
     else   // print or filament.
@@ -713,12 +788,6 @@ get_slic3r_config_section(char* key, char* preset, char *inifile)
         if (s->keyval[i].override)
             continue;
         fprintf_s(ini, "%s\n", s->keyval[i].key);
-
-        // TODO: Extract bed min/max.
-
-
-
-
     }
     fclose(ini);
     return TRUE;
@@ -765,12 +834,14 @@ run_slicer(char* slicer_exe, char* cmd_line, char* dir)
     // Set up members of the STARTUPINFO structure. 
     // This structure specifies the STDIN and STDOUT handles for redirection.
     // We only need stdout/err.
+    // Keep console window hidden (progress and status will show instead)
     ZeroMemory(&siStartInfo, sizeof(STARTUPINFO));
     siStartInfo.cb = sizeof(STARTUPINFO);
     siStartInfo.hStdError = g_hChildStd_OUT_Wr;
     siStartInfo.hStdOutput = g_hChildStd_OUT_Wr;
     siStartInfo.hStdInput = NULL;
-    siStartInfo.dwFlags |= STARTF_USESTDHANDLES;
+    siStartInfo.wShowWindow = SW_HIDE;
+    siStartInfo.dwFlags |= STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
 
     // Create the child process. 
     bSuccess = CreateProcess
