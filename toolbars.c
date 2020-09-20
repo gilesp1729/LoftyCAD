@@ -320,20 +320,20 @@ printer_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
         if (print_zmin <= 0 && print_zmax >= 9999)
         {
-            SendDlgItemMessage(hWnd, IDC_PRINTER_ZFROM, WM_ENABLE, 0, 0);
-            SendDlgItemMessage(hWnd, IDC_PRINTER_ZTO, WM_ENABLE, 0, 0);
+            EnableWindow(GetDlgItem(hWnd, IDC_PRINTER_ZFROM), FALSE);
+            EnableWindow(GetDlgItem(hWnd, IDC_PRINTER_ZTO), FALSE);
             SendDlgItemMessage(hWnd, IDC_PRINTER_FULL, BM_CLICK, 0, 0);
         }
         else if (print_zmin == print_zmax)
         {
-            SendDlgItemMessage(hWnd, IDC_PRINTER_ZFROM, WM_ENABLE, 1, 0);
-            SendDlgItemMessage(hWnd, IDC_PRINTER_ZTO, WM_ENABLE, 0, 0);
+            EnableWindow(GetDlgItem(hWnd, IDC_PRINTER_ZFROM), TRUE);
+            EnableWindow(GetDlgItem(hWnd, IDC_PRINTER_ZTO), FALSE);
             SendDlgItemMessage(hWnd, IDC_PRINTER_LAYER, BM_CLICK, 0, 0);
         }
         else
         {
-            SendDlgItemMessage(hWnd, IDC_PRINTER_ZFROM, WM_ENABLE, 1, 0);
-            SendDlgItemMessage(hWnd, IDC_PRINTER_ZTO, WM_ENABLE, 1, 0);
+            EnableWindow(GetDlgItem(hWnd, IDC_PRINTER_ZFROM), TRUE);
+            EnableWindow(GetDlgItem(hWnd, IDC_PRINTER_ZTO), TRUE);
             SendDlgItemMessage(hWnd, IDC_PRINTER_UPTO, BM_CLICK, 0, 0);
         }
         break;
@@ -344,24 +344,24 @@ printer_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             switch (LOWORD(wParam))
             {
             case IDC_PRINTER_FULL:
-                SendDlgItemMessage(hWnd, IDC_PRINTER_ZFROM, WM_ENABLE, 0, 0);
-                SendDlgItemMessage(hWnd, IDC_PRINTER_ZTO, WM_ENABLE, 0, 0);
+                EnableWindow(GetDlgItem(hWnd, IDC_PRINTER_ZFROM), FALSE);
+                EnableWindow(GetDlgItem(hWnd, IDC_PRINTER_ZTO), FALSE);
                 print_zmin = 0;
                 print_zmax = 9999;
                 invalidate_dl();
                 break;
 
             case IDC_PRINTER_LAYER:
-                SendDlgItemMessage(hWnd, IDC_PRINTER_ZFROM, WM_ENABLE, 1, 0);
-                SendDlgItemMessage(hWnd, IDC_PRINTER_ZTO, WM_ENABLE, 0, 0);
+                EnableWindow(GetDlgItem(hWnd, IDC_PRINTER_ZFROM), TRUE);
+                EnableWindow(GetDlgItem(hWnd, IDC_PRINTER_ZTO), FALSE);
                 SendDlgItemMessage(hWnd, IDC_PRINTER_ZFROM, WM_GETTEXT, 16, (LPARAM)buf);
                 print_zmin = print_zmax = (float)atof(buf);
                 invalidate_dl();
                 break;
 
             case IDC_PRINTER_UPTO:
-                SendDlgItemMessage(hWnd, IDC_PRINTER_ZFROM, WM_ENABLE, 1, 0);
-                SendDlgItemMessage(hWnd, IDC_PRINTER_ZTO, WM_ENABLE, 1, 0);
+                EnableWindow(GetDlgItem(hWnd, IDC_PRINTER_ZFROM), TRUE);
+                EnableWindow(GetDlgItem(hWnd, IDC_PRINTER_ZTO), TRUE);
                 SendDlgItemMessage(hWnd, IDC_PRINTER_ZFROM, WM_GETTEXT, 16, (LPARAM)buf);
                 print_zmin = (float)atof(buf);
                 SendDlgItemMessage(hWnd, IDC_PRINTER_ZTO, WM_GETTEXT, 16, (LPARAM)buf);
