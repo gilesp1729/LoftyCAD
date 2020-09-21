@@ -538,7 +538,7 @@ slicer_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             break;
 
         case IDB_SLICER_GUI:
-            // TODO: support running slic3r GUI here
+            ShellExecute(hWndSlicer, "open", slicer_exe[slicer_index], NULL, NULL, SW_SHOW);
             break;
 
         case IDB_SLICER_SLICE_EXISTING:

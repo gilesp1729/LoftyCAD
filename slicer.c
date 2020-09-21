@@ -933,7 +933,4 @@ run_slicer(char* slicer_exe, char* cmd_line, char* dir)
     }
 
     return TRUE;
-
-    // old code
-    // ShellExecute(hWndSlicer, "open", slicer_exe[slicer_index], cmd, dir, SW_SHOW);
 }
