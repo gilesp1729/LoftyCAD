@@ -188,8 +188,8 @@ extern Material materials[MAX_MATERIAL];
 #define ID_STATUSBAR    99940
 
 // Slicer stuff
-#define NUM_SLICER_LOCATIONS    4
-#define NUM_CONFIG_LOCATIONS    2
+#define NUM_SLICER_LOCATIONS    6
+#define NUM_CONFIG_LOCATIONS    3
 #define MAX_SLICERS             8
 extern char slicer_exe[MAX_SLICERS][MAX_PATH];
 extern char slicer_config[MAX_SLICERS][MAX_PATH];
