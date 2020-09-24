@@ -627,8 +627,10 @@ slicer_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
             // Build slic3r cmd line and run it. Centre it on the current print bed dimensions.
             // TODO: Put in other overrides here as options.
-            // PROBLEM - this gets done on defaults before the gcode is read?
-            sprintf_s(option, 80, " --print-center %d,%d ",
+            
+            // PROBLEM - --print-center for slic3r and slic3rPE, but --center for PrusaSlicer
+            //sprintf_s(option, 80, " --print-center %d,%d ",  // slic3r, slic3rPE
+            sprintf_s(option, 80, " -g --center %d,%d ",        // PrusaSlicer
                 (int)(bed_xmax - bed_xmin) / 2,
                 (int)(bed_ymax - bed_ymin) / 2);
 

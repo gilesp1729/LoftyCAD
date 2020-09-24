@@ -879,7 +879,11 @@ run_slicer(char* slicer_exe, char* cmd_line, char* dir)
     siStartInfo.wShowWindow = SW_HIDE;
     siStartInfo.dwFlags |= STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
 
-    // Create the child process. 
+    // Create the child process. Log stuff.
+    Log(slicer_exe);
+    Log("\r\n");
+    Log(cmd_line);
+    Log("\r\n");
     bSuccess = CreateProcess
     (
         slicer_exe,    // application name

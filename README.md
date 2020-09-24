@@ -37,10 +37,16 @@ In particular, it will:
 - Import STL, AMF, OBJ, and OFF to groups containing meshes as volumes
 - Import G-code files and visualise G-code
 
+# Slic3r integration
+- Integrates with Prusa Slic3rPE 1.41 and vanilla Slic3r
+- Slice to G-code and preview
+
 # Works in progress
-- Integrate with Slic3r (or PrusaSlicer) and directly print to a connected printer
+- PrusaSlicer 2.x integration (pending command line problems)
+- Multi-material slicing
+- Directly print to a USB or serial connected printer
 - Allow manipulation of triangle meshes: smooth extrusion, refinement, and more
-- Lofting (a nod to the original Lofty, which is LoftyCAD's spiritual ancestor)
+- Tubing and lofting (a nod to the original Lofty, LoftyCAD's spiritual ancestor)
 
 # Installing LoftyCAD from the prebuilt installer
 Unzip the zip in the Installer directory, to any directory on the Windows system (c:\Program Files (x86) is the standard place for 32-bit programs). The install.bat file will do this (run as administrator!), register the file associations, and create a desktop link.
