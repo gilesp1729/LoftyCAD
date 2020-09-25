@@ -538,7 +538,7 @@ slicer_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             break;
 
         case IDB_SLICER_GUI:
-            ShellExecute(hWndSlicer, "open", slicer_exe[slicer_index], NULL, NULL, SW_SHOW);
+            ShellExecute(hWndSlicer, "open", slicer_exe[slicer_index].exe, NULL, NULL, SW_SHOW);
             break;
 
         case IDB_SLICER_SLICE_EXISTING:
@@ -627,16 +627,13 @@ slicer_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
             // Build slic3r cmd line and run it. Centre it on the current print bed dimensions.
             // TODO: Put in other overrides here as options.
-            
-            // PROBLEM - --print-center for slic3r and slic3rPE, but --center for PrusaSlicer
-            //sprintf_s(option, 80, " --print-center %d,%d ",  // slic3r, slic3rPE
-            sprintf_s(option, 80, " -g --center %d,%d ",        // PrusaSlicer
+            sprintf_s(option, 80, slicer_cmd[slicer_config[config_index].type],
                 (int)(bed_xmax - bed_xmin) / 2,
                 (int)(bed_ymax - bed_ymin) / 2);
 
             strcat_s(cmd, 1024, option);
             strcat_s(cmd, 1024, filename);
-            run_slicer(slicer_exe[slicer_index], cmd, dir);
+            run_slicer(slicer_exe[slicer_index].exe, cmd, dir);
 
             break;
         }

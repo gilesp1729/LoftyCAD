@@ -41,13 +41,9 @@ typedef struct InhSection
     char        section_string[MAX_SECT_SIZE];  // Null-separated raw string, returned from GetPrivateProfileSection.
 } InhSection;
 
-// What kind of slicer we are dealing with
-typedef enum
-{
-    SLIC_VANILLA,
-    SLIC_SLIC3RPE,
-    SLIC_PRUSA
-} SLICER;
+// Slicer and config fixed arrays
+#define NUM_SLICER_LOCATIONS    6
+#define NUM_CONFIG_LOCATIONS    3
 
 // Location structure used for executables and ini files. Allows marking any location 
 // as PrusaSlicer, Slic3rPE, or Slic3r to discourage accidentally pointing a slicer at
@@ -59,7 +55,6 @@ typedef struct Location
     SLICER      type;                           // What kind of slicer it is
 } Location;
 
-
 // List of locations to look for Slic3r. If PrusaSlicer is installed, assume that takes priority
 // over vanilla slic3r. The leading backslash allows cat'ing with the program files directory.
 // Have (x86) versions here too.
@@ -67,25 +62,33 @@ typedef struct Location
 Location slic3r_locations[NUM_SLICER_LOCATIONS] =
 {
     {"\\Prusa3D\\PrusaSlicer",      "prusa-slicer-console.exe", SLIC_PRUSA},
-    {"\\Prusa3D\\Slic3rPE",         "slic3r-console.exe",       SLIC_SLIC3RPE},
-    {"\\Slic3r*",                   "slic3r-console.exe",       SLIC_VANILLA},
+    {"\\Prusa3D\\Slic3rPE",         "slic3r-console.exe",       SLIC_SLIC3R},
+    {"\\Slic3r*",                   "slic3r-console.exe",       SLIC_SLIC3R},
     {" (x86)\\Prusa3D\\PrusaSlicer","prusa-slicer-console.exe", SLIC_PRUSA},
-    {" (x86)\\Prusa3D\\Slic3rPE",   "slic3r-console.exe",       SLIC_SLIC3RPE},
-    {" (x86)\\Slic3r*",             "slic3r-console.exe",       SLIC_VANILLA}
+    {" (x86)\\Prusa3D\\Slic3rPE",   "slic3r-console.exe",       SLIC_SLIC3R},
+    {" (x86)\\Slic3r*",             "slic3r-console.exe",       SLIC_SLIC3R}
 };
 
 // List of possible locations for config files under Application Data. No wildcards.
 Location config_locations[NUM_CONFIG_LOCATIONS] =
 {
     {"\\PrusaSlicer",                "PrusaSlicer.ini", SLIC_PRUSA },
-    {"\\Slic3rPE",                   "slic3r.ini",      SLIC_SLIC3RPE},
-    {"\\Slic3r",                     "slic3r.ini",      SLIC_VANILLA}
+    {"\\Slic3rPE",                   "slic3r.ini",      SLIC_SLIC3R},
+    {"\\Slic3r",                     "slic3r.ini",      SLIC_SLIC3R}
 };
 
+// Command sets (a sprintf string that takes the bed centre as two floats)
+// Indexed by slicer type
+char slicer_cmd[MAX_TYPES][80] =
+{
+    " --print-center %d,%d ",                       // For vanilla slic3r and slic3rPE
+    " -g --center %d,%d "                           // For PrusaSlicer
+};
+
+
 // Arrays of exe and config names, and the index to the current one of each.
-char slicer_exe[MAX_SLICERS][MAX_PATH];
-char slicer_config[MAX_SLICERS][MAX_PATH];
-char slicer_config_ini[MAX_SLICERS][MAX_PATH];
+SlicerExe slicer_exe[MAX_SLICERS];
+SlicerConfig slicer_config[MAX_SLICERS];
 int slicer_index = 0;
 int config_index = 0;
 int num_slicers = 0;
@@ -128,8 +131,8 @@ load_slic3r_exe_and_config()
     slicer_index = 0;
     config_index = 0;
 
-    slicer_exe[0][0] = '\0';
-    slicer_config[0][0] = '\0';
+    slicer_exe[0].exe[0] = '\0';
+    slicer_config[0].dir[0] = '\0';
 
     for (i = 0; i < MAX_SLICERS; i++)
     {
@@ -138,7 +141,7 @@ load_slic3r_exe_and_config()
         if (RegQueryValueEx(hkey, location, 0, NULL, str, &len) != ERROR_SUCCESS)
             break;
         rc = TRUE;
-        strcpy_s(slicer_exe[i], MAX_PATH, str);
+        strcpy_s(slicer_exe[i].exe, MAX_PATH, str);
 
         num_slicers++;
     }
@@ -157,13 +160,18 @@ load_slic3r_exe_and_config()
         len = MAX_PATH;
         if (RegQueryValueEx(hkey, location, 0, NULL, str, &len) != ERROR_SUCCESS)
             break;
-        strcpy_s(slicer_config[i], MAX_PATH, str);
+        strcpy_s(slicer_config[i].dir, MAX_PATH, str);
 
         sprintf_s(location, 32, "ConfigIni%d", i);
         len = MAX_PATH;
         if (RegQueryValueEx(hkey, location, 0, NULL, str, &len) != ERROR_SUCCESS)
             break;
-        strcpy_s(slicer_config_ini[i], MAX_PATH, str);
+        strcpy_s(slicer_config[i].ini, MAX_PATH, str);
+
+        sprintf_s(location, 32, "ConfigType%d", i);
+        len = 4;
+        if (RegQueryValueEx(hkey, location, 0, NULL, (LPBYTE)&slicer_config[i].type, &len) != ERROR_SUCCESS)
+            break;
 
         num_configs++;
     }
@@ -191,7 +199,7 @@ save_slic3r_exe_and_config()
     for (i = 0; i < num_slicers; i++)
     {
         sprintf_s(location, 32, "Location%d", i);
-        RegSetValueEx(hkey, location, 0, REG_SZ, slicer_exe[i], strlen(slicer_exe[i]) + 1);
+        RegSetValueEx(hkey, location, 0, REG_SZ, slicer_exe[i].exe, strlen(slicer_exe[i].exe) + 1);
     }
     for (; i < MAX_SLICERS; i++)        // clear out any old ones beyond the num
     {
@@ -202,15 +210,19 @@ save_slic3r_exe_and_config()
     for (i = 0; i < num_configs; i++)
     {
         sprintf_s(location, 32, "ConfigDir%d", i);
-        RegSetValueEx(hkey, location, 0, REG_SZ, slicer_config[i], strlen(slicer_config[i]) + 1);
+        RegSetValueEx(hkey, location, 0, REG_SZ, slicer_config[i].dir, strlen(slicer_config[i].dir) + 1);
         sprintf_s(location, 32, "ConfigIni%d", i);
-        RegSetValueEx(hkey, location, 0, REG_SZ, slicer_config_ini[i], strlen(slicer_config_ini[i]) + 1);
+        RegSetValueEx(hkey, location, 0, REG_SZ, slicer_config[i].ini, strlen(slicer_config[i].ini) + 1);
+        sprintf_s(location, 32, "ConfigType%d", i);
+        RegSetValueEx(hkey, location, 0, REG_DWORD, (PBYTE)&slicer_config[i].type, 4);
     }
     for (; i < MAX_SLICERS; i++)        // clear out any old ones beyond the num
     {
         sprintf_s(location, 32, "ConfigDir%d", i);
         RegDeleteKeyValue(hkey, NULL, location);
         sprintf_s(location, 32, "ConfigIni%d", i);
+        RegDeleteKeyValue(hkey, NULL, location);
+        sprintf_s(location, 32, "ConfigType%d", i);
         RegDeleteKeyValue(hkey, NULL, location);
     }
 
@@ -286,7 +298,7 @@ find_slic3r_exe_and_config()
             if (f != INVALID_HANDLE_VALUE)
             {
                 // Found one - store it away filename and all.
-                strcpy_s(slicer_exe[num_slicers++], MAX_PATH, filename);
+                strcpy_s(slicer_exe[num_slicers++].exe, MAX_PATH, filename);
                 rc = TRUE;
                 CloseHandle(f);
             }
@@ -313,8 +325,9 @@ find_slic3r_exe_and_config()
         if (f != INVALID_HANDLE_VALUE)
         {
             // Found it. The directory and target ini file are stored separately.
-            strcpy_s(slicer_config_ini[num_configs], MAX_PATH, config_locations[i].target);
-            strcpy_s(slicer_config[num_configs++], MAX_PATH, location);
+            slicer_config[num_configs].type = config_locations[i].type;
+            strcpy_s(slicer_config[num_configs].ini, MAX_PATH, config_locations[i].target);
+            strcpy_s(slicer_config[num_configs++].dir, MAX_PATH, location);
             CloseHandle(f);
         }
     }
@@ -526,7 +539,7 @@ set_bed_shape(char* printer)
     InhSection* s;
     char vendor[MAX_PATH];
     
-    strcpy_s(vendor, MAX_PATH, slicer_config[config_index]);
+    strcpy_s(vendor, MAX_PATH, slicer_config[config_index].dir);
     strcat_s(vendor, MAX_PATH, VENDOR_INI_FILE);
     s = load_section(vendor, "printer", printer);
 
@@ -568,7 +581,7 @@ read_slic3r_config(char* key, int dlg_item, char *sel_printer)
     SendDlgItemMessage(hWndSlicer, dlg_item, CB_RESETCONTENT, 0, 0);
 
     // Look for user preset(s) in complete files, of the form <ConfigDir>\<key>\<preset>.ini
-    strcpy_s(dir, MAX_PATH, slicer_config[config_index]);
+    strcpy_s(dir, MAX_PATH, slicer_config[config_index].dir);
     strcat_s(dir, MAX_PATH, "\\");
     strcat_s(dir, MAX_PATH, key);
     strcpy_s(filename, MAX_PATH, dir);
@@ -648,13 +661,13 @@ read_slic3r_config(char* key, int dlg_item, char *sel_printer)
     }
 
     // Find slic3r.ini (or PrusaSlicer.ini, or whatever it is)
-    strcpy_s(dir, MAX_PATH, slicer_config[config_index]);
+    strcpy_s(dir, MAX_PATH, slicer_config[config_index].dir);
     strcpy_s(ini, MAX_PATH, dir);
     strcat_s(ini, MAX_PATH, "\\");
-    strcat_s(ini, MAX_PATH, slicer_config_ini[config_index]);
+    strcat_s(ini, MAX_PATH, slicer_config[config_index].ini);
 
     // Find possible vendor file
-    strcpy_s(vendor, MAX_PATH, slicer_config[config_index]);
+    strcpy_s(vendor, MAX_PATH, slicer_config[config_index].dir);
     strcat_s(vendor, MAX_PATH, VENDOR_INI_FILE);
 
     // Look for printer, print or filament presets. Printer must be called first.
@@ -805,7 +818,7 @@ get_slic3r_config_section(char* key, char* preset, char *inifile)
 
     // Find possible vendor file and load the section.
     // (User preset sections will always be in the cache, and will ignore the filename)
-    strcpy_s(vendor, MAX_PATH, slicer_config[config_index]);
+    strcpy_s(vendor, MAX_PATH, slicer_config[config_index].dir);
     strcat_s(vendor, MAX_PATH, VENDOR_INI_FILE);
     s = load_section(vendor, key, preset);
     if (s == NULL || s->n_keyvals == 0)

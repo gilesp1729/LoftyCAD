@@ -1471,9 +1471,9 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         SendDlgItemMessage(hWnd, IDC_PREFS_SLICER_EXE, CB_RESETCONTENT, 0, 0);
         SendDlgItemMessage(hWnd, IDC_PREFS_SLICER_CONFIG, CB_RESETCONTENT, 0, 0);
         for (i = 0; i < num_slicers; i++)
-            SendDlgItemMessage(hWnd, IDC_PREFS_SLICER_EXE, CB_INSERTSTRING, i, (LPARAM)slicer_exe[i]);
+            SendDlgItemMessage(hWnd, IDC_PREFS_SLICER_EXE, CB_INSERTSTRING, i, (LPARAM)slicer_exe[i].exe);
         for (i = 0; i < num_configs; i++)
-            SendDlgItemMessage(hWnd, IDC_PREFS_SLICER_CONFIG, CB_INSERTSTRING, i, (LPARAM)slicer_config[i]);
+            SendDlgItemMessage(hWnd, IDC_PREFS_SLICER_CONFIG, CB_INSERTSTRING, i, (LPARAM)slicer_config[i].dir);
         SendDlgItemMessage(hWnd, IDC_PREFS_SLICER_EXE, CB_SETCURSEL, slicer_index, 0);
         SendDlgItemMessage(hWnd, IDC_PREFS_SLICER_CONFIG, CB_SETCURSEL, config_index, 0);
         break;
@@ -1579,7 +1579,7 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                         i = MAX_SLICERS - 1;
                     if (i >= num_slicers)
                         num_slicers = i + 1;
-                    strcpy_s(slicer_exe[i], MAX_PATH, location);
+                    strcpy_s(slicer_exe[i].exe, MAX_PATH, location);
                     slicer_index = i;
                     index_changed = TRUE;
                     slicer_changed = FALSE;
@@ -1609,7 +1609,12 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                         i = MAX_SLICERS - 1;
                     if (i >= num_configs)
                         num_configs = i + 1;
-                    strcpy_s(slicer_config[i], MAX_PATH, location);
+                    strcpy_s(slicer_config[i].dir, MAX_PATH, location);
+
+                    // TODO: Save the ini file and slicer type here somehow. (find the ini file itself?)
+                    // Remembering it could be a user-specified dir and ini.
+                    // Check box for Prusa-type cmd set/ini?
+
                     config_index = i;
                     index_changed = TRUE;
                     config_changed = FALSE;

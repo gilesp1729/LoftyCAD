@@ -13,6 +13,7 @@
 #include "dimensions.h"
 #include "registry.h"
 #include "triangulate.h"
+#include "slicer.h"
 
 
 // Version
@@ -186,19 +187,6 @@ extern Material materials[MAX_MATERIAL];
 
 // ID of status bar window
 #define ID_STATUSBAR    99940
-
-// Slicer stuff
-#define NUM_SLICER_LOCATIONS    6
-#define NUM_CONFIG_LOCATIONS    3
-#define MAX_SLICERS             8
-extern char slicer_exe[MAX_SLICERS][MAX_PATH];
-extern char slicer_config[MAX_SLICERS][MAX_PATH];
-extern int slicer_index;
-extern int config_index;
-extern int num_slicers;
-extern int num_configs;
-
-
 
 // Debug stuff
 
