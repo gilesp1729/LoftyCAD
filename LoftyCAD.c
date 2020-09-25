@@ -1440,7 +1440,8 @@ int WINAPI
 prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     char buf[16];
-    char location[MAX_PATH];
+    char location[MAX_PATH], filename[MAX_PATH];
+    FILE* f;
     float new_val;
     int i;
     static BOOL slicer_changed, index_changed, config_changed;
@@ -1602,19 +1603,39 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
             case CBN_KILLFOCUS:
                 if (config_changed)
-                {
+                {                 
+                    char inifiles[2][32] = { "slic3r.ini", "PrusaSlicer.ini" };
+                    SLICER type;
+
+                    // User has typed in a new location.
                     SendDlgItemMessage(hWnd, IDC_PREFS_SLICER_CONFIG, WM_GETTEXT, MAX_PATH, (LPARAM)location);
+
+                    // Check location for the presence of an INI file (slic3r.ini or PrusaSlicer.ini)
+                    // Remember its name, and what kind of slicer it is.
+                    for (type = 0; type < MAX_TYPES; type++)
+                    {
+                        strcpy_s(filename, MAX_PATH, location);
+                        strcat_s(filename, MAX_PATH, "\\");
+                        strcat_s(filename, MAX_PATH, inifiles[type]);
+                        f = CreateFile(filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+                        if (f != INVALID_HANDLE_VALUE)
+                        {
+                            CloseHandle(f);
+                            break;
+                        }
+                    }
+                    if (type == MAX_TYPES)
+                        break;              // no INI file found
+
+                    // Add the location to the list.
                     i = SendDlgItemMessage(hWnd, IDC_PREFS_SLICER_CONFIG, CB_ADDSTRING, 0, (LPARAM)location);
                     if (i >= MAX_SLICERS)
                         i = MAX_SLICERS - 1;
                     if (i >= num_configs)
                         num_configs = i + 1;
                     strcpy_s(slicer_config[i].dir, MAX_PATH, location);
-
-                    // TODO: Save the ini file and slicer type here somehow. (find the ini file itself?)
-                    // Remembering it could be a user-specified dir and ini.
-                    // Check box for Prusa-type cmd set/ini?
-
+                    strcpy_s(slicer_config[i].ini, MAX_PATH, inifiles[type]);
+                    slicer_config[i].type = type;
                     config_index = i;
                     index_changed = TRUE;
                     config_changed = FALSE;
