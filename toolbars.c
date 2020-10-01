@@ -622,12 +622,24 @@ preview_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             {
                 SendDlgItemMessage(hWnd, IDC_PRINTER_ZFROM, WM_GETTEXT, 16, (LPARAM)buf);
                 print_zmin = (float)atof(buf);
+                if (print_zmax < print_zmin)
+                {
+                    print_zmax = print_zmin;
+                    sprintf_s(buf, 16, "%.2f", print_zmax);
+                    SendDlgItemMessage(hWnd, IDC_PRINTER_ZTO, WM_SETTEXT, 0, (LPARAM)buf);
+                }
                 invalidate_dl();
             }
             else if (LOWORD(wParam) == IDC_PRINTER_ZTO)
             {
                 SendDlgItemMessage(hWnd, IDC_PRINTER_ZTO, WM_GETTEXT, 16, (LPARAM)buf);
                 print_zmax = (float)atof(buf);
+                if (print_zmin > print_zmax)
+                {
+                    print_zmin = print_zmax;
+                    sprintf_s(buf, 16, "%.2f", print_zmin);
+                    SendDlgItemMessage(hWnd, IDC_PRINTER_ZFROM, WM_SETTEXT, 0, (LPARAM)buf);
+                }
                 invalidate_dl();
             }
         }

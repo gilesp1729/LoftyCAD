@@ -971,18 +971,18 @@ run_slicer(char* slicer_exe, char* cmd_line, char* dir)
         purge_zpoly_edges(&gcode_tree);
         if (!read_gcode_to_group(&gcode_tree, out_filename))
         {
-            MessageBox(hWndSlicer, "Slic3r output was not found", out_filename, MB_OK | MB_ICONWARNING);
+            MessageBox(hWndSlicer, "Slicer output was not found", out_filename, MB_OK | MB_ICONWARNING);
             return FALSE;
         }
         invalidate_dl();
-        SendMessage(hWndPropSheet, PSM_SETCURSEL, 2, 0);  // select printer tab
+        SendMessage(hWndPropSheet, PSM_SETCURSEL, 2, 0);  // select print preview tab
         SendDlgItemMessage(hWndPrintPreview, IDC_PRINT_FILENAME, WM_SETTEXT, 0, (LPARAM)out_filename);
         SendDlgItemMessage(hWndPrintPreview, IDC_PRINT_FIL_USED, WM_SETTEXT, 0, (LPARAM)gcode_tree.fil_used);
         SendDlgItemMessage(hWndPrintPreview, IDC_PRINT_EST_PRINT, WM_SETTEXT, 0, (LPARAM)gcode_tree.est_print);
     }
     else
     {
-        MessageBox(hWndSlicer, chBuf, "Slic3r failure", MB_OK | MB_ICONWARNING);
+        MessageBox(hWndSlicer, chBuf, "Slicer failure", MB_OK | MB_ICONWARNING);
     }
 
     return TRUE;
