@@ -160,10 +160,11 @@
 #define IDC_STATIC_SLICER               1057
 #define IDC_PRINT_FILENAME              1059
 #define IDC_PRINT_FIL_USED              1060
-#define IDC_PRINT_FIL_USED2             1061
 #define IDC_PRINT_EST_PRINT             1061
 #define IDD_PRINT_PREVIEW               1544
 #define IDD_SLICER                      1545
+#define IDD_PRINT_PREVIEW1              1546
+#define IDD_PRINTER                     1546
 #define ID_FILE_NEW                     32774
 #define ID_FILE_OPEN                    32775
 #define ID_FILE_SAVE                    32776

@@ -294,9 +294,195 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     return 0;
 }
 
-// Window proc for the printer tab.
+// Window proc for the slicer tab.
 int WINAPI
-printer_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+slicer_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    HMENU hMenu;
+    PSHNOTIFY* notify;
+    char printer[64], print[64], filament[64];
+    char cmd[1024], filename[MAX_PATH], dir[MAX_PATH], button_title[256];
+    OPENFILENAME ofn;
+    int indx;
+    char* slosh, *pdot;
+    char inifile[MAX_PATH];
+    char option[80];
+
+    switch (msg)
+    {
+    case WM_INITDIALOG:
+        hWndSlicer = hWnd;
+        read_slic3r_config("printer", IDC_SLICER_PRINTER, printer);
+        read_slic3r_config("print", IDC_SLICER_PRINTSETTINGS, printer);
+        read_slic3r_config("filament", IDC_SLICER_FILAMENT, printer);
+
+        if (curr_filename[0] == '\0')
+        {
+            SendDlgItemMessage(hWndSlicer, IDB_SLICER_SLICE, WM_SETTEXT, 0, (LPARAM)"Slice Current Model");
+            EnableWindow(GetDlgItem(hWndSlicer, IDB_SLICER_SLICE), FALSE);
+        }
+        else
+        {
+            strcpy_s(button_title, 256, "Export and Slice ");
+            strcat_s(button_title, 256, curr_filename);
+            SendDlgItemMessage(hWndSlicer, IDB_SLICER_SLICE, WM_SETTEXT, 0, (LPARAM)button_title);
+            EnableWindow(GetDlgItem(hWndSlicer, IDB_SLICER_SLICE), TRUE);
+        }
+        break;
+
+    case WM_COMMAND:
+        switch (LOWORD(wParam))
+        {
+        case IDC_SLICER_PRINTER:
+            switch (HIWORD(wParam))
+            {
+            case CBN_SELCHANGE:
+                indx = SendDlgItemMessage(hWnd, IDC_SLICER_PRINTER, CB_GETCURSEL, 0, 0);
+                SendDlgItemMessage(hWnd, IDC_SLICER_PRINTER, CB_GETLBTEXT, indx, (LPARAM)printer);
+                read_slic3r_config("print", IDC_SLICER_PRINTSETTINGS, printer);
+                read_slic3r_config("filament", IDC_SLICER_FILAMENT, printer);
+
+                // Pull out bed shape from cached printer section
+                set_bed_shape(printer);
+                break;
+
+            case CBN_KILLFOCUS:
+
+                break;
+            }
+            break;
+
+        case IDB_SLICER_SUPPORT:
+        case IDC_SLICER_LAYERHEIGHT:
+        case IDC_SLICER_INFILL:
+            // TODO: support these overrides
+            break;
+
+        case IDB_SLICER_GUI:
+            ShellExecute(hWndSlicer, "open", slicer_exe[slicer_index].exe, NULL, NULL, SW_SHOW);
+            break;
+
+        case IDB_SLICER_SLICE_EXISTING:
+            // Open an existing triangle mesh (STL, AMF, ...) and slice it
+            memset(&ofn, 0, sizeof(OPENFILENAME));
+            ofn.lStructSize = sizeof(OPENFILENAME);
+            ofn.hwndOwner = auxGetHWND();
+            ofn.lpstrFilter =
+                "STL Meshes (*.STL)\0*.STL\0"
+                "AMF Files (*.AMF)\0*.AMF\0"
+                "OBJ Files (*.OBJ)\0*.OBJ\0"
+                "All Files\0*.*\0\0";
+            ofn.nFilterIndex = 1;
+            ofn.lpstrDefExt = "lcd";
+            filename[0] = '\0';
+            ofn.lpstrFile = filename;
+            ofn.nMaxFile = MAX_PATH;
+            ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST;
+            if (!GetOpenFileName(&ofn))
+                break;
+
+            goto slice_it;
+
+        case IDB_SLICER_SLICE:
+            // Export the object tree as STL (note: this may change with multi-materials)
+            memset(&ofn, 0, sizeof(OPENFILENAME));
+            ofn.lStructSize = sizeof(OPENFILENAME);
+            ofn.hwndOwner = auxGetHWND();
+            ofn.lpstrFilter =
+                "STL Meshes (*.STL)\0*.STL\0"
+                "STL Meshes for each material (*_1.STL)\0*.STL\0"
+                "All Files\0*.*\0\0";
+            ofn.nFilterIndex = 1;
+            ofn.lpstrDefExt = "stl";
+            strcpy_s(filename, 256, curr_filename);
+            pdot = strrchr(filename, '.');
+            if (pdot != NULL)
+                *pdot = '\0';           // cut off any ".lcd"
+            ofn.lpstrFile = filename;
+            ofn.nMaxFile = MAX_PATH;
+            ofn.Flags = OFN_EXPLORER | OFN_OVERWRITEPROMPT;
+            if (!GetSaveFileName(&ofn))
+                break;
+
+            // Export the model
+            xform_list.head = NULL;
+            xform_list.tail = NULL;
+            gen_view_list_tree_volumes(&object_tree);
+            if (!gen_view_list_tree_surfaces(&object_tree, &object_tree))
+                break;
+            export_object_tree(&object_tree, filename, ofn.nFilterIndex);
+
+        slice_it:
+            // Get the directory with its trailing '\\'
+            strcpy_s(dir, MAX_PATH, filename);
+            slosh = strrchr(dir, '\\');
+            *(slosh + 1) = '\0';
+
+            // Open the ini files for writing and fill them from the selected presets.
+            // Separate ini files are used as there may be duplicates between sections
+            strcpy_s(inifile, MAX_PATH, dir);
+            strcat_s(inifile, MAX_PATH, "slicer_settings_printer.ini");
+            indx = SendDlgItemMessage(hWnd, IDC_SLICER_PRINTER, CB_GETCURSEL, 0, 0);
+            SendDlgItemMessage(hWnd, IDC_SLICER_PRINTER, CB_GETLBTEXT, indx, (LPARAM)printer);
+            get_slic3r_config_section("printer", printer, inifile);
+            
+            // Add load options to slic3r cmd line for settings
+            strcpy_s(cmd, 1024, " --load ");
+            strcat_s(cmd, 1024, inifile);
+
+            strcpy_s(inifile, MAX_PATH, dir);
+            strcat_s(inifile, MAX_PATH, "slicer_settings_print.ini");
+            indx = SendDlgItemMessage(hWnd, IDC_SLICER_PRINTSETTINGS, CB_GETCURSEL, 0, 0);
+            SendDlgItemMessage(hWnd, IDC_SLICER_PRINTSETTINGS, CB_GETLBTEXT, indx, (LPARAM)print);
+            get_slic3r_config_section("print", print, inifile);
+            strcat_s(cmd, 1024, " --load ");
+            strcat_s(cmd, 1024, inifile);
+
+            strcpy_s(inifile, MAX_PATH, dir);
+            strcat_s(inifile, MAX_PATH, "slicer_settings_filament.ini");
+            indx = SendDlgItemMessage(hWnd, IDC_SLICER_FILAMENT, CB_GETCURSEL, 0, 0);
+            SendDlgItemMessage(hWnd, IDC_SLICER_FILAMENT, CB_GETLBTEXT, indx, (LPARAM)filament);
+            get_slic3r_config_section("filament", filament, inifile);
+            strcat_s(cmd, 1024, " --load ");
+            strcat_s(cmd, 1024, inifile);
+
+            // Build slic3r cmd line and run it. Centre it on the current print bed dimensions.
+            // TODO: Put in other overrides here as options.
+            sprintf_s(option, 80, slicer_cmd[slicer_config[config_index].type],
+                (int)(bed_xmax - bed_xmin) / 2,
+                (int)(bed_ymax - bed_ymin) / 2);
+
+            strcat_s(cmd, 1024, option);
+            strcat_s(cmd, 1024, filename);
+            run_slicer(slicer_exe[slicer_index].exe, cmd, dir);
+
+            break;
+        }
+        break;
+
+    case WM_NOTIFY:
+        notify = (PSHNOTIFY*)lParam;
+        hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
+        switch (notify->hdr.code)
+        {
+        case PSN_SETACTIVE:
+            break;
+
+        case PSN_RESET:
+            view_tools = FALSE;
+            ShowWindow(hWndPropSheet, SW_HIDE);
+            CheckMenuItem(hMenu, ID_VIEW_TOOLS, view_tools ? MF_CHECKED : MF_UNCHECKED);
+            break;
+        }
+        break;
+    }
+
+    return 0;
+}
+
+// Window proc for the print preview tab.
+int WINAPI
+preview_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     HMENU hMenu;
     PSHNOTIFY* notify;
@@ -473,169 +659,100 @@ printer_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     return 0;
 }
 
-// Window proc for the slicer tab.
+// Window proc for the printer tab.
 int WINAPI
-slicer_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+printer_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     HMENU hMenu;
     PSHNOTIFY* notify;
-    char printer[64], print[64], filament[64];
-    char cmd[1024], filename[MAX_PATH], dir[MAX_PATH], button_title[256];
-    OPENFILENAME ofn;
-    int indx;
-    char* slosh, *pdot;
-    char inifile[MAX_PATH];
-    char option[80];
+    char buf[16];
 
     switch (msg)
     {
     case WM_INITDIALOG:
-        hWndSlicer = hWnd;
-        read_slic3r_config("printer", IDC_SLICER_PRINTER, printer);
-        read_slic3r_config("print", IDC_SLICER_PRINTSETTINGS, printer);
-        read_slic3r_config("filament", IDC_SLICER_FILAMENT, printer);
-
-        if (curr_filename[0] == '\0')
-        {
-            SendDlgItemMessage(hWndSlicer, IDB_SLICER_SLICE, WM_SETTEXT, 0, (LPARAM)"Slice Current Model");
-            EnableWindow(GetDlgItem(hWndSlicer, IDB_SLICER_SLICE), FALSE);
-        }
-        else
-        {
-            strcpy_s(button_title, 256, "Export and Slice ");
-            strcat_s(button_title, 256, curr_filename);
-            SendDlgItemMessage(hWndSlicer, IDB_SLICER_SLICE, WM_SETTEXT, 0, (LPARAM)button_title);
-            EnableWindow(GetDlgItem(hWndSlicer, IDB_SLICER_SLICE), TRUE);
-        }
+        hWndPrinter = hWnd;
+        LoadAndDisplayIcon(hWnd, IDI_TOP, IDB_XY, IDS_XY);
+        LoadAndDisplayIcon(hWnd, IDI_FRONT, IDB_YZ, IDS_YZ);
+        LoadAndDisplayIcon(hWnd, IDI_LEFT, IDB_XZ, IDS_XZ);
+        LoadAndDisplayIcon(hWnd, IDI_BOTTOM, IDB_MINUS_XY, IDS_MINUS_XY);
+        LoadAndDisplayIcon(hWnd, IDI_BACK, IDB_MINUS_YZ, IDS_MINUS_YZ);
+        LoadAndDisplayIcon(hWnd, IDI_RIGHT, IDB_MINUS_XZ, IDS_MINUS_XZ);
         break;
 
     case WM_COMMAND:
-        switch (LOWORD(wParam))
+        if (HIWORD(wParam) == BN_CLICKED)
         {
-        case IDC_SLICER_PRINTER:
-            switch (HIWORD(wParam))
+            switch (LOWORD(wParam))
             {
-            case CBN_SELCHANGE:
-                indx = SendDlgItemMessage(hWnd, IDC_SLICER_PRINTER, CB_GETCURSEL, 0, 0);
-                SendDlgItemMessage(hWnd, IDC_SLICER_PRINTER, CB_GETLBTEXT, indx, (LPARAM)printer);
-                read_slic3r_config("print", IDC_SLICER_PRINTSETTINGS, printer);
-                read_slic3r_config("filament", IDC_SLICER_FILAMENT, printer);
+            //case IDC_PRINTER_FULL:
+            //    break;
 
-                // Pull out bed shape from cached printer section
-                set_bed_shape(printer);
+            case IDB_XY:
+                facing_plane = &plane_XY;
+                facing_index = PLANE_XY;
+#ifdef DEBUG_TOOLBAR_FACING
+                Log("Facing plane XY\r\n");
+#endif
+                trackball_InitQuat(quat_XY);
+                SetWindowPos(auxGetHWND(), HWND_TOP, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOREPOSITION);
                 break;
 
-            case CBN_KILLFOCUS:
+            case IDB_YZ:
+                facing_plane = &plane_YZ;
+                facing_index = PLANE_YZ;
+#ifdef DEBUG_TOOLBAR_FACING
+                Log("Facing plane YZ\r\n");
+#endif
+                trackball_InitQuat(quat_YZ);
+                SetWindowPos(auxGetHWND(), HWND_TOP, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOREPOSITION);
+                break;
 
+            case IDB_XZ:
+                facing_plane = &plane_XZ;
+                facing_index = PLANE_XZ;
+#ifdef DEBUG_TOOLBAR_FACING
+                Log("Facing plane XZ\r\n");
+#endif
+                trackball_InitQuat(quat_XZ);
+                SetWindowPos(auxGetHWND(), HWND_TOP, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOREPOSITION);
+                break;
+
+            case IDB_MINUS_XY:
+                facing_plane = &plane_mXY;
+                facing_index = PLANE_MINUS_XY;
+#ifdef DEBUG_TOOLBAR_FACING
+                Log("Facing plane -XY\r\n");
+#endif
+                trackball_InitQuat(quat_mXY);
+                SetWindowPos(auxGetHWND(), HWND_TOP, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOREPOSITION);
+                break;
+
+            case IDB_MINUS_YZ:
+                facing_plane = &plane_mYZ;
+                facing_index = PLANE_MINUS_YZ;
+#ifdef DEBUG_TOOLBAR_FACING
+                Log("Facing plane -YZ\r\n");
+#endif
+                trackball_InitQuat(quat_mYZ);
+                SetWindowPos(auxGetHWND(), HWND_TOP, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOREPOSITION);
+                break;
+
+            case IDB_MINUS_XZ:
+                facing_plane = &plane_mXZ;
+                facing_index = PLANE_MINUS_XZ;
+#ifdef DEBUG_TOOLBAR_FACING
+                Log("Facing plane -XZ\r\n");
+#endif
+                trackball_InitQuat(quat_mXZ);
+                SetWindowPos(auxGetHWND(), HWND_TOP, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOREPOSITION);
                 break;
             }
-            break;
-
-        case IDB_SLICER_SUPPORT:
-        case IDC_SLICER_LAYERHEIGHT:
-        case IDC_SLICER_INFILL:
-            // TODO: support these overrides
-            break;
-
-        case IDB_SLICER_GUI:
-            ShellExecute(hWndSlicer, "open", slicer_exe[slicer_index].exe, NULL, NULL, SW_SHOW);
-            break;
-
-        case IDB_SLICER_SLICE_EXISTING:
-            // Open an existing triangle mesh (STL, AMF, ...) and slice it
-            memset(&ofn, 0, sizeof(OPENFILENAME));
-            ofn.lStructSize = sizeof(OPENFILENAME);
-            ofn.hwndOwner = auxGetHWND();
-            ofn.lpstrFilter =
-                "STL Meshes (*.STL)\0*.STL\0"
-                "AMF Files (*.AMF)\0*.AMF\0"
-                "OBJ Files (*.OBJ)\0*.OBJ\0"
-                "All Files\0*.*\0\0";
-            ofn.nFilterIndex = 1;
-            ofn.lpstrDefExt = "lcd";
-            filename[0] = '\0';
-            ofn.lpstrFile = filename;
-            ofn.nMaxFile = MAX_PATH;
-            ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST;
-            if (!GetOpenFileName(&ofn))
-                break;
-
-            goto slice_it;
-
-        case IDB_SLICER_SLICE:
-            // Export the object tree as STL (note: this may change with multi-materials)
-            memset(&ofn, 0, sizeof(OPENFILENAME));
-            ofn.lStructSize = sizeof(OPENFILENAME);
-            ofn.hwndOwner = auxGetHWND();
-            ofn.lpstrFilter =
-                "STL Meshes (*.STL)\0*.STL\0"
-                "STL Meshes for each material (*_1.STL)\0*.STL\0"
-                "All Files\0*.*\0\0";
-            ofn.nFilterIndex = 1;
-            ofn.lpstrDefExt = "stl";
-            strcpy_s(filename, 256, curr_filename);
-            pdot = strrchr(filename, '.');
-            if (pdot != NULL)
-                *pdot = '\0';           // cut off any ".lcd"
-            ofn.lpstrFile = filename;
-            ofn.nMaxFile = MAX_PATH;
-            ofn.Flags = OFN_EXPLORER | OFN_OVERWRITEPROMPT;
-            if (!GetSaveFileName(&ofn))
-                break;
-
-            // Export the model
-            xform_list.head = NULL;
-            xform_list.tail = NULL;
-            gen_view_list_tree_volumes(&object_tree);
-            if (!gen_view_list_tree_surfaces(&object_tree, &object_tree))
-                break;
-            export_object_tree(&object_tree, filename, ofn.nFilterIndex);
-
-        slice_it:
-            // Get the directory with its trailing '\\'
-            strcpy_s(dir, MAX_PATH, filename);
-            slosh = strrchr(dir, '\\');
-            *(slosh + 1) = '\0';
-
-            // Open the ini files for writing and fill them from the selected presets.
-            // Separate ini files are used as there may be duplicates between sections
-            strcpy_s(inifile, MAX_PATH, dir);
-            strcat_s(inifile, MAX_PATH, "slicer_settings_printer.ini");
-            indx = SendDlgItemMessage(hWnd, IDC_SLICER_PRINTER, CB_GETCURSEL, 0, 0);
-            SendDlgItemMessage(hWnd, IDC_SLICER_PRINTER, CB_GETLBTEXT, indx, (LPARAM)printer);
-            get_slic3r_config_section("printer", printer, inifile);
-            
-            // Add load options to slic3r cmd line for settings
-            strcpy_s(cmd, 1024, " --load ");
-            strcat_s(cmd, 1024, inifile);
-
-            strcpy_s(inifile, MAX_PATH, dir);
-            strcat_s(inifile, MAX_PATH, "slicer_settings_print.ini");
-            indx = SendDlgItemMessage(hWnd, IDC_SLICER_PRINTSETTINGS, CB_GETCURSEL, 0, 0);
-            SendDlgItemMessage(hWnd, IDC_SLICER_PRINTSETTINGS, CB_GETLBTEXT, indx, (LPARAM)print);
-            get_slic3r_config_section("print", print, inifile);
-            strcat_s(cmd, 1024, " --load ");
-            strcat_s(cmd, 1024, inifile);
-
-            strcpy_s(inifile, MAX_PATH, dir);
-            strcat_s(inifile, MAX_PATH, "slicer_settings_filament.ini");
-            indx = SendDlgItemMessage(hWnd, IDC_SLICER_FILAMENT, CB_GETCURSEL, 0, 0);
-            SendDlgItemMessage(hWnd, IDC_SLICER_FILAMENT, CB_GETLBTEXT, indx, (LPARAM)filament);
-            get_slic3r_config_section("filament", filament, inifile);
-            strcat_s(cmd, 1024, " --load ");
-            strcat_s(cmd, 1024, inifile);
-
-            // Build slic3r cmd line and run it. Centre it on the current print bed dimensions.
-            // TODO: Put in other overrides here as options.
-            sprintf_s(option, 80, slicer_cmd[slicer_config[config_index].type],
-                (int)(bed_xmax - bed_xmin) / 2,
-                (int)(bed_ymax - bed_ymin) / 2);
-
-            strcat_s(cmd, 1024, option);
-            strcat_s(cmd, 1024, filename);
-            run_slicer(slicer_exe[slicer_index].exe, cmd, dir);
-
-            break;
+        }
+        else if (HIWORD(wParam) == EN_KILLFOCUS)
+        {
+        //    if (LOWORD(wParam) == IDC_PRINTER_ZFROM)
+        //    {
+        //    }
         }
         break;
 
@@ -645,6 +762,12 @@ slicer_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         switch (notify->hdr.code)
         {
         case PSN_SETACTIVE:
+            view_printer = TRUE;
+            view_rendered = FALSE;
+            glDisable(GL_BLEND);
+            invalidate_dl();
+            view_printbed = TRUE;
+            CheckMenuItem(hMenu, ID_VIEW_PRINTBED, MF_CHECKED);
             break;
 
         case PSN_RESET:
