@@ -55,13 +55,13 @@ STATE app_state = STATE_NONE;
 // TRUE when drawing a construction edge or other construction object.
 BOOL construction = FALSE;
 
-// A list of objects that are currently selected. The "prev" pointer points to 
+// A list of objects that are currently selected. The "prev" pointer points to
 // the actual object (it's a singly linked list). There is also a clipboard,
 // which is arranged similarly.
 ListHead selection = { NULL, NULL };
 ListHead clipboard = { NULL, NULL };
 
-// A list head that saves an old object tree when the clipboard still has 
+// A list head that saves an old object tree when the clipboard still has
 // references to it
 ListHead saved_list = { NULL, NULL };
 
@@ -241,7 +241,7 @@ Init(void)
     glClearColor(1.0, 1.0, 1.0, 1.0);
 
     glDepthFunc(GL_LEQUAL);
-    glEnable(GL_DEPTH_TEST); 
+    glEnable(GL_DEPTH_TEST);
 
     glLightfv(GL_LIGHT0, GL_AMBIENT, ambient);
     glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuse);
@@ -257,7 +257,7 @@ Init(void)
 
     // Enable alpha blending, so we can have transparency
     //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);      // alpha blending
-    glBlendFunc(GL_ZERO, GL_SRC_COLOR);     // multiply blending. 
+    glBlendFunc(GL_ZERO, GL_SRC_COLOR);     // multiply blending.
     glEnable(GL_BLEND);
 
     // For text annotations, horizontal characters start at 1000, outlines at 2000
@@ -430,14 +430,14 @@ Pick(GLint x_pick, GLint y_pick, BOOL force_pick)
                 // special case: if we are in STATE_NONE and we have a face on a fully locked volume,
                 // just look straight through it so we can pick things behind it. However, we must still
                 // be able to right-click things, so don't do it if force_pick is set TRUE.
-                if 
+                if
                 (
-                    !force_pick 
+                    !force_pick
                     &&
-                    obj->type == OBJ_FACE 
-                    && 
-                    ((Face *)obj)->vol != NULL 
-                    && 
+                    obj->type == OBJ_FACE
+                    &&
+                    ((Face *)obj)->vol != NULL
+                    &&
                     ((Face *)obj)->vol->hdr.lock >= LOCK_VOLUME
                 )
                 {
@@ -466,7 +466,7 @@ Pick(GLint x_pick, GLint y_pick, BOOL force_pick)
                 for (j = 0; j < num_objs; j++)
                 {
                     Object *obj = (Object *)buffer[n];
- 
+
                     if (obj == NULL)
                         len = sprintf_s(p, size, "NULL ");
                     else
@@ -481,7 +481,7 @@ Pick(GLint x_pick, GLint y_pick, BOOL force_pick)
                 size = 512;
             }
             else  // not logging, still need to skip the data
-#endif 
+#endif
             {
                 n += num_objs + 3;
             }
@@ -534,7 +534,7 @@ Pick(GLint x_pick, GLint y_pick, BOOL force_pick)
 }
 
 // Pick all top-level objects intersecting the given rect and select.
-void 
+void
 Pick_all_in_rect(GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
 {
     GLuint buffer[4096];
@@ -754,7 +754,7 @@ left_down(AUX_EVENTREC *event)
     case STATE_STARTING_TEXT:
         // We can't always determine plane in which the new edge will be drawn.
         // This only works with a mouse move within a face, and we will often have
-        // started on an edge or snapped to a point. 
+        // started on an edge or snapped to a point.
         // But if we do have a plane, we can set it here.
         SetCapture(auxGetHWND());
 
@@ -784,7 +784,7 @@ left_down(AUX_EVENTREC *event)
             {
             case OBJ_GROUP:
             case OBJ_VOLUME:
-                // We are on a volume or group, and the faces are locked; 
+                // We are on a volume or group, and the faces are locked;
                 // access the underlying face if we have one.
                 if (raw_picked_obj != NULL && raw_picked_obj->type == OBJ_FACE)
                 {
@@ -815,7 +815,7 @@ left_down(AUX_EVENTREC *event)
                 break;
 
             case OBJ_POINT:
-                // Snap to the point. 
+                // Snap to the point.
                 picked_point = *(Point *)picked_obj;
                 break;
             }
@@ -829,7 +829,7 @@ left_down(AUX_EVENTREC *event)
     case STATE_STARTING_ROTATE:
         // Determine the facing plane through the centroid of the object.
         // This is used as picked_plane. Project the mouse down position
-        // back to this plane and use that as picked_point. If the object is 
+        // back to this plane and use that as picked_point. If the object is
         // not a volume or group, we want the parent.
         SetCapture(auxGetHWND());
 
@@ -848,7 +848,7 @@ left_down(AUX_EVENTREC *event)
             break;
         }
 
-        // Find the object (or its parent) 
+        // Find the object (or its parent)
         switch (picked_obj->type)
         {
         case OBJ_FACE:
@@ -875,7 +875,7 @@ left_down(AUX_EVENTREC *event)
                 break;
             }
             // fall through for volumes/groups
-        case OBJ_GROUP:  
+        case OBJ_GROUP:
         case OBJ_VOLUME:
             // Note group and volume have box immediately following header (mandatory)
             vol = (Volume *)picked_obj;
@@ -1244,8 +1244,8 @@ left_click(AUX_EVENTREC *event)
 
     display_help("Selection");
 
-    // Pick object (already in picked_obj) and select. 
-    // If a double click, select its parent volume. 
+    // Pick object (already in picked_obj) and select.
+    // If a double click, select its parent volume.
     // If Shift key down, add it to the selection.
     // If it is already selected, remove it from selection.
     if (picked_obj != NULL)
@@ -1421,7 +1421,7 @@ mouse_move(AUX_EVENTREC *event)
 {
     // when moving the mouse, we may be highlighting objects.
     // We do this when we are about to add something to the tree.
-    // Just having the function causes force redraws (TODO: TK/AUX may need to 
+    // Just having the function causes force redraws (TODO: TK/AUX may need to
     // handle a return value to control this, if the drawing is complex)
 
     // while here, store away the state of the shift key
@@ -1436,219 +1436,6 @@ mouse_move(AUX_EVENTREC *event)
 }
 
 
-// Preferences dialog.
-int WINAPI
-prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
-{
-    char buf[16];
-    char location[MAX_PATH], filename[MAX_PATH];
-    FILE* f;
-    float new_val;
-    int i;
-    static BOOL slicer_changed, index_changed, config_changed;
-    char printer[64];
-
-    switch (msg)
-    {
-    case WM_INITDIALOG:
-        SendDlgItemMessage(hWnd, IDC_PREFS_TITLE, WM_SETTEXT, 0, (LPARAM)object_tree.title);
-        sprintf_s(buf, 16, "%.0f", half_size);
-        SendDlgItemMessage(hWnd, IDC_PREFS_HALFSIZE, WM_SETTEXT, 0, (LPARAM)buf);
-        sprintf_s(buf, 16, "%.2f", grid_snap);
-        SendDlgItemMessage(hWnd, IDC_PREFS_GRID, WM_SETTEXT, 0, (LPARAM)buf);
-        sprintf_s(buf, 16, "%.2f", tolerance);
-        SendDlgItemMessage(hWnd, IDC_PREFS_TOL, WM_SETTEXT, 0, (LPARAM)buf);
-        sprintf_s(buf, 16, "%d", angle_snap);
-        SendDlgItemMessage(hWnd, IDC_PREFS_ANGLE, WM_SETTEXT, 0, (LPARAM)buf);
-        sprintf_s(buf, 16, "%.2f", round_rad);
-        SendDlgItemMessage(hWnd, IDC_PREFS_ROUNDRAD, WM_SETTEXT, 0, (LPARAM)buf);
-        SetFocus(GetDlgItem(hWnd, IDC_PREFS_TITLE));
-
-        index_changed = FALSE;
-        slicer_changed = FALSE;
-        config_changed = FALSE;
-
-        // Load up slicer exe and config to combo boxes.
-    load_combo:
-        SendDlgItemMessage(hWnd, IDC_PREFS_SLICER_EXE, CB_RESETCONTENT, 0, 0);
-        SendDlgItemMessage(hWnd, IDC_PREFS_SLICER_CONFIG, CB_RESETCONTENT, 0, 0);
-        for (i = 0; i < num_slicers; i++)
-            SendDlgItemMessage(hWnd, IDC_PREFS_SLICER_EXE, CB_INSERTSTRING, i, (LPARAM)slicer_exe[i].exe);
-        for (i = 0; i < num_configs; i++)
-            SendDlgItemMessage(hWnd, IDC_PREFS_SLICER_CONFIG, CB_INSERTSTRING, i, (LPARAM)slicer_config[i].dir);
-        SendDlgItemMessage(hWnd, IDC_PREFS_SLICER_EXE, CB_SETCURSEL, slicer_index, 0);
-        SendDlgItemMessage(hWnd, IDC_PREFS_SLICER_CONFIG, CB_SETCURSEL, config_index, 0);
-        break;
-
-    case WM_COMMAND:
-        switch (LOWORD(wParam))
-        {
-        case IDOK:
-            SendDlgItemMessage(hWnd, IDC_PREFS_TITLE, WM_GETTEXT, 256, (LPARAM)object_tree.title);
-
-            SendDlgItemMessage(hWnd, IDC_PREFS_HALFSIZE, WM_GETTEXT, 16, (LPARAM)buf);
-            half_size = (float)atof(buf);
-            zTrans = -2.0f * half_size;
-            Position(FALSE, 0, 0, 0, 0);
-
-            SendDlgItemMessage(hWnd, IDC_PREFS_TOL, WM_GETTEXT, 16, (LPARAM)buf);
-            new_val = (float)atof(buf);
-            if(!nz(new_val - tolerance))
-            {
-                // The snapping tol and chamfer rad are fixed fractions of the tolerance. Don't change them.
-                snap_tol = 3 * tolerance;
-                chamfer_rad = 3.5f * tolerance;
-                tol_log = (int)ceilf(log10f(1.0f / tolerance));
-
-                // Fix up all the flattened curves.
-                adjust_stepsizes((Object *)&object_tree, new_val);
-                clear_move_copy_flags((Object*)&object_tree);
-                invalidate_all_view_lists((Object *)&object_tree, (Object *)&object_tree, 0, 0, 0);
-
-                tolerance = new_val;
-                drawing_changed = TRUE;
-
-                if (view_rendered)
-                {
-                    // regenerate surface mesh, in case we're viewing rendered
-                    xform_list.head = NULL;
-                    xform_list.tail = NULL;
-                    if (object_tree.mesh != NULL)
-                        mesh_destroy(object_tree.mesh);
-                    object_tree.mesh = NULL;
-                    object_tree.mesh_valid = FALSE;
-                    gen_view_list_tree_volumes(&object_tree);
-                    gen_view_list_tree_surfaces(&object_tree, &object_tree);
-                }
-            }
-
-            // These don't change the drawing until something else is added.
-            SendDlgItemMessage(hWnd, IDC_PREFS_GRID, WM_GETTEXT, 16, (LPARAM)buf);
-            grid_snap = (float)atof(buf);
-            SendDlgItemMessage(hWnd, IDC_PREFS_ANGLE, WM_GETTEXT, 16, (LPARAM)buf);
-            angle_snap = atoi(buf);
-            SendDlgItemMessage(hWnd, IDC_PREFS_ROUNDRAD, WM_GETTEXT, 16, (LPARAM)buf);
-            round_rad = (float)atof(buf);
-
-            // Slicer changes, in and of themselves, don't change the drawing. But save
-            // any changes in the registry (even on cancel, as the internal lists have changed)
-            if (index_changed)
-            {
-                save_slic3r_exe_and_config();
-                read_slic3r_config("printer", IDC_SLICER_PRINTER, printer);
-                read_slic3r_config("print", IDC_SLICER_PRINTSETTINGS, printer);
-                read_slic3r_config("filament", IDC_SLICER_FILAMENT, printer);
-            }
-
-            EndDialog(hWnd, drawing_changed);
-            break;
-
-        case IDCANCEL:
-            if (index_changed)
-            {
-                save_slic3r_exe_and_config();
-                read_slic3r_config("printer", IDC_SLICER_PRINTER, printer);
-                read_slic3r_config("print", IDC_SLICER_PRINTSETTINGS, printer);
-                read_slic3r_config("filament", IDC_SLICER_FILAMENT, printer);
-            }
-
-            EndDialog(hWnd, 0);
-            break;
-
-        case IDC_PREFS_FIND_SLICERS:
-            find_slic3r_exe_and_config();
-            index_changed = TRUE;
-            goto load_combo;
-
-        case IDC_PREFS_SLICER_EXE:
-            switch (HIWORD(wParam))
-            {
-            case CBN_SELCHANGE:
-                slicer_index = SendDlgItemMessage(hWnd, IDC_PREFS_SLICER_EXE, CB_GETCURSEL, 0, 0);
-                index_changed = TRUE;
-                break;
-
-            case CBN_EDITCHANGE:
-                slicer_changed = TRUE;
-                break;
-
-            case CBN_KILLFOCUS:
-                if (slicer_changed)
-                {
-                    SendDlgItemMessage(hWnd, IDC_PREFS_SLICER_EXE, WM_GETTEXT, MAX_PATH, (LPARAM)location);
-                    i = SendDlgItemMessage(hWnd, IDC_PREFS_SLICER_EXE, CB_ADDSTRING, 0, (LPARAM)location);
-                    if (i >= MAX_SLICERS)
-                        i = MAX_SLICERS - 1;
-                    if (i >= num_slicers)
-                        num_slicers = i + 1;
-                    strcpy_s(slicer_exe[i].exe, MAX_PATH, location);
-                    slicer_index = i;
-                    index_changed = TRUE;
-                    slicer_changed = FALSE;
-                }
-                break;
-            }
-            break;
-
-        case IDC_PREFS_SLICER_CONFIG:
-            switch (HIWORD(wParam))
-            {
-            case CBN_SELCHANGE:
-                config_index = SendDlgItemMessage(hWnd, IDC_PREFS_SLICER_CONFIG, CB_GETCURSEL, 0, 0);
-                index_changed = TRUE;
-                break;
-
-            case CBN_EDITCHANGE:
-                config_changed = TRUE;
-                break;
-
-            case CBN_KILLFOCUS:
-                if (config_changed)
-                {                 
-                    char inifiles[2][32] = { "slic3r.ini", "PrusaSlicer.ini" };
-                    SLICER type;
-
-                    // User has typed in a new location.
-                    SendDlgItemMessage(hWnd, IDC_PREFS_SLICER_CONFIG, WM_GETTEXT, MAX_PATH, (LPARAM)location);
-
-                    // Check location for the presence of an INI file (slic3r.ini or PrusaSlicer.ini)
-                    // Remember its name, and what kind of slicer it is.
-                    for (type = 0; type < MAX_TYPES; type++)
-                    {
-                        strcpy_s(filename, MAX_PATH, location);
-                        strcat_s(filename, MAX_PATH, "\\");
-                        strcat_s(filename, MAX_PATH, inifiles[type]);
-                        f = CreateFile(filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-                        if (f != INVALID_HANDLE_VALUE)
-                        {
-                            CloseHandle(f);
-                            break;
-                        }
-                    }
-                    if (type == MAX_TYPES)
-                        break;              // no INI file found
-
-                    // Add the location to the list.
-                    i = SendDlgItemMessage(hWnd, IDC_PREFS_SLICER_CONFIG, CB_ADDSTRING, 0, (LPARAM)location);
-                    if (i >= MAX_SLICERS)
-                        i = MAX_SLICERS - 1;
-                    if (i >= num_configs)
-                        num_configs = i + 1;
-                    strcpy_s(slicer_config[i].dir, MAX_PATH, location);
-                    strcpy_s(slicer_config[i].ini, MAX_PATH, inifiles[type]);
-                    slicer_config[i].type = type;
-                    config_index = i;
-                    index_changed = TRUE;
-                    config_changed = FALSE;
-                }
-                break;
-            }
-            break;
-        }
-    }
-
-    return 0;
-}
 
 // The good old WinMain.
 int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
@@ -1720,7 +1507,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
         psp[0].pszTitle = "Drawing Tools";
         psp[0].lParam = 0;
         psp[0].pfnCallback = NULL;
-        
+
         psp[1].dwSize = sizeof(PROPSHEETPAGE);
         psp[1].dwFlags = PSP_USETITLE;
         psp[1].hInstance = hInst;
@@ -1820,13 +1607,13 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
         // Status bar goes at the bottom (and moves with the window - WM_SIZE with 0,0 redraws)
         hwndStatus = CreateWindow
         (
-            STATUSCLASSNAME, 
-            NULL, 
-            WS_CHILD | WS_VISIBLE, 
-            0, wHeight - 10, wWidth, 10, 
-            auxGetHWND(), 
-            NULL, 
-            hInst, 
+            STATUSCLASSNAME,
+            NULL,
+            WS_CHILD | WS_VISIBLE,
+            0, wHeight - 10, wWidth, 10,
+            auxGetHWND(),
+            NULL,
+            hInst,
             0
         );
         parts[0] = 250;
@@ -1841,7 +1628,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
         rect.top += 2;
         hwndProg = CreateWindow
         (
-            PROGRESS_CLASS, 
+            PROGRESS_CLASS,
             NULL,
             WS_CHILD | WS_VISIBLE,
             250, rect.top, 200, rect.bottom - rect.top,

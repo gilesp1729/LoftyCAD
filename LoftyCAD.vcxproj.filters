@@ -185,6 +185,9 @@
     <ClCompile Include="slicer.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="preferences.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="LoftyCAD.rc">

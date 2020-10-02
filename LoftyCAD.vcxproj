@@ -58,7 +58,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>libmpfr-4.lib;libgmp-10.lib;glu32.lib;opengl32.lib;comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libmpfr-4.lib;libgmp-10.lib;glu32.lib;opengl32.lib;comctl32.lib;setupapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(CGAL_DIR)\build\lib;$(CGAL_DIR)/build/lib/$(Configuration);$(CGAL_DIR)\auxiliary\gmp\lib;$(BOOST_LIBRARYDIR)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
@@ -78,7 +78,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>libmpfr-4.lib;libgmp-10.lib;glu32.lib;opengl32.lib;comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libmpfr-4.lib;libgmp-10.lib;glu32.lib;opengl32.lib;comctl32.lib;setupapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(CGAL_DIR)\build\lib;$(CGAL_DIR)/build/lib/$(Configuration);$(CGAL_DIR)\auxiliary\gmp\lib;$(BOOST_LIBRARYDIR)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
@@ -130,6 +130,7 @@
     <ClCompile Include="neighbourhood.c" />
     <ClCompile Include="objtree.c" />
     <ClCompile Include="LoftyCAD.c" />
+    <ClCompile Include="preferences.c" />
     <ClCompile Include="progress.c" />
     <ClCompile Include="registry.c" />
     <ClCompile Include="serialise.c" />
