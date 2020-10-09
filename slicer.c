@@ -110,10 +110,20 @@ InhSection* cache[MAX_SECTIONS];
 // Vendor file (currently the only one known and supported)
 #define VENDOR_INI_FILE "\\vendor\\PrusaResearch.ini"
 
-// Currently selected printer port (without colon: "COM10")
+
+// Preferences for printer connection
+
+// What sort of connection
+BOOL print_octo = FALSE;                // TRUE for Octoprint, FALSE for serial
+
+// Currently selected printer serial port (without colon: "COM10")
 char printer_port[64] = "\0";
 
+// Octoprint server name (e.g. "octopi.local")
+char octoprint_server[128] = "\0";
 
+// Octoprint server API key
+char octoprint_apikey[128] = "\0";
 
 // Load Slic3r executable and config directories from the reg. Return FALSE if we don't have an exe
 // and leave the fields blank.
@@ -184,9 +194,15 @@ load_slic3r_exe_and_config()
     len = 4;
     RegQueryValueEx(hkey, "ConfigIndex", 0, NULL, (LPBYTE)&config_index, &len);
 
-    // Printer port
+    // Printer connection
+    len = 4;
+    RegQueryValueEx(hkey, "PrintOcto", 0, NULL, (LPBYTE)&print_octo, &len);
     len = 64;
     RegQueryValueEx(hkey, "PrinterPort", 0, NULL, (LPBYTE)printer_port, &len);
+    len = 128;
+    RegQueryValueEx(hkey, "OctoServer", 0, NULL, (LPBYTE)octoprint_server, &len);
+    len = 128;
+    RegQueryValueEx(hkey, "OctoAPIKey", 0, NULL, (LPBYTE)octoprint_apikey, &len);
 
     RegCloseKey(hkey);
 
@@ -237,8 +253,11 @@ save_slic3r_exe_and_config()
     RegSetValueEx(hkey, "SlicerIndex", 0, REG_DWORD, (LPBYTE)&slicer_index, 4);
     RegSetValueEx(hkey, "ConfigIndex", 0, REG_DWORD, (LPBYTE)&config_index, 4);
 
-    // Printer port
+    // Printer connection
+    RegSetValueEx(hkey, "PrintOcto", 0, REG_DWORD, (LPBYTE)&print_octo, 4);
     RegSetValueEx(hkey, "PrinterPort", 0, REG_SZ, (PBYTE)printer_port, strlen(printer_port) + 1);
+    RegSetValueEx(hkey, "OctoServer", 0, REG_SZ, (PBYTE)octoprint_server, strlen(octoprint_server) + 1);
+    RegSetValueEx(hkey, "OctoAPIKey", 0, REG_SZ, (PBYTE)octoprint_apikey, strlen(octoprint_apikey) + 1);
 
     RegCloseKey(hkey);
 
@@ -255,7 +274,11 @@ save_printer_config()
     HKEY hkey;
 
     RegCreateKeyEx(HKEY_CURRENT_USER, "Software\\LoftyCAD\\Slic3r", 0, NULL, 0, KEY_ALL_ACCESS, NULL, &hkey, NULL);
+
+    RegSetValueEx(hkey, "PrintOcto", 0, REG_DWORD, (LPBYTE)&print_octo, 4);
     RegSetValueEx(hkey, "PrinterPort", 0, REG_SZ, (PBYTE)printer_port, strlen(printer_port) + 1);
+    RegSetValueEx(hkey, "OctoServer", 0, REG_SZ, (PBYTE)octoprint_server, strlen(octoprint_server) + 1);
+    RegSetValueEx(hkey, "OctoAPIKey", 0, REG_SZ, (PBYTE)octoprint_apikey, strlen(octoprint_apikey) + 1);
 
     RegCloseKey(hkey);
 }

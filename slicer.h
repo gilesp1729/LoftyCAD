@@ -30,6 +30,9 @@ extern int slicer_index;
 extern int config_index;
 extern int num_slicers;
 extern int num_configs;
+extern BOOL print_octo;
 extern char printer_port[64];
+extern char octoprint_server[128];
+extern char octoprint_apikey[128];
 
 

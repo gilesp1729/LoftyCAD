@@ -164,6 +164,9 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         SendDlgItemMessage(hWnd, IDC_PREFS_ROUNDRAD, WM_SETTEXT, 0, (LPARAM)buf);
         SetFocus(GetDlgItem(hWnd, IDC_PREFS_TITLE));
 
+        // Load up printer server selection (serial or Octoprint)
+
+
         // Load up serial ports.
         dis = BeginEnumeratePorts();
         while (EnumeratePortsNext(dis, buf, 16))
@@ -176,11 +179,21 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             i = 0;
         SendDlgItemMessage(hWnd, IDC_PREFS_SERIALPORT, CB_SETCURSEL, i, 0);
 
+        // Load up Octoprint info
+        CheckDlgButton(hWnd, IDC_RADIO_SERIALPORT, print_octo ? BST_UNCHECKED : BST_CHECKED);
+        CheckDlgButton(hWnd, IDC_RADIO_OCTOPRINT, print_octo ? BST_CHECKED : BST_UNCHECKED);
+        EnableWindow(GetDlgItem(hWnd, IDC_PREFS_SERIALPORT), !print_octo);
+        EnableWindow(GetDlgItem(hWnd, IDC_PREFS_OCTOPRINT), print_octo);
+        EnableWindow(GetDlgItem(hWnd, IDC_PREFS_OCTO_APIKEY), print_octo);
+        EnableWindow(GetDlgItem(hWnd, IDC_PREFS_OCTO_TEST), print_octo);
+        SendDlgItemMessage(hWnd, IDC_PREFS_OCTOPRINT, WM_SETTEXT, 0, (LPARAM)octoprint_server);
+        SendDlgItemMessage(hWnd, IDC_PREFS_OCTO_APIKEY, WM_SETTEXT, 0, (LPARAM)octoprint_apikey);
+
+        // Load up slicer exe and config to combo boxes.
         index_changed = FALSE;
         slicer_changed = FALSE;
         config_changed = FALSE;
 
-        // Load up slicer exe and config to combo boxes.
     load_combo:
         SendDlgItemMessage(hWnd, IDC_PREFS_SLICER_EXE, CB_RESETCONTENT, 0, 0);
         SendDlgItemMessage(hWnd, IDC_PREFS_SLICER_CONFIG, CB_RESETCONTENT, 0, 0);
@@ -244,6 +257,8 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
             // Store any change in the selected printer and its settings
             SendDlgItemMessage(hWnd, IDC_PREFS_SERIALPORT, WM_GETTEXT, 64, (LPARAM)printer_port);
+            SendDlgItemMessage(hWnd, IDC_PREFS_OCTOPRINT, WM_GETTEXT, 128, (LPARAM)octoprint_server);
+            SendDlgItemMessage(hWnd, IDC_PREFS_OCTO_APIKEY, WM_GETTEXT, 128, (LPARAM)octoprint_apikey);
             save_printer_config();
 
             // Slicer changes, in and of themselves, don't change the drawing. But save
@@ -256,7 +271,7 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 read_slic3r_config("filament", IDC_SLICER_FILAMENT, printer);
             }
             // TEMP
-            send_to_octo("");
+            //send_to_octo("");
             EndDialog(hWnd, drawing_changed);
             break;
 
@@ -362,16 +377,17 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             }
             break;
 
-        case IDC_PREFS_SERIALPORT:
-            switch (HIWORD(wParam))
-            {
-            case CBN_SELCHANGE:
-                i = SendDlgItemMessage(hWnd, IDC_PREFS_SERIALPORT, CB_GETCURSEL, 0, 0);
+        case IDC_RADIO_SERIALPORT:
+            print_octo = FALSE;
+            goto enable_fields;
 
-
-
-                break;
-            }
+        case IDC_RADIO_OCTOPRINT:
+            print_octo = TRUE;
+        enable_fields:
+            EnableWindow(GetDlgItem(hWnd, IDC_PREFS_SERIALPORT), !print_octo);
+            EnableWindow(GetDlgItem(hWnd, IDC_PREFS_OCTOPRINT), print_octo);
+            EnableWindow(GetDlgItem(hWnd, IDC_PREFS_OCTO_APIKEY), print_octo);
+            EnableWindow(GetDlgItem(hWnd, IDC_PREFS_OCTO_TEST), print_octo);
             break;
         }
     }

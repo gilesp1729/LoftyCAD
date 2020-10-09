@@ -162,7 +162,12 @@
 #define IDC_PRINT_FIL_USED              1060
 #define IDC_PREFS_SERIALPORT            1060
 #define IDC_PRINT_EST_PRINT             1061
-#define IDC_PREFS_PORTDESCR             1061
+#define IDC_RADIO_OCTOPRINT             1062
+#define IDC_RADIO_SERIALPORT            1063
+#define IDC_PREFS_OCTOPRINT             1064
+#define IDC_PREFS_OCTO_APIKEY           1065
+#define IDC_BUTTON1                     1066
+#define IDC_PREFS_OCTO_TEST             1066
 #define IDD_PRINT_PREVIEW               1544
 #define IDD_SLICER                      1545
 #define IDD_PRINTER                     1546
@@ -307,7 +312,7 @@
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        164
 #define _APS_NEXT_COMMAND_VALUE         32921
-#define _APS_NEXT_CONTROL_VALUE         1062
+#define _APS_NEXT_CONTROL_VALUE         1067
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif
