@@ -55,6 +55,7 @@ check_file_changed(HWND hWnd)
 
     clean_checkpoints(curr_filename);
     DestroyWindow(hWnd);
+    close_comms();
 }
 
 // Load material names up to menu, with all non-hidden materials checked, or a single

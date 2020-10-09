@@ -139,7 +139,7 @@ BOOL  EndEnumeratePorts(HANDLE DeviceInfoSet)
 int WINAPI
 prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-    char buf[16];
+    char buf[16], version[128];
     char location[MAX_PATH], filename[MAX_PATH];
     FILE* f;
     float new_val;
@@ -188,6 +188,7 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         EnableWindow(GetDlgItem(hWnd, IDC_PREFS_OCTO_TEST), print_octo);
         SendDlgItemMessage(hWnd, IDC_PREFS_OCTOPRINT, WM_SETTEXT, 0, (LPARAM)octoprint_server);
         SendDlgItemMessage(hWnd, IDC_PREFS_OCTO_APIKEY, WM_SETTEXT, 0, (LPARAM)octoprint_apikey);
+        SendDlgItemMessage(hWnd, IDC_STATIC_TEST_RESULT, WM_SETTEXT, 0, (LPARAM)"");
 
         // Load up slicer exe and config to combo boxes.
         index_changed = FALSE;
@@ -270,8 +271,7 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 read_slic3r_config("print", IDC_SLICER_PRINTSETTINGS, printer);
                 read_slic3r_config("filament", IDC_SLICER_FILAMENT, printer);
             }
-            // TEMP
-            //send_to_octo("");
+
             EndDialog(hWnd, drawing_changed);
             break;
 
@@ -388,6 +388,14 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             EnableWindow(GetDlgItem(hWnd, IDC_PREFS_OCTOPRINT), print_octo);
             EnableWindow(GetDlgItem(hWnd, IDC_PREFS_OCTO_APIKEY), print_octo);
             EnableWindow(GetDlgItem(hWnd, IDC_PREFS_OCTO_TEST), print_octo);
+            break;
+
+        case IDC_PREFS_OCTO_TEST:
+            SendDlgItemMessage(hWnd, IDC_STATIC_TEST_RESULT, WM_SETTEXT, 0, (LPARAM)"Attempting connection...");
+            if (get_octo_version(version, 128))
+                SendDlgItemMessage(hWnd, IDC_STATIC_TEST_RESULT, WM_SETTEXT, 0, (LPARAM)version);
+            else
+                SendDlgItemMessage(hWnd, IDC_STATIC_TEST_RESULT, WM_SETTEXT, 0, (LPARAM)"Cannot connect to server");
             break;
         }
     }

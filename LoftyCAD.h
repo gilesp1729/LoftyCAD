@@ -279,6 +279,13 @@ BOOL get_slic3r_config_section(char* key, char* preset, char *inifile);
 void set_bed_shape(char* printer);
 BOOL run_slicer(char* slicer_exe, char* cmd_line, char* dir);
 
+// Printer connection (printer.c)
+void init_comms(void);
+void close_comms(void);
+BOOL get_octo_version(char* buf, int buflen);
+void send_to_serial(char* gcode_file);
+void send_to_octoprint(char* gcode_file);
+
 // Help dialog (help.c)
 HWND init_help_window(void);
 void display_help_window(void);

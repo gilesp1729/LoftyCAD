@@ -15,49 +15,45 @@ send_to_serial(char* gcode_file)
 
 
 void
-get_octo_version()
-{
-
-
-
-}
-
-
-void
-send_to_octo(char* gcode_file)
+init_comms(void)
 {
     WSADATA wsaData;
 
-    /* first what are we going to send and where are we going to send it? */
-    int portno = 80;
-    char* host = "octopi.local";
-    char* message_fmt = "GET /api/version?apikey=%s HTTP/1.1\r\n\r\n";
-    // TEMP hardcoded
-    char* apikey = "ca4e5ff1a119050f53a483cf7e463ec1";
-    int err;
+    /* Initialise Winsock */
+    WSAStartup(MAKEWORD(2, 2), &wsaData);
+}
 
+void
+close_comms(void)
+{
+    /* shutdown */
+    WSACleanup();
+}
+
+// Connect to an Octoprint server.
+int
+connect_to_socket()
+{
+    int sockfd;
+    int portno = 80;
     struct hostent* server;
     struct sockaddr_in serv_addr;
-    int sockfd, bytes, sent, received, total;
-    char message[1024], response[4096];
-
-    /* Initialise Winsock */
-    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != NO_ERROR)
-        return;
-
-    /* fill in the parameters */
-    sprintf_s(message, 1024, message_fmt, apikey);
-    Log(message);
 
     /* create the socket */
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd < 0) 
+    if (sockfd < 0)
+    {
         Log("ERROR opening socket\r\n");
+        return -1;
+    }
 
     /* lookup the ip address */
-    server = gethostbyname(host);
-    if (server == NULL) 
+    server = gethostbyname(octoprint_server);
+    if (server == NULL)
+    {
         Log("ERROR no such host\r\n");
+        return -1;
+    }
 
     /* fill in the structure */
     memset(&serv_addr, 0, sizeof(serv_addr));
@@ -67,7 +63,30 @@ send_to_octo(char* gcode_file)
 
     /* connect the socket */
     if (connect(sockfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0)
+    {
         Log("ERROR connecting\r\n");
+        return -1;
+    }
+
+    return sockfd;
+}
+
+BOOL
+get_octo_version(char *buf, int buflen)
+{
+    char* message_fmt = "GET /api/version?apikey=%s HTTP/1.1\r\n\r\n";
+    int sockfd, bytes, sent, received, total;
+    char message[1024], response[4096];
+    char* brace, * octo, * quote;
+
+    // Connect to the server
+    sockfd = connect_to_socket();
+    if (sockfd < 0)
+        return FALSE;
+
+    /* fill in the parameters */
+    sprintf_s(message, 1024, message_fmt, octoprint_apikey);
+    Log(message);
 
     /* send the request */
     total = strlen(message);
@@ -88,7 +107,8 @@ send_to_octo(char* gcode_file)
     received = 0;
     do 
     {
-        // Is anything there to be read? Check with a timeout to avoid blocking
+        // Is anything there to be read? Check with a 100ms timeout to avoid blocking
+        // on the last call.
         fd_set readfds = { 1, sockfd };
         TIMEVAL tv = { 0, 100000 };
 
@@ -110,9 +130,42 @@ send_to_octo(char* gcode_file)
     /* close the socket */
     closesocket(sockfd);
 
-    /* shutdown */
-    WSACleanup();
-
     /* process response */
     Log(response);
+
+    // Parse out the OctoPrint version
+    brace = strchr(response, '{');
+    octo = strstr(brace, "OctoPrint");
+    if (octo == NULL)
+        return FALSE;
+    strcpy_s(buf, buflen, octo);
+    quote = strchr(buf, '\"');
+    *quote = '\0';
+    return TRUE;
+}
+
+void
+send_to_octoprint(char* gcode_file)
+{
+#if 0
+    char* message = "POST /api/version HTTP/1.1\r\n\r\n";
+    int sockfd, bytes, sent, received, total;
+    char response[4096];
+    char* brace, * octo, * quote;
+
+    // Connect to the server
+    sockfd = connect_to_socket();
+    if (sockfd < 0)
+        return FALSE;
+
+    /* fill in the parameters */
+    sprintf_s(message, 1024, message_fmt, octoprint_apikey);
+    Log(message);
+
+
+
+
+
+
+#endif
 }

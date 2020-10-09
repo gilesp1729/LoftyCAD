@@ -284,6 +284,8 @@ Init(void)
     object_tree.hdr.type = OBJ_GROUP;  // set up object tree groups
     gcode_tree.hdr.type = OBJ_GROUP;
     gcode_tree.hdr.lock = LOCK_GROUP;
+
+    init_comms();               // initialise Winsock for comms to Octoprint
 }
 
 // Set up frustum and possibly picking matrix. If picking, pass the centre of the
