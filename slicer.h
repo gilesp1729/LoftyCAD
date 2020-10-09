@@ -30,5 +30,6 @@ extern int slicer_index;
 extern int config_index;
 extern int num_slicers;
 extern int num_configs;
+extern char printer_port[64];
 
 

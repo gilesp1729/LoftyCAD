@@ -47,7 +47,7 @@ HANDLE  BeginEnumeratePorts(VOID)
     return DeviceInfoSet;
 }
 
-BOOL EnumeratePortsNext(HANDLE DeviceInfoSet, LPTSTR lpBuffer, int bufsize, LPTSTR lpDescr, int descsize)
+BOOL EnumeratePortsNext(HANDLE DeviceInfoSet, LPTSTR lpBuffer, int bufsize)
 {
     static CM_Open_DevNode_Key OpenDevNodeKey = NULL;
     static HINSTANCE CfgMan;
@@ -56,7 +56,6 @@ BOOL EnumeratePortsNext(HANDLE DeviceInfoSet, LPTSTR lpBuffer, int bufsize, LPTS
     char DevName[MAX_NAME_PORTS] = { 0 };
     static int numDev = 0;
     int numport;
-    char descr[256];
 
     SP_DEVINFO_DATA DeviceInfoData = { 0 };
     DeviceInfoData.cbSize = sizeof(SP_DEVINFO_DATA);
@@ -82,7 +81,6 @@ BOOL EnumeratePortsNext(HANDLE DeviceInfoSet, LPTSTR lpBuffer, int bufsize, LPTS
 
         HKEY KeyDevice;
         DWORD len;
-        int i;
 
         res1 = SetupDiEnumDeviceInfo(DeviceInfoSet, numDev, &DeviceInfoData);
         if (!res1)
@@ -99,30 +97,6 @@ BOOL EnumeratePortsNext(HANDLE DeviceInfoSet, LPTSTR lpBuffer, int bufsize, LPTS
         if (res1 != ERROR_SUCCESS)
             return FALSE;
 
-#if 1
-        // TMP find out what other values are in there
-        Log("-------------------------------------------------\r\n");
-        i = 0;
-        while (1)
-        {
-            char value[64];
-            int lenval = 64;
-            char data[64];
-            int lendata = 64;
-            DWORD type;
-
-            if (RegEnumValue(KeyDevice, i, value, &lenval, NULL, &type, data, &lendata) != ERROR_SUCCESS)
-                break;
-            value[lenval] = '\0';
-            Log(value);
-            Log("\r\n");
-            data[lendata] = '\0';
-            Log(data);
-            Log("\r\n---------------\r\n");
-            i++;
-        }
-#endif
-
         len = MAX_NAME_PORTS;
         res1 = RegQueryValueEx
         (
@@ -134,11 +108,9 @@ BOOL EnumeratePortsNext(HANDLE DeviceInfoSet, LPTSTR lpBuffer, int bufsize, LPTS
             &len     // address of data buffer size
         );
 
+        RegCloseKey(KeyDevice);
         if (res1 != ERROR_SUCCESS)
-        {
-            RegCloseKey(KeyDevice);
             return FALSE;
-        }
 
         numDev++;
         if (_memicmp(DevName, "com", 3))
@@ -149,23 +121,6 @@ BOOL EnumeratePortsNext(HANDLE DeviceInfoSet, LPTSTR lpBuffer, int bufsize, LPTS
         {
             // Found a COM port.
             strcpy_s(lpBuffer, bufsize, DevName);
-            lpDescr[0] = '\0';
-
-            // Retrieve any HW descriptive name for a printer connected to this port.
-            res1 = RegQueryValueEx
-            (
-                KeyDevice,    // handle of key to query
-                "PrinterHwidToUse",  // address of name of value to query
-                NULL,    // reserved
-                NULL,    // address of buffer for value type
-                descr,    // address of data buffer
-                &len     // address of data buffer size
-            );
-
-            if (res1 == ERROR_SUCCESS)
-                strcpy_s(lpDescr, descsize, descr);
-
-            RegCloseKey(KeyDevice);
             return TRUE;
         }
 
@@ -184,7 +139,7 @@ BOOL  EndEnumeratePorts(HANDLE DeviceInfoSet)
 int WINAPI
 prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-    char buf[16], descr[256], hwdescr[MAX_PORTS][256];
+    char buf[16];
     char location[MAX_PATH], filename[MAX_PATH];
     FILE* f;
     float new_val;
@@ -211,13 +166,15 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
         // Load up serial ports.
         dis = BeginEnumeratePorts();
-        while (EnumeratePortsNext(dis, buf, 16, descr, 256))
+        while (EnumeratePortsNext(dis, buf, 16))
         {
             i = SendDlgItemMessage(hWnd, IDC_PREFS_SERIALPORT, CB_ADDSTRING, 0, (LPARAM)buf);
-            if (i < MAX_PORTS)
-                strcpy_s(hwdescr[i], 256, descr);
         }
         EndEnumeratePorts(dis);
+        i = SendDlgItemMessage(hWndSlicer, IDC_PREFS_SERIALPORT, CB_FINDSTRINGEXACT, -1, (LPARAM)printer_port);
+        if (i == CB_ERR)
+            i = 0;
+        SendDlgItemMessage(hWnd, IDC_PREFS_SERIALPORT, CB_SETCURSEL, i, 0);
 
         index_changed = FALSE;
         slicer_changed = FALSE;
@@ -285,6 +242,10 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             SendDlgItemMessage(hWnd, IDC_PREFS_ROUNDRAD, WM_GETTEXT, 16, (LPARAM)buf);
             round_rad = (float)atof(buf);
 
+            // Store any change in the selected printer and its settings
+            SendDlgItemMessage(hWnd, IDC_PREFS_SERIALPORT, WM_GETTEXT, 64, (LPARAM)printer_port);
+            save_printer_config();
+
             // Slicer changes, in and of themselves, don't change the drawing. But save
             // any changes in the registry (even on cancel, as the internal lists have changed)
             if (index_changed)
@@ -294,7 +255,8 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 read_slic3r_config("print", IDC_SLICER_PRINTSETTINGS, printer);
                 read_slic3r_config("filament", IDC_SLICER_FILAMENT, printer);
             }
-
+            // TEMP
+            send_to_octo("");
             EndDialog(hWnd, drawing_changed);
             break;
 
@@ -405,7 +367,9 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             {
             case CBN_SELCHANGE:
                 i = SendDlgItemMessage(hWnd, IDC_PREFS_SERIALPORT, CB_GETCURSEL, 0, 0);
-                SendDlgItemMessage(hWnd, IDC_PREFS_PORTDESCR, WM_SETTEXT, 0, (LPARAM)hwdescr[i]);
+
+
+
                 break;
             }
             break;

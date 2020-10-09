@@ -188,6 +188,9 @@
     <ClCompile Include="preferences.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="printer.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="LoftyCAD.rc">

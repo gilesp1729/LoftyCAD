@@ -110,6 +110,8 @@ InhSection* cache[MAX_SECTIONS];
 // Vendor file (currently the only one known and supported)
 #define VENDOR_INI_FILE "\\vendor\\PrusaResearch.ini"
 
+// Currently selected printer port (without colon: "COM10")
+char printer_port[64] = "\0";
 
 
 
@@ -181,6 +183,11 @@ load_slic3r_exe_and_config()
     RegQueryValueEx(hkey, "SlicerIndex", 0, NULL, (LPBYTE)&slicer_index, &len);
     len = 4;
     RegQueryValueEx(hkey, "ConfigIndex", 0, NULL, (LPBYTE)&config_index, &len);
+
+    // Printer port
+    len = 64;
+    RegQueryValueEx(hkey, "PrinterPort", 0, NULL, (LPBYTE)printer_port, &len);
+
     RegCloseKey(hkey);
 
     return TRUE;
@@ -230,6 +237,9 @@ save_slic3r_exe_and_config()
     RegSetValueEx(hkey, "SlicerIndex", 0, REG_DWORD, (LPBYTE)&slicer_index, 4);
     RegSetValueEx(hkey, "ConfigIndex", 0, REG_DWORD, (LPBYTE)&config_index, 4);
 
+    // Printer port
+    RegSetValueEx(hkey, "PrinterPort", 0, REG_SZ, (PBYTE)printer_port, strlen(printer_port) + 1);
+
     RegCloseKey(hkey);
 
     // Clear the section cache, in case slicer has changed.
@@ -237,6 +247,18 @@ save_slic3r_exe_and_config()
     n_cache = 0;
 }
 
+
+// Save the printer configuration.
+void
+save_printer_config()
+{
+    HKEY hkey;
+
+    RegCreateKeyEx(HKEY_CURRENT_USER, "Software\\LoftyCAD\\Slic3r", 0, NULL, 0, KEY_ALL_ACCESS, NULL, &hkey, NULL);
+    RegSetValueEx(hkey, "PrinterPort", 0, REG_SZ, (PBYTE)printer_port, strlen(printer_port) + 1);
+
+    RegCloseKey(hkey);
+}
 
 // Find Slic3r executable and config directories in standard places (for Slic3r and PrusaSlicer).
 // Return FALSE if an exe was not found. 
@@ -975,7 +997,7 @@ run_slicer(char* slicer_exe, char* cmd_line, char* dir)
             return FALSE;
         }
         invalidate_dl();
-        SendMessage(hWndPropSheet, PSM_SETCURSEL, 2, 0);  // select print preview tab
+        SendMessage(hWndPropSheet, PSM_SETCURSEL, TAB_PREVIEW, 0);  // select print preview tab
         SendDlgItemMessage(hWndPrintPreview, IDC_PRINT_FILENAME, WM_SETTEXT, 0, (LPARAM)out_filename);
         SendDlgItemMessage(hWndPrintPreview, IDC_PRINT_FIL_USED, WM_SETTEXT, 0, (LPARAM)gcode_tree.fil_used);
         SendDlgItemMessage(hWndPrintPreview, IDC_PRINT_EST_PRINT, WM_SETTEXT, 0, (LPARAM)gcode_tree.est_print);

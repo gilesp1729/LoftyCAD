@@ -1497,46 +1497,47 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
         auxIdleFunc(DrawCB);
         auxMainLoop(DrawCB);
 
-        // Property sheet for the tools and preview tools
-        psp[0].dwSize = sizeof(PROPSHEETPAGE);
-        psp[0].dwFlags = PSP_USETITLE;
-        psp[0].hInstance = hInst;
-        psp[0].pszTemplate = MAKEINTRESOURCE(IDD_TOOLBAR);
-        psp[0].pszIcon = NULL;
-        psp[0].pfnDlgProc = toolbar_dialog;
-        psp[0].pszTitle = "Drawing Tools";
-        psp[0].lParam = 0;
-        psp[0].pfnCallback = NULL;
+        // Property sheet for the tools and preview tools. Tabs are indexed by symbols
+        // to make it simpler to refer to them consistently elsewhere.
+        psp[TAB_TOOLS].dwSize = sizeof(PROPSHEETPAGE);
+        psp[TAB_TOOLS].dwFlags = PSP_USETITLE;
+        psp[TAB_TOOLS].hInstance = hInst;
+        psp[TAB_TOOLS].pszTemplate = MAKEINTRESOURCE(IDD_TOOLBAR);
+        psp[TAB_TOOLS].pszIcon = NULL;
+        psp[TAB_TOOLS].pfnDlgProc = toolbar_dialog;
+        psp[TAB_TOOLS].pszTitle = "Drawing Tools";
+        psp[TAB_TOOLS].lParam = 0;
+        psp[TAB_TOOLS].pfnCallback = NULL;
 
-        psp[1].dwSize = sizeof(PROPSHEETPAGE);
-        psp[1].dwFlags = PSP_USETITLE;
-        psp[1].hInstance = hInst;
-        psp[1].pszTemplate = MAKEINTRESOURCE(IDD_SLICER);
-        psp[1].pszIcon = NULL;
-        psp[1].pfnDlgProc = slicer_dialog;
-        psp[1].pszTitle = "Slicer";
-        psp[1].lParam = 0;
-        psp[1].pfnCallback = NULL;
+        psp[TAB_SLICER].dwSize = sizeof(PROPSHEETPAGE);
+        psp[TAB_SLICER].dwFlags = PSP_USETITLE;
+        psp[TAB_SLICER].hInstance = hInst;
+        psp[TAB_SLICER].pszTemplate = MAKEINTRESOURCE(IDD_SLICER);
+        psp[TAB_SLICER].pszIcon = NULL;
+        psp[TAB_SLICER].pfnDlgProc = slicer_dialog;
+        psp[TAB_SLICER].pszTitle = "Slicer";
+        psp[TAB_SLICER].lParam = 0;
+        psp[TAB_SLICER].pfnCallback = NULL;
 
-        psp[2].dwSize = sizeof(PROPSHEETPAGE);
-        psp[2].dwFlags = PSP_USETITLE;
-        psp[2].hInstance = hInst;
-        psp[2].pszTemplate = MAKEINTRESOURCE(IDD_PRINT_PREVIEW);
-        psp[2].pszIcon = NULL;
-        psp[2].pfnDlgProc = preview_dialog;
-        psp[2].pszTitle = "Print Preview";
-        psp[2].lParam = 0;
-        psp[2].pfnCallback = NULL;
+        psp[TAB_PREVIEW].dwSize = sizeof(PROPSHEETPAGE);
+        psp[TAB_PREVIEW].dwFlags = PSP_USETITLE;
+        psp[TAB_PREVIEW].hInstance = hInst;
+        psp[TAB_PREVIEW].pszTemplate = MAKEINTRESOURCE(IDD_PRINT_PREVIEW);
+        psp[TAB_PREVIEW].pszIcon = NULL;
+        psp[TAB_PREVIEW].pfnDlgProc = preview_dialog;
+        psp[TAB_PREVIEW].pszTitle = "Print Preview";
+        psp[TAB_PREVIEW].lParam = 0;
+        psp[TAB_PREVIEW].pfnCallback = NULL;
 
-        psp[3].dwSize = sizeof(PROPSHEETPAGE);
-        psp[3].dwFlags = PSP_USETITLE;
-        psp[3].hInstance = hInst;
-        psp[3].pszTemplate = MAKEINTRESOURCE(IDD_PRINTER);
-        psp[3].pszIcon = NULL;
-        psp[3].pfnDlgProc = printer_dialog;
-        psp[3].pszTitle = "Printer";
-        psp[3].lParam = 0;
-        psp[3].pfnCallback = NULL;
+        psp[TAB_PRINTER].dwSize = sizeof(PROPSHEETPAGE);
+        psp[TAB_PRINTER].dwFlags = PSP_USETITLE;
+        psp[TAB_PRINTER].hInstance = hInst;
+        psp[TAB_PRINTER].pszTemplate = MAKEINTRESOURCE(IDD_PRINTER);
+        psp[TAB_PRINTER].pszIcon = NULL;
+        psp[TAB_PRINTER].pfnDlgProc = printer_dialog;
+        psp[TAB_PRINTER].pszTitle = "Printer";
+        psp[TAB_PRINTER].lParam = 0;
+        psp[TAB_PRINTER].pfnCallback = NULL;
 
         psh.dwSize = sizeof(PROPSHEETHEADER);
         psh.dwFlags = PSH_PROPSHEETPAGE | PSH_MODELESS | PSH_NOAPPLYNOW | PSH_NOCONTEXTHELP;
@@ -1545,7 +1546,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
         psh.pszIcon = NULL;
         psh.pszCaption = "Tools";
         psh.nPages = sizeof(psp) / sizeof(PROPSHEETPAGE);
-        psh.nStartPage = 0;
+        psh.nStartPage = TAB_TOOLS;
         psh.ppsp = (LPCPROPSHEETPAGE)&psp;
         psh.pfnCallback = NULL;
 

@@ -189,6 +189,12 @@ extern Material materials[MAX_MATERIAL];
 // ID of status bar window
 #define ID_STATUSBAR    99940
 
+// Tab indices in toolbar window (actually a property sheet)
+#define TAB_TOOLS       0
+#define TAB_SLICER      1
+#define TAB_PREVIEW     2
+#define TAB_PRINTER     3
+
 // Debug stuff
 
 // Debugging defines
@@ -266,6 +272,7 @@ void spaghetti(ZPolyEdge * zedge, float zmin, float zmax);
 // Slic3r integration (slicer.c)
 BOOL load_slic3r_exe_and_config();
 void save_slic3r_exe_and_config();
+void save_printer_config();
 BOOL find_slic3r_exe_and_config();
 void read_slic3r_config(char* key, int dlg_item, char *printer);
 BOOL get_slic3r_config_section(char* key, char* preset, char *inifile);

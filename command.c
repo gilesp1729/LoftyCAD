@@ -249,7 +249,7 @@ Command(int message, int wParam, int lParam)
             purge_zpoly_edges(&gcode_tree);
             rc = read_gcode_to_group(&gcode_tree, new_filename);
             invalidate_dl();
-            SendMessage(hWndPropSheet, PSM_SETCURSEL, 2, 0);  // select print preview tab
+            SendMessage(hWndPropSheet, PSM_SETCURSEL, TAB_PREVIEW, 0);  // select print preview tab
             SendDlgItemMessage(hWndPrintPreview, IDC_PRINT_FILENAME, WM_SETTEXT, 0, (LPARAM)new_filename);
             SendDlgItemMessage(hWndPrintPreview, IDC_PRINT_FIL_USED, WM_SETTEXT, 0, (LPARAM)gcode_tree.fil_used);
             SendDlgItemMessage(hWndPrintPreview, IDC_PRINT_EST_PRINT, WM_SETTEXT, 0, (LPARAM)gcode_tree.est_print);
@@ -756,7 +756,7 @@ Command(int message, int wParam, int lParam)
                     purge_zpoly_edges(&gcode_tree);
                     rc = read_gcode_to_group(&gcode_tree, new_filename);
                     invalidate_dl();
-                    SendMessage(hWndPropSheet, PSM_SETCURSEL, 2, 0);  // select print preview tab
+                    SendMessage(hWndPropSheet, PSM_SETCURSEL, TAB_PREVIEW, 0);  // select print preview tab
                     SendDlgItemMessage(hWndPrintPreview, IDC_PRINT_FILENAME, WM_SETTEXT, 0, (LPARAM)new_filename);
                     SendDlgItemMessage(hWndPrintPreview, IDC_PRINT_FIL_USED, WM_SETTEXT, 0, (LPARAM)gcode_tree.fil_used);
                     SendDlgItemMessage(hWndPrintPreview, IDC_PRINT_EST_PRINT, WM_SETTEXT, 0, (LPARAM)gcode_tree.est_print);
