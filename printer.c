@@ -125,7 +125,14 @@ get_octo_version(char *buf, int buflen)
     } while (received < total);
 
     if (received == total)
+    {
         Log("ERROR storing complete response from socket\r\n");
+        closesocket(sockfd);
+        return FALSE;
+    }
+
+    // make sure it's null terminated.
+    response[received] = '\0';
 
     /* close the socket */
     closesocket(sockfd);
@@ -133,7 +140,7 @@ get_octo_version(char *buf, int buflen)
     /* process response */
     Log(response);
 
-    // Parse out the OctoPrint version
+    // Parse out the OctoPrint version, skipping all the bumph in the response.
     brace = strchr(response, '{');
     octo = strstr(brace, "OctoPrint");
     if (octo == NULL)
@@ -143,6 +150,60 @@ get_octo_version(char *buf, int buflen)
     *quote = '\0';
     return TRUE;
 }
+
+
+/* Sending a file to OctoPrint for printing.
+
+The message looks as follows:
+
+    POST /api/files/local HTTP/1.1
+    Host: example.com
+    X-Api-Key: abcdef...
+    Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryDeC2E3iWbTv1PwMC
+
+    ------WebKitFormBoundaryDeC2E3iWbTv1PwMC
+    Content-Disposition: form-data; name="file"; filename="file_to_send.gcode"
+    Content-Type: application/octet-stream
+
+    M109 T0 S220.000000
+    T0
+    G21
+    G90
+    ...
+    ------WebKitFormBoundaryDeC2E3iWbTv1PwMC--
+
+With optional extras:
+
+    Content-Disposition: form-data; name="select"
+
+    true
+    ------WebKitFormBoundaryDeC2E3iWbTv1PwMC
+    Content-Disposition: form-data; name="print"
+
+    true
+    ------WebKitFormBoundaryDeC2E3iWbTv1PwMC--
+
+The response is expected as follows:
+
+    HTTP/1.1 200 OK
+    Content-Type: application/json
+    Location: http://example.com/api/files/local/file_to_send.gcode
+
+    {
+      "files": {
+        "local": {
+          "name": "file_to_send",
+          "origin": "local",
+          "refs": {
+            "resource": "http://example.com/api/files/local/file_to_send.gcode",
+            "download": "http://example.com/downloads/files/local/file_to_send.gcode"
+          }
+        }
+      },
+      "done": true
+    }
+
+*/
 
 void
 send_to_octoprint(char* gcode_file)

@@ -97,35 +97,24 @@ read_stl_to_group(Group *group, char *filename)
     // Search for "solid ". If not found, assume it's a binary STL file.
     if (fread_s(buf, 512, 1, 6, f) != 6)
         goto error_return;
-    if (strncmp(buf, "solid ", 6) == 0)
-    {
-        if (fgets(buf, 512, f) == NULL)
-            goto error_return;
-        tok = strtok_s(buf, "\n", &nexttok);  // rest of line till \n
-        if (tok != NULL)
-            strcpy_s(group->title, 256, tok);
-        vol = vol_new();
-        vol->hdr.lock = LOCK_FACES;
-    }
-    else
-    {
-        fclose(f);
-        fopen_s(&f, filename, "rb");        // make sure it's binary!
-        if (f == NULL)
-            return FALSE;
-
-        if (fread_s(buf, 512, 1, 80, f) != 80)
-            goto error_return;
-
-        strncpy_s(group->title, 80, buf, _TRUNCATE);
-        group->title[79] = '\0';    // in case there's no NULL char
-        if (fread_s(&n_tri, 4, 1, 4, f) != 4)
-            goto error_return;
-        vol = vol_new();
-        vol->hdr.lock = LOCK_FACES;
-
+    if (strncmp(buf, "solid ", 6) != 0)
         goto binary_stl;
-    }
+
+    // Read the rest of the line
+    if (fgets(buf, 512, f) == NULL)
+        goto error_return;
+
+    // Sometimes a binary STL will still start with "solid ". Check for the newline
+    // that will be there for ASCII (but not binary)
+    i = strlen(buf);
+    if (buf[i-1] != '\n')
+        goto binary_stl;
+
+    tok = strtok_s(buf, "\n", &nexttok);  // Read the rest of the line till \n
+    if (tok != NULL)
+        strcpy_s(group->title, 256, tok);
+    vol = vol_new();
+    vol->hdr.lock = LOCK_FACES;
 
     // Read in the rest of the ASCII STL file.
     while (TRUE)
@@ -136,6 +125,9 @@ read_stl_to_group(Group *group, char *filename)
         step_file_progress(f);
 
         tok = strtok_s(buf, " \t\n", &nexttok);
+        if (tok == NULL)
+            continue;
+
         if (strcmp(tok, "facet") == 0)
         {
             tok = strtok_s(NULL, " \t\n", &nexttok);  // absorb "normal"
@@ -212,6 +204,21 @@ error_return:
     return FALSE;
 
 binary_stl:
+    fclose(f);                          // close the file
+    fopen_s(&f, filename, "rb");        // make sure it's opened as binary!
+    if (f == NULL)
+        return FALSE;
+
+    if (fread_s(buf, 512, 1, 80, f) != 80)
+        goto error_return;
+
+    strncpy_s(group->title, 80, buf, _TRUNCATE);
+    group->title[79] = '\0';    // in case there's no NULL char
+    if (fread_s(&n_tri, 4, 1, 4, f) != 4)
+        goto error_return;
+    vol = vol_new();
+    vol->hdr.lock = LOCK_FACES;
+
     i = 0;
     while (TRUE)
     {
@@ -1045,9 +1052,11 @@ read_gcode_to_group(Group* group, char* filename)
                 have_x = have_y = have_z = have_e = FALSE;
                 while (TRUE)
                 {
-                    // Gather up the options (XYZEF..) till EOL
+                    // Gather up the options (XYZEF..) till EOL or semicolon
                     tok = strtok_s(NULL, " \t\n", &nexttok);
                     if (tok == NULL)
+                        break;
+                    if (tok[0] == ';')
                         break;
                     switch (tok[0])
                     {
