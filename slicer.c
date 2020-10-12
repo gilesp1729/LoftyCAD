@@ -615,7 +615,7 @@ read_slic3r_config(char* key, int dlg_item, char *sel_printer)
     FILE* f;
     WIN32_FIND_DATA find_data;
     int len, i, n;
-    char* p, *model;
+    char* p, *v, *model;
     char key_colon[64];
     int klen;
     char model_str[SECT_NAME_SIZE];
@@ -661,11 +661,18 @@ read_slic3r_config(char* key, int dlg_item, char *sel_printer)
                 n = 0;
                 while (1)
                 {
-                    if (fgets(p, 256, f) == NULL)
+                    if (fgets(p, 2048, f) == NULL)      // these can be very long
                         break;
                     len = strlen(p);
                     s->keyval[n].key = p;
-                    s->keyval[n].value = strchr(p, '=');
+                    v = strchr(p, '=');
+                    if (v == NULL)
+                        s->keyval[n].value = NULL;       // no '=' found. Should never happen.
+                    else
+                    {
+                        do { v++; } while (*v == ' ');  // skip blanks
+                        s->keyval[n].value = v;
+                    }
 
                     // Extract bed min/max from the section if it exists.
                     if (strncmp(s->keyval[n].key, "bed_shape", 9) == 0)
@@ -673,7 +680,7 @@ read_slic3r_config(char* key, int dlg_item, char *sel_printer)
                         char* nexttok = NULL;
                         char* tok;
 
-                        strcpy_s(bed_str, 256, s->keyval[n].value);
+                        strcpy_s(bed_str, 256, s->keyval[n].value);        
                         tok = strtok_s(bed_str, "x, \t\n", &nexttok);      // 0x0
                         s->bed_xmin = (float)atof(tok);
                         tok = strtok_s(NULL, "x, \t\n", &nexttok);
