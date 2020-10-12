@@ -429,7 +429,7 @@ load_section(char *ini, char *key, char* sect)
     char* p;
     char* v;
     int keyval_len, len;
-    int i, j, curr_n;
+    int i, j;
     int n = 0;
     InhSection* s;
     char section[SECT_NAME_SIZE];
@@ -496,7 +496,6 @@ load_section(char *ini, char *key, char* sect)
 
                 // Copy the new section's key/value pairs into the current one,
                 // checking for overrides if there is more than one inherited section.
-                curr_n = n;
                 for (i = 0; i < inhs->n_keyvals; i++)
                 {
                     // Copy the pointers. They point to the string in the other InhSection,
@@ -504,15 +503,12 @@ load_section(char *ini, char *key, char* sect)
                     // This copy may be set to override but the original must be left alone.
                     s->keyval[n] = inhs->keyval[i];
 
-                    // Check if it conflicts with any existing ones (up to curr_n)
+                    // Check if it conflicts with any existing ones.
                     // Warning: potential n-squared loop!
-                    for (j = 0; j < curr_n; j++)
+                    for (j = 0; j < n; j++)
                     {
                         if (keys_match(s->keyval[j].key, s->keyval[n].key))
-                        {
                             s->keyval[j].override = TRUE;
-                            break;
-                        }
                     }
                     n++;
                 }
@@ -534,10 +530,7 @@ load_section(char *ini, char *key, char* sect)
             for (j = 0; j < n; j++)
             {
                 if (keys_match(s->keyval[j].key, s->keyval[n].key))
-                {
                     s->keyval[j].override = TRUE;
-                    break;
-                }
             }
 
             // Extract bed min/max from the section if it exists.
