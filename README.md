@@ -8,7 +8,7 @@ Simple to use like Sketchup, but with some improvements:
 In particular, it will:
 - Retain the identity of 3D shapes, and not merge irreversibly with others
 - Produce a single triangle mesh from merged objects, using CSG operations (union, intersection, difference)
-- Not produce non-manifold triangle meshes requiring repairs (OK, some apps complain, but I've never seen one fail to slice)
+- Not produce non-manifold triangle meshes requiring repairs 
 - Write STL and other triangle mesh files directly
 - Allow you to control your data locally (not subscription or web-based)
 
@@ -37,14 +37,14 @@ In particular, it will:
 - Import STL, AMF, OBJ, and OFF to groups containing meshes as volumes
 - Import G-code files and visualise G-code
 
-# Slic3r integration
-- Integrates with Prusa Slic3rPE 1.41 and vanilla Slic3r
+# Slicer and printer integration
+- Integrates with PrusaSlicer 2.x, Slic3rPE 1.41 and vanilla Slic3r
 - Slice to G-code and preview
 
 # Works in progress
-- PrusaSlicer 2.x integration (pending command line problems)
 - Multi-material slicing
-- Directly print to a USB or serial connected printer
+- Directly control, and print to, a USB or serial connected printer
+- Directly upload to an OctoPrint server
 - Allow manipulation of triangle meshes: smooth extrusion, refinement, and more
 - Tubing and lofting (a nod to the original Lofty, LoftyCAD's spiritual ancestor)
 

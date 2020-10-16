@@ -168,6 +168,9 @@
 #define IDC_PREFS_OCTO_APIKEY           1065
 #define IDC_PREFS_OCTO_TEST             1066
 #define IDC_STATIC_TEST_RESULT          1067
+#define IDB_PRINTER_UPLOAD              1068
+#define IDB_PRINTER_UPLOAD2             1069
+#define IDB_PRINTER_PRINT               1069
 #define IDD_PRINT_PREVIEW               1544
 #define IDD_SLICER                      1545
 #define IDD_PRINTER                     1546
@@ -312,7 +315,7 @@
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        164
 #define _APS_NEXT_COMMAND_VALUE         32921
-#define _APS_NEXT_CONTROL_VALUE         1068
+#define _APS_NEXT_CONTROL_VALUE         1069
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif

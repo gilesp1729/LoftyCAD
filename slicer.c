@@ -8,8 +8,9 @@
 // Size of a section name.
 #define SECT_NAME_SIZE      80
 
-// Max number of key=value pairs in a section.
-#define MAX_KEYVALS         128
+// Max number of key=value pairs in a section. Note that inheritances may make
+// this requirement much larger than the final output as dups are culled later.
+#define MAX_KEYVALS         512
 
 // Max size of a section in characters, with null-separated key=value pairs.
 #define MAX_SECT_SIZE       8192
@@ -28,7 +29,7 @@ typedef struct InhString
     BOOL        override;               // TRUE is this key has been overridden
 } InhString;
 
-// Section with up to 1024 chars and 64 instances of key=value data. 
+// Section structure. 
 typedef struct InhSection
 {
     char        sect_name[SECT_NAME_SIZE];      // The original name of the section from the ini file.
@@ -992,7 +993,6 @@ run_slicer(char* slicer_exe, char* cmd_line, char* dir)
             if (strstr(line, PATH_STR) == NULL)
             {
                 Log(line);
-                show_status("", line);
                 bump_progress();
             }
 
