@@ -126,6 +126,9 @@ char octoprint_server[128] = "\0";
 // Octoprint server API key
 char octoprint_apikey[128] = "\0";
 
+// If TRUE, user is prompted for a G-code filename. Otherwise, the slicer generates one.
+BOOL explicit_gcode = TRUE;
+
 // Load Slic3r executable and config directories from the reg. Return FALSE if we don't have an exe
 // and leave the fields blank.
 BOOL
@@ -894,7 +897,7 @@ get_slic3r_config_section(char* key, char* preset, char *inifile)
 
 // Run the slicer and capture its output. (Courtesy of MS process-read-from-pipe example)
 BOOL
-run_slicer(char* slicer_exe, char* cmd_line, char* dir)
+run_slicer(char* slicer_exe, char* cmd_line, char* dir, char* gcode_filename)
 {
     HANDLE g_hChildStd_OUT_Rd = NULL;
     HANDLE g_hChildStd_OUT_Wr = NULL;
@@ -999,10 +1002,17 @@ run_slicer(char* slicer_exe, char* cmd_line, char* dir)
             // Check for output filename
             if (!have_output && (p = strstr(line, OUTPUT_FILE_STR)) != NULL)
             {
-                p += strlen(OUTPUT_FILE_STR);
-                endline = strchr(p, '\r');
-                *endline = '\0';
-                strcpy_s(out_filename, MAX_PATH, p);
+                if (explicit_gcode)
+                {
+                    strcpy_s(out_filename, MAX_PATH, gcode_filename);
+                }
+                else
+                {
+                    p += strlen(OUTPUT_FILE_STR);
+                    endline = strchr(p, '\r');
+                    *endline = '\0';
+                    strcpy_s(out_filename, MAX_PATH, p);
+                }
                 have_output = TRUE;
             }
         }

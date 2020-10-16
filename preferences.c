@@ -164,6 +164,8 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         SendDlgItemMessage(hWnd, IDC_PREFS_ROUNDRAD, WM_SETTEXT, 0, (LPARAM)buf);
         SetFocus(GetDlgItem(hWnd, IDC_PREFS_TITLE));
 
+        CheckDlgButton(hWnd, IDC_PREFS_EXPLICIT_GCODE, explicit_gcode ? BST_CHECKED : BST_UNCHECKED);
+
         // Load up printer server selection (serial or Octoprint)
 
 
@@ -264,6 +266,7 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
             // Slicer changes, in and of themselves, don't change the drawing. But save
             // any changes in the registry (even on cancel, as the internal lists have changed)
+            explicit_gcode = IsDlgButtonChecked(hWnd, IDC_PREFS_EXPLICIT_GCODE);
             if (index_changed)
             {
                 save_slic3r_exe_and_config();

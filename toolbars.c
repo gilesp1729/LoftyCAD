@@ -301,7 +301,7 @@ slicer_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     HMENU hMenu;
     PSHNOTIFY* notify;
     char printer[64], print[64], filament[64];
-    char cmd[1024], filename[MAX_PATH], dir[MAX_PATH], button_title[256];
+    char cmd[1024], filename[MAX_PATH], dir[MAX_PATH], gcode_filename[MAX_PATH], button_title[256];
     OPENFILENAME ofn;
     int indx;
     char* slosh, *pdot;
@@ -394,7 +394,7 @@ slicer_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 "All Files\0*.*\0\0";
             ofn.nFilterIndex = 1;
             ofn.lpstrDefExt = "stl";
-            strcpy_s(filename, 256, curr_filename);
+            strcpy_s(filename, MAX_PATH, curr_filename);
             pdot = strrchr(filename, '.');
             if (pdot != NULL)
                 *pdot = '\0';           // cut off any ".lcd"
@@ -451,10 +451,37 @@ slicer_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             sprintf_s(option, 80, slicer_cmd[slicer_config[config_index].type],
                 (int)(bed_xmax - bed_xmin) / 2,
                 (int)(bed_ymax - bed_ymin) / 2);
-
             strcat_s(cmd, 1024, option);
+
+            // Put in the output file option if we are specifying it explicitly.
+            // (otherwise it will be generated according to output_filename_format,
+            // but beware of PrusaSlicer issue #4872 messing this up)
+            if (explicit_gcode)
+            {
+                memset(&ofn, 0, sizeof(OPENFILENAME));
+                ofn.lStructSize = sizeof(OPENFILENAME);
+                ofn.hwndOwner = auxGetHWND();
+                ofn.lpstrFilter =
+                    "G-code (*.GCODE)\0*.GCODE\0"
+                    "All Files\0*.*\0\0";
+                ofn.nFilterIndex = 1;
+                ofn.lpstrDefExt = "gcode";
+                strcpy_s(gcode_filename, MAX_PATH, filename);
+                pdot = strrchr(gcode_filename, '.');
+                if (pdot != NULL)
+                    *pdot = '\0';           // cut off any ".stl" and add extra stuff
+                ofn.lpstrFile = gcode_filename;
+                ofn.nMaxFile = MAX_PATH;
+                ofn.Flags = OFN_EXPLORER | OFN_OVERWRITEPROMPT;
+                if (!GetSaveFileName(&ofn))
+                    break;
+
+                sprintf_s(option, 80, " -o %s ", gcode_filename);
+                strcat_s(cmd, 1024, option);
+            }
+
             strcat_s(cmd, 1024, filename);
-            run_slicer(slicer_exe[slicer_index].exe, cmd, dir);
+            run_slicer(slicer_exe[slicer_index].exe, cmd, dir, gcode_filename);
 
             break;
         }
@@ -677,7 +704,6 @@ printer_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     HMENU hMenu;
     PSHNOTIFY* notify;
-    char buf[16];
 
     switch (msg)
     {

@@ -34,5 +34,6 @@ extern BOOL print_octo;
 extern char printer_port[64];
 extern char octoprint_server[128];
 extern char octoprint_apikey[128];
+extern BOOL explicit_gcode;
 
 

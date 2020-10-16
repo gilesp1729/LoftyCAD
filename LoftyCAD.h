@@ -277,7 +277,7 @@ BOOL find_slic3r_exe_and_config();
 void read_slic3r_config(char* key, int dlg_item, char *printer);
 BOOL get_slic3r_config_section(char* key, char* preset, char *inifile);
 void set_bed_shape(char* printer);
-BOOL run_slicer(char* slicer_exe, char* cmd_line, char* dir);
+BOOL run_slicer(char* slicer_exe, char* cmd_line, char* dir, char* gcode_filename);
 
 // Printer connection (printer.c)
 void init_comms(void);
