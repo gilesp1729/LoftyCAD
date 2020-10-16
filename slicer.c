@@ -594,6 +594,29 @@ set_bed_shape(char* printer)
     }
 }
 
+// Load a string from a section and put its value into the corresponding dialog item.
+BOOL
+read_string_and_load_dlgitem(char* sect, char* string, int dlg_item, BOOL checkbox)
+{
+    InhSection* s;
+    char* val;
+    char vendor[MAX_PATH];
+
+    strcpy_s(vendor, MAX_PATH, slicer_config[config_index].dir);
+    strcat_s(vendor, MAX_PATH, VENDOR_INI_FILE);
+    s = load_section(vendor, "print", sect);
+    val = find_string_in_section(string, s);
+    if (val == NULL)
+        return FALSE;
+
+    if (checkbox)  // string is "0" or "1"
+        CheckDlgButton(hWndSlicer, dlg_item, string[0] == '1' ? BST_CHECKED : BST_UNCHECKED);
+    else
+        SendDlgItemMessage(hWndSlicer, dlg_item, WM_SETTEXT, 0, (LPARAM)val);
+
+    return TRUE;
+}
+
 // Read Slic3r configuration and populate allowable printers, print settings and filament settings
 // according to the given key (printer, print or filament). The settings are loaded into the
 // given combo box item in hwndSlicer.

@@ -316,6 +316,15 @@ slicer_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         read_slic3r_config("print", IDC_SLICER_PRINTSETTINGS, printer);
         read_slic3r_config("filament", IDC_SLICER_FILAMENT, printer);
 
+        indx = SendDlgItemMessage(hWnd, IDC_SLICER_PRINTSETTINGS, CB_GETCURSEL, 0, 0);
+        SendDlgItemMessage(hWnd, IDC_SLICER_PRINTSETTINGS, CB_GETLBTEXT, indx, (LPARAM)print);
+        read_string_and_load_dlgitem(print, "support_material", IDB_SLICER_SUPPORT, TRUE);
+        read_string_and_load_dlgitem(print, "layer_height", IDC_SLICER_LAYERHEIGHT, FALSE);
+        read_string_and_load_dlgitem(print, "perimeters", IDC_SLICER_WALLTHICK, FALSE);
+        read_string_and_load_dlgitem(print, "top_solid_layers", IDC_SLICER_ROOFTHICK, FALSE);
+        read_string_and_load_dlgitem(print, "bottom_solid_layers", IDC_SLICER_FLOORTHICK, FALSE);
+        read_string_and_load_dlgitem(print, "fill_density", IDC_SLICER_INFILL, FALSE);
+
         if (curr_filename[0] == '\0')
         {
             SendDlgItemMessage(hWndSlicer, IDB_SLICER_SLICE, WM_SETTEXT, 0, (LPARAM)"Slice Current Model");
@@ -345,15 +354,30 @@ slicer_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 // Pull out bed shape from cached printer section
                 set_bed_shape(printer);
                 break;
+            }
+            break;
 
-            case CBN_KILLFOCUS:
-
+        case IDC_SLICER_PRINTSETTINGS:
+            switch (HIWORD(wParam))
+            {
+            case CBN_SELCHANGE:
+                indx = SendDlgItemMessage(hWnd, IDC_SLICER_PRINTSETTINGS, CB_GETCURSEL, 0, 0);
+                SendDlgItemMessage(hWnd, IDC_SLICER_PRINTSETTINGS, CB_GETLBTEXT, indx, (LPARAM)print);
+                read_string_and_load_dlgitem(print, "support_material", IDB_SLICER_SUPPORT, TRUE);
+                read_string_and_load_dlgitem(print, "layer_height", IDC_SLICER_LAYERHEIGHT, FALSE);
+                read_string_and_load_dlgitem(print, "perimeters", IDC_SLICER_WALLTHICK, FALSE);
+                read_string_and_load_dlgitem(print, "top_solid_layers", IDC_SLICER_ROOFTHICK, FALSE);
+                read_string_and_load_dlgitem(print, "bottom_solid_layers", IDC_SLICER_FLOORTHICK, FALSE);
+                read_string_and_load_dlgitem(print, "fill_density", IDC_SLICER_INFILL, FALSE);
                 break;
             }
             break;
 
         case IDB_SLICER_SUPPORT:
         case IDC_SLICER_LAYERHEIGHT:
+        case IDC_SLICER_WALLTHICK:
+        case IDC_SLICER_ROOFTHICK:
+        case IDC_SLICER_FLOORTHICK:
         case IDC_SLICER_INFILL:
             // TODO: support these overrides
             break;

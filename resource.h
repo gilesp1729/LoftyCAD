@@ -158,6 +158,9 @@
 #define IDB_SLICER_SLICE_EXISTING       1052
 #define IDC_SLICER_WALLTHICK            1053
 #define IDC_PREFS_FIND_SLICERS          1054
+#define IDC_SLICER_ROOFTHICK2           1054
+#define IDC_SLICER_ROOFTHICK            1054
+#define IDC_SLICER_FLOORTHICK           1055
 #define IDC_STATIC_SLICER               1057
 #define IDC_PRINT_FILENAME              1059
 #define IDC_PRINT_FIL_USED              1060
@@ -171,7 +174,6 @@
 #define IDC_STATIC_TEST_RESULT          1067
 #define IDB_PRINTER_UPLOAD              1068
 #define IDB_PRINTER_PRINT               1069
-#define IDC_CHECK1                      1069
 #define IDC_PREFS_EXPLICIT_GCODE        1069
 #define IDD_PRINT_PREVIEW               1544
 #define IDD_SLICER                      1545
