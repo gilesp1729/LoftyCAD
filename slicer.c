@@ -609,10 +609,14 @@ read_string_and_load_dlgitem(char* sect, char* string, int dlg_item, BOOL checkb
     if (val == NULL)
         return FALSE;
 
+    // Set up the value in the edit box
     if (checkbox)  // string is "0" or "1"
         CheckDlgButton(hWndSlicer, dlg_item, string[0] == '1' ? BST_CHECKED : BST_UNCHECKED);
     else
         SendDlgItemMessage(hWndSlicer, dlg_item, WM_SETTEXT, 0, (LPARAM)val);
+
+    // Mark the edit box as having an unchanged value
+    SetWindowLong(GetDlgItem(hWndSlicer, dlg_item), GWL_USERDATA, 0);
 
     return TRUE;
 }
@@ -926,7 +930,6 @@ run_slicer(char* slicer_exe, char* cmd_line, char* dir, char* gcode_filename)
     HANDLE g_hChildStd_OUT_Wr = NULL;
 
     SECURITY_ATTRIBUTES saAttr;
-    TCHAR szCmdline[] = TEXT("child");
     PROCESS_INFORMATION piProcInfo;
     STARTUPINFO siStartInfo;
     BOOL bSuccess = FALSE;

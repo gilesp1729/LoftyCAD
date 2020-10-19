@@ -299,14 +299,19 @@ int WINAPI
 slicer_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     HMENU hMenu;
+    static HFONT hFontStd, hFontBold;
+    LOGFONT lf;
     PSHNOTIFY* notify;
     char printer[64], print[64], filament[64];
     char cmd[1024], filename[MAX_PATH], dir[MAX_PATH], gcode_filename[MAX_PATH], button_title[256];
     OPENFILENAME ofn;
-    int indx;
+    int indx, len;
     char* slosh, *pdot;
     char inifile[MAX_PATH];
+    char buf[16];
     char option[80];
+    static BOOL text_changed = FALSE;
+    static BOOL first_focus = FALSE;
 
     switch (msg)
     {
@@ -324,6 +329,12 @@ slicer_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         read_string_and_load_dlgitem(print, "top_solid_layers", IDC_SLICER_ROOFTHICK, FALSE);
         read_string_and_load_dlgitem(print, "bottom_solid_layers", IDC_SLICER_FLOORTHICK, FALSE);
         read_string_and_load_dlgitem(print, "fill_density", IDC_SLICER_INFILL, FALSE);
+
+        // Get the font used by the edit boes, and make a bold version of it
+        hFontStd = (HFONT)SendDlgItemMessage(hWnd, IDC_SLICER_LAYERHEIGHT, WM_GETFONT, 0, 0);
+        GetObject(hFontStd, sizeof(LOGFONT), &lf);
+        lf.lfWeight = FW_BOLD;
+        hFontBold = CreateFontIndirect(&lf);
 
         if (curr_filename[0] == '\0')
         {
@@ -369,17 +380,51 @@ slicer_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 read_string_and_load_dlgitem(print, "top_solid_layers", IDC_SLICER_ROOFTHICK, FALSE);
                 read_string_and_load_dlgitem(print, "bottom_solid_layers", IDC_SLICER_FLOORTHICK, FALSE);
                 read_string_and_load_dlgitem(print, "fill_density", IDC_SLICER_INFILL, FALSE);
+                SendDlgItemMessage(hWnd, IDC_SLICER_LAYERHEIGHT, WM_SETFONT, (WPARAM)hFontStd, TRUE);
+                SendDlgItemMessage(hWnd, IDC_SLICER_WALLTHICK, WM_SETFONT, (WPARAM)hFontStd, TRUE);
+                SendDlgItemMessage(hWnd, IDC_SLICER_ROOFTHICK, WM_SETFONT, (WPARAM)hFontStd, TRUE);
+                SendDlgItemMessage(hWnd, IDC_SLICER_FLOORTHICK, WM_SETFONT, (WPARAM)hFontStd, TRUE);
+                SendDlgItemMessage(hWnd, IDC_SLICER_INFILL, WM_SETFONT, (WPARAM)hFontStd, TRUE);
+                text_changed = FALSE;
                 break;
             }
             break;
 
         case IDB_SLICER_SUPPORT:
+            switch (HIWORD(wParam))
+            {
+            case BN_CLICKED:
+                SetWindowLong(GetDlgItem(hWndSlicer, LOWORD(wParam)), GWL_USERDATA, 1);
+                break;
+            }
+            break;
+
         case IDC_SLICER_LAYERHEIGHT:
         case IDC_SLICER_WALLTHICK:
         case IDC_SLICER_ROOFTHICK:
         case IDC_SLICER_FLOORTHICK:
         case IDC_SLICER_INFILL:
-            // TODO: support these overrides
+            // Set changed overrides to bold face
+            switch (HIWORD(wParam))
+            {
+            case EN_SETFOCUS:
+                // Catch the first time it gets the focus, so we don't count
+                // the EN_CHANGE when the edit box is first written to
+                first_focus = TRUE;
+                break;
+
+            case EN_CHANGE:
+                text_changed = first_focus;
+                break;
+
+            case EN_KILLFOCUS:
+                if (text_changed)
+                {
+                    SendDlgItemMessage(hWnd, LOWORD(wParam), WM_SETFONT, (WPARAM)hFontBold, TRUE);
+                    SetWindowLong(GetDlgItem(hWndSlicer, LOWORD(wParam)), GWL_USERDATA, 1);
+                }
+                text_changed = FALSE;
+            }
             break;
 
         case IDB_SLICER_GUI:
@@ -470,8 +515,7 @@ slicer_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             strcat_s(cmd, 1024, " --load ");
             strcat_s(cmd, 1024, inifile);
 
-            // Build slic3r cmd line and run it. Centre it on the current print bed dimensions.
-            // TODO: Put in other overrides here as options.
+            // Build slic3r options. Centre model on the current print bed dimensions.
             sprintf_s(option, 80, slicer_cmd[slicer_config[config_index].type],
                 (int)(bed_xmax - bed_xmin) / 2,
                 (int)(bed_ymax - bed_ymin) / 2);
@@ -504,6 +548,54 @@ slicer_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 strcat_s(cmd, 1024, option);
             }
 
+            // Put in any changed overrrides as options. Apart from the infill density (below)
+            // NO checking is done.
+            if (GetWindowLong(GetDlgItem(hWnd, IDB_SLICER_SUPPORT), GWL_USERDATA) != 0)
+            {
+                if (IsDlgButtonChecked(hWnd, IDB_SLICER_SUPPORT))
+                    strcat_s(cmd, 1024, " --support-material ");
+                else
+                    strcat_s(cmd, 1024, " --no-support-material ");
+            }
+            if (GetWindowLong(GetDlgItem(hWnd, IDC_SLICER_LAYERHEIGHT), GWL_USERDATA) != 0)
+            {
+                SendDlgItemMessage(hWnd, IDC_SLICER_LAYERHEIGHT, WM_GETTEXT, 16, (LPARAM)buf);
+                sprintf_s(option, 80, " --layer-height %s ", buf);
+                strcat_s(cmd, 1024, option);
+            }
+            if (GetWindowLong(GetDlgItem(hWnd, IDC_SLICER_WALLTHICK), GWL_USERDATA) != 0)
+            {
+                SendDlgItemMessage(hWnd, IDC_SLICER_WALLTHICK, WM_GETTEXT, 16, (LPARAM)buf);
+                sprintf_s(option, 80, " --perimeters %s ", buf);
+                strcat_s(cmd, 1024, option);
+            }
+            if (GetWindowLong(GetDlgItem(hWnd, IDC_SLICER_ROOFTHICK), GWL_USERDATA) != 0)
+            {
+                SendDlgItemMessage(hWnd, IDC_SLICER_ROOFTHICK, WM_GETTEXT, 16, (LPARAM)buf);
+                sprintf_s(option, 80, " --top-solid-layers %s ", buf);
+                strcat_s(cmd, 1024, option);
+            }
+            if (GetWindowLong(GetDlgItem(hWnd, IDC_SLICER_FLOORTHICK), GWL_USERDATA) != 0)
+            {
+                SendDlgItemMessage(hWnd, IDC_SLICER_FLOORTHICK, WM_GETTEXT, 16, (LPARAM)buf);
+                sprintf_s(option, 80, " --bottom-solid-layers %s ", buf);
+                strcat_s(cmd, 1024, option);
+            }
+            if (GetWindowLong(GetDlgItem(hWnd, IDC_SLICER_INFILL), GWL_USERDATA) != 0)
+            {
+                SendDlgItemMessage(hWnd, IDC_SLICER_INFILL, WM_GETTEXT, 16, (LPARAM)buf);
+
+                // Make sure the "%" is present, otherwise PS runs away in an infinite loop!
+                // Raised issue #4887 on PS.
+                len = strlen(buf);
+                if (buf[len - 1] != '%')
+                    strcat_s(buf, 16, "%");
+
+                sprintf_s(option, 80, " --fill-density %s ", buf);
+                strcat_s(cmd, 1024, option);
+            }
+
+            // Add the input file and run it
             strcat_s(cmd, 1024, filename);
             run_slicer(slicer_exe[slicer_index].exe, cmd, dir, gcode_filename);
 
@@ -537,7 +629,7 @@ preview_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     HMENU hMenu;
     PSHNOTIFY* notify;
-    char buf[16];
+    char buf[16], print_button[128];
 
     switch (msg)
     {
@@ -573,6 +665,13 @@ preview_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             EnableWindow(GetDlgItem(hWnd, IDC_PRINTER_ZTO), TRUE);
             SendDlgItemMessage(hWnd, IDC_PRINTER_UPTO, BM_CLICK, 0, 0);
         }
+
+        if (print_octo)
+            sprintf_s(print_button, 128, "Upload G-code to %s", octoprint_server);
+        else
+            sprintf_s(print_button, 128, "Print G-code to %s", printer_port);
+        SendDlgItemMessage(hWndPrintPreview, IDB_PRINTER_PRINT, WM_SETTEXT, 0, (LPARAM)print_button);
+
         break;
 
     case WM_COMMAND:

@@ -139,7 +139,7 @@ BOOL  EndEnumeratePorts(HANDLE DeviceInfoSet)
 int WINAPI
 prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-    char buf[16], version[128];
+    char buf[16], version[128], print_button[128];
     char location[MAX_PATH], filename[MAX_PATH];
     FILE* f;
     float new_val;
@@ -263,6 +263,11 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             SendDlgItemMessage(hWnd, IDC_PREFS_OCTOPRINT, WM_GETTEXT, 128, (LPARAM)octoprint_server);
             SendDlgItemMessage(hWnd, IDC_PREFS_OCTO_APIKEY, WM_GETTEXT, 128, (LPARAM)octoprint_apikey);
             save_printer_config();
+            if (print_octo)
+                sprintf_s(print_button, 128, "Upload G-code to %s", octoprint_server);
+            else
+                sprintf_s(print_button, 128, "Print G-code to %s", printer_port);
+            SendDlgItemMessage(hWndPrintPreview, IDB_PRINTER_PRINT, WM_SETTEXT, 0, (LPARAM)print_button);
 
             // Slicer changes, in and of themselves, don't change the drawing. But save
             // any changes in the registry (even on cancel, as the internal lists have changed)
