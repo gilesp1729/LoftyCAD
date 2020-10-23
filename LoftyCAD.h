@@ -285,7 +285,7 @@ void init_comms(void);
 void close_comms(void);
 BOOL get_octo_version(char* buf, int buflen);
 void send_to_serial(char* gcode_file);
-void send_to_octoprint(char* gcode_file);
+void send_to_octoprint(char* gcode_file, char *destination);
 
 // Help dialog (help.c)
 HWND init_help_window(void);

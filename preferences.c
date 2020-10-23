@@ -141,7 +141,7 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     char buf[16], version[128], print_button[128];
     char location[MAX_PATH], filename[MAX_PATH];
-    FILE* f;
+    HANDLE f;
     float new_val;
     int i;
     static BOOL slicer_changed, index_changed, config_changed;

@@ -7,13 +7,6 @@
 
 // Communication with printer.
 
-
-void
-send_to_serial(char* gcode_file)
-{
-}
-
-
 void
 init_comms(void)
 {
@@ -28,6 +21,12 @@ close_comms(void)
 {
     /* shutdown */
     WSACleanup();
+}
+
+// Send a G-code file to the serial port.
+void
+send_to_serial(char* gcode_file)
+{
 }
 
 // Connect to an Octoprint server.
@@ -71,27 +70,15 @@ connect_to_socket()
     return sockfd;
 }
 
+// Send a message string to the socket.
 BOOL
-get_octo_version(char *buf, int buflen)
+send_to_socket(int sockfd, char* message)
 {
-    char* message_fmt = "GET /api/version?apikey=%s HTTP/1.1\r\n\r\n";
-    int sockfd, bytes, sent, received, total;
-    char message[1024], response[4096];
-    char* brace, * octo, * quote;
+    int total, sent, bytes;
 
-    // Connect to the server
-    sockfd = connect_to_socket();
-    if (sockfd < 0)
-        return FALSE;
-
-    /* fill in the parameters */
-    sprintf_s(message, 1024, message_fmt, octoprint_apikey);
-    Log(message);
-
-    /* send the request */
     total = strlen(message);
     sent = 0;
-    do 
+    do
     {
         bytes = send(sockfd, message + sent, total - sent, 0);
         if (bytes < 0)
@@ -101,11 +88,18 @@ get_octo_version(char *buf, int buflen)
         sent += bytes;
     } while (sent < total);
 
-    /* receive the response */
-    memset(response, 0, sizeof(response));
-    total = sizeof(response) - 1;
+    return sent == total;
+}
+
+BOOL
+receive_from_socket(int sockfd, char* response, int resp_len)
+{
+    int total, bytes, received;
+
+    memset(response, 0, resp_len);
+    total = resp_len - 1;
     received = 0;
-    do 
+    do
     {
         // Is anything there to be read? Check with a 100ms timeout to avoid blocking
         // on the last call.
@@ -124,15 +118,40 @@ get_octo_version(char *buf, int buflen)
         received += bytes;
     } while (received < total);
 
-    if (received == total)
+    // make sure it's null terminated.
+    if (received < total)
+        response[received] = '\0';
+
+    return received < total;
+}
+
+BOOL
+get_octo_version(char *buf, int buflen)
+{
+    char* message_fmt = "GET /api/version?apikey=%s HTTP/1.1\r\n\r\n";
+    int sockfd;
+    char message[1024], response[4096];
+    char* brace, * octo, * quote;
+
+    // Connect to the server
+    sockfd = connect_to_socket();
+    if (sockfd < 0)
+        return FALSE;
+
+    /* fill in the parameters */
+    sprintf_s(message, 1024, message_fmt, octoprint_apikey);
+    Log(message);
+
+    /* send the request */
+    send_to_socket(sockfd, message);
+
+    /* receive the response */
+    if (!receive_from_socket(sockfd, response, sizeof(response)))
     {
         Log("ERROR storing complete response from socket\r\n");
         closesocket(sockfd);
         return FALSE;
     }
-
-    // make sure it's null terminated.
-    response[received] = '\0';
 
     /* close the socket */
     closesocket(sockfd);
@@ -170,7 +189,7 @@ The message looks as follows:
     G21
     G90
     ...
-    ------WebKitFormBoundaryDeC2E3iWbTv1PwMC--
+    ------WebKitFormBoundaryDeC2E3iWbTv1PwMC
 
 With optional extras:
 
@@ -182,6 +201,7 @@ With optional extras:
 
     true
     ------WebKitFormBoundaryDeC2E3iWbTv1PwMC--
+(note that only the final boundary has "--" appended!)
 
 The response is expected as follows:
 
@@ -206,27 +226,58 @@ The response is expected as follows:
 */
 
 void
-send_to_octoprint(char* gcode_file)
+send_to_octoprint(char* gcode_file, char *destination)
 {
-#if 0
-    char* message = "POST /api/version HTTP/1.1\r\n\r\n";
-    int sockfd, bytes, sent, received, total;
+    char* message_fmt = "POST /api/files/%s HTTP/1.1\r\nHost: %s\r\nX-Api-Key: %s\r\n";
+    char* content_type_fmt = "Content-Type: multipart/form-data; boundary=%s\r\n\r\n";
+    char* content_fmt = "Content-Disposition: form-data; name=\"file\"; filename=\"%s\"\r\n";
+    char* boundary = "----WebKitFormBoundaryDeC2E3iWbTv1PwMC";
+    char message[1024];
+    int sockfd;
+    HANDLE hf;
     char response[4096];
-    char* brace, * octo, * quote;
 
     // Connect to the server
     sockfd = connect_to_socket();
     if (sockfd < 0)
-        return FALSE;
+        return;
 
-    /* fill in the parameters */
-    sprintf_s(message, 1024, message_fmt, octoprint_apikey);
+    // Fill in the parameters. Destination is either "local" or "sdcard"
+    sprintf_s(message, 1024, message_fmt, destination, octoprint_apikey);
     Log(message);
+    send_to_socket(sockfd, message);
 
+    // Start the multipart form
+    sprintf_s(message, 1024, content_type_fmt, boundary);
+    Log(message);
+    send_to_socket(sockfd, message);
 
+    sprintf_s(message, 1024, "--%s\r\n", boundary);
+    Log(message);
+    send_to_socket(sockfd, message);
+    sprintf_s(message, 1024, content_fmt, gcode_file);
+    Log(message);
+    send_to_socket(sockfd, message);
+    sprintf_s(message, 1024, " Content-Type: application/octet-stream\r\n\r\n");
+    Log(message);
+    send_to_socket(sockfd, message);
 
+    // Send the file data
+    hf = CreateFile(gcode_file, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    TransmitFile(sockfd, hf, 0, 0, NULL, NULL, 0);
+    CloseHandle(hf);
 
+    // Finish with a final boundary
+    sprintf_s(message, 1024, "--%s--\r\n", boundary);
+    Log(message);
+    send_to_socket(sockfd, message);
 
+    // Read back the response and log it to the debug log
+    receive_from_socket(sockfd, response, sizeof(response));
 
-#endif
+    /* close the socket */
+    closesocket(sockfd);
+
+    // Log the response
+    Log(response);
 }

@@ -1547,7 +1547,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
         psh.hInstance = hInst;
         psh.pszIcon = NULL;
         psh.pszCaption = "Tools";
-        psh.nPages = sizeof(psp) / sizeof(PROPSHEETPAGE);
+        psh.nPages = 3; // sizeof(psp) / sizeof(PROPSHEETPAGE); // TEMP don't show printer tab for the moment
         psh.nStartPage = TAB_TOOLS;
         psh.ppsp = (LPCPROPSHEETPAGE)&psp;
         psh.pfnCallback = NULL;

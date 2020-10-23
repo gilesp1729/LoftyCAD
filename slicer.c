@@ -1060,6 +1060,7 @@ run_slicer(char* slicer_exe, char* cmd_line, char* dir, char* gcode_filename)
         SendDlgItemMessage(hWndPrintPreview, IDC_PRINT_FILENAME, WM_SETTEXT, 0, (LPARAM)out_filename);
         SendDlgItemMessage(hWndPrintPreview, IDC_PRINT_FIL_USED, WM_SETTEXT, 0, (LPARAM)gcode_tree.fil_used);
         SendDlgItemMessage(hWndPrintPreview, IDC_PRINT_EST_PRINT, WM_SETTEXT, 0, (LPARAM)gcode_tree.est_print);
+        EnableWindow(GetDlgItem(hWndPrintPreview, IDB_PRINTER_PRINT), TRUE);
     }
     else
     {

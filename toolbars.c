@@ -629,7 +629,7 @@ preview_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     HMENU hMenu;
     PSHNOTIFY* notify;
-    char buf[16], print_button[128];
+    char buf[16], print_button[128], gcode_filename[MAX_PATH];
 
     switch (msg)
     {
@@ -671,7 +671,10 @@ preview_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         else
             sprintf_s(print_button, 128, "Print G-code to %s", printer_port);
         SendDlgItemMessage(hWndPrintPreview, IDB_PRINTER_PRINT, WM_SETTEXT, 0, (LPARAM)print_button);
-
+        EnableWindow(GetDlgItem(hWnd, IDB_PRINTER_PRINT), FALSE);
+        SendDlgItemMessage(hWndPrintPreview, IDC_PRINT_FILENAME, WM_SETTEXT, 0, (LPARAM)"");
+        SendDlgItemMessage(hWndPrintPreview, IDC_PRINT_FIL_USED, WM_SETTEXT, 0, (LPARAM)"");
+        SendDlgItemMessage(hWndPrintPreview, IDC_PRINT_EST_PRINT, WM_SETTEXT, 0, (LPARAM)"");
         break;
 
     case WM_COMMAND:
@@ -763,6 +766,16 @@ preview_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 #endif
                 trackball_InitQuat(quat_mXZ);
                 SetWindowPos(auxGetHWND(), HWND_TOP, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOREPOSITION);
+                break;
+
+            case IDB_PRINTER_PRINT:
+                if (SendDlgItemMessage(hWnd, IDC_PRINT_FILENAME, WM_GETTEXT, MAX_PATH, (LPARAM)gcode_filename) == 0)
+                    break;
+                if (print_octo)
+                    send_to_octoprint(gcode_filename, "local");
+                else
+                    send_to_serial(gcode_filename);
+
                 break;
             }
         }
