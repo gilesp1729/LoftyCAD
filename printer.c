@@ -72,17 +72,19 @@ connect_to_socket()
 
 // Send a message string to the socket.
 BOOL
-send_to_socket(int sockfd, char* message)
+send_to_socket(int sockfd, char* message, int total)
 {
-    int total, sent, bytes;
+    int sent, bytes;
 
-    total = strlen(message);
     sent = 0;
     do
     {
         bytes = send(sockfd, message + sent, total - sent, 0);
         if (bytes < 0)
+        {
+            int err = WSAGetLastError();
             Log("ERROR writing message to socket\r\n");
+        }
         if (bytes <= 0)
             break;
         sent += bytes;
@@ -129,7 +131,7 @@ BOOL
 get_octo_version(char *buf, int buflen)
 {
     char* message_fmt = "GET /api/version?apikey=%s HTTP/1.1\r\n\r\n";
-    int sockfd;
+    int sockfd, bytes;
     char message[1024], response[4096];
     char* brace, * octo, * quote;
 
@@ -139,11 +141,11 @@ get_octo_version(char *buf, int buflen)
         return FALSE;
 
     /* fill in the parameters */
-    sprintf_s(message, 1024, message_fmt, octoprint_apikey);
+    bytes = sprintf_s(message, 1024, message_fmt, octoprint_apikey);
     Log(message);
 
     /* send the request */
-    send_to_socket(sockfd, message);
+    send_to_socket(sockfd, message, bytes);
 
     /* receive the response */
     if (!receive_from_socket(sockfd, response, sizeof(response)))
@@ -228,13 +230,13 @@ The response is expected as follows:
 void
 send_to_octoprint(char* gcode_file, char *destination)
 {
-    char* message_fmt = "POST /api/files/%s HTTP/1.1\r\nHost: %s\r\nX-Api-Key: %s\r\n";
+    char* message_fmt = "POST /api/files/%s HTTP/1.1\r\nX-Api-Key: %s\r\n";
     char* content_type_fmt = "Content-Type: multipart/form-data; boundary=%s\r\n\r\n";
     char* content_fmt = "Content-Disposition: form-data; name=\"file\"; filename=\"%s\"\r\n";
     char* boundary = "----WebKitFormBoundaryDeC2E3iWbTv1PwMC";
     char message[1024];
-    int sockfd;
-    HANDLE hf;
+    int sockfd, bytes;
+    FILE* hf;
     char response[4096];
 
     // Connect to the server
@@ -243,34 +245,44 @@ send_to_octoprint(char* gcode_file, char *destination)
         return;
 
     // Fill in the parameters. Destination is either "local" or "sdcard"
-    sprintf_s(message, 1024, message_fmt, destination, octoprint_apikey);
+    bytes = sprintf_s(message, 1024, message_fmt, destination, octoprint_apikey);
     Log(message);
-    send_to_socket(sockfd, message);
+    send_to_socket(sockfd, message, bytes);
 
     // Start the multipart form
-    sprintf_s(message, 1024, content_type_fmt, boundary);
+    bytes = sprintf_s(message, 1024, content_type_fmt, boundary);
     Log(message);
-    send_to_socket(sockfd, message);
+    send_to_socket(sockfd, message, bytes);
 
-    sprintf_s(message, 1024, "--%s\r\n", boundary);
+    bytes = sprintf_s(message, 1024, "--%s\r\n", boundary);
     Log(message);
-    send_to_socket(sockfd, message);
-    sprintf_s(message, 1024, content_fmt, gcode_file);
+    send_to_socket(sockfd, message, bytes);
+    bytes = sprintf_s(message, 1024, content_fmt, gcode_file);
     Log(message);
-    send_to_socket(sockfd, message);
-    sprintf_s(message, 1024, " Content-Type: application/octet-stream\r\n\r\n");
+    send_to_socket(sockfd, message, bytes);
+    bytes = sprintf_s(message, 1024, "Content-Type: application/octet-stream\r\n\r\n");
     Log(message);
-    send_to_socket(sockfd, message);
+    send_to_socket(sockfd, message, bytes);
 
     // Send the file data
-    hf = CreateFile(gcode_file, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-    TransmitFile(sockfd, hf, 0, 0, NULL, NULL, 0);
-    CloseHandle(hf);
+    Log("Sending G-code data... ");
+    fopen_s(&hf, gcode_file, "rb");
+    while (1)
+    {
+        bytes = fread_s(message, 1024, 1, 1024, hf);
+        if (bytes == 0)
+            break;
+        if (!send_to_socket(sockfd, message, bytes))
+            break;
+    }
+
+    fclose(hf);
+    Log("sent.\r\n");
 
     // Finish with a final boundary
-    sprintf_s(message, 1024, "--%s--\r\n", boundary);
+    bytes = sprintf_s(message, 1024, "--%s--\r\n", boundary);
     Log(message);
-    send_to_socket(sockfd, message);
+    send_to_socket(sockfd, message, bytes);
 
     // Read back the response and log it to the debug log
     receive_from_socket(sockfd, response, sizeof(response));
