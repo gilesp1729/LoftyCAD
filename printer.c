@@ -181,6 +181,7 @@ The message looks as follows:
     Host: example.com
     X-Api-Key: abcdef...
     Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryDeC2E3iWbTv1PwMC
+    Content-Length: nnnnn
 
     ------WebKitFormBoundaryDeC2E3iWbTv1PwMC
     Content-Disposition: form-data; name="file"; filename="file_to_send.gcode"
@@ -191,7 +192,11 @@ The message looks as follows:
     G21
     G90
     ...
-    ------WebKitFormBoundaryDeC2E3iWbTv1PwMC
+    ------WebKitFormBoundaryDeC2E3iWbTv1PwMC--
+
+(Content-Length is the byte count from the first byte of the first boundary sequence,
+up to and including the two trailing hyphens of the last boundary sequence, including \r\n endings.
+The Content-Length is required, even though it is not mentioned in the Octo doco.)
 
 With optional extras:
 
@@ -231,11 +236,12 @@ void
 send_to_octoprint(char* gcode_file, char *destination)
 {
     char* message_fmt = "POST /api/files/%s HTTP/1.1\r\nX-Api-Key: %s\r\n";
-    char* content_type_fmt = "Content-Type: multipart/form-data; boundary=%s\r\n\r\n";
-    char* content_fmt = "Content-Disposition: form-data; name=\"file\"; filename=\"%s\"\r\n";
+    char* content_type_fmt = "Content-Type: multipart/form-data; boundary=%s\r\n";
+    char* content_length_fmt = "Content-Length: %d\r\n\r\n";
+    char* content_disp_fmt = "Content-Disposition: form-data; name=\"file\"; filename=\"%s\"\r\n";
     char* boundary = "----WebKitFormBoundaryDeC2E3iWbTv1PwMC";
-    char message[1024];
-    int sockfd, bytes;
+    char message[1024], first_boundary[256], last_boundary[256], content_type[256], content_disp[256], content_length[256];
+    int sockfd, bytes, type_bytes, disp_bytes, length_bytes, file_bytes, b1_bytes, b2_bytes;
     FILE* hf;
     char response[4096];
 
@@ -250,19 +256,34 @@ send_to_octoprint(char* gcode_file, char *destination)
     send_to_socket(sockfd, message, bytes);
 
     // Start the multipart form
-    bytes = sprintf_s(message, 1024, content_type_fmt, boundary);
-    Log(message);
-    send_to_socket(sockfd, message, bytes);
+    type_bytes = sprintf_s(content_type, 256, content_type_fmt, boundary);
+    Log(content_type);
+    send_to_socket(sockfd, content_type, type_bytes);
 
-    bytes = sprintf_s(message, 1024, "--%s\r\n", boundary);
-    Log(message);
-    send_to_socket(sockfd, message, bytes);
-    bytes = sprintf_s(message, 1024, content_fmt, gcode_file);
-    Log(message);
-    send_to_socket(sockfd, message, bytes);
-    bytes = sprintf_s(message, 1024, "Content-Type: application/octet-stream\r\n\r\n");
-    Log(message);
-    send_to_socket(sockfd, message, bytes);
+    // From here we have to count bytes for the Content-Length. Build up the message
+    // parts first before sending any of them.
+    b1_bytes = sprintf_s(first_boundary, 256, "--%s\r\n", boundary);
+    disp_bytes = sprintf_s(content_disp, 256, content_disp_fmt, "file.gcode"); // TEMP gcode_file); - may have to remove dir etc.
+    type_bytes = sprintf_s(content_type, 256, "Content-Type: application/octet-stream\r\n\r\n");
+    b2_bytes = sprintf_s(last_boundary, 256, "--%s--\r\n", boundary);
+    fopen_s(&hf, gcode_file, "rb");
+    fseek(hf, 0, SEEK_END);
+    file_bytes = ftell(hf);
+    fclose(hf);
+
+    // Send the content length header now we know its size
+    length_bytes = sprintf_s(content_length, 256, content_length_fmt,
+        b1_bytes + disp_bytes + type_bytes + file_bytes + b2_bytes);
+    Log(content_length);
+    send_to_socket(sockfd, content_length, length_bytes);
+
+    // Send the headers
+    Log(first_boundary);
+    send_to_socket(sockfd, first_boundary, b1_bytes);
+    Log(content_disp);
+    send_to_socket(sockfd, content_disp, disp_bytes);
+    Log(content_type);
+    send_to_socket(sockfd, content_type, type_bytes);
 
     // Send the file data
     Log("Sending G-code data... ");
@@ -280,9 +301,8 @@ send_to_octoprint(char* gcode_file, char *destination)
     Log("sent.\r\n");
 
     // Finish with a final boundary
-    bytes = sprintf_s(message, 1024, "--%s--\r\n", boundary);
-    Log(message);
-    send_to_socket(sockfd, message, bytes);
+    Log(last_boundary);
+    send_to_socket(sockfd, last_boundary, b2_bytes);
 
     // Read back the response and log it to the debug log
     receive_from_socket(sockfd, response, sizeof(response));

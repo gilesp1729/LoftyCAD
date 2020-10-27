@@ -16,7 +16,7 @@
 #define MAX_SECT_SIZE       8192
 
 // Max size of the section name buffer
-#define MAX_SECT_NAME_SIZE  16384
+#define MAX_SECT_NAME_SIZE  32767
 
 // Max number of section in the vendor ini file
 #define MAX_SECTIONS        1024
