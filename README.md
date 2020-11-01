@@ -1,25 +1,25 @@
-# LoftyCAD
-Simple CAD for 3D printers for Windows. It came out of dissatisfactions with SketchUp, and with free 3D CAD programs in general.
+# LoftyCAD: Sketch, Render, Slice and Print.
+Free CSG CAD for 3D printers for Windows. It came out of dissatisfactions with SketchUp, and with free 3D CAD programs in general. However, it has since grown into something a lot bigger.
 
 # LoftyCAD philosophy and goals
 # General
 LoftyCAD is a hierarchical CSG 3D-modelling program. It is open-source, actively maintained, and free to all.
 Simple to use like Sketchup, but with some improvements:
 In particular, it will:
-- Retain the identity of 3D shapes, and not merge irreversibly with others
+- Retain the identity of 3D shapes, and not merge shapes irreversibly with others
 - Produce a single triangle mesh from merged objects, using CSG operations (union, intersection, difference)
 - Not produce non-manifold triangle meshes requiring repairs 
 - Write STL and other triangle mesh files directly
-- Allow you to control your data locally (not subscription or web-based)
+- Not be subscription or web-based; your data is yours forever on your local PC
 
 # Interface
-- Sketch-up-like (draw a 2D-2.5D face followed by extrusion)
+- Sketch-up-like (draw a 2D-2.5D face followed by extrusion into a 3D volume)
 - Volume-face-edge-point hierarchy with controlled locking
 - Allows rect edges, polygons, circles, arcs, Beziers and the extruded right prisms from them
 - Allows curved surfaces (cylinders, barrel arcs, and Bezier surfaces)
 - Allows extrusion of curved surfaces, either parallel or along local normals
 - Allows extrusion of text and fonts
-- Axially symmetric objects (bodies of revolution)
+- Allows axially symmetric objects (bodies of revolution)
 - Copy and paste objects
 - Reflect and rotate objects
 - Group objects and transform (scale and rotate)
@@ -39,12 +39,12 @@ In particular, it will:
 
 # Slicer and printer integration
 - Integrates with PrusaSlicer 2.x, Slic3rPE 1.41 and vanilla Slic3r
-- Slice to G-code and preview
+- Slice to G-code and preview layers
+- Directly upload G-code to an OctoPrint server
 
 # Works in progress
 - Multi-material slicing
 - Directly control, and print to, a USB or serial connected printer
-- Directly upload to an OctoPrint server
 - Allow manipulation of triangle meshes: smooth extrusion, refinement, and more
 - Tubing and lofting (a nod to the original Lofty, LoftyCAD's spiritual ancestor)
 
