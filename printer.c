@@ -23,10 +23,104 @@ close_comms(void)
     WSACleanup();
 }
 
+// Test a printer connected to an open comms port, setting its baud rate
+// and returning TRUE when it has processed an M105 command.
+BOOL
+test_serial_comms(FILE* hp)
+{
+    DCB dcb;
+    COMMTIMEOUTS ct;
+    int i, lenw, lenr;
+    char line[1024];
+
+    // Set up timeouts on the port so we can get comtrol back if something
+    // goes wrong with the printer.
+    GetCommTimeouts(hp, &ct);
+    ct.ReadIntervalTimeout = 0;
+    ct.ReadTotalTimeoutConstant = 1000;
+    ct.ReadTotalTimeoutMultiplier = 0;
+    ct.WriteTotalTimeoutConstant = 1000;
+    ct.WriteTotalTimeoutMultiplier = 0;
+    SetCommTimeouts(hp, &ct);
+
+    memset(&dcb, 0, sizeof(DCB));
+    dcb.DCBlength = sizeof(DCB);
+    GetCommState(hp, &dcb);
+    dcb.BaudRate = CBR_256000;      //  baud rate
+    dcb.ByteSize = 8;               //  data size, xmit and rcv
+    dcb.Parity = NOPARITY;          //  parity bit
+    dcb.StopBits = ONESTOPBIT;      //  stop bit
+    SetCommState(hp, &dcb);
+
+    while (1)
+    {
+        if (!WriteFile(hp, "M105\r\n", 6, &lenw, NULL))
+            return FALSE;
+        i = 0;
+        while (ReadFile(hp, &line[i], 1, &lenr, NULL))
+        {
+            if (lenr == 0)
+                break;
+            i++;
+        }
+        line[i] = '\0';
+        Log(line);
+        Sleep(500);
+    }
+
+    return TRUE;
+}
+
 // Send a G-code file to the serial port.
 void
 send_to_serial(char* gcode_file)
 {
+    FILE* hf;
+    HANDLE hp;
+    char port[16], line[1024];
+
+    // Open the serial port and the G-code file.
+    fopen_s(&hf, gcode_file, "rt");
+    if (hf == NULL)
+    {
+        Log("Could not open G-code\r\n");
+        return;
+    }
+    // Need to use \\.\COMnnn syntax if nnn > 9, so do it here in all cases.
+    strcpy_s(port, 16, "\\\\.\\");
+    strcat_s(port, 16, printer_port);
+    hp = CreateFile(port, (GENERIC_READ | GENERIC_WRITE), 0, NULL, OPEN_EXISTING, 0, NULL);
+    if (hp == NULL)
+    {
+        Log("Could not open printer port\r\n");
+        fclose(hf);
+        return;
+    }
+
+    // Set the baud rate and maybe some other stuff
+    if (!test_serial_comms(hp))
+        return;
+
+    // Send each command (skipping comments and blank lines) and await a response.
+    // Normally "OK" sometimes followed by some temperature bumph (M105).
+    // Always terminated by a CRLF newline.
+    while (0)  // TEMP DISABLE THIS
+    {
+        if (fgets(line, 1024, hf) == NULL)
+            break;
+        if (line[0] == ' ' || line[0] == ';')
+            continue;
+
+
+
+
+    }
+
+
+
+    // Close file and port
+    fclose(hf);
+    CloseHandle(hp);
 }
 
 // Connect to an Octoprint server.
@@ -267,6 +361,11 @@ send_to_octoprint(char* gcode_file, char *destination)
     type_bytes = sprintf_s(content_type, 256, "Content-Type: application/octet-stream\r\n\r\n");
     b2_bytes = sprintf_s(last_boundary, 256, "--%s--\r\n", boundary);
     fopen_s(&hf, gcode_file, "rb");
+    if (hf == NULL)
+    {
+        Log("Could not open G-code\r\n");
+        return;
+    }
     fseek(hf, 0, SEEK_END);
     file_bytes = ftell(hf);
     fclose(hf);
