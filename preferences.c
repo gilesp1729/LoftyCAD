@@ -420,6 +420,7 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 HANDLE hp;
                 int user_baud;
                 char line[128];
+                // Baud rates, with the most commonly used up front (Serial over USB to Arduino/Marlin)
                 int baud[] = { 250000, 115200, 57600, 38400, 19200, 9600 };
                 int n_baud = sizeof(baud) / sizeof(int);
 
@@ -429,12 +430,13 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 sprintf_s(line, 128, "Attempting connection at %d baud...", user_baud);
                 SendDlgItemMessage(hWnd, IDC_STATIC_TEST_RESULT, WM_SETTEXT, 0, (LPARAM)line);
                 hp = open_serial_port();
-                if (test_serial_comms(hp, user_baud))
+                if (user_baud > 0 && test_serial_comms(hp, user_baud))
                 {
                     sprintf_s(line, 128, "Connected at %d baud", user_baud);
                     SendDlgItemMessage(hWnd, IDC_STATIC_TEST_RESULT, WM_SETTEXT, 0, (LPARAM)line);
                     sprintf_s(buf, 16, "%d", user_baud);
                     SendDlgItemMessage(hWnd, IDC_PREFS_SERIAL_BAUD, WM_SETTEXT, 0, (LPARAM)buf);
+                    print_serial_baud = user_baud;      // in case we cancel, we still want to keep it
                 }
                 else
                 {
@@ -450,6 +452,7 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                             SendDlgItemMessage(hWnd, IDC_STATIC_TEST_RESULT, WM_SETTEXT, 0, (LPARAM)line);
                             sprintf_s(buf, 16, "%d", user_baud);
                             SendDlgItemMessage(hWnd, IDC_PREFS_SERIAL_BAUD, WM_SETTEXT, 0, (LPARAM)buf);
+                            print_serial_baud = user_baud;
                             break;
                         }
                     }

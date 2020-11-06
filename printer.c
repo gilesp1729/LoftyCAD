@@ -72,6 +72,8 @@ test_serial_comms(FILE* hp, int baud)
         if (!WriteFile(hp, "M105\r\n", 6, &lenw, NULL))
             return FALSE;
         i = 0;
+
+        // Read to exhaustion (timeout), not just to the first newline
         while (ReadFile(hp, &line[i], 1, &lenr, NULL))
         {
             if (lenr == 0)
@@ -117,21 +119,36 @@ send_to_serial(char* gcode_file)
         return;
 
     // Send each command (skipping comments and blank lines) and await a response.
-    // Normally "OK" sometimes followed by some temperature bumph (M105).
-    // Always terminated by a CRLF newline.
-    while (0)  // TEMP DISABLE THIS
+    // Normally "ok" sometimes followed by some temperature bumph (M105).
+    // Always terminated by a newline (\n only)
+    while (1)
     {
+        int len, lenw, lenr, i; 
+
         if (fgets(line, 1024, hf) == NULL)
             break;
-        if (line[0] == ' ' || line[0] == ';')
+        if (line[0] == ' ' || line[0] == '\n' || line[0] == ';')
             continue;
+        Log(line);                  // TODO this needs \r\n to be logged to internal debug log
+        len = strlen(line);
+        WriteFile(hp, line, len, &lenw, NULL);   // TODO does this ever do a partial write?
 
-
-
-
+        i = 0;
+        while (ReadFile(hp, &line[i], 1, &lenr, NULL))
+        {
+            if (lenr == 0)
+                break;
+            i++;
+            if (line[i - 1] == '\n')
+            {
+                line[i] = '\0';
+                Log(line);        // TODO this needs \r\n to be logged to internal debug log
+                if (i >= 2 && line[0] == 'o' && line[1] == 'k')
+                    break;
+                i = 0;
+            }
+        }
     }
-
-
 
     // Close file and port
     fclose(hf);

@@ -229,7 +229,7 @@ extern Material materials[MAX_MATERIAL];
 #endif
 
 // Where do assert and log messages go
-#define USE_DEBUGSTR_LOG
+#undef USE_DEBUGSTR_LOG
 
 #ifdef USE_DEBUGSTR_LOG
 #define Log(msg)            OutputDebugString(msg);
