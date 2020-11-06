@@ -280,11 +280,15 @@ void set_bed_shape(char* printer);
 BOOL read_string_and_load_dlgitem(char* sect, char* string, int dlg_item, BOOL checkbox);
 BOOL run_slicer(char* slicer_exe, char* cmd_line, char* dir, char* gcode_filename);
 
-// Printer connection (printer.c)
+// Serial printer connection (printer.c)
+HANDLE open_serial_port();
+BOOL test_serial_comms(FILE * hp, int baud);
+void send_to_serial(char* gcode_file);
+
+// Octoprint (socket) printer connection (printer.c)
 void init_comms(void);
 void close_comms(void);
 BOOL get_octo_version(char* buf, int buflen);
-void send_to_serial(char* gcode_file);
 void send_to_octoprint(char* gcode_file, char *destination);
 
 // Help dialog (help.c)

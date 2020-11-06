@@ -120,6 +120,12 @@ BOOL print_octo = FALSE;                // TRUE for Octoprint, FALSE for serial
 // Currently selected printer serial port (without colon: "COM10")
 char printer_port[64] = "\0";
 
+// If true, serial connections will send and check line numbers
+BOOL print_serial_lineno = FALSE;
+
+// The serial connection's baud rate. Zero if it has not been tested for yet
+int print_serial_baud = 0;
+
 // Octoprint server name (e.g. "octopi.local")
 char octoprint_server[128] = "\0";
 
@@ -203,6 +209,8 @@ load_slic3r_exe_and_config()
     RegQueryValueEx(hkey, "PrintOcto", 0, NULL, (LPBYTE)&print_octo, &len);
     len = 64;
     RegQueryValueEx(hkey, "PrinterPort", 0, NULL, (LPBYTE)printer_port, &len);
+    len = 4;
+    RegQueryValueEx(hkey, "PrintSerialBaud", 0, NULL, (LPBYTE)&print_serial_baud, &len);
     len = 128;
     RegQueryValueEx(hkey, "OctoServer", 0, NULL, (LPBYTE)octoprint_server, &len);
     len = 128;
@@ -260,6 +268,7 @@ save_slic3r_exe_and_config()
     // Printer connection
     RegSetValueEx(hkey, "PrintOcto", 0, REG_DWORD, (LPBYTE)&print_octo, 4);
     RegSetValueEx(hkey, "PrinterPort", 0, REG_SZ, (PBYTE)printer_port, strlen(printer_port) + 1);
+    RegSetValueEx(hkey, "PrintSerialBaud", 0, REG_DWORD, (LPBYTE)&print_serial_baud, 4);
     RegSetValueEx(hkey, "OctoServer", 0, REG_SZ, (PBYTE)octoprint_server, strlen(octoprint_server) + 1);
     RegSetValueEx(hkey, "OctoAPIKey", 0, REG_SZ, (PBYTE)octoprint_apikey, strlen(octoprint_apikey) + 1);
 
@@ -281,6 +290,7 @@ save_printer_config()
 
     RegSetValueEx(hkey, "PrintOcto", 0, REG_DWORD, (LPBYTE)&print_octo, 4);
     RegSetValueEx(hkey, "PrinterPort", 0, REG_SZ, (PBYTE)printer_port, strlen(printer_port) + 1);
+    RegSetValueEx(hkey, "PrintSerialBaud", 0, REG_DWORD, (LPBYTE)&print_serial_baud, 4);
     RegSetValueEx(hkey, "OctoServer", 0, REG_SZ, (PBYTE)octoprint_server, strlen(octoprint_server) + 1);
     RegSetValueEx(hkey, "OctoAPIKey", 0, REG_SZ, (PBYTE)octoprint_apikey, strlen(octoprint_apikey) + 1);
 

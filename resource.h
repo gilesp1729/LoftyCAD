@@ -158,7 +158,6 @@
 #define IDB_SLICER_SLICE_EXISTING       1052
 #define IDC_SLICER_WALLTHICK            1053
 #define IDC_PREFS_FIND_SLICERS          1054
-#define IDC_SLICER_ROOFTHICK2           1054
 #define IDC_SLICER_ROOFTHICK            1054
 #define IDC_SLICER_FLOORTHICK           1055
 #define IDC_STATIC_SLICER               1057
@@ -170,11 +169,13 @@
 #define IDC_RADIO_SERIALPORT            1063
 #define IDC_PREFS_OCTOPRINT             1064
 #define IDC_PREFS_OCTO_APIKEY           1065
-#define IDC_PREFS_OCTO_TEST             1066
+#define IDC_PREFS_TEST_CONNECTION       1066
 #define IDC_STATIC_TEST_RESULT          1067
-#define IDB_PRINTER_UPLOAD              1068
+#define IDC_PREFS_OCTOPRINT2            1068
+#define IDC_PREFS_SERIAL_BAUD           1068
 #define IDB_PRINTER_PRINT               1069
 #define IDC_PREFS_EXPLICIT_GCODE        1069
+#define IDC_PREFS_SEND_LINENO           1070
 #define IDD_PRINT_PREVIEW               1544
 #define IDD_SLICER                      1545
 #define IDD_PRINTER                     1546

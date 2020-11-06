@@ -17,6 +17,8 @@
 typedef DWORD
 (WINAPI *CM_Open_DevNode_Key)(DWORD, DWORD, DWORD, DWORD, PHKEY, DWORD);
 
+static int numDev = 0;
+
 HANDLE  BeginEnumeratePorts(VOID)
 {
     BOOL guidTest = FALSE;
@@ -24,8 +26,8 @@ HANDLE  BeginEnumeratePorts(VOID)
     HDEVINFO DeviceInfoSet;
     char* buf;
 
-    guidTest = SetupDiClassGuidsFromNameA(
-        "Ports", 0, 0, &RequiredSize);
+    numDev = 0;
+    guidTest = SetupDiClassGuidsFromNameA("Ports", 0, 0, &RequiredSize);
     if (RequiredSize < 1)
         return INVALID_HANDLE_VALUE;
 
@@ -54,7 +56,6 @@ BOOL EnumeratePortsNext(HANDLE DeviceInfoSet, LPTSTR lpBuffer, int bufsize)
 
     int res1;
     char DevName[MAX_NAME_PORTS] = { 0 };
-    static int numDev = 0;
     int numport;
 
     SP_DEVINFO_DATA DeviceInfoData = { 0 };
@@ -176,18 +177,22 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             i = SendDlgItemMessage(hWnd, IDC_PREFS_SERIALPORT, CB_ADDSTRING, 0, (LPARAM)buf);
         }
         EndEnumeratePorts(dis);
-        i = SendDlgItemMessage(hWndSlicer, IDC_PREFS_SERIALPORT, CB_FINDSTRINGEXACT, -1, (LPARAM)printer_port);
+        i = SendDlgItemMessage(hWnd, IDC_PREFS_SERIALPORT, CB_FINDSTRINGEXACT, -1, (LPARAM)printer_port);
         if (i == CB_ERR)
             i = 0;
         SendDlgItemMessage(hWnd, IDC_PREFS_SERIALPORT, CB_SETCURSEL, i, 0);
+        sprintf_s(buf, 16, "%d", print_serial_baud);
+        SendDlgItemMessage(hWnd, IDC_PREFS_SERIAL_BAUD, WM_SETTEXT, 0, (LPARAM)buf);
 
-        // Load up Octoprint info
+        // Load up printer connection info
         CheckDlgButton(hWnd, IDC_RADIO_SERIALPORT, print_octo ? BST_UNCHECKED : BST_CHECKED);
         CheckDlgButton(hWnd, IDC_RADIO_OCTOPRINT, print_octo ? BST_CHECKED : BST_UNCHECKED);
+        CheckDlgButton(hWnd, IDC_PREFS_SEND_LINENO, print_serial_lineno ? BST_CHECKED : BST_UNCHECKED);
         EnableWindow(GetDlgItem(hWnd, IDC_PREFS_SERIALPORT), !print_octo);
+        EnableWindow(GetDlgItem(hWnd, IDC_PREFS_SERIAL_BAUD), !print_octo);
+        EnableWindow(GetDlgItem(hWnd, IDC_PREFS_SEND_LINENO), !print_octo);
         EnableWindow(GetDlgItem(hWnd, IDC_PREFS_OCTOPRINT), print_octo);
         EnableWindow(GetDlgItem(hWnd, IDC_PREFS_OCTO_APIKEY), print_octo);
-        EnableWindow(GetDlgItem(hWnd, IDC_PREFS_OCTO_TEST), print_octo);
         SendDlgItemMessage(hWnd, IDC_PREFS_OCTOPRINT, WM_SETTEXT, 0, (LPARAM)octoprint_server);
         SendDlgItemMessage(hWnd, IDC_PREFS_OCTO_APIKEY, WM_SETTEXT, 0, (LPARAM)octoprint_apikey);
         SendDlgItemMessage(hWnd, IDC_STATIC_TEST_RESULT, WM_SETTEXT, 0, (LPARAM)"");
@@ -262,6 +267,8 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             SendDlgItemMessage(hWnd, IDC_PREFS_SERIALPORT, WM_GETTEXT, 64, (LPARAM)printer_port);
             SendDlgItemMessage(hWnd, IDC_PREFS_OCTOPRINT, WM_GETTEXT, 128, (LPARAM)octoprint_server);
             SendDlgItemMessage(hWnd, IDC_PREFS_OCTO_APIKEY, WM_GETTEXT, 128, (LPARAM)octoprint_apikey);
+            SendDlgItemMessage(hWnd, IDC_PREFS_SERIAL_BAUD, WM_GETTEXT, 16, (LPARAM)buf);
+            print_serial_baud = atoi(buf);
             save_printer_config();
             if (print_octo)
                 sprintf_s(print_button, 128, "Upload G-code to %s", octoprint_server);
@@ -393,18 +400,68 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             print_octo = TRUE;
         enable_fields:
             EnableWindow(GetDlgItem(hWnd, IDC_PREFS_SERIALPORT), !print_octo);
+            EnableWindow(GetDlgItem(hWnd, IDC_PREFS_SERIAL_BAUD), !print_octo);
+            EnableWindow(GetDlgItem(hWnd, IDC_PREFS_SEND_LINENO), !print_octo);
             EnableWindow(GetDlgItem(hWnd, IDC_PREFS_OCTOPRINT), print_octo);
             EnableWindow(GetDlgItem(hWnd, IDC_PREFS_OCTO_APIKEY), print_octo);
-            EnableWindow(GetDlgItem(hWnd, IDC_PREFS_OCTO_TEST), print_octo);
             break;
 
-        case IDC_PREFS_OCTO_TEST:
+        case IDC_PREFS_TEST_CONNECTION:
             SendDlgItemMessage(hWnd, IDC_STATIC_TEST_RESULT, WM_SETTEXT, 0, (LPARAM)"Attempting connection...");
-            if (get_octo_version(version, 128))
-                SendDlgItemMessage(hWnd, IDC_STATIC_TEST_RESULT, WM_SETTEXT, 0, (LPARAM)version);
-            else
-                SendDlgItemMessage(hWnd, IDC_STATIC_TEST_RESULT, WM_SETTEXT, 0, (LPARAM)"Cannot connect to server");
+            if (print_octo)
+            {
+                if (get_octo_version(version, 128))
+                    SendDlgItemMessage(hWnd, IDC_STATIC_TEST_RESULT, WM_SETTEXT, 0, (LPARAM)version);
+                else
+                    SendDlgItemMessage(hWnd, IDC_STATIC_TEST_RESULT, WM_SETTEXT, 0, (LPARAM)"Cannot connect to server");
+            }
+            else // serial
+            {
+                HANDLE hp;
+                int user_baud;
+                char line[128];
+                int baud[] = { 250000, 115200, 57600, 38400, 19200, 9600 };
+                int n_baud = sizeof(baud) / sizeof(int);
+
+                // Test and set baud rate, starting with the user's setting
+                SendDlgItemMessage(hWnd, IDC_PREFS_SERIAL_BAUD, WM_GETTEXT, 16, (LPARAM)buf);
+                user_baud = atoi(buf);
+                sprintf_s(line, 128, "Attempting connection at %d baud...", user_baud);
+                SendDlgItemMessage(hWnd, IDC_STATIC_TEST_RESULT, WM_SETTEXT, 0, (LPARAM)line);
+                hp = open_serial_port();
+                if (test_serial_comms(hp, user_baud))
+                {
+                    sprintf_s(line, 128, "Connected at %d baud", user_baud);
+                    SendDlgItemMessage(hWnd, IDC_STATIC_TEST_RESULT, WM_SETTEXT, 0, (LPARAM)line);
+                    sprintf_s(buf, 16, "%d", user_baud);
+                    SendDlgItemMessage(hWnd, IDC_PREFS_SERIAL_BAUD, WM_SETTEXT, 0, (LPARAM)buf);
+                }
+                else
+                {
+                    // Try some different baud rates. Load the successful one into the field.
+                    for (i = 0; i < n_baud; i++)
+                    {
+                        user_baud = baud[i];
+                        sprintf_s(line, 128, "Attempting connection at %d baud...", user_baud);
+                        SendDlgItemMessage(hWnd, IDC_STATIC_TEST_RESULT, WM_SETTEXT, 0, (LPARAM)line);
+                        if (test_serial_comms(hp, user_baud))
+                        {
+                            sprintf_s(line, 128, "Connected at %d baud", user_baud);
+                            SendDlgItemMessage(hWnd, IDC_STATIC_TEST_RESULT, WM_SETTEXT, 0, (LPARAM)line);
+                            sprintf_s(buf, 16, "%d", user_baud);
+                            SendDlgItemMessage(hWnd, IDC_PREFS_SERIAL_BAUD, WM_SETTEXT, 0, (LPARAM)buf);
+                            break;
+                        }
+                    }
+                    if (i == n_baud)
+                        SendDlgItemMessage(hWnd, IDC_STATIC_TEST_RESULT, WM_SETTEXT, 0, (LPARAM)"Failed to connect");
+                }
+                CloseHandle(hp);
+            }
             break;
+
+        case IDC_PREFS_SEND_LINENO:
+            print_serial_lineno = IsDlgButtonChecked(hWnd, IDC_PREFS_SEND_LINENO);
         }
     }
 

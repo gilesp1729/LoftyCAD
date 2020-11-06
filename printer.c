@@ -23,15 +23,30 @@ close_comms(void)
     WSACleanup();
 }
 
-// Test a printer connected to an open comms port, setting its baud rate
+// Open the printer serial port.
+HANDLE
+open_serial_port()
+{
+    char port[16];
+
+    // Need to use \\.\COMnnn syntax if nnn > 9, so do it here in all cases.
+    strcpy_s(port, 16, "\\\\.\\");
+    strcat_s(port, 16, printer_port);
+    return CreateFile(port, (GENERIC_READ | GENERIC_WRITE), 0, NULL, OPEN_EXISTING, 0, NULL);
+}
+
+// Test a printer connected to an open comms port at the given baud rate
 // and returning TRUE when it has processed an M105 command.
 BOOL
-test_serial_comms(FILE* hp)
+test_serial_comms(FILE* hp, int baud)
 {
     DCB dcb;
     COMMTIMEOUTS ct;
-    int i, lenw, lenr;
+    int i, lenw, lenr, pass;
     char line[1024];
+
+    if (hp == NULL)
+        return FALSE;
 
     // Set up timeouts on the port so we can get comtrol back if something
     // goes wrong with the printer.
@@ -46,13 +61,13 @@ test_serial_comms(FILE* hp)
     memset(&dcb, 0, sizeof(DCB));
     dcb.DCBlength = sizeof(DCB);
     GetCommState(hp, &dcb);
-    dcb.BaudRate = CBR_256000;      //  baud rate
+    dcb.BaudRate = baud;            //  baud rate
     dcb.ByteSize = 8;               //  data size, xmit and rcv
     dcb.Parity = NOPARITY;          //  parity bit
     dcb.StopBits = ONESTOPBIT;      //  stop bit
     SetCommState(hp, &dcb);
 
-    while (1)
+    for (pass = 0; pass < 5; pass++)
     {
         if (!WriteFile(hp, "M105\r\n", 6, &lenw, NULL))
             return FALSE;
@@ -65,10 +80,12 @@ test_serial_comms(FILE* hp)
         }
         line[i] = '\0';
         Log(line);
-        Sleep(500);
+        if (i >= 2 && line[0] == 'o' && line[1] == 'k')
+            return TRUE;
+        Sleep(300);
     }
 
-    return TRUE;
+    return FALSE;
 }
 
 // Send a G-code file to the serial port.
@@ -77,7 +94,7 @@ send_to_serial(char* gcode_file)
 {
     FILE* hf;
     HANDLE hp;
-    char port[16], line[1024];
+    char line[1024];
 
     // Open the serial port and the G-code file.
     fopen_s(&hf, gcode_file, "rt");
@@ -86,19 +103,17 @@ send_to_serial(char* gcode_file)
         Log("Could not open G-code\r\n");
         return;
     }
-    // Need to use \\.\COMnnn syntax if nnn > 9, so do it here in all cases.
-    strcpy_s(port, 16, "\\\\.\\");
-    strcat_s(port, 16, printer_port);
-    hp = CreateFile(port, (GENERIC_READ | GENERIC_WRITE), 0, NULL, OPEN_EXISTING, 0, NULL);
+
+    hp = open_serial_port();
     if (hp == NULL)
     {
-        Log("Could not open printer port\r\n");
+        Log("Could not open printer serial port\r\n");
         fclose(hf);
         return;
     }
 
-    // Set the baud rate and maybe some other stuff
-    if (!test_serial_comms(hp))
+    // Set the baud rate and maybe some other stuff. 
+    if (!test_serial_comms(hp, print_serial_baud))
         return;
 
     // Send each command (skipping comments and blank lines) and await a response.
