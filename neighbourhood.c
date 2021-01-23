@@ -58,7 +58,7 @@ find_in_neighbourhood_point(Point *point, Object *obj)
 {
     Point *p;
     Point2D pt;
-    float a, b, c;
+    float a, b, c, dx, dy, dz;
     Edge *e;
     Face *f;
     Volume *vol;
@@ -91,6 +91,8 @@ find_in_neighbourhood_point(Point *point, Object *obj)
 
     case OBJ_FACE:
         f = (Face *)obj;
+        
+        // Test for hits on edges.
         for (i = 0; i < f->n_edges; i++)
         {
             Object *test = find_in_neighbourhood_point(point, (Object *)f->edges[i]);
@@ -99,11 +101,17 @@ find_in_neighbourhood_point(Point *point, Object *obj)
                 return test;
         }
 
-#if 0 // doesn't work - needto test in-plane first
-        // Must test point against interior of face.
+        // Test point against interior of face.
         a = fabsf(f->normal.A);
         b = fabsf(f->normal.B);
         c = fabsf(f->normal.C);
+        
+        // make sure point is in plane first
+        dx = point->x - f->normal.refpt.x;
+        dy = point->y - f->normal.refpt.y;
+        dz = point->z - f->normal.refpt.z;
+        if (fabsf(a * dx + b * dy + c * dz) > snap_tol)
+            return NULL;
 
         if (c > b && c > a)
         {
@@ -123,7 +131,6 @@ find_in_neighbourhood_point(Point *point, Object *obj)
 
         if (point_in_polygon2D(pt, f->view_list2D, f->n_view2D))
             return obj; 
-#endif // 0
 
         break;
 
