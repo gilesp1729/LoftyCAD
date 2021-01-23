@@ -57,6 +57,8 @@ Object *
 find_in_neighbourhood_point(Point *point, Object *obj)
 {
     Point *p;
+    Point2D pt;
+    float a, b, c;
     Edge *e;
     Face *f;
     Volume *vol;
@@ -68,12 +70,17 @@ find_in_neighbourhood_point(Point *point, Object *obj)
     {
     case OBJ_POINT:
         p = (Point *)obj;
+        if (p == point)
+            return NULL;
         if (near_pt(point, p, snap_tol))
             return obj;
         break;
 
     case OBJ_EDGE:
         e = (Edge *)obj;
+        if (e->endpoints[0] == point || e->endpoints[1] == point)
+            return NULL;
+
         if (find_in_neighbourhood_point(point, (Object *)e->endpoints[0]))
             return (Object *)e->endpoints[0];
         if (find_in_neighbourhood_point(point, (Object *)e->endpoints[1]))
@@ -91,6 +98,33 @@ find_in_neighbourhood_point(Point *point, Object *obj)
             if (test != NULL)
                 return test;
         }
+
+#if 0 // doesn't work - needto test in-plane first
+        // Must test point against interior of face.
+        a = fabsf(f->normal.A);
+        b = fabsf(f->normal.B);
+        c = fabsf(f->normal.C);
+
+        if (c > b && c > a)
+        {
+            pt.x = point->x;
+            pt.y = point->y;
+        }
+        else if (b > a && b > c)
+        {
+            pt.x = point->x;
+            pt.y = point->z;
+        }
+        else
+        {
+            pt.x = point->y;
+            pt.y = point->z;
+        }
+
+        if (point_in_polygon2D(pt, f->view_list2D, f->n_view2D))
+            return obj; 
+#endif // 0
+
         break;
 
     case OBJ_VOLUME:
@@ -207,7 +241,7 @@ find_in_neighbourhood(Object *match_obj, Group *tree)
 
     for (obj = tree->obj_list.head; obj != NULL; obj = obj->next)
     {
-        Object *test = NULL;
+        Object *test = NULL, *test2 = NULL;
 
         switch (match_obj->type)
         {
@@ -216,7 +250,10 @@ find_in_neighbourhood(Object *match_obj, Group *tree)
             break;
 
         case OBJ_EDGE:
-            test = find_in_neighbourhood_point(((Edge *)match_obj)->endpoints[1], obj);
+            // only test the endpoints
+            test = find_in_neighbourhood_point(((Edge*)match_obj)->endpoints[1], obj);
+            if (test == NULL)
+                test = find_in_neighbourhood_point(((Edge*)match_obj)->endpoints[0], obj);
             break;
 
         case OBJ_FACE:

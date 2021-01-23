@@ -281,7 +281,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
     {
     case OBJ_POINT:
         push_name = snapping || parent_lock < obj->type;
-        locked = parent_lock >= obj->type;
+        locked = !push_name; // parent_lock >= obj->type;  // allow coloring when highlighting neighbourhood
         p = (Point *)obj;
         if ((selected || highlighted || picking) && !push_name)
             return;
@@ -354,7 +354,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
 
     case OBJ_EDGE:
         push_name = snapping || parent_lock < obj->type;
-        locked = parent_lock >= obj->type;
+        locked = !push_name; // parent_lock >= obj->type;  // allow coloring when highlighting neighbourhood
         edge = (Edge *)obj;
         if ((edge->type & EDGE_CONSTRUCTION) && !view_constr)
             return;
@@ -739,7 +739,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
             // not necessarily snapping things at the mouse position. So we can't use
             // picking here.
             if (app_state == STATE_MOVING)
-                highlight_obj = picked_obj;
+                highlight_obj = find_in_neighbourhood(picked_obj, &object_tree);
             else
                 highlight_obj = find_in_neighbourhood(curr_obj, &object_tree);
         }
@@ -1946,7 +1946,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
 
             build_parent_xform_list(highlight_obj, parent, &xform_list);
             pres = DRAW_HIGHLIGHT | DRAW_WITH_DIMENSIONS;
-            if (app_state >= STATE_STARTING_EDGE)
+            //if (app_state >= STATE_STARTING_EDGE)         // allow locked edges to be highlighted
                 pres |= DRAW_HIGHLIGHT_LOCKED;
             draw_object(highlight_obj, pres, parent != NULL ? parent->lock : LOCK_NONE);
 
