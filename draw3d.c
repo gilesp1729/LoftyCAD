@@ -2200,6 +2200,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
         glPopMatrix();
     }
 
+#if 0  // This is done in show_dims now (on the object, not under the cursor)
     // echo highlighting of snap targets at cursor
     if (!picking && highlight_obj != NULL)
     {
@@ -2237,6 +2238,7 @@ Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
         glMatrixMode(GL_MODELVIEW);
         glPopMatrix();
     }
+#endif // 0
 
     glFlush();
     if (!picking)

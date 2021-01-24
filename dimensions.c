@@ -564,7 +564,6 @@ show_dims_at(POINT pt, Object *obj, BOOL accept_input)
 void
 show_dims_on(Object *obj, PRESENTATION pres, LOCK parent_lock)
 {
-    HDC hdc = auxGetHDC();
     Volume *v;
     Face *f;
     Edge *e;
@@ -575,11 +574,6 @@ show_dims_on(Object *obj, PRESENTATION pres, LOCK parent_lock)
     BOOL highlighted = pres & DRAW_HIGHLIGHT;
 
     char buf[64];
-
-    if (!has_dims(obj))
-        return;
-
-    get_dims_string(obj, buf);
 
     switch (obj->type & ~EDGE_CONSTRUCTION)
     {
@@ -661,8 +655,19 @@ show_dims_on(Object *obj, PRESENTATION pres, LOCK parent_lock)
     }
 
     glListBase(1000);
+    get_dims_string(obj, buf);
     ASSERT(strlen(buf) < 64, "String too long!");
     glCallLists(strlen(buf), GL_UNSIGNED_BYTE, buf);
+
+    if (highlighted)
+    {
+        // Describe the object if highlighted (whether dimensioned or not).
+        // Leave dims in the same place, since they often get drawn twice.
+        brief_description(obj, buf, 64);
+        if (has_dims(obj))
+            glCallLists(2, GL_UNSIGNED_BYTE, ": ");
+        glCallLists(strlen(buf), GL_UNSIGNED_BYTE, buf);
+    }
 }
 
 
