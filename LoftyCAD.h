@@ -17,8 +17,8 @@
 
 
 // Version
-#define LOFTYCAD_VERSION "1.4"
-#define LOFTYCAD_BRANCH "(Material Girl)"
+#define LOFTYCAD_VERSION "1.5"
+#define LOFTYCAD_BRANCH "(Horus)"
 
 // States the app can be in.
 typedef enum STATE
@@ -258,8 +258,8 @@ extern BOOL debug_view_viewlist;
 // Some forwards (mostly draw3d.c)
 Object * Pick(GLint x_pick, GLint y_pick, BOOL force_pick);
 void Pick_all_in_rect(GLint x_pick, GLint y_pick, GLint width, GLint height);
-void CALLBACK Draw(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick);
-void CALLBACK Position(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick);
+void CALLBACK Draw(void);
+void CALLBACK Position(void);
 void invalidate_dl(void);
 BOOL is_selected_direct(Object * obj, Object * *prev_in_list);
 BOOL is_selected_parent(Object * obj);

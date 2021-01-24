@@ -222,7 +222,7 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             SendDlgItemMessage(hWnd, IDC_PREFS_HALFSIZE, WM_GETTEXT, 16, (LPARAM)buf);
             half_size = (float)atof(buf);
             zTrans = -2.0f * half_size;
-            Position(FALSE, 0, 0, 0, 0);
+            Position();
 
             SendDlgItemMessage(hWnd, IDC_PREFS_TOL, WM_GETTEXT, 16, (LPARAM)buf);
             new_val = (float)atof(buf);

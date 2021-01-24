@@ -56,11 +56,12 @@ Unzip the zip in the Installer directory, to any directory on the Windows system
 LoftyCAD uses the excellent CGAL computational geometry library to merge and intersect triangle meshes.
 
 # Horus branch
-# This branch is to develop a picking replacement to avoid doing the GL_SELECT buffer mechanism, which is very slow.
-- This branch is the live development branch and will become the master in due course. Features described above refer to this branch and may not be present in the deprecated master branch.
+- This branch is the live development branch and will become the master in due course. Features described above refer to this branch and may not be present in earlier branches.
+- This branch is to develop a picking replacement to avoid doing the GL_SELECT buffer mechanism, which is very slow.
 - Build as for the Material Girl branch.
 
 # Material Girl branch:
+# No further development will be done on this branch.
 - This branch requires CGAL 5.0 (at least) and VS2019.
 - The 32-bit version must be used, since LoftyCAD is a 32-bit program for now.
 - CGAL from 5.0 is a header-only library and requires no build steps (other than cmake to make all the .slns and vsprojs).

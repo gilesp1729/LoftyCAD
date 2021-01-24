@@ -291,7 +291,7 @@ Init(void)
 // Set up frustum and possibly picking matrix. If picking, pass the centre of the
 // picking region and its width and height.
 void CALLBACK
-Position(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
+Position(void)
 {
     GLint viewport[4], width, height;
     float h, w, znear, zfar, zoom_factor;
@@ -305,8 +305,6 @@ Position(BOOL picking, GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
     glGetIntegerv(GL_VIEWPORT, viewport);
     width = viewport[2];
     height = viewport[3];
-    if (picking)
-        gluPickMatrix(x_pick, height - y_pick, w_pick, h_pick, viewport);  // Y window coords need inverting for GL
 
     znear = 0.5f * half_size;
     zfar = 50 * half_size;
@@ -363,7 +361,7 @@ Reshape(int width, int height)
     SendMessage(hwndStatus, WM_SIZE, 0, 0);     // redraw the status bar
     trackball_Resize(width, height);
     glViewport(0, 0, (GLint)width, (GLint)height);
-    Position(FALSE, 0, 0, 0, 0);
+    Position();
 }
 
 
@@ -374,6 +372,7 @@ Reshape(int width, int height)
 Object *
 Pick(GLint x_pick, GLint y_pick, BOOL force_pick)
 {
+#if 0
     GLuint buffer[512];
     GLint num_hits;
     GLuint min_obj = 0;
@@ -533,12 +532,16 @@ Pick(GLint x_pick, GLint y_pick, BOOL force_pick)
     }
 
     return obj;
+#else
+    return NULL;
+#endif // 0
 }
 
 // Pick all top-level objects intersecting the given rect and select.
 void
 Pick_all_in_rect(GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
 {
+#if 0
     GLuint buffer[4096];
     GLint num_hits;
     Object *obj = NULL;
@@ -634,13 +637,7 @@ Pick_all_in_rect(GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
         }
 #endif
     }
-}
-
-// callback version of Draw for AUX/TK
-void CALLBACK
-DrawCB(void)
-{
-    Draw(FALSE, 0, 0, 0, 0);
+#endif // 0
 }
 
 // Find if an object is in the selection, returning TRUE if found, and
@@ -1496,8 +1493,8 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 
         trackball_Init(wWidth, wHeight);
 
-        auxIdleFunc(DrawCB);
-        auxMainLoop(DrawCB);
+        auxIdleFunc(Draw);
+        auxMainLoop(Draw);
 
         // Property sheet for the tools and preview tools. Tabs are indexed by symbols
         // to make it simpler to refer to them consistently elsewhere.

@@ -9,12 +9,12 @@ typedef enum
     DRAW_NONE = 0,
     DRAW_SELECTED = 1,
     DRAW_HIGHLIGHT = 2,
-    DRAW_TOP_LEVEL_ONLY = 4,
+    DRAW_TOP_LEVEL_ONLY = 4,    // unused
     DRAW_HIGHLIGHT_LOCKED = 8,
     DRAW_HIGHLIGHT_HALO = 16,
     DRAW_WITH_DIMENSIONS = 32,
     DRAW_PATH = 64,
-    DRAW_PICKING = 128
+    DRAW_PICKING = 128          // unused
 } PRESENTATION;
 
 void SetMaterial(int mat);
