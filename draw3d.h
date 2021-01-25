@@ -22,5 +22,7 @@ void color(Object* obj, BOOL construction, PRESENTATION pres, BOOL locked);
 void color_as(OBJECT obj_type, float color_decay, BOOL construction, PRESENTATION pres, BOOL locked);
 void draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock);
 Face *text_face(Text *text, Face *f);
+void CALLBACK Draw(void);
+void invalidate_dl(void);
 
 #endif // __DRAW3D_H__

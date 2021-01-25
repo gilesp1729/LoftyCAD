@@ -82,6 +82,58 @@ snap_ray_edge(GLint x, GLint y, Edge *edge, Point *new_point)
     return TRUE;
 }
 
+// Intersect a ray obtained by a mouse (window) coordinate with a line (edge),
+// returning the distance of the nearest point on an edge to the ray, or a 
+// very large number if there is no intersection. The edge is considered finite.
+float
+dist_ray_edge(Plane *v, Edge* edge, Point* new_point)
+{
+    Plane u, w0;
+    float a, b, c, d, e, sc, tc, denom;
+    Point other_pt;
+
+    if (edge->type != EDGE_STRAIGHT)
+        return FALSE;
+
+    // Express the lines in point/direction form (as Plane structs, for easy dotting later)
+    u.refpt = *edge->endpoints[0];
+    u.A = edge->endpoints[1]->x - edge->endpoints[0]->x;
+    u.B = edge->endpoints[1]->y - edge->endpoints[0]->y;
+    u.C = edge->endpoints[1]->z - edge->endpoints[0]->z;
+
+    w0.refpt = v->refpt;
+    w0.A = u.refpt.x - v->refpt.x;
+    w0.B = u.refpt.y - v->refpt.y;
+    w0.C = u.refpt.z - v->refpt.z;
+
+    // calculate the dot products used in the solution for the closest points.
+    a = pldot(&u, &u);
+    b = pldot(&u, v);
+    c = pldot(v, v);
+    d = pldot(&u, &w0);
+    e = pldot(v, &w0);
+    denom = a * c - b * b;
+    if (nz(denom))
+        return 99999;       // lines are parallel
+
+    tc = (a * e - b * d) / denom;
+    other_pt.x = v->refpt.x + tc * v->A;
+    other_pt.y = v->refpt.y + tc * v->B;
+    other_pt.z = v->refpt.z + tc * v->C;
+
+    sc = (b * e - c * d) / denom;
+    new_point->x = u.refpt.x + sc * u.A;
+    new_point->y = u.refpt.y + sc * u.B;
+    new_point->z = u.refpt.z + sc * u.C;
+
+    if (sc <= 0)
+        return length(edge->endpoints[0], &other_pt);
+    if (sc >= 1)
+        return length(edge->endpoints[1], &other_pt);
+
+    return length(new_point, &other_pt);
+}
+
 // Find the shortest distance from a point to an edge (line segment) or an infinite line (expressed by an edge)
 // Algorithm and notation from D.Sunday, "Lines and Distance of a Point to a Line", http://geomalgorithms.com/a02-_lines.html
 float

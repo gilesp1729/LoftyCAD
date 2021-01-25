@@ -472,9 +472,8 @@ void rotate_obj_90_facing(Object* obj, float xc, float yc, float zc);
 void rotate_obj_free_facing(Object* obj, float alpha, float xc, float yc, float zc);
 void reflect_obj_facing(Object* obj, float xc, float yc, float zc);
 
-// Find object in tree, at a location, or as child of another object
+// Find object in tree or as child of another object
 BOOL find_obj(Object *parent, Object *obj);
-Object *find_in_neighbourhood(Object *match_obj, Group *tree);
 Object *find_parent_object(Group *tree, Object *obj, BOOL deep_search);
 Object *find_top_level_parent(Group *tree, Object *obj);
 BOOL is_top_level_object(Object *obj, Group *tree);

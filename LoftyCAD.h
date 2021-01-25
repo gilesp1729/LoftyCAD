@@ -255,12 +255,8 @@ extern BOOL debug_view_bbox;
 extern BOOL debug_view_normals;
 extern BOOL debug_view_viewlist;
 
-// Some forwards (mostly draw3d.c)
-Object * Pick(GLint x_pick, GLint y_pick, BOOL force_pick);
-void Pick_all_in_rect(GLint x_pick, GLint y_pick, GLint width, GLint height);
-void CALLBACK Draw(void);
+// Some forwards
 void CALLBACK Position(void);
-void invalidate_dl(void);
 BOOL is_selected_direct(Object * obj, Object * *prev_in_list);
 BOOL is_selected_parent(Object * obj);
 BOOL remove_from_selection(Object * obj);
@@ -325,6 +321,11 @@ Group* group_connected_edges(Edge * edge);
 Face* make_face(Group * group);
 void insert_chamfer_round(Point * pt, Face * parent, float size, EDGE edge_type, BOOL restricted);
 Volume* make_body_of_revolution(Group * group, BOOL negative);
+
+// Neighbourhood search and picking (neighbourhood.c)
+Object* Pick(GLint x_pick, GLint y_pick, BOOL force_pick);
+void Pick_all_in_rect(GLint x_pick, GLint y_pick, GLint width, GLint height);
+Object* find_in_neighbourhood(Object * match_obj, Group * tree);
 
 // Forwards for window procedures and similar
 int CALLBACK Command(int message, int wParam, int lParam);
