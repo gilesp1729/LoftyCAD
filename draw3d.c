@@ -210,7 +210,6 @@ draw_triangle(void *arg, int mat, float x[3], float y[3], float z[3])
     float A, B, C, length;
 
     SetMaterial(mat);
-    //glBegin(GL_POLYGON);
     cross(x[1] - x[0], y[1] - y[0], z[1] - z[0], x[2] - x[0], y[2] - y[0], z[2] - z[0], &A, &B, &C);
     length = (float)sqrt(A * A + B * B + C * C);
     if (!nz(length))
@@ -222,7 +221,6 @@ draw_triangle(void *arg, int mat, float x[3], float y[3], float z[3])
     }
     for (i = 0; i < 3; i++)
         glVertex3d(x[i], y[i], z[i]);
-    //glEnd();
 }
 
 // Send a coordinate to glVertex3f, after transforming it by the transforms in the list.
@@ -251,7 +249,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
     Volume *vol;
     Group *group;
     float dx, dy, dz;
-    BOOL push_name, locked, constr_edge;
+    BOOL locked, constr_edge;
     // This object is selected. Color it and all its components.
     BOOL selected = pres & DRAW_SELECTED;
     // This object is highlighted because the mouse is hovering on it.
@@ -273,14 +271,10 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
     switch (obj->type)
     {
     case OBJ_POINT:
-        push_name = snapping || parent_lock < obj->type;
-        locked = !push_name; // parent_lock >= obj->type;  // allow coloring when highlighting neighbourhood
+        locked = !(snapping || parent_lock < obj->type);
         p = (Point *)obj;
-        if ((selected || highlighted) && !push_name)
+        if ((selected || highlighted) && locked)
             return;
-
-        if (push_name)
-            glPushName((GLuint)obj);
 
         if (selected || highlighted)
         {
@@ -340,18 +334,15 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
                 glEnd();
             }
         }
-        if (push_name)
-            glPopName();
 
         break;
 
     case OBJ_EDGE:
-        push_name = snapping || parent_lock < obj->type;
-        locked = !push_name; // parent_lock >= obj->type;  // allow coloring when highlighting neighbourhood
+        locked = !(snapping || parent_lock < obj->type);
         edge = (Edge *)obj;
         if ((edge->type & EDGE_CONSTRUCTION) && !view_constr)
             return;
-        if ((selected || highlighted) && !push_name)
+        if ((selected || highlighted) && locked)
             return;
         constr_edge = (pres & DRAW_PATH) != 0 || (edge->type & EDGE_CONSTRUCTION) != 0;
 
@@ -367,9 +358,6 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             edge->drawn = curr_drawn_no;
         }
 
-        if (push_name)
-            glPushName((GLuint)obj);
-
         switch (edge->type & ~EDGE_CONSTRUCTION)
         {
         case EDGE_STRAIGHT:
@@ -378,8 +366,6 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             glVertex3_trans(edge->endpoints[0]->x, edge->endpoints[0]->y, edge->endpoints[0]->z);
             glVertex3_trans(edge->endpoints[1]->x, edge->endpoints[1]->y, edge->endpoints[1]->z);
             glEnd();
-            if (push_name)
-                glPopName();
             if (draw_components)
             {
                 draw_object((Object *)edge->endpoints[0], (pres & ~DRAW_WITH_DIMENSIONS), parent_lock);
@@ -396,8 +382,6 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
                 glVertex3_trans(p->x, p->y, p->z);
 
             glEnd();
-            if (push_name)
-                glPopName();
             if (draw_components)
             {
                 draw_object((Object *)ae->centre, (pres & ~DRAW_WITH_DIMENSIONS), parent_lock);
@@ -415,8 +399,6 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
                 glVertex3_trans(p->x, p->y, p->z);
 
             glEnd();
-            if (push_name)
-                glPopName();
             if (draw_components)
             {
                 draw_object((Object *)edge->endpoints[0], (pres & ~DRAW_WITH_DIMENSIONS), parent_lock);
@@ -430,9 +412,6 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             zedge = (ZPolyEdge*)edge;
             color(obj, constr_edge, pres, locked);
             spaghetti(zedge, print_zmin, print_zmax);
-            if (push_name)
-                glPopName();
-
             break;
         }
         break;
@@ -448,10 +427,8 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
 
         if (face->vol == NULL || !materials[face->vol->material].hidden)
         {
-            glPushName((GLuint)obj);
             gen_view_list_face(face);
             face_shade(rtess, face, pres, locked);
-            glPopName();
         }
 
         // Don't pass draw with dims down to sub-components, to minimise clutter
@@ -1934,7 +1911,6 @@ Draw(void)
                 {
                     Bbox box = vol->bbox;
 
-                    glPushName(0);
                     glColor3d(1.0, 0.4, 0.4);
                     glBegin(GL_LINE_LOOP);
                     glVertex3f(box.xmin, box.ymin, box.zmin);
@@ -1964,7 +1940,6 @@ Draw(void)
                     glVertex3f(box.xmax, box.ymax, box.zmin);
                     glVertex3f(box.xmax, box.ymax, box.zmax);
                     glEnd();
-                    glPopName();
                 }
             }
 
@@ -1984,26 +1959,22 @@ Draw(void)
                         {
                             Plane* n = &f->normal;
 
-                            glPushName(0);
                             glColor3d(1.0, 0.4, 0.4);
                             glBegin(GL_LINES);
                             glVertex3f(n->refpt.x, n->refpt.y, n->refpt.z);
                             glVertex3f(n->refpt.x + 3 * n->A, n->refpt.y + 3 * n->B, n->refpt.z + 3 * n->C);
                             glEnd();
-                            glPopName();
                         }
 
                         for (i = 0; i < f->n_local; i++)
                         {
                             PlaneRef* n = &f->local_norm[i];
 
-                            glPushName(0);
                             glColor3d(0.4, 0.4, 1.0);
                             glBegin(GL_LINES);
                             glVertex3f(n->refpt->x, n->refpt->y, n->refpt->z);
                             glVertex3f(n->refpt->x + 2 * n->A, n->refpt->y + 2 * n->B, n->refpt->z + 2 * n->C);
                             glEnd();
-                            glPopName();
                         }
                     }
                 }
@@ -2021,25 +1992,21 @@ Draw(void)
                     {
                         Plane* n = &f->normal;
 
-                        glPushName(0);
                         glColor3d(1.0, 0.4, 0.4);
                         glBegin(GL_LINES);
                         glVertex3f(n->refpt.x, n->refpt.y, n->refpt.z);
                         glVertex3f(n->refpt.x + 3 * n->A, n->refpt.y + 3 * n->B, n->refpt.z + 3 * n->C);
                         glEnd();
-                        glPopName();
                     }
                     for (i = 0; i < f->n_local; i++)
                     {
                         PlaneRef* n = &f->local_norm[i];
 
-                        glPushName(0);
                         glColor3d(0.4, 0.4, 1.0);
                         glBegin(GL_LINES);
                         glVertex3f(n->refpt->x, n->refpt->y, n->refpt->z);
                         glVertex3f(n->refpt->x + 2 * n->A, n->refpt->y + 2 * n->B, n->refpt->z + 2 * n->C);
                         glEnd();
-                        glPopName();
                     }
                 }
 
@@ -2078,7 +2045,6 @@ Draw(void)
             double x, y;
 
             // Draw print bed. By default, just a 200x200mm square centred at the origin.
-            glPushName(0);
             glBegin(GL_LINE_LOOP);
             glColor3d(0.8, 0.8, 0.8);
             glVertex3d(xmin, ymin, 0.0);
@@ -2104,7 +2070,6 @@ Draw(void)
         }
 
         // Draw axes XYZ in RGB (large for tool view, small for print bed view)
-        glPushName(0);
         glBegin(GL_LINES);
         glColor3d(1.0, 0.4, 0.4);
         glVertex3d(0.0, 0.0, 0.0);
@@ -2120,7 +2085,6 @@ Draw(void)
         glVertex3d(0.0, 0.0, 0.0);
         glVertex3d(0.0, 0.0, axis);
         glEnd();
-        glPopName();
     }
 
     // handle shift-drag for selection by drawing 2D rect. 

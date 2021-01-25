@@ -293,14 +293,31 @@ find_in_neighbourhood(Object *match_obj, Group *tree)
 // Picking helpers: return an intersecting object with a ray. Also return the distance
 // to the ray's near plane (the refpt of the Plane) to help with sorting.
 // For faces, only viewable faces are considered (normal towards eye)
-Object* pick_point(Point* p, Plane* line, float *dist)
+Object* pick_point(Point* p, LOCK parent_lock, Plane* line, float *dist)
 {
+
+
+
+
+
     return NULL;
 }
 
-Object* pick_edge(Edge* e, Plane* line, float* dist)
+Object* pick_edge(Edge* e, LOCK parent_lock, Plane* line, float* dist)
 {
     Point point;
+
+    // Check if the endpoints are hit first.
+    if (parent_lock < LOCK_POINTS)
+    {
+        Object* test = pick_point(e->endpoints[0], parent_lock, line, dist);
+
+        if (test != NULL)
+            return test;
+        test = pick_point(e->endpoints[1], parent_lock, line, dist);
+        if (test != NULL)
+            return test;
+    }
 
     if (dist_ray_edge(line, e, &point) < snap_tol)
     {
@@ -310,7 +327,7 @@ Object* pick_edge(Edge* e, Plane* line, float* dist)
     return NULL;
 }
 
-Object* pick_face(Face* f, Plane* line, float* dist)
+Object* pick_face(Face* f, LOCK parent_lock, Plane* line, float* dist)
 {
     Point point;
     Point2D pt;
@@ -319,6 +336,20 @@ Object* pick_face(Face* f, Plane* line, float* dist)
     // If face is turning away, no need to consider it.
     if (pldot(line, &f->normal) >= 0)
         return NULL;
+
+    // Check if the edges are hit first.
+    if (parent_lock < LOCK_EDGES)
+    {
+        int i;
+
+        for (i = 0; i < f->n_edges; i++)
+        {
+            Object* test = pick_edge(f->edges[i], parent_lock, line, dist);
+
+            if (test != NULL)
+                return test;
+        }
+    }
 
     // Find the intersection point and check if it lies in the face.
     if (intersect_line_plane(line, &f->normal , &point) > 0)
@@ -360,7 +391,7 @@ Object* pick_face(Face* f, Plane* line, float* dist)
     return NULL;
 }
 
-Object* pick_object(Object* obj, Plane* line, float* dist)
+Object* pick_object(Object* obj, LOCK parent_lock, Plane* line, float* dist)
 {
     Object* test = NULL;
     Object* o;
@@ -369,21 +400,21 @@ Object* pick_object(Object* obj, Plane* line, float* dist)
     switch (obj->type)
     {
     case OBJ_POINT:
-        test = pick_point((Point*)obj, line, dist);
+        test = pick_point((Point*)obj, parent_lock, line, dist);
         break;
 
     case OBJ_EDGE:
-        test = pick_edge((Edge*)obj, line, dist);
+        test = pick_edge((Edge*)obj, parent_lock, line, dist);
         break;
 
     case OBJ_FACE:
-        test = pick_face((Face*)obj, line, dist);
+        test = pick_face((Face*)obj, parent_lock, line, dist);
         break;
 
     case OBJ_VOLUME:
         for (f = (Face*)((Volume*)obj)->faces.head; f != NULL; f = (Face*)f->hdr.next)
         {
-            test = pick_face(f, line, dist);
+            test = pick_face(f, parent_lock, line, dist);
             if (test != NULL)
                 break;
         }
@@ -392,7 +423,7 @@ Object* pick_object(Object* obj, Plane* line, float* dist)
     case OBJ_GROUP:
         for (o = ((Group*)obj)->obj_list.head; o != NULL; o = o->next)
         {
-            test = pick_object(o, line, dist);
+            test = pick_object(o, obj->lock, line, dist);
             if (test != NULL)
                 break;
         }
@@ -423,7 +454,7 @@ Pick(GLint x_pick, GLint y_pick, BOOL force_pick)
     // Loop though top-level objects.
     for (obj = object_tree.obj_list.head; obj != NULL; obj = obj->next)
     {
-        test = pick_object(obj, &line, &dist);
+        test = pick_object(obj, obj->lock, &line, &dist);
 
         if (test != NULL)
         {
