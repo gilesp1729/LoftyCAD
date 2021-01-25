@@ -86,7 +86,7 @@ snap_ray_edge(GLint x, GLint y, Edge *edge, Point *new_point)
 // returning the distance of the nearest point on an edge to the ray, or a 
 // very large number if there is no intersection. The edge is considered finite.
 float
-dist_ray_edge(Plane *v, Edge* edge, Point* new_point)
+dist_ray_to_edge(Plane *v, Edge* edge, Point* new_point)
 {
     Plane u, w0;
     float a, b, c, d, e, sc, tc, denom;
@@ -170,7 +170,7 @@ dist_point_to_edge(Point *P, Edge *S)
 }
 
 // The same, but consider the line as infinite, and also return the perpendicular
-// intersection point. There is also a plane/refpt version.
+// intersection point. There is also a plane/refpt and ray version.
 float
 dist_point_to_perp_line(Point* P, Edge* S, Point* Pb)
 {
@@ -221,6 +221,30 @@ dist_point_to_perp_plane(Point* P, Plane* S, Point* Pb)
     Pb->x = S->refpt.x + b * v.x;
     Pb->y = S->refpt.y + b * v.y;
     Pb->z = S->refpt.z + b * v.z;
+
+    return length(P, Pb);
+}
+
+float
+dist_point_to_ray(Point* P, Plane* v, Point* Pb)
+{
+    Plane w;
+    float c1, c2, b;
+
+    //  Vector v = ray
+    //  Vector w = P - ray.refpt
+    w.A = P->x - v->refpt.x;
+    w.B = P->y - v->refpt.y;
+    w.C = P->z - v->refpt.z;
+
+    c1 = pldot(&w, v);
+    c2 = pldot(v, v);
+    b = c1 / c2;
+
+    //Point Pb = ray.refpt + b * ray;
+    Pb->x = v->refpt.x + b * v->A;
+    Pb->y = v->refpt.y + b * v->B;
+    Pb->z = v->refpt.z + b * v->C;
 
     return length(P, Pb);
 }

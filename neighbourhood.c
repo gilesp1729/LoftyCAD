@@ -295,10 +295,13 @@ find_in_neighbourhood(Object *match_obj, Group *tree)
 // For faces, only viewable faces are considered (normal towards eye)
 Object* pick_point(Point* p, LOCK parent_lock, Plane* line, float *dist)
 {
+    Point point;
 
-
-
-
+    if (dist_point_to_ray(p, line, &point) < snap_tol)
+    {
+        *dist = length(&line->refpt, &point);
+        return (Object*)p;
+    }
 
     return NULL;
 }
@@ -319,7 +322,7 @@ Object* pick_edge(Edge* e, LOCK parent_lock, Plane* line, float* dist)
             return test;
     }
 
-    if (dist_ray_edge(line, e, &point) < snap_tol)
+    if (dist_ray_to_edge(line, e, &point) < snap_tol)
     {
         *dist = length(&line->refpt, &point);
         return (Object*)e;
