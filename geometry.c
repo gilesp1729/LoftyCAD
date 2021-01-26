@@ -46,7 +46,7 @@ snap_ray_edge(GLint x, GLint y, Edge *edge, Point *new_point)
     Plane u, v, w0;
     float a, b, c, d, e, sc, denom;
 
-    if (edge->type != EDGE_STRAIGHT)
+    if ((edge->type & ~EDGE_CONSTRUCTION) != EDGE_STRAIGHT)
         return FALSE; 
 
     // Express the lines in point/direction form (as Plane structs, for easy dotting later)
@@ -92,8 +92,8 @@ dist_ray_to_edge(Plane *v, Edge* edge, Point* new_point)
     float a, b, c, d, e, sc, tc, denom;
     Point other_pt;
 
-    if (edge->type != EDGE_STRAIGHT)
-        return FALSE;
+    if ((edge->type & ~EDGE_CONSTRUCTION) != EDGE_STRAIGHT)
+        return 99999;
 
     // Express the lines in point/direction form (as Plane structs, for easy dotting later)
     u.refpt = *edge->endpoints[0];
