@@ -309,12 +309,15 @@ Object* pick_point(Point* p, LOCK parent_lock, Plane* line, float *dist)
 Object* pick_edge(Edge* e, LOCK parent_lock, Plane* line, float* dist)
 {
     Point point;
+    Point* p;
+    Object* test;
+    ArcEdge* ae;
+    BezierEdge* be;
 
     // Check if the endpoints are hit first.
     if (parent_lock < LOCK_POINTS)
     {
-        Object* test = pick_point(e->endpoints[0], parent_lock, line, dist);
-
+        test = pick_point(e->endpoints[0], parent_lock, line, dist);
         if (test != NULL)
             return test;
         test = pick_point(e->endpoints[1], parent_lock, line, dist);
@@ -322,11 +325,48 @@ Object* pick_edge(Edge* e, LOCK parent_lock, Plane* line, float* dist)
             return test;
     }
 
-    if (dist_ray_to_edge(line, e, &point) < snap_tol)
+    // Edge picker relies on the view lists being valid. The next draw will do it.
+    if (!e->view_valid)
+        return NULL;
+
+    switch (e->type & ~EDGE_CONSTRUCTION)
     {
-        *dist = length(&line->refpt, &point);
-        return (Object*)e;
+    case EDGE_STRAIGHT:
+        if (dist_ray_to_edge(line, e, &point) < snap_tol)
+        {
+            *dist = length(&line->refpt, &point);
+            return (Object*)e;
+        }
+        break;
+
+    case EDGE_ARC:
+        ae = (ArcEdge*)e;
+        test = pick_point(ae->centre, parent_lock, line, dist);
+        if (test != NULL)
+            return test;
+        goto test_edge;
+
+    case EDGE_BEZIER:
+        be = (BezierEdge*)e;
+        test = pick_point(be->ctrlpoints[0], parent_lock, line, dist);
+        if (test != NULL)
+            return test;
+        test = pick_point(be->ctrlpoints[1], parent_lock, line, dist);
+        if (test != NULL)
+            return test;
+
+    test_edge:
+        for (p = (Point *)e->view_list.head; p->hdr.next != NULL; p = (Point *)p->hdr.next)
+        {
+            if (dist_ray_to_segment(line, p, (Point *)p->hdr.next, &point) < snap_tol)
+            {
+                *dist = length(&line->refpt, &point);
+                return (Object*)e;
+            }
+        }
+        break;
     }
+
     return NULL;
 }
 
@@ -337,7 +377,7 @@ Object* pick_face(Face* f, LOCK parent_lock, Plane* line, float* dist)
     float a, b, c, dx, dy, dz;
 
     // If face is turning away, no need to consider it.
-    if (pldot(line, &f->normal) >= 0)
+    if (IS_FLAT(f) && pldot(line, &f->normal) >= 0)
         return NULL;
 
     // Check if the edges are hit first.
@@ -355,40 +395,53 @@ Object* pick_face(Face* f, LOCK parent_lock, Plane* line, float* dist)
     }
 
     // Find the intersection point and check if it lies in the face.
-    if (intersect_line_plane(line, &f->normal , &point) > 0)
+    switch (f->type & ~FACE_CONSTRUCTION)
     {
-        a = fabsf(f->normal.A);
-        b = fabsf(f->normal.B);
-        c = fabsf(f->normal.C);
+    case FACE_TRI:
+    case FACE_RECT:
+    case FACE_FLAT:
+    case FACE_CIRCLE:
+        if (intersect_line_plane(line, &f->normal, &point) > 0)
+        {
+            a = fabsf(f->normal.A);
+            b = fabsf(f->normal.B);
+            c = fabsf(f->normal.C);
 
-        // make sure point is in plane first
-        dx = point.x - f->normal.refpt.x;
-        dy = point.y - f->normal.refpt.y;
-        dz = point.z - f->normal.refpt.z;
-        if (fabsf(a * dx + b * dy + c * dz) > snap_tol)
-            return NULL;
+            // make sure point is in plane first
+            dx = point.x - f->normal.refpt.x;
+            dy = point.y - f->normal.refpt.y;
+            dz = point.z - f->normal.refpt.z;
+            if (fabsf(a * dx + b * dy + c * dz) > snap_tol)
+                return NULL;
 
-        if (c > b && c > a)
-        {
-            pt.x = point.x;
-            pt.y = point.y;
-        }
-        else if (b > a && b > c)
-        {
-            pt.x = point.x;
-            pt.y = point.z;
-        }
-        else
-        {
-            pt.x = point.y;
-            pt.y = point.z;
-        }
+            if (c > b && c > a)
+            {
+                pt.x = point.x;
+                pt.y = point.y;
+            }
+            else if (b > a && b > c)
+            {
+                pt.x = point.x;
+                pt.y = point.z;
+            }
+            else
+            {
+                pt.x = point.y;
+                pt.y = point.z;
+            }
 
-        if (point_in_polygon2D(pt, f->view_list2D, f->n_view2D))
-        {
-            *dist = length(&line->refpt, &point);
-            return (Object*)f;
+            if (point_in_polygon2D(pt, f->view_list2D, f->n_view2D))
+            {
+                *dist = length(&line->refpt, &point);
+                return (Object*)f;
+            }
         }
+        break;
+
+    case FACE_CYLINDRICAL:
+    case FACE_BARREL:
+    case FACE_BEZIER:
+        break;
     }
 
     return NULL;

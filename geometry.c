@@ -85,6 +85,7 @@ snap_ray_edge(GLint x, GLint y, Edge *edge, Point *new_point)
 // Intersect a ray obtained by a mouse (window) coordinate with a line (edge),
 // returning the distance of the nearest point on an edge to the ray, or a 
 // very large number if there is no intersection. The edge is considered finite.
+// THere is also a point-segment version.
 float
 dist_ray_to_edge(Plane *v, Edge* edge, Point* new_point)
 {
@@ -130,6 +131,53 @@ dist_ray_to_edge(Plane *v, Edge* edge, Point* new_point)
         return length(edge->endpoints[0], &other_pt);
     if (sc >= 1)
         return length(edge->endpoints[1], &other_pt);
+
+    return length(new_point, &other_pt);
+}
+
+float
+dist_ray_to_segment(Plane* v, Point *p1, Point *p2, Point* new_point)
+{
+    Plane u, w0;
+    float a, b, c, d, e, sc, tc, denom;
+    Point other_pt;
+
+
+    // Express the lines in point/direction form (as Plane structs, for easy dotting later)
+    u.refpt = *p1;
+    u.A = p2->x - p1->x;
+    u.B = p2->y - p1->y;
+    u.C = p2->z - p1->z;
+
+    w0.refpt = v->refpt;
+    w0.A = u.refpt.x - v->refpt.x;
+    w0.B = u.refpt.y - v->refpt.y;
+    w0.C = u.refpt.z - v->refpt.z;
+
+    // calculate the dot products used in the solution for the closest points.
+    a = pldot(&u, &u);
+    b = pldot(&u, v);
+    c = pldot(v, v);
+    d = pldot(&u, &w0);
+    e = pldot(v, &w0);
+    denom = a * c - b * b;
+    if (nz(denom))
+        return LARGE_COORD;       // lines are parallel
+
+    tc = (a * e - b * d) / denom;
+    other_pt.x = v->refpt.x + tc * v->A;
+    other_pt.y = v->refpt.y + tc * v->B;
+    other_pt.z = v->refpt.z + tc * v->C;
+
+    sc = (b * e - c * d) / denom;
+    new_point->x = u.refpt.x + sc * u.A;
+    new_point->y = u.refpt.y + sc * u.B;
+    new_point->z = u.refpt.z + sc * u.C;
+
+    if (sc <= 0)
+        return length(p1, &other_pt);
+    if (sc >= 1)
+        return length(p2, &other_pt);
 
     return length(new_point, &other_pt);
 }
