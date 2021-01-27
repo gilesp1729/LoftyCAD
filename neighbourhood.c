@@ -373,9 +373,9 @@ Object* pick_face(Face* f, LOCK parent_lock, Plane* line, float* dist)
     Point point;
     Point* p;
     Point2D pt;
-    float a, b, c, dx, dy, dz;
+    float a, b, c;
 
-    // If face is turning away, no need to consider it.
+    // If a flat face is turning away, no need to consider it.
     if (IS_FLAT(f) && pldot(line, &f->normal) >= 0)
         return NULL;
 
@@ -405,13 +405,6 @@ Object* pick_face(Face* f, LOCK parent_lock, Plane* line, float* dist)
             a = fabsf(f->normal.A);
             b = fabsf(f->normal.B);
             c = fabsf(f->normal.C);
-
-            // make sure point is in plane first
-            dx = point.x - f->normal.refpt.x;
-            dy = point.y - f->normal.refpt.y;
-            dz = point.z - f->normal.refpt.z;
-            if (fabsf(a * dx + b * dy + c * dz) > snap_tol)
-                return NULL;
 
             if (c > b && c > a)
             {
@@ -452,18 +445,17 @@ Object* pick_face(Face* f, LOCK parent_lock, Plane* line, float* dist)
             facet_normal.C = p->z;
             p = (Point *)p->hdr.next;           // get first point of 4
             facet_normal.refpt = *p;
+
+            // test normal facing away first
+            if (pldot(line, &facet_normal) >= 0)
+                goto next_facet;
+
+            // test for intersection within facet
             if (intersect_line_plane(line, &facet_normal, &point) > 0)
             {
                 a = fabsf(facet_normal.A);
                 b = fabsf(facet_normal.B);
                 c = fabsf(facet_normal.C);
-
-                // make sure point is in plane first
-                dx = point.x - facet_normal.refpt.x;
-                dy = point.y - facet_normal.refpt.y;
-                dz = point.z - facet_normal.refpt.z;
-                if (fabsf(a * dx + b * dy + c * dz) > snap_tol)
-                    goto next_facet;
 
                 if (c > b && c > a)
                 {
