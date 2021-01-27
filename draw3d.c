@@ -502,7 +502,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         }
         else
         {
-            // Draw individual faces with names pushed
+            // Draw individual faces 
             gen_view_list_vol(vol);
             if (vol->xform != NULL)
                 link((Object *)vol->xform, &xform_list);
@@ -665,7 +665,7 @@ Draw(void)
                         highlight_obj = NULL;
                 }
             }
-            else if (highlight_obj->type == OBJ_EDGE || highlight_obj->type == OBJ_FACE)
+            else if (highlight_obj->type == OBJ_FACE)
             {
                 find_corner_edges
                 (
@@ -678,7 +678,21 @@ Draw(void)
                     if (!extrudible(highlight_obj))
                         highlight_obj = NULL;
                 }
-                else if (app_state == STATE_STARTING_SCALE)
+            }
+            else if (highlight_obj->type == OBJ_EDGE)
+            {
+                find_corner_edges
+                (
+                    highlight_obj,
+                    find_parent_object(&object_tree, highlight_obj, FALSE),
+                    &halo
+                );
+                if (app_state == STATE_STARTING_EXTRUDE || app_state == STATE_STARTING_EXTRUDE_LOCAL)
+                {
+                    if (!extrudible(highlight_obj))
+                        highlight_obj = NULL;
+                }
+                else if (app_state == STATE_STARTING_SCALE || app_state == STATE_STARTING_ROTATE)
                 {
                     highlight_obj = NULL;
                 }
@@ -1552,6 +1566,7 @@ Draw(void)
                         break;
                     }
 
+#if 0
                     if (picked_obj->type == OBJ_VOLUME || picked_obj->type == OBJ_GROUP)
                     {
                         xform = ((Volume*)picked_obj)->xform;  // works for groups too, as the struct layout is the same
@@ -1569,18 +1584,28 @@ Draw(void)
                             xform->sy *= fabsf(new_point.y - centre_facing_plane.refpt.y) / d1.y;
                         if ((scaled & DIRN_Z) && !nz(d1.z))
                             xform->sz *= fabsf(new_point.z - centre_facing_plane.refpt.z) / d1.z;
+
+                        xform->enable_scale = TRUE;
+                        evaluate_transform(xform);
                     }
                     else  // scaling in-place
+#endif // 0
                     {
-                        break;   // TODO: if we can come up with a way to do it
-
+                        scale_obj_free
+                        (
+                            picked_obj,
+                            ((scaled & DIRN_X) && !nz(d1.x)) ? fabsf(new_point.x - centre_facing_plane.refpt.x) / d1.x : 1,
+                            ((scaled & DIRN_Y) && !nz(d1.y)) ? fabsf(new_point.y - centre_facing_plane.refpt.y) / d1.y : 1,
+                            ((scaled & DIRN_Z) && !nz(d1.z)) ? fabsf(new_point.z - centre_facing_plane.refpt.z) / d1.z : 1,
+                            centre_facing_plane.refpt.x,
+                            centre_facing_plane.refpt.y,
+                            centre_facing_plane.refpt.z
+                        );
+                        clear_move_copy_flags(picked_obj);
                     }
-
 
                     curr_obj = picked_obj;  // for highlighting
                     picked_point = new_point;
-                    xform->enable_scale = TRUE;
-                    evaluate_transform(xform);
                     invalidate_all_view_lists(picked_obj, picked_obj, 0, 0, 0);
                 }
 
@@ -1589,6 +1614,7 @@ Draw(void)
             case STATE_DRAWING_ROTATE:
                 if (picked_obj == NULL)
                     break;
+#if 0
                 if (picked_obj->type == OBJ_VOLUME || picked_obj->type == OBJ_GROUP)
                 {
                     float da;
@@ -1645,6 +1671,7 @@ Draw(void)
                     evaluate_transform(xform);
                 }
                 else  // we're rotating in-place
+#endif // 0
                 {
                     float da;
                     float alpha;
@@ -1802,7 +1829,6 @@ Draw(void)
         pres = 0;
         if (app_state >= STATE_STARTING_EDGE)
             pres |= DRAW_HIGHLIGHT_LOCKED;
-        glInitNames();
         curr_drawn_no++;
         xform_list.head = NULL;
         xform_list.tail = NULL;

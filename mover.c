@@ -850,20 +850,24 @@ rotate_coord_free_facing(float* x, float* y, float* z, float alpha, float xc, fl
     case PLANE_XY:
     case PLANE_MINUS_XY:
         mat_mult_2x2_xy(m, x0, y0, x, y);
+        *x += xc;
+        *y += yc;
         break;
 
     case PLANE_XZ:
     case PLANE_MINUS_XZ:
         mat_mult_2x2_xy(m, x0, z0, x, z);
+        *x += xc;
+        *z += zc;
         break;
 
     case PLANE_YZ:
     case PLANE_MINUS_YZ:
         mat_mult_2x2_xy(m, y0, z0, y, z);
+        *y += yc;
+        *z += zc;
         break;
     }
-    *x += xc;
-    *y += yc;
 }
 
 // Rotate the direction of a plane, in the facing plane, by angle alpha in the positive direction.
@@ -887,7 +891,7 @@ rotate_plane_free_facing(Plane* pl, float alpha)
     case PLANE_XZ:
     case PLANE_MINUS_XZ:
         mat_mult_2x2_xy(m, A0, C0, &pl->A, &pl->C);
-        break;
+break;
 
     case PLANE_YZ:
     case PLANE_MINUS_YZ:
@@ -908,9 +912,9 @@ rotate_obj_free_facing(Object* obj, float alpha, float xc, float yc, float zc)
     ArcEdge* ae;
     BezierEdge* be;
     Face* face;
-    //Volume* vol;
-    //Group* grp;
-    //Object* o;
+    Volume* vol;
+    Group* grp;
+    Object* o;
 
     switch (obj->type)
     {
@@ -964,13 +968,14 @@ rotate_obj_free_facing(Object* obj, float alpha, float xc, float yc, float zc)
         }
         face->view_valid = FALSE;
         break;
-#if 0  // these are handled by xforms. TODO: do we want to give the choice?
+
+#if 1  // these are handled by xforms. TODO: do we want to give the choice?
     case OBJ_VOLUME:
         vol = (Volume*)obj;
         for (face = (Face*)vol->faces.head; face != NULL; face = (Face*)face->hdr.next)
             rotate_obj_free_facing((Object*)face, alpha, xc, yc, zc);
-        if (vol->xform != NULL)
-            rotate_coord_free_facing(&vol->xform->xc, &vol->xform->yc, &vol->xform->zc, alpha, xc, yc, zc);
+         if (vol->xform != NULL)
+             rotate_coord_free_facing(&vol->xform->xc, &vol->xform->yc, &vol->xform->zc, alpha, xc, yc, zc);
         break;
 
     case OBJ_GROUP:
@@ -984,6 +989,106 @@ rotate_obj_free_facing(Object* obj, float alpha, float xc, float yc, float zc)
     }
 }
 
+// Scale a coordinate by (sx, sy, sz) about (xc, yc, zc). Unused scales are expected to be 1.
+// Zero or negative scales are ignored.
+void
+scale_coord_free(float* x, float* y, float* z, float sx, float sy, float sz, float xc, float yc, float zc)
+{
+    if (sx < SMALL_COORD)
+        sx = 1;
+    if (sy < SMALL_COORD)
+        sy = 1;
+    if (sz < SMALL_COORD)
+        sz = 1;
+
+    *x = (*x - xc) * sx + xc;
+    *y = (*y - yc) * sy + yc;
+    *z = (*z - zc) * sz + zc;
+}
+
+// Scale an object.
+void
+scale_obj_free(Object* obj, float sx, float sy, float sz, float xc, float yc, float zc)
+{
+    int i;
+    Point* p;
+    EDGE type;
+    Edge* edge;
+    ArcEdge* ae;
+    BezierEdge* be;
+    Face* face;
+    Volume* vol;
+    Group* grp;
+    Object* o;
+
+    switch (obj->type)
+    {
+    case OBJ_POINT:
+        p = (Point*)obj;
+        if (!p->moved)
+        {
+            scale_coord_free(&p->x, &p->y, &p->z, sx, sy, sz, xc, yc, zc);
+            p->moved = TRUE;
+        }
+        break;
+
+    case OBJ_EDGE:
+        edge = (Edge*)obj;
+        scale_obj_free((Object*)edge->endpoints[0], sx, sy, sz, xc, yc, zc);
+        scale_obj_free((Object*)edge->endpoints[1], sx, sy, sz, xc, yc, zc);
+        type = ((Edge*)obj)->type & ~EDGE_CONSTRUCTION;
+        switch (type)
+        {
+        case EDGE_ARC:
+            ae = (ArcEdge*)obj;
+            scale_obj_free((Object*)ae->centre, sx, sy, sz, xc, yc, zc);
+            scale_obj_free((Object*)&ae->normal.refpt, sx, sy, sz, xc, yc, zc);
+            edge->view_valid = FALSE;
+            break;
+
+        case EDGE_BEZIER:
+            be = (BezierEdge*)obj;
+            scale_obj_free((Object*)be->ctrlpoints[0], sx, sy, sz, xc, yc, zc);
+            scale_obj_free((Object*)be->ctrlpoints[1], sx, sy, sz, xc, yc, zc);
+            edge->view_valid = FALSE;
+            break;
+        }
+        break;
+
+    case OBJ_FACE:
+        face = (Face*)obj;
+        for (i = 0; i < face->n_edges; i++)
+        {
+            edge = face->edges[i];
+            scale_obj_free((Object*)edge, sx, sy, sz, xc, yc, zc);
+        }
+        // don't forget to rotate the normal refpt too
+        scale_coord_free(&face->normal.refpt.x, &face->normal.refpt.y, &face->normal.refpt.z, sx, sy, sz, xc, yc, zc);
+        if (face->text != NULL)             // and the text positions
+        {
+            scale_coord_free(&face->text->origin.x, &face->text->origin.y, &face->text->origin.z, sx, sy, sz, xc, yc, zc);
+            scale_coord_free(&face->text->endpt.x, &face->text->endpt.y, &face->text->endpt.z, sx, sy, sz, xc, yc, zc);
+        }
+        face->view_valid = FALSE;
+        break;
+
+    case OBJ_VOLUME:
+        vol = (Volume*)obj;
+        for (face = (Face*)vol->faces.head; face != NULL; face = (Face*)face->hdr.next)
+            scale_obj_free((Object*)face, sx, sy, sz, xc, yc, zc);
+        if (vol->xform != NULL)
+            scale_coord_free(&vol->xform->xc, &vol->xform->yc, &vol->xform->zc, sx, sy, sz, xc, yc, zc);
+        break;
+
+    case OBJ_GROUP:
+        grp = (Group*)obj;
+        for (o = grp->obj_list.head; o != NULL; o = o->next)
+            scale_obj_free(o, sx, sy, sz, xc, yc, zc);
+        if (grp->xform != NULL)
+            scale_coord_free(&grp->xform->xc, &grp->xform->yc, &grp->xform->zc, sx, sy, sz, xc, yc, zc);
+        break;
+    }
+}
 
 // Reflect a coordinate in the facing plane.
 void

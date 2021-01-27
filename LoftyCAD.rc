@@ -258,8 +258,8 @@ BEGIN
     IDS_ARC_EDGE            "Drag an arc edge.\r\nThe direction of dragging determines the direction of the arc.\r\n\r\nThe edge is drawn on the current face, or on the default plane."
     IDS_BEZIER_EDGE         "Drag a Bezier edge. The control points can be moved later.\r\n\r\nThe edge is drawn on the current face, or on the default plane."
     IDS_RENDERED            "Toggle the rendered view on and off."
-    IDS_SCALE               "Drag a point on a volume or group to scale it about its centre in the dominant direction."
-    IDS_ROTATE              "Drag a point on a volume or group to rotate it about its centre in the facing plane."
+    IDS_SCALE               "Drag a point on an object to scale it about its centre in the dominant direction."
+    IDS_ROTATE              "Drag a point on an object to rotate it about its centre in the facing plane."
     IDS_TEXT                "Click and drag to place text.\r\n\r\nThe text is placed on the current face, or on the default plane."
     IDS_EXTRUDE_LOCAL       "Drag a curved face to move its points along their local normals."
 END

@@ -93,7 +93,7 @@ dist_ray_to_edge(Plane *v, Edge* edge, Point* new_point)
     Point other_pt;
 
     if ((edge->type & ~EDGE_CONSTRUCTION) != EDGE_STRAIGHT)
-        return 99999;
+        return LARGE_COORD;
 
     // Express the lines in point/direction form (as Plane structs, for easy dotting later)
     u.refpt = *edge->endpoints[0];
@@ -114,7 +114,7 @@ dist_ray_to_edge(Plane *v, Edge* edge, Point* new_point)
     e = pldot(v, &w0);
     denom = a * c - b * b;
     if (nz(denom))
-        return 99999;       // lines are parallel
+        return LARGE_COORD;       // lines are parallel
 
     tc = (a * e - b * d) / denom;
     other_pt.x = v->refpt.x + tc * v->A;

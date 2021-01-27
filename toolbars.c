@@ -250,7 +250,6 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                     view_rendered = FALSE;
                     glEnable(GL_BLEND);
                     CheckMenuItem(hMenu, ID_VIEW_RENDEREDVIEW, MF_UNCHECKED);
-                    invalidate_dl();
                 }
                 else
                 {
@@ -265,6 +264,7 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                     CheckMenuItem(hMenu, ID_VIEW_RENDEREDVIEW, MF_CHECKED);
                 }
                 enable_rendered_view_items();
+                invalidate_dl();
                 break;
             }
         }

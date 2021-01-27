@@ -466,10 +466,11 @@ void move_corner_edges(ListHead *halo, float xoffset, float yoffset, float zoffs
 void clear_move_copy_flags(Object *obj);
 Face *clone_face_reverse(Face *face);
 
-// Rotate-90 and reflect object in place (note: this is not the same as a transform)
+// Rotate, reflect and scale an object in place (mover.c)
 void find_obj_pivot(Object* obj, float* xc, float* yc, float* zc);
 void rotate_obj_90_facing(Object* obj, float xc, float yc, float zc);
 void rotate_obj_free_facing(Object* obj, float alpha, float xc, float yc, float zc);
+void scale_obj_free(Object* obj, float sx, float sy, float sz, float xc, float yc, float zc);
 void reflect_obj_facing(Object* obj, float xc, float yc, float zc);
 
 // Find object in tree or as child of another object

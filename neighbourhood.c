@@ -430,7 +430,6 @@ Object* pick_object(Object* obj, LOCK parent_lock, Plane* line, float* dist)
             if (test != NULL)
                 break;
         }
-
         break;
     }
 
@@ -447,8 +446,8 @@ Pick(GLint x_pick, GLint y_pick, BOOL force_pick)
     Object* ret_obj = NULL;
     Object* obj;
     Plane line;
-    float dist = 99999;
-    float ret_dist = 99999;
+    float dist = LARGE_COORD;
+    float ret_dist = LARGE_COORD;
 
     // Get ray from eye position.
     ray_from_eye(x_pick, y_pick, &line);

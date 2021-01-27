@@ -613,8 +613,8 @@ left_down(AUX_EVENTREC *event)
 
         // For scaling, determine the dominant direction (it doesn't change during the
         // scaling operation). Drop out if we have coincident points and can't get an
-        // angle or a dominant direction.
-        if (nz(length(&picked_point, &centre_facing_plane.refpt)))
+        // angle or a dominant direction. Also here if we dropped out above.
+        if (!left_mouse || nz(length(&picked_point, &centre_facing_plane.refpt)))
         {
             ReleaseCapture();
             left_mouse = FALSE;

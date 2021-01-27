@@ -398,7 +398,6 @@ Command(int message, int wParam, int lParam)
                 view_rendered = FALSE;
                 glEnable(GL_BLEND);
                 CheckMenuItem(hMenu, ID_VIEW_RENDEREDVIEW, MF_UNCHECKED);
-                invalidate_dl();
             }
             else
             {
@@ -413,6 +412,7 @@ Command(int message, int wParam, int lParam)
                 CheckMenuItem(hMenu, ID_VIEW_RENDEREDVIEW, MF_CHECKED);
             }
             enable_rendered_view_items();
+            invalidate_dl();
             break;
 
         case ID_VIEW_PRINTBED:
