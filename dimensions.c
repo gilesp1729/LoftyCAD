@@ -571,6 +571,12 @@ show_dims_on(Object *obj, PRESENTATION pres, LOCK parent_lock)
 
     switch (obj->type & ~EDGE_CONSTRUCTION)
     {
+    case OBJ_POINT:
+        p0 = (Point*)obj;
+        color_as(OBJ_EDGE, 1.0f, EDGE_STRAIGHT, 0, FALSE);
+        glRasterPos3f(p0->x, p0->y, p0->z);
+        break;
+
     case OBJ_EDGE:
         e = (Edge *)obj;
         if ((e->type & EDGE_CONSTRUCTION) && !view_constr)
@@ -649,9 +655,12 @@ show_dims_on(Object *obj, PRESENTATION pres, LOCK parent_lock)
     }
 
     glListBase(1000);
-    get_dims_string(obj, buf);
-    ASSERT(strlen(buf) < 64, "String too long!");
-    glCallLists(strlen(buf), GL_UNSIGNED_BYTE, buf);
+    if (has_dims(obj))
+    {
+        get_dims_string(obj, buf);
+        ASSERT(strlen(buf) < 64, "String too long!");
+        glCallLists(strlen(buf), GL_UNSIGNED_BYTE, buf);
+    }
 
     if (highlighted)
     {

@@ -325,10 +325,6 @@ Object* pick_edge(Edge* e, LOCK parent_lock, Plane* line, float* dist)
             return test;
     }
 
-    // Edge picker relies on the view lists being valid. The next draw will do it.
-    if (!e->view_valid)
-        return NULL;
-
     switch (e->type & ~EDGE_CONSTRUCTION)
     {
     case EDGE_STRAIGHT:
@@ -356,6 +352,8 @@ Object* pick_edge(Edge* e, LOCK parent_lock, Plane* line, float* dist)
             return test;
 
     test_edge:
+        if (!e->view_valid)
+            return NULL;
         for (p = (Point *)e->view_list.head; p->hdr.next != NULL; p = (Point *)p->hdr.next)
         {
             if (dist_ray_to_segment(line, p, (Point *)p->hdr.next, &point) < snap_tol)
@@ -373,6 +371,7 @@ Object* pick_edge(Edge* e, LOCK parent_lock, Plane* line, float* dist)
 Object* pick_face(Face* f, LOCK parent_lock, Plane* line, float* dist)
 {
     Point point;
+    Point* p;
     Point2D pt;
     float a, b, c, dx, dy, dz;
 
@@ -441,6 +440,89 @@ Object* pick_face(Face* f, LOCK parent_lock, Plane* line, float* dist)
     case FACE_CYLINDRICAL:
     case FACE_BARREL:
     case FACE_BEZIER:
+        // These faces have facets in their view lists. Test each one separately. Could be slow...
+        for (p = (Point*)f->view_list.head; p != NULL; )
+        {
+            Plane facet_normal;
+            Point2D facet2D[5];
+
+            ASSERT(p->flags == FLAG_NEW_FACET, "Expecting a facet normal");
+            facet_normal.A = p->x;
+            facet_normal.B = p->y;
+            facet_normal.C = p->z;
+            p = (Point *)p->hdr.next;           // get first point of 4
+            facet_normal.refpt = *p;
+            if (intersect_line_plane(line, &facet_normal, &point) > 0)
+            {
+                a = fabsf(facet_normal.A);
+                b = fabsf(facet_normal.B);
+                c = fabsf(facet_normal.C);
+
+                // make sure point is in plane first
+                dx = point.x - facet_normal.refpt.x;
+                dy = point.y - facet_normal.refpt.y;
+                dz = point.z - facet_normal.refpt.z;
+                if (fabsf(a * dx + b * dy + c * dz) > snap_tol)
+                    goto next_facet;
+
+                if (c > b && c > a)
+                {
+                    pt.x = point.x;
+                    pt.y = point.y;
+                    facet2D[0].x = p->x;
+                    facet2D[0].y = p->y;
+                    p = (Point*)p->hdr.next; 
+                    facet2D[1].x = p->x;
+                    facet2D[1].y = p->y;
+                    p = (Point*)p->hdr.next; 
+                    facet2D[2].x = p->x;
+                    facet2D[2].y = p->y;
+                    p = (Point*)p->hdr.next; 
+                    facet2D[3].x = p->x;
+                    facet2D[3].y = p->y;
+                }
+                else if (b > a && b > c)
+                {
+                    pt.x = point.x;
+                    pt.y = point.z;
+                    facet2D[0].x = p->x;
+                    facet2D[0].y = p->z;
+                    p = (Point*)p->hdr.next;
+                    facet2D[1].x = p->x;
+                    facet2D[1].y = p->z;
+                    p = (Point*)p->hdr.next;
+                    facet2D[2].x = p->x;
+                    facet2D[2].y = p->z;
+                    p = (Point*)p->hdr.next;
+                    facet2D[3].x = p->x;
+                    facet2D[3].y = p->z;
+                }
+                else
+                {
+                    pt.x = point.y;
+                    pt.y = point.z;
+                    facet2D[0].x = p->y;
+                    facet2D[0].y = p->z;
+                    p = (Point*)p->hdr.next;
+                    facet2D[1].x = p->y;
+                    facet2D[1].y = p->z;
+                    p = (Point*)p->hdr.next;
+                    facet2D[2].x = p->y;
+                    facet2D[2].y = p->z;
+                    p = (Point*)p->hdr.next;
+                    facet2D[3].x = p->y;
+                    facet2D[3].y = p->z;
+                }
+
+                p = (Point*)p->hdr.next;
+                facet2D[4] = facet2D[0];        // close the polygon
+                if (point_in_polygon2D(pt, facet2D, 4))
+                    return (Object *)f;
+            }
+        next_facet:
+            while (p != NULL && p->flags != FLAG_NEW_FACET)
+                p = (Point*)p->hdr.next;
+        }
         break;
     }
 
