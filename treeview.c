@@ -19,31 +19,6 @@ Object *treeview_highlight;
 // Limit of children, to stop ridiculously large expansions
 #define TREEVIEW_LIMIT     2000
 
-// Descriptive string for a transform, to be used in an object description.
-char* xform_string(Transform* xform, char* buf, int len)
-{
-    int n;
-
-    buf[0] = '\0';
-    if (xform == NULL)
-        return buf;
-
-    strcpy_s(buf, len, "[");
-    n = 1;
-    if (xform->enable_scale)
-        n += sprintf_s(&buf[n], len - n, "S(%.2f, %.2f, %.2f)", xform->sx, xform->sy, xform->sz);
-    if (xform->enable_rotation && n < len)  // assumes n doesn't hit len
-    {
-        if (xform->enable_scale)
-            n += sprintf_s(&buf[n], len - n, ", ");
-        n += sprintf_s(&buf[n], len - n, "R(%.1f, %.1f, %.1f)", xform->rx, xform->ry, xform->rz);
-    }
-    if (n < len)
-        strcpy_s(&buf[n], len - n, "]");
-
-    return buf;
-}
-
 // Descriptive string for a face or arc-edge normal.
 char* normal_string(Plane *norm, char* buf, int len)
 {
@@ -118,30 +93,27 @@ char *obj_description(Object *obj, char *descr, int descr_len, BOOL verbose)
 
     case OBJ_VOLUME:
         vol = (Volume *)obj;
-        sprintf_s(descr, descr_len, "%s %s %d %s %s", 
+        sprintf_s(descr, descr_len, "%s %s %d %s", 
                 op_string[vol->op],
                 vol_names[vol->max_facetype],
                 obj->ID,
-                verbose ? get_dims_string(obj, buf) : "",
-                verbose ? xform_string(vol->xform, buf2, 64) : ""
+                verbose ? get_dims_string(obj, buf) : ""
                 );
         break;
 
     case OBJ_GROUP:
         grp = (Group *)obj;
         if (grp->title[0] == '\0' || !verbose)
-            sprintf_s(descr, descr_len, "%s Group %d %s", 
+            sprintf_s(descr, descr_len, "%s Group %d", 
                     op_string[grp->op], 
-                    obj->ID,
-                    verbose ? xform_string(grp->xform, buf, 64) : ""
+                    obj->ID
                     );
         else
         {
-            sprintf_s(tmpbuf, 256, "%s Group %d: %s %s",
+            sprintf_s(tmpbuf, 256, "%s Group %d: %s",
                 op_string[grp->op],
                 obj->ID,
-                grp->title,
-                xform_string(grp->xform, buf, 64)
+                grp->title
             );
             tmpbuf[descr_len - 1] = '\0';
             strcpy_s(descr, descr_len, tmpbuf);

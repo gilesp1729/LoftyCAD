@@ -17,7 +17,6 @@ typedef enum
     OBJ_FACE,
     OBJ_VOLUME,
     OBJ_GROUP,
-    OBJ_TRANSFORM,
     OBJ_MAX         // must be highest
 } OBJECT;
 
@@ -323,43 +322,11 @@ typedef struct Bbox
     float           zc;
 } Bbox;
 
-// Flags that characterise transforms. They are a bitfield. If it is zero,
-// the transform is unitary and does not affect the result, so can be skipped.
-typedef enum
-{
-    XF_SCALE_NONUNITY = 1,          // There is a non-unity scale to be applied.
-    XF_ROTATE_X = 2,                // There is a rotation about the X axis.
-    XF_ROTATE_Y = 4,                // There is a rotation about the Y axis.
-    XF_ROTATE_Z = 8                 // There is a rotation about the Z axis.
-} TRANSFLAGS;
-
-// Transform for a volume or a group. In this order:
-// subtract centre, do scaling, do rotation, add back centre.
-typedef struct Transform
-{
-    struct Object   hdr;            // Header, to allow list insertion
-    float           xc;             // Centre of transform, copied from centre of vol/group bbox
-    float           yc;
-    float           zc;
-    float           sx;             // Scale factors. Scaling is applied first.
-    float           sy;
-    float           sz;
-    BOOL            enable_scale;   // TRUE to allow the scaling to be applied
-    float           rx;             // Rotation angles, in degrees, about axes. Rotations are applied second.
-    float           ry;
-    float           rz;
-    BOOL            enable_rotation; // TRUE to allow the rotation to be applied
-    double          mat[9];         // Net matrix from scales and rotates
-    double          inv_mat[9];     // Inverse matrix
-    TRANSFLAGS      flags;          // Transform flag bits, that allow optimisation of the speed of application.
-} Transform;
-
 // Volume struct. This is the usual top-level 3D object.
 typedef struct Volume
 {
     struct Object   hdr;            // Header
-    struct Bbox     bbox;           // Bounding box for the volume in 3D, based on untransformed points.
-    struct Transform *xform;        // Transform to be applied to volume
+    struct Bbox     bbox;           // Bounding box for the volume in 3D
     OPERATION       op;             // Operation to use when combining volume with tree
                                     // NOTE THE ABOVE MUST FOLLOW immediately after header
     FACE            max_facetype;   // The highest order face that this volume contains
@@ -379,7 +346,6 @@ typedef struct Group
 {
     struct Object   hdr;            // Header
     struct Bbox     bbox;           // Bounding box for the group in 3D, based on bboxes of volumes in the group
-    struct Transform *xform;        // Transform to be applied to group
     OPERATION       op;             // Operation to use when combining group with tree
                                     // NOTE THE ABOVE MUST FOLLOW immediately after header
     int             n_members;      // The number of top-level objects in the group.
@@ -428,7 +394,6 @@ Edge *edge_new(EDGE edge_type);
 Face *face_new(FACE face_type, Plane norm);
 Volume *vol_new(void);
 Group *group_new(void);
-Transform *xform_new(void);
 
 // Link and delink from doubly linked lists (list.c)
 void link(Object *new_obj, ListHead *obj_list);
@@ -478,7 +443,6 @@ BOOL find_obj(Object *parent, Object *obj);
 Object *find_parent_object(Group *tree, Object *obj, BOOL deep_search);
 Object *find_top_level_parent(Group *tree, Object *obj);
 BOOL is_top_level_object(Object *obj, Group *tree);
-void build_parent_xform_list(Object *obj, Object *parent, ListHead *xform_list);
 
 // Write and read a tree to a file (serialise.c)
 void serialise_tree(Group *tree, char *filename);

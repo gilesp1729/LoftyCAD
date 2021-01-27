@@ -202,19 +202,6 @@ serialise_obj(Object *obj, FILE *f)
             n += fprintf_s(f, "%d ", face->hdr.ID);
         }
         fprintf_s(f, "\n");
-        if (vol->xform != NULL)
-        {
-            Transform *xform = vol->xform;
-
-            fprintf_s(f, "TRANSFORM %d %f %f %f %d %f %f %f %d %f %f %f\n",
-                      obj->ID,
-                      xform->xc, xform->yc, xform->zc,
-                      xform->enable_scale,
-                      xform->sx, xform->sy, xform->sz,
-                      xform->enable_rotation,
-                      xform->rx, xform->ry, xform->rz
-                      );
-        }
         if (vol->material != 0)
         {
             if (mat_written[vol->material])
@@ -244,19 +231,6 @@ serialise_obj(Object *obj, FILE *f)
         if (group->op != OP_NONE)
             fprintf_s(f, "%s ", optypes[group->op]);
         fprintf_s(f, "\n");
-        if (group->xform != NULL)
-        {
-            Transform *xform = group->xform;
-
-            fprintf_s(f, "TRANSFORM %d %f %f %f %d %f %f %f %d %f %f %f\n",
-                      obj->ID,
-                      xform->xc, xform->yc, xform->zc,
-                      xform->enable_scale,
-                      xform->sx, xform->sy, xform->sz,
-                      xform->enable_rotation,
-                      xform->rx, xform->ry, xform->rz
-                      );
-        }
         break;
     }
 
@@ -400,7 +374,6 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
     double version = 0.1;
     Object **object;
     Group *grp;
-    Transform *xform;
 
     fopen_s(&f, filename, "rt");
     if (f == NULL)
@@ -983,47 +956,6 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
                 link_tail_group(object[id], tree);
             else if (IS_GROUP(object[stack[stkptr - 1]]))
                 link_tail_group(object[id], (Group *)object[stack[stkptr - 1]]);
-        }
-        else if (strcmp(tok, "TRANSFORM") == 0)
-        {
-            tok = strtok_s(NULL, " \t\n", &nexttok);
-            id = atoi(tok) + id_offset;
-            ASSERT(object[id]->type == OBJ_VOLUME || object[id]->type == OBJ_GROUP, "Transform must be on volume or group");
-            xform = xform_new();
-            switch (object[id]->type)
-            {
-            case OBJ_VOLUME:
-                ((Volume *)object[id])->xform = xform;
-                break;
-            case OBJ_GROUP:
-                ((Group *)object[id])->xform = xform;
-                break;
-            }
-            tok = strtok_s(NULL, " \t\n", &nexttok);
-            xform->xc = (float)atof(tok);
-            tok = strtok_s(NULL, " \t\n", &nexttok);
-            xform->yc = (float)atof(tok);
-            tok = strtok_s(NULL, " \t\n", &nexttok);
-            xform->zc = (float)atof(tok);
-
-            tok = strtok_s(NULL, " \t\n", &nexttok);
-            xform->enable_scale = atoi(tok);
-            tok = strtok_s(NULL, " \t\n", &nexttok);
-            xform->sx = (float)atof(tok);
-            tok = strtok_s(NULL, " \t\n", &nexttok);
-            xform->sy = (float)atof(tok);
-            tok = strtok_s(NULL, " \t\n", &nexttok);
-            xform->sz = (float)atof(tok);
-
-            tok = strtok_s(NULL, " \t\n", &nexttok);
-            xform->enable_rotation = atoi(tok);
-            tok = strtok_s(NULL, " \t\n", &nexttok);
-            xform->rx = (float)atof(tok);
-            tok = strtok_s(NULL, " \t\n", &nexttok);
-            xform->ry = (float)atof(tok);
-            tok = strtok_s(NULL, " \t\n", &nexttok);
-            xform->rz = (float)atof(tok);
-            evaluate_transform(xform);
         }
         else if (strcmp(tok, "MATERIAL") == 0)
         {

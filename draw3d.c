@@ -12,16 +12,13 @@ static Plane temp_plane;
 // Current drawn number (increments for every draw, eventualy rolls over - how soon? TODO)
 static unsigned int curr_drawn_no = 0;
 
-// List of transforms to be applied to point coordinates
-ListHead xform_list = { NULL, NULL };
-
 // The halo list. Initialise to NULL here so rogue pointers don't escape into free lists.
 ListHead halo = { NULL, NULL };
 
 // Material array
 Material materials[MAX_MATERIAL];
 
-// Flag to turn drawing off while building display lists (protect the xform_list)
+// Flag to turn drawing off while building display lists.
 BOOL suppress_drawing = FALSE;
 
 // Flags to indicate object tree DL is valid and can be replayed. 
@@ -223,16 +220,6 @@ draw_triangle(void *arg, int mat, float x[3], float y[3], float z[3])
         glVertex3d(x[i], y[i], z[i]);
 }
 
-// Send a coordinate to glVertex3f, after transforming it by the transforms in the list.
-void
-glVertex3_trans(float x, float y, float z)
-{
-    double tx, ty, tz;
-
-    transform_list_xyz(&xform_list, x, y, z, &tx, &ty, &tz);
-    glVertex3d(tx, ty, tz);
-}
-
 // Draw any object. Control select/highlight colors per object type, how the parent is locked,
 // and whether to draw components or just the top-level object, among other things.
 void
@@ -289,30 +276,30 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
                 dx = 1;         // TODO - scale this unit so it is not too large when zoomed in
                 dy = 1;
                 dz = 0;
-                glVertex3_trans(p->x - dx, p->y - dy, p->z);
-                glVertex3_trans(p->x + dx, p->y - dy, p->z);
-                glVertex3_trans(p->x + dx, p->y + dy, p->z);
-                glVertex3_trans(p->x - dx, p->y + dy, p->z);
+                glVertex3d(p->x - dx, p->y - dy, p->z);
+                glVertex3d(p->x + dx, p->y - dy, p->z);
+                glVertex3d(p->x + dx, p->y + dy, p->z);
+                glVertex3d(p->x - dx, p->y + dy, p->z);
                 break;
             case PLANE_YZ:
             case PLANE_MINUS_YZ:
                 dx = 0;
                 dy = 1;
                 dz = 1;
-                glVertex3_trans(p->x, p->y - dy, p->z - dz);
-                glVertex3_trans(p->x, p->y + dy, p->z - dz);
-                glVertex3_trans(p->x, p->y + dy, p->z + dz);
-                glVertex3_trans(p->x, p->y - dy, p->z + dz);
+                glVertex3d(p->x, p->y - dy, p->z - dz);
+                glVertex3d(p->x, p->y + dy, p->z - dz);
+                glVertex3d(p->x, p->y + dy, p->z + dz);
+                glVertex3d(p->x, p->y - dy, p->z + dz);
                 break;
             case PLANE_XZ:
             case PLANE_MINUS_XZ:
                 dx = 1;
                 dy = 0;
                 dz = 1;
-                glVertex3_trans(p->x - dx, p->y, p->z - dz);
-                glVertex3_trans(p->x + dx, p->y, p->z - dz);
-                glVertex3_trans(p->x + dx, p->y, p->z + dz);
-                glVertex3_trans(p->x - dx, p->y, p->z + dz);
+                glVertex3d(p->x - dx, p->y, p->z - dz);
+                glVertex3d(p->x + dx, p->y, p->z - dz);
+                glVertex3d(p->x + dx, p->y, p->z + dz);
+                glVertex3d(p->x - dx, p->y, p->z + dz);
             }
             glEnd();
             glEnable(GL_CULL_FACE);
@@ -330,7 +317,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
                 }
                 glBegin(GL_POINTS);
                 color(obj, FALSE, pres, locked);
-                glVertex3_trans(p->x, p->y, p->z);
+                glVertex3d(p->x, p->y, p->z);
                 glEnd();
             }
         }
@@ -363,8 +350,8 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         case EDGE_STRAIGHT:
             glBegin(GL_LINES);
             color(obj, constr_edge, pres, locked);
-            glVertex3_trans(edge->endpoints[0]->x, edge->endpoints[0]->y, edge->endpoints[0]->z);
-            glVertex3_trans(edge->endpoints[1]->x, edge->endpoints[1]->y, edge->endpoints[1]->z);
+            glVertex3d(edge->endpoints[0]->x, edge->endpoints[0]->y, edge->endpoints[0]->z);
+            glVertex3d(edge->endpoints[1]->x, edge->endpoints[1]->y, edge->endpoints[1]->z);
             glEnd();
             if (draw_components)
             {
@@ -379,7 +366,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             glBegin(GL_LINE_STRIP);
             color(obj, constr_edge, pres, locked);
             for (p = (Point *)edge->view_list.head; p != NULL; p = (Point *)p->hdr.next)
-                glVertex3_trans(p->x, p->y, p->z);
+                glVertex3d(p->x, p->y, p->z);
 
             glEnd();
             if (draw_components)
@@ -396,7 +383,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             glBegin(GL_LINE_STRIP);
             color(obj, constr_edge, pres, locked);
             for (p = (Point *)edge->view_list.head; p != NULL; p = (Point *)p->hdr.next)
-                glVertex3_trans(p->x, p->y, p->z);
+                glVertex3d(p->x, p->y, p->z);
 
             glEnd();
             if (draw_components)
@@ -461,8 +448,6 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             ListHead elist = { NULL, NULL };
 
             gen_view_list_vol(vol);
-            if (vol->xform != NULL)
-                link((Object*)vol->xform, &xform_list);
 
             // Output triangle faces, putting their edges in a queue to do later
             locked = parent_lock > OBJ_FACE;
@@ -471,7 +456,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             {
                 color((Object*)face, face->type & FACE_CONSTRUCTION, pres, locked);
                 for (i = 0, p = (Point*)face->view_list.head; i < 3 && p != NULL; i++, p = (Point*)p->hdr.next)
-                    glVertex3_trans(p->x, p->y, p->z);
+                    glVertex3d(p->x, p->y, p->z);
                 if (draw_components)
                 {
                     for (i = 0; i < face->n_edges; i++)
@@ -492,24 +477,17 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             for (edge = (Edge*)elist.head; edge != NULL; edge = (Edge*)edge->hdr.next)
             {
                 color((Object*)edge, edge->type & EDGE_CONSTRUCTION, pres, locked);
-                glVertex3_trans(edge->endpoints[0]->x, edge->endpoints[0]->y, edge->endpoints[0]->z);
-                glVertex3_trans(edge->endpoints[1]->x, edge->endpoints[1]->y, edge->endpoints[1]->z);
+                glVertex3d(edge->endpoints[0]->x, edge->endpoints[0]->y, edge->endpoints[0]->z);
+                glVertex3d(edge->endpoints[1]->x, edge->endpoints[1]->y, edge->endpoints[1]->z);
             }
             glEnd();
-
-            if (vol->xform != NULL)
-                delink((Object*)vol->xform, &xform_list);
         }
         else
         {
             // Draw individual faces 
             gen_view_list_vol(vol);
-            if (vol->xform != NULL)
-                link((Object *)vol->xform, &xform_list);
             for (face = (Face *)vol->faces.head; face != NULL; face = (Face *)face->hdr.next)
                 draw_object((Object *)face, (pres & ~DRAW_WITH_DIMENSIONS), parent_lock);
-            if (vol->xform != NULL)
-                delink((Object *)vol->xform, &xform_list);
         }
         break;
 
@@ -547,8 +525,6 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         else
         {
             // Not a rendered view - just draw the thing no matter what. Take account of a locked group.
-            if (group->xform != NULL)
-                link((Object *)group->xform, &xform_list);
             for (o = group->obj_list.head; o != NULL; o = o->next)
             {
                 draw_object
@@ -558,8 +534,6 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
                     parent_lock == LOCK_GROUP ? LOCK_GROUP : o->lock
                 );
             }
-            if (group->xform != NULL)
-                delink((Object *)group->xform, &xform_list);
         }
         break;
     }
@@ -1531,7 +1505,7 @@ Draw(void)
             case STATE_DRAWING_SCALE:
                 if (picked_obj != NULL)
                 {
-                    Transform *xform;
+                    float sx, sy, sz;
 
                     intersect_ray_plane(pt.x, pt.y, &centre_facing_plane, &new_point);
                     // Find dominant direction in plane, or do both if SHIFT key down
@@ -1566,43 +1540,33 @@ Draw(void)
                         break;
                     }
 
-#if 0
-                    if (picked_obj->type == OBJ_VOLUME || picked_obj->type == OBJ_GROUP)
+                    sx = sy = sz = 1;
+                    if ((scaled & DIRN_X) && !nz(d1.x))
                     {
-                        xform = ((Volume*)picked_obj)->xform;  // works for groups too, as the struct layout is the same
-                        if (xform == NULL)
-                        {
-                            ((Volume*)picked_obj)->xform = xform = xform_new();
-                            xform->xc = centre_facing_plane.refpt.x;
-                            xform->yc = centre_facing_plane.refpt.y;
-                            xform->zc = centre_facing_plane.refpt.z;
-                        }
-
-                        if ((scaled & DIRN_X) && !nz(d1.x))
-                            xform->sx *= fabsf(new_point.x - centre_facing_plane.refpt.x) / d1.x;
-                        if ((scaled & DIRN_Y) && !nz(d1.y))
-                            xform->sy *= fabsf(new_point.y - centre_facing_plane.refpt.y) / d1.y;
-                        if ((scaled & DIRN_Z) && !nz(d1.z))
-                            xform->sz *= fabsf(new_point.z - centre_facing_plane.refpt.z) / d1.z;
-
-                        xform->enable_scale = TRUE;
-                        evaluate_transform(xform);
+                        sx = fabsf(new_point.x - centre_facing_plane.refpt.x) / d1.x;
+                        eff_sx *= sx;
                     }
-                    else  // scaling in-place
-#endif // 0
+                    if ((scaled & DIRN_Y) && !nz(d1.y))
                     {
-                        scale_obj_free
-                        (
-                            picked_obj,
-                            ((scaled & DIRN_X) && !nz(d1.x)) ? fabsf(new_point.x - centre_facing_plane.refpt.x) / d1.x : 1,
-                            ((scaled & DIRN_Y) && !nz(d1.y)) ? fabsf(new_point.y - centre_facing_plane.refpt.y) / d1.y : 1,
-                            ((scaled & DIRN_Z) && !nz(d1.z)) ? fabsf(new_point.z - centre_facing_plane.refpt.z) / d1.z : 1,
-                            centre_facing_plane.refpt.x,
-                            centre_facing_plane.refpt.y,
-                            centre_facing_plane.refpt.z
-                        );
-                        clear_move_copy_flags(picked_obj);
+                        sy = fabsf(new_point.y - centre_facing_plane.refpt.y) / d1.y;
+                        eff_sy *= sy;
                     }
+                    if ((scaled & DIRN_Z) && !nz(d1.z))
+                    {
+                        sz = fabsf(new_point.z - centre_facing_plane.refpt.z) / d1.z;
+                        eff_sz *= sz;
+                    }
+                    scale_obj_free
+                    (
+                        picked_obj,
+                        sx,
+                        ((scaled & DIRN_Y) && !nz(d1.y)) ? fabsf(new_point.y - centre_facing_plane.refpt.y) / d1.y : 1,
+                        ((scaled & DIRN_Z) && !nz(d1.z)) ? fabsf(new_point.z - centre_facing_plane.refpt.z) / d1.z : 1,
+                        centre_facing_plane.refpt.x,
+                        centre_facing_plane.refpt.y,
+                        centre_facing_plane.refpt.z
+                    );
+                    clear_move_copy_flags(picked_obj);
 
                     curr_obj = picked_obj;  // for highlighting
                     picked_point = new_point;
@@ -1830,8 +1794,6 @@ Draw(void)
         if (app_state >= STATE_STARTING_EDGE)
             pres |= DRAW_HIGHLIGHT_LOCKED;
         curr_drawn_no++;
-        xform_list.head = NULL;
-        xform_list.tail = NULL;
         if (view_printer)
             draw_object((Object*)&gcode_tree, pres, LOCK_NONE);  // locks come from objects
         else
@@ -1863,7 +1825,6 @@ Draw(void)
         {
             Object *parent = find_parent_object(&object_tree, obj->prev, TRUE);
 
-            build_parent_xform_list(obj->prev, parent, &xform_list);
             if (obj->prev != curr_obj && obj->prev != highlight_obj)
             {
                 pres = DRAW_SELECTED | DRAW_WITH_DIMENSIONS;
@@ -1878,7 +1839,6 @@ Draw(void)
         {
             Object *parent = find_parent_object(&object_tree, curr_obj, TRUE);
 
-            build_parent_xform_list(curr_obj, parent, &xform_list);
             pres = DRAW_HIGHLIGHT | DRAW_WITH_DIMENSIONS;
             if (app_state >= STATE_STARTING_EDGE)
                 pres |= DRAW_HIGHLIGHT_LOCKED;
@@ -1897,7 +1857,6 @@ Draw(void)
         {
             Object* parent = find_parent_object(&object_tree, highlight_obj, TRUE);
 
-            build_parent_xform_list(highlight_obj, parent, &xform_list);
             pres = DRAW_HIGHLIGHT | DRAW_WITH_DIMENSIONS;
             //if (app_state >= STATE_STARTING_EDGE)         // allow locked edges to be highlighted
                 pres |= DRAW_HIGHLIGHT_LOCKED;
@@ -1918,7 +1877,6 @@ Draw(void)
             {
                 Object* parent = find_parent_object(&object_tree, obj->prev, TRUE);
 
-                build_parent_xform_list(obj->prev, parent, &xform_list);
                 if (obj->prev != curr_obj && obj->prev != highlight_obj)
                 {
                     pres = DRAW_HIGHLIGHT_HALO;

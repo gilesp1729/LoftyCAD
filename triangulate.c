@@ -327,16 +327,11 @@ gen_view_list_tree_surfaces_op(OPERATION op, Group *tree, Group *parent_tree)
                 break;
 
             // update the triangle mesh for the volume
-            if (vol->xform != NULL)
-                link((Object *)vol->xform, &xform_list);
             for (f = (Face *)vol->faces.head; f != NULL; f = (Face *)f->hdr.next)
                 gen_view_list_surface(f);
 #ifdef DEBUG_WRITE_VOL_MESH
             mesh_write_off("vol", obj->ID, vol->mesh);
 #endif
-            if (vol->xform != NULL)
-                delink((Object *)vol->xform, &xform_list);
-
             vol->mesh_valid = TRUE;
             if (!parent_tree->mesh_valid)
             {
@@ -378,8 +373,6 @@ gen_view_list_tree_surfaces_op(OPERATION op, Group *tree, Group *parent_tree)
 
         case OBJ_GROUP:
             group = (Group *)obj;
-            if (group->xform != NULL)
-                link((Object *)group->xform, &xform_list);
             if (group->op == OP_NONE)
             {
                 // Render contents of group as if in the parent
@@ -430,8 +423,6 @@ gen_view_list_tree_surfaces_op(OPERATION op, Group *tree, Group *parent_tree)
 #endif
                 }
             }
-            if (group->xform != NULL)
-                delink((Object *)group->xform, &xform_list);
             break;
         }
     }
@@ -2038,10 +2029,8 @@ void
 render_vertexData(void * vertex_data, void * polygon_data)
 {
     Point *v = (Point *)vertex_data;
-    double tx, ty, tz;
 
-    transform_list_xyz(&xform_list, v->x, v->y, v->z, &tx, &ty, &tz);
-    glVertex3d(tx, ty, tz);
+    glVertex3d(v->x, v->y, v->z);
 }
 
 void 

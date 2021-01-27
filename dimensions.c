@@ -416,35 +416,32 @@ get_dims_string(Object *obj, char buf[64])
         v = (Volume *)obj;
         if (app_state == STATE_STARTING_SCALE || app_state == STATE_DRAWING_SCALE)
         {
-            if (v->xform != NULL)
+            switch (scaled)
             {
-                switch (scaled)
-                {
-                case DIRN_X:
-                    sprintf_s(buf, 64, "%sx", display_rounded(buf, v->xform->sx));
-                    break;
-                case DIRN_Y:
-                    sprintf_s(buf, 64, "%sy", display_rounded(buf, v->xform->sy));
-                    break;
-                case DIRN_Z:
-                    sprintf_s(buf, 64, "%sz", display_rounded(buf, v->xform->sz));
-                    break;
-                case DIRN_X | DIRN_Y:
-                    sprintf_s(buf, 64, "%s,%sxy",
-                              display_rounded(buf, v->xform->sx),
-                              display_rounded(buf2, v->xform->sy));
-                    break;
-                case DIRN_X | DIRN_Z:
-                    sprintf_s(buf, 64, "%s,%sxz",
-                              display_rounded(buf, v->xform->sx),
-                              display_rounded(buf2, v->xform->sz));
-                    break;
-                case DIRN_Y | DIRN_Z:
-                    sprintf_s(buf, 64, "%s,%syz",
-                              display_rounded(buf, v->xform->sy),
-                              display_rounded(buf2, v->xform->sz));
-                    break;
-                }
+            case DIRN_X:
+                sprintf_s(buf, 64, "%sx", display_rounded(buf, eff_sx));
+                break;
+            case DIRN_Y:
+                sprintf_s(buf, 64, "%sy", display_rounded(buf, eff_sy));
+                break;
+            case DIRN_Z:
+                sprintf_s(buf, 64, "%sz", display_rounded(buf, eff_sz));
+                break;
+            case DIRN_X | DIRN_Y:
+                sprintf_s(buf, 64, "%s,%sxy",
+                            display_rounded(buf, eff_sx),
+                            display_rounded(buf2, eff_sy));
+                break;
+            case DIRN_X | DIRN_Z:
+                sprintf_s(buf, 64, "%s,%sxz",
+                            display_rounded(buf, eff_sx),
+                            display_rounded(buf2, eff_sz));
+                break;
+            case DIRN_Y | DIRN_Z:
+                sprintf_s(buf, 64, "%s,%syz",
+                            display_rounded(buf, eff_sy),
+                            display_rounded(buf2, eff_sz));
+                break;
             }
         }
         else if (app_state == STATE_DRAWING_ROTATE)
@@ -500,35 +497,32 @@ get_dims_string(Object *obj, char buf[64])
         g = (Group*)obj;
         if (app_state == STATE_STARTING_SCALE || app_state == STATE_DRAWING_SCALE)
         {
-            if (g->xform != NULL)
+            switch (scaled)
             {
-                switch (scaled)
-                {
-                case DIRN_X:
-                    sprintf_s(buf, 64, "%sx", display_rounded(buf, g->xform->sx));
-                    break;
-                case DIRN_Y:
-                    sprintf_s(buf, 64, "%sy", display_rounded(buf, g->xform->sy));
-                    break;
-                case DIRN_Z:
-                    sprintf_s(buf, 64, "%sz", display_rounded(buf, g->xform->sz));
-                    break;
-                case DIRN_X | DIRN_Y:
-                    sprintf_s(buf, 64, "%s,%sxy",
-                        display_rounded(buf, g->xform->sx),
-                        display_rounded(buf2, g->xform->sy));
-                    break;
-                case DIRN_X | DIRN_Z:
-                    sprintf_s(buf, 64, "%s,%sxz",
-                        display_rounded(buf, g->xform->sx),
-                        display_rounded(buf2, g->xform->sz));
-                    break;
-                case DIRN_Y | DIRN_Z:
-                    sprintf_s(buf, 64, "%s,%syz",
-                        display_rounded(buf, g->xform->sy),
-                        display_rounded(buf2, g->xform->sz));
-                    break;
-                }
+            case DIRN_X:
+                sprintf_s(buf, 64, "%sx", display_rounded(buf, eff_sx));
+                break;
+            case DIRN_Y:
+                sprintf_s(buf, 64, "%sy", display_rounded(buf, eff_sy));
+                break;
+            case DIRN_Z:
+                sprintf_s(buf, 64, "%sz", display_rounded(buf, eff_sz));
+                break;
+            case DIRN_X | DIRN_Y:
+                sprintf_s(buf, 64, "%s,%sxy",
+                    display_rounded(buf, eff_sx),
+                    display_rounded(buf2, eff_sy));
+                break;
+            case DIRN_X | DIRN_Z:
+                sprintf_s(buf, 64, "%s,%sxz",
+                    display_rounded(buf, eff_sx),
+                    display_rounded(buf2, eff_sz));
+                break;
+            case DIRN_Y | DIRN_Z:
+                sprintf_s(buf, 64, "%s,%syz",
+                    display_rounded(buf, eff_sy),
+                    display_rounded(buf2, eff_sz));
+                break;
             }
         }
         else if (app_state == STATE_STARTING_ROTATE || app_state == STATE_DRAWING_ROTATE)

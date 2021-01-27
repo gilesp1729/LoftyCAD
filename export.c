@@ -211,8 +211,6 @@ export_object_tree(Group *tree, char *filename, int file_index)
                 materials[candidates[j]].hidden = TRUE;
             materials[candidates[i]].hidden = FALSE;
 
-            xform_list.head = NULL;
-            xform_list.tail = NULL;
             if (object_tree.mesh != NULL)
                 mesh_destroy(object_tree.mesh);
             object_tree.mesh = NULL;
@@ -285,8 +283,6 @@ export_object_tree(Group *tree, char *filename, int file_index)
 
             if (k > 1)                      // don't bother re-rendering, if there's only one material
             {
-                xform_list.head = NULL;
-                xform_list.tail = NULL;
                 if (object_tree.mesh != NULL)
                     mesh_destroy(object_tree.mesh);
                 object_tree.mesh = NULL;
@@ -425,8 +421,6 @@ export_object_tree(Group *tree, char *filename, int file_index)
 
             if (k > 1)
             {
-                xform_list.head = NULL;
-                xform_list.tail = NULL;
                 if (object_tree.mesh != NULL)
                     mesh_destroy(object_tree.mesh);
                 object_tree.mesh = NULL;

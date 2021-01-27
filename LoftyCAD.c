@@ -109,6 +109,9 @@ SCALED scaled;
 float total_angle;
 float effective_angle;
 
+// Effective scales similarly
+float eff_sx, eff_sy, eff_sz;
+
 
 // Standard planes
 Plane plane_XY = { 0, };
@@ -402,8 +405,6 @@ update_drawing(void)
     drawing_changed = TRUE;
     invalidate_dl();
     write_checkpoint(&object_tree, curr_filename);
-    xform_list.head = NULL;
-    xform_list.tail = NULL;
     gen_view_list_tree_volumes(&object_tree);
     populate_treeview();
 }
@@ -624,14 +625,12 @@ left_down(AUX_EVENTREC *event)
         }
 
         // Initialise some stuff used by both scaling and rotation
+        effective_angle = total_angle = 0;
+        eff_sx = eff_sy = eff_sz = 1;
         switch (facing_index)
         {
         case PLANE_XY:
         case PLANE_MINUS_XY:
-            total_angle = 0;
-            if (vol != NULL && vol->xform != NULL)
-                total_angle = vol->xform->rz;
-            effective_angle = total_angle;
             d1.x = fabsf(picked_point.x - centre_facing_plane.refpt.x);
             d1.y = fabsf(picked_point.y - centre_facing_plane.refpt.y);
             if (d1.x > d1.y)
@@ -642,9 +641,6 @@ left_down(AUX_EVENTREC *event)
 
         case PLANE_XZ:
         case PLANE_MINUS_XZ:
-            if (vol != NULL && vol->xform != NULL)
-                total_angle = vol->xform->ry;
-            effective_angle = total_angle;
             d1.x = fabsf(picked_point.x - centre_facing_plane.refpt.x);
             d1.z = fabsf(picked_point.z - centre_facing_plane.refpt.z);
             if (d1.x > d1.z)
@@ -655,9 +651,6 @@ left_down(AUX_EVENTREC *event)
 
         case PLANE_YZ:
         case PLANE_MINUS_YZ:
-            if (vol != NULL && vol->xform != NULL)
-                total_angle = vol->xform->rx;
-            effective_angle = total_angle;
             d1.y = fabsf(picked_point.y - centre_facing_plane.refpt.y);
             d1.z = fabsf(picked_point.z - centre_facing_plane.refpt.z);
             if (d1.y > d1.z)
@@ -1426,8 +1419,6 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
             hMenu = GetSubMenu(GetMenu(auxGetHWND()), 0);
             hMenu = GetSubMenu(hMenu, 9);
             insert_filename_to_MRU(hMenu, curr_filename);
-            xform_list.head = NULL;
-            xform_list.tail = NULL;
             gen_view_list_tree_volumes(&object_tree);
             populate_treeview();
         }

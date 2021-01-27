@@ -244,8 +244,6 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 if (view_rendered)
                 {
                     // regenerate surface mesh, in case we're viewing rendered
-                    xform_list.head = NULL;
-                    xform_list.tail = NULL;
                     if (object_tree.mesh != NULL)
                         mesh_destroy(object_tree.mesh);
                     object_tree.mesh = NULL;

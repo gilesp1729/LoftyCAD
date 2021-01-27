@@ -238,14 +238,6 @@ copy_obj(Object* obj, float xoffset, float yoffset, float zoffset, BOOL cloning)
             new_face->vol = new_vol;
             link_tail((Object*)new_face, &new_vol->faces);
         }
-        if (vol->xform != NULL)
-        {
-            new_vol->xform = xform_new();
-            *new_vol->xform = *vol->xform;
-            new_vol->xform->xc += xoffset;
-            new_vol->xform->yc += yoffset;
-            new_vol->xform->zc += zoffset;
-        }
         new_vol->op = vol->op;
         new_vol->max_facetype = vol->max_facetype;
         break;
@@ -260,14 +252,6 @@ copy_obj(Object* obj, float xoffset, float yoffset, float zoffset, BOOL cloning)
         }
         new_obj = (Object*)new_grp;
         new_obj->lock = obj->lock;
-        if (grp->xform != NULL)
-        {
-            new_grp->xform = xform_new();
-            *new_grp->xform = *grp->xform;
-            new_grp->xform->xc += xoffset;
-            new_grp->xform->yc += yoffset;
-            new_grp->xform->zc += zoffset;
-        }
         new_grp->op = grp->op;
         break;
     }
@@ -468,24 +452,12 @@ move_obj(Object* obj, float xoffset, float yoffset, float zoffset)
         vol = (Volume*)obj;
         for (face = (Face*)vol->faces.head; face != NULL; face = (Face*)face->hdr.next)
             move_obj((Object*)face, xoffset, yoffset, zoffset);
-        if (vol->xform != NULL)
-        {
-            vol->xform->xc += xoffset;
-            vol->xform->yc += yoffset;
-            vol->xform->zc += zoffset;
-        }
         break;
 
     case OBJ_GROUP:
         grp = (Group*)obj;
         for (o = grp->obj_list.head; o != NULL; o = o->next)
             move_obj(o, xoffset, yoffset, zoffset);
-        if (grp->xform != NULL)
-        {
-            grp->xform->xc += xoffset;
-            grp->xform->yc += yoffset;
-            grp->xform->zc += zoffset;
-        }
         break;
     }
 }
@@ -812,16 +784,12 @@ rotate_obj_90_facing(Object* obj, float xc, float yc, float zc)
         vol = (Volume*)obj;
         for (face = (Face*)vol->faces.head; face != NULL; face = (Face*)face->hdr.next)
             rotate_obj_90_facing((Object*)face, xc, yc, zc);
-        if (vol->xform != NULL)
-            rotate_coord_90_facing(&vol->xform->xc, &vol->xform->yc, &vol->xform->zc, xc, yc, zc);
         break;
 
     case OBJ_GROUP:
         grp = (Group*)obj;
         for (o = grp->obj_list.head; o != NULL; o = o->next)
             rotate_obj_90_facing(o, xc, yc, zc);
-        if (grp->xform != NULL)
-            rotate_coord_90_facing(&grp->xform->xc, &grp->xform->yc, &grp->xform->zc, xc, yc, zc);
         break;
     }
 }
@@ -974,16 +942,12 @@ rotate_obj_free_facing(Object* obj, float alpha, float xc, float yc, float zc)
         vol = (Volume*)obj;
         for (face = (Face*)vol->faces.head; face != NULL; face = (Face*)face->hdr.next)
             rotate_obj_free_facing((Object*)face, alpha, xc, yc, zc);
-         if (vol->xform != NULL)
-             rotate_coord_free_facing(&vol->xform->xc, &vol->xform->yc, &vol->xform->zc, alpha, xc, yc, zc);
         break;
 
     case OBJ_GROUP:
         grp = (Group*)obj;
         for (o = grp->obj_list.head; o != NULL; o = o->next)
             rotate_obj_free_facing(o, alpha, xc, yc, zc);
-        if (grp->xform != NULL)
-            rotate_coord_free_facing(&grp->xform->xc, &grp->xform->yc, &grp->xform->zc, alpha, xc, yc, zc);
         break;
 #endif
     }
@@ -1076,16 +1040,12 @@ scale_obj_free(Object* obj, float sx, float sy, float sz, float xc, float yc, fl
         vol = (Volume*)obj;
         for (face = (Face*)vol->faces.head; face != NULL; face = (Face*)face->hdr.next)
             scale_obj_free((Object*)face, sx, sy, sz, xc, yc, zc);
-        if (vol->xform != NULL)
-            scale_coord_free(&vol->xform->xc, &vol->xform->yc, &vol->xform->zc, sx, sy, sz, xc, yc, zc);
         break;
 
     case OBJ_GROUP:
         grp = (Group*)obj;
         for (o = grp->obj_list.head; o != NULL; o = o->next)
             scale_obj_free(o, sx, sy, sz, xc, yc, zc);
-        if (grp->xform != NULL)
-            scale_coord_free(&grp->xform->xc, &grp->xform->yc, &grp->xform->zc, sx, sy, sz, xc, yc, zc);
         break;
     }
 }
@@ -1282,16 +1242,12 @@ reflect_obj_facing(Object* obj, float xc, float yc, float zc)
         vol = (Volume*)obj;
         for (face = (Face*)vol->faces.head; face != NULL; face = (Face*)face->hdr.next)
             reflect_obj_facing((Object*)face, xc, yc, zc);
-        if (vol->xform != NULL)
-            reflect_coord_facing(&vol->xform->xc, &vol->xform->yc, &vol->xform->zc, xc, yc, zc);
         break;
 
     case OBJ_GROUP:
         grp = (Group*)obj;
         for (o = grp->obj_list.head; o != NULL; o = o->next)
             reflect_obj_facing(o, xc, yc, zc);
-        if (grp->xform != NULL)
-            reflect_coord_facing(&grp->xform->xc, &grp->xform->yc, &grp->xform->zc, xc, yc, zc);
         break;
     }
 }

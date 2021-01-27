@@ -214,18 +214,6 @@ Group *group_new(void)
     return grp;
 }
 
-Transform *xform_new(void)
-{
-    Transform *xform = calloc(1, sizeof(Transform));
-
-    xform->hdr.type = OBJ_TRANSFORM;
-    xform->hdr.ID = 0;  // these do not use object ID's
-    xform->sx = 1.0f;   // set up a unity transform with no rotation. Nothing is enabled.
-    xform->sy = 1.0f;
-    xform->sz = 1.0f;
-    return xform;
-}
-
 // Test if an object is in the object tree at the top level.
 BOOL
 is_top_level_object(Object *obj, Group *tree)
@@ -386,32 +374,6 @@ find_top_level_parent(Group *tree, Object *obj)
     return top_level;
 }
 
-// Build xform list for volume, and groups leading to the volume
-void
-build_parent_xform_list(Object* obj, Object *parent, ListHead* xform_list)
-{
-    Object *top_parent;
-
-    xform_list->head = NULL;
-    xform_list->tail = NULL;
-    if (parent == NULL)
-        return;
-
-    // Build list of xforms from the top-level parent down. Take account of sub-components.
-    if (obj->type < OBJ_VOLUME && parent->type == OBJ_VOLUME)
-    {
-        if (((Volume*)parent)->xform != NULL)
-            link_tail((Object*)((Volume*)parent)->xform, xform_list);
-    }
-    for (top_parent = parent; top_parent->parent_group->hdr.parent_group != NULL; top_parent = (Object*)top_parent->parent_group)
-    {
-        Group* parent_group = top_parent->parent_group;
-
-        if (parent_group->xform != NULL)
-            link_tail((Object*)(parent_group->xform), xform_list);
-    }
-}
-
 // Purge an object. Points are put in the free list.
 void
 purge_obj_top(Object *obj, OBJECT top_type)
@@ -486,8 +448,6 @@ purge_obj_top(Object *obj, OBJECT top_type)
             purge_obj_top((Object *)face, top_type);
         }
         free_bucket(vol->point_bucket);
-        if (vol->xform != NULL)
-            free(vol->xform);
         free(obj);
         break;
 
@@ -500,8 +460,6 @@ purge_obj_top(Object *obj, OBJECT top_type)
         }
         if (group->mesh != NULL)
             mesh_destroy(group->mesh);
-        if (group->xform != NULL)
-            free(group->xform);
         free(obj);
         break;
     }

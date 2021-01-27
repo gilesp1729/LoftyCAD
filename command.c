@@ -214,8 +214,6 @@ Command(int message, int wParam, int lParam)
                     hMenu = GetSubMenu(GetMenu(auxGetHWND()), 0);
                     hMenu = GetSubMenu(hMenu, 9);
                     insert_filename_to_MRU(hMenu, curr_filename);
-                    xform_list.head = NULL;
-                    xform_list.tail = NULL;
                     gen_view_list_tree_volumes(&object_tree);
                     populate_treeview();
                 }
@@ -401,8 +399,6 @@ Command(int message, int wParam, int lParam)
             }
             else
             {
-                xform_list.head = NULL;
-                xform_list.tail = NULL;
                 gen_view_list_tree_volumes(&object_tree);
                 if (!gen_view_list_tree_surfaces(&object_tree, &object_tree))
                     break;
@@ -635,8 +631,6 @@ Command(int message, int wParam, int lParam)
                 hMenu = GetSubMenu(GetMenu(auxGetHWND()), 0);
                 hMenu = GetSubMenu(hMenu, 9);
                 insert_filename_to_MRU(hMenu, curr_filename);
-                xform_list.head = NULL;
-                xform_list.tail = NULL;
                 gen_view_list_tree_volumes(&object_tree);
                 populate_treeview();
             }
@@ -702,8 +696,6 @@ Command(int message, int wParam, int lParam)
             ofn.Flags = OFN_EXPLORER | OFN_OVERWRITEPROMPT;
             if (GetSaveFileName(&ofn))
             {
-                xform_list.head = NULL;
-                xform_list.tail = NULL;
                 gen_view_list_tree_volumes(&object_tree);
                 if (!gen_view_list_tree_surfaces(&object_tree, &object_tree))
                     break;
@@ -836,8 +828,6 @@ Command(int message, int wParam, int lParam)
                     strcat_s(button_title, 256, curr_filename);
                     SendDlgItemMessage(hWndSlicer, IDB_SLICER_SLICE, WM_SETTEXT, 0, (LPARAM)button_title);
                     EnableWindow(GetDlgItem(hWndSlicer, IDB_SLICER_SLICE), TRUE);
-                    xform_list.head = NULL;
-                    xform_list.tail = NULL;
                     gen_view_list_tree_volumes(&object_tree);
                     populate_treeview();
                 }
@@ -960,8 +950,6 @@ Command(int message, int wParam, int lParam)
         case ID_EDIT_UNDO:
             generation--;
             read_checkpoint(&object_tree, curr_filename, generation);
-            xform_list.head = NULL;
-            xform_list.tail = NULL;
             gen_view_list_tree_volumes(&object_tree);
             populate_treeview();
             break;
@@ -969,8 +957,6 @@ Command(int message, int wParam, int lParam)
         case ID_EDIT_REDO:
             generation++;
             read_checkpoint(&object_tree, curr_filename, generation);
-            xform_list.head = NULL;
-            xform_list.tail = NULL;
             gen_view_list_tree_volumes(&object_tree);
             populate_treeview();
             break;
@@ -1058,8 +1044,6 @@ Command(int message, int wParam, int lParam)
             update_drawing();
 
             // regenerate surface mesh, in case we're viewing rendered
-            xform_list.head = NULL;
-            xform_list.tail = NULL;
             if (object_tree.mesh != NULL)
                 mesh_destroy(object_tree.mesh);
             object_tree.mesh = NULL;

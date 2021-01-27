@@ -804,6 +804,7 @@ mat_mult_3x3(double *m, double *mat)
     mat_copy_3x3(res, mat);
 }
 
+#if 0
 // Evaluate a transform matrix and characterise it. Build both forward and inverse matrices.
 void
 evaluate_transform(Transform *xform)
@@ -1034,3 +1035,5 @@ transform_list_xyz(ListHead *xform_list, float x, float y, float z, double *tx, 
         dz = *tz;
     }
 }
+
+#endif
