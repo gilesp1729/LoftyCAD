@@ -1578,64 +1578,6 @@ Draw(void)
             case STATE_DRAWING_ROTATE:
                 if (picked_obj == NULL)
                     break;
-#if 0
-                if (picked_obj->type == OBJ_VOLUME || picked_obj->type == OBJ_GROUP)
-                {
-                    float da;
-                    Transform *xform;
-
-                    intersect_ray_plane(pt.x, pt.y, &centre_facing_plane, &new_point);
-                    da = RADF * angle3(&picked_point, &centre_facing_plane.refpt, &new_point, &centre_facing_plane);
-                    xform = ((Volume *)picked_obj)->xform;  // works for groups too, as the struct layout is the same
-                    if (xform == NULL)
-                    {
-                        ((Volume *)picked_obj)->xform = xform = xform_new();
-                        xform->xc = centre_facing_plane.refpt.x;
-                        xform->yc = centre_facing_plane.refpt.y;
-                        xform->zc = centre_facing_plane.refpt.z;
-                    }
-
-                    switch (facing_index)       // this matches the centre facing plane
-                    {
-                    case PLANE_XY:
-                        total_angle += da;
-                        xform->rz = 
-                            effective_angle = cleanup_angle_and_snap(total_angle, key_status & AUX_SHIFT);
-                        break;
-                    case PLANE_MINUS_XY:
-                        total_angle -= da;
-                        xform->rz = 
-                            effective_angle = cleanup_angle_and_snap(total_angle, key_status & AUX_SHIFT);
-                        break;
-                    case PLANE_XZ:
-                        total_angle += da;
-                        xform->ry = 
-                            effective_angle = cleanup_angle_and_snap(total_angle, key_status & AUX_SHIFT);
-                        break;
-                    case PLANE_MINUS_XZ:
-                        total_angle -= da;
-                        xform->ry = 
-                            effective_angle = cleanup_angle_and_snap(total_angle, key_status & AUX_SHIFT);
-                        break;
-                    case PLANE_YZ:
-                        total_angle += da;
-                        xform->rx = 
-                            effective_angle = cleanup_angle_and_snap(total_angle, key_status & AUX_SHIFT);
-                        break;
-                    case PLANE_MINUS_YZ:
-                        total_angle -= da;
-                        xform->rx = 
-                            effective_angle = cleanup_angle_and_snap(total_angle, key_status & AUX_SHIFT);
-                        break;
-                    }
-
-                    curr_obj = picked_obj;  // for highlighting
-                    picked_point = new_point;
-                    xform->enable_rotation = TRUE;
-                    evaluate_transform(xform);
-                }
-                else  // we're rotating in-place
-#endif // 0
                 {
                     float da;
                     float alpha;
@@ -1845,7 +1787,7 @@ Draw(void)
             draw_object(curr_obj, pres, parent != NULL ? parent->lock : LOCK_NONE);
         }
 
-        // Draw edges in current path. They are never transformed.
+        // Draw edges in current path.
         if (curr_path != NULL)
         {
             pres = DRAW_PATH;

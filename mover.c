@@ -937,7 +937,6 @@ rotate_obj_free_facing(Object* obj, float alpha, float xc, float yc, float zc)
         face->view_valid = FALSE;
         break;
 
-#if 1  // these are handled by xforms. TODO: do we want to give the choice?
     case OBJ_VOLUME:
         vol = (Volume*)obj;
         for (face = (Face*)vol->faces.head; face != NULL; face = (Face*)face->hdr.next)
@@ -949,7 +948,6 @@ rotate_obj_free_facing(Object* obj, float alpha, float xc, float yc, float zc)
         for (o = grp->obj_list.head; o != NULL; o = o->next)
             rotate_obj_free_facing(o, alpha, xc, yc, zc);
         break;
-#endif
     }
 }
 

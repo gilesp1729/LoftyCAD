@@ -184,7 +184,7 @@ contextmenu(Object *picked_obj, POINT pt)
         break;
     }
 
-    // We can only do transforms, and render operations, on a volume or a group.
+    // We can only do render operations on a volume or a group.
     op = OP_MAX;
     switch (picked_obj->type)
     {
@@ -192,7 +192,6 @@ contextmenu(Object *picked_obj, POINT pt)
     case OBJ_POINT:
     case OBJ_EDGE:
     case OBJ_FACE:
-        EnableMenuItem(hMenu, ID_OBJ_TRANSFORM, MF_GRAYED);
         break;
     case OBJ_VOLUME:
         op = ((Volume *)picked_obj)->op;

@@ -505,11 +505,6 @@ gen_view_list_vol(Volume *vol)
     box->yc = (box->ymin + box->ymax) / 2;
     box->zc = (box->zmin + box->zmax) / 2;
 
-    // update the triangle mesh for the volume. NOT HERE as the transforms don't work.
-    //for (f = (Face *)vol->faces.head; f != NULL; f = (Face *)f->hdr.next)
-    //    gen_view_list_surface(f);
-
-    //vol->mesh_valid = TRUE;
     return TRUE;
 }
 
@@ -2021,7 +2016,7 @@ render_beginData(GLenum type, void * polygon_data)
 {
     Plane *norm = (Plane *)polygon_data;
 
-    glNormal3f(norm->A, norm->B, norm->C);  // TODO_XFORM - need to transform this too! But it probably doesn't matter.
+    glNormal3f(norm->A, norm->B, norm->C); 
     glBegin(type);
 }
 
