@@ -509,7 +509,10 @@ Object* pick_face(Face* f, LOCK parent_lock, Plane* line, float* dist)
                 p = (Point*)p->hdr.next;
                 facet2D[4] = facet2D[0];        // close the polygon
                 if (point_in_polygon2D(pt, facet2D, 4))
-                    return (Object *)f;
+                {
+                    *dist = length(&line->refpt, &point);
+                    return (Object*)f;
+                }
             }
         next_facet:
             while (p != NULL && p->flags != FLAG_NEW_FACET)
@@ -606,11 +609,10 @@ Pick(GLint x_pick, GLint y_pick, BOOL force_pick)
             }
             else
             {
-                // Return the lowest priority object closest to the eye.
-                if (ret_obj == NULL || test->type < ret_obj->type || dist < ret_dist)
+                // Return the object closest to the eye.
+                if (ret_obj == NULL || dist < ret_dist)
                     ret_obj = test;
-                if (ret_obj == NULL || test->type <= ret_obj->type)
-                    ret_dist = dist;
+                ret_dist = dist;
             }
         }
     }
