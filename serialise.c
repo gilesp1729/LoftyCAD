@@ -275,9 +275,14 @@ serialise_tree(Group *tree, char *filename)
     }
 
     // Write object tree
+    show_status("Writing ", filename);
+    set_progress_range(tree->n_members);
     save_count++;
     for (obj = tree->obj_list.head; obj != NULL; obj = obj->next)
+    {
+        bump_progress();
         serialise_obj(obj, f);
+    }
 
     // Write selection out.
     if (selection.head != NULL)
@@ -304,6 +309,7 @@ serialise_tree(Group *tree, char *filename)
         fprintf_s(f, "PATH %d\n", curr_path->ID);
     }
 
+    clear_status_and_progress();
     fclose(f);
 }
 

@@ -28,6 +28,7 @@ int	right_mouseX, right_mouseY;
 int key_status;
 BOOL	left_mouse = FALSE;
 BOOL	right_mouse = FALSE;
+BOOL    mouse_moved = FALSE;
 
 // Toolbars
 HWND hWndPropSheet;
@@ -416,6 +417,8 @@ left_down(AUX_EVENTREC *event)
     Point d1;
     Volume *vol = NULL;
 
+    mouse_moved = FALSE;
+
     // If viewing rendered or the printer, don't do anything here except orbit.
     if (view_rendered || view_printer)
     {
@@ -781,14 +784,16 @@ left_up(AUX_EVENTREC *event)
         ReleaseCapture();
         left_mouse = FALSE;
         change_state(STATE_NONE);
-        update_drawing();
+        if (mouse_moved)
+            update_drawing();
         break;
 
     case STATE_MOVING:
         ReleaseCapture();
         left_mouse = FALSE;
         change_state(STATE_NONE);
-        update_drawing();
+        if (mouse_moved)
+            update_drawing();
         break;
 
     case STATE_DRAWING_RECT:
@@ -871,7 +876,8 @@ left_up(AUX_EVENTREC *event)
         ReleaseCapture();
         left_mouse = FALSE;
         change_state(STATE_NONE);
-        update_drawing();
+        if (mouse_moved)
+            update_drawing();
         hide_hint();
         curr_obj = NULL;
         break;
@@ -893,6 +899,7 @@ left_up(AUX_EVENTREC *event)
     }
 
     key_status = 0;
+    mouse_moved = FALSE;
 }
 
 // Remove an object from the selection and return TRUE. If the object was

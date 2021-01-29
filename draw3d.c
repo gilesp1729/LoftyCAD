@@ -723,6 +723,9 @@ Draw(void)
             Plane norm;
             Object *parent, *dummy;
 
+            // Flag that the mouse has been moved.
+            mouse_moved = TRUE;
+
             switch (app_state)
             {
             case STATE_DRAGGING_SELECT:
