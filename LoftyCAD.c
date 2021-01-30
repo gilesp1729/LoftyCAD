@@ -1403,33 +1403,91 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
         {
             char window_title[256];
             char button_title[256];
+            char new_filename[256];
             int lens, start;
+            char* pdot;
+            extern char *filetypes[];
+            Group* group;
+            BOOL rc;
+            int i;
 
             // Strip quotes.
             start = 0;
             if (lpCmdLine[0] == '"')
                 start = 1;
-            strcpy_s(curr_filename, 256, &lpCmdLine[start]);
-            lens = strlen(curr_filename) - 1;
-            if (curr_filename[lens] == '"')
-                curr_filename[lens] = '\0';
+            strcpy_s(new_filename, 256, &lpCmdLine[start]);
+            lens = strlen(new_filename) - 1;
+            if (new_filename[lens] == '"')
+                new_filename[lens] = '\0';
 
-            deserialise_tree(&object_tree, curr_filename, FALSE);
-            strcpy_s(window_title, 256, curr_filename);
-            strcat_s(window_title, 256, " - ");
-            strcat_s(window_title, 256, object_tree.title);
-            SetWindowText(auxGetHWND(), window_title);
-            strcpy_s(button_title, 256, "Export and Slice ");
-            strcat_s(button_title, 256, curr_filename);
-            SendDlgItemMessage(hWndSlicer, IDB_SLICER_SLICE, WM_SETTEXT, 0, (LPARAM)button_title);
-            EnableWindow(GetDlgItem(hWndSlicer, IDB_SLICER_SLICE), TRUE);
-            hMenu = GetSubMenu(GetMenu(auxGetHWND()), 0);
-            hMenu = GetSubMenu(hMenu, 9);
-            insert_filename_to_MRU(hMenu, curr_filename);
-            gen_view_list_tree_volumes(&object_tree);
-            populate_treeview();
+            // If an LCD file, open it. If one of the recognised import formats, import it to a group.
+            pdot = strrchr(new_filename, '.');
+            for (i = 0; i < 6; i++)
+            {
+                if (_stricmp(pdot + 1, filetypes[i]) == 0)
+                    break;
+            }
+            if (i == 6)
+                goto process_messages;   // not recognised, just forget it
+
+            if (i == 0)
+            {
+                strcpy_s(curr_filename, 256, new_filename);
+
+                deserialise_tree(&object_tree, curr_filename, FALSE);
+                strcpy_s(window_title, 256, curr_filename);
+                strcat_s(window_title, 256, " - ");
+                strcat_s(window_title, 256, object_tree.title);
+                SetWindowText(auxGetHWND(), window_title);
+                strcpy_s(button_title, 256, "Export and Slice ");
+                strcat_s(button_title, 256, curr_filename);
+                SendDlgItemMessage(hWndSlicer, IDB_SLICER_SLICE, WM_SETTEXT, 0, (LPARAM)button_title);
+                EnableWindow(GetDlgItem(hWndSlicer, IDB_SLICER_SLICE), TRUE);
+                hMenu = GetSubMenu(GetMenu(auxGetHWND()), 0);
+                hMenu = GetSubMenu(hMenu, 9);
+                insert_filename_to_MRU(hMenu, curr_filename);
+                gen_view_list_tree_volumes(&object_tree);
+                populate_treeview();
+                goto process_messages;
+            }
+
+            // try to import to a group
+            group = group_new();
+            rc = FALSE;
+            switch (i)
+            {
+            case 1:
+                rc = read_stl_to_group(group, new_filename);
+                break;
+            case 2:
+                rc = read_amf_to_group(group, new_filename);
+                break;
+            case 3:
+                rc = read_obj_to_group(group, new_filename);
+                break;
+            case 4:
+                rc = read_off_to_group(group, new_filename);
+                break;
+            case 5:
+                // These don't go to the object tree, but to the gcode tree. Only one at a time.
+                purge_zpoly_edges(&gcode_tree);
+                rc = read_gcode_to_group(&gcode_tree, new_filename);
+                invalidate_dl();
+                SendMessage(hWndPropSheet, PSM_SETCURSEL, TAB_PREVIEW, 0);  // select print preview tab
+                SendDlgItemMessage(hWndPrintPreview, IDC_PRINT_FILENAME, WM_SETTEXT, 0, (LPARAM)new_filename);
+                SendDlgItemMessage(hWndPrintPreview, IDC_PRINT_FIL_USED, WM_SETTEXT, 0, (LPARAM)gcode_tree.fil_used);
+                SendDlgItemMessage(hWndPrintPreview, IDC_PRINT_EST_PRINT, WM_SETTEXT, 0, (LPARAM)gcode_tree.est_print);
+                EnableWindow(GetDlgItem(hWndPrintPreview, IDB_PRINTER_PRINT), TRUE);
+                break;
+            }
+
+            if (rc)
+                link_group((Object*)group, &object_tree);
+            else
+                purge_obj((Object*)group);
         }
 
+    process_messages:
         DragAcceptFiles(auxGetHWND(), TRUE);
 
         hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_LOFTYCAD));

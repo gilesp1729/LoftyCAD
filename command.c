@@ -4,6 +4,9 @@
 #include <CommDlg.h>
 #include <shellapi.h>
 
+// File types for accepted imports.
+char* filetypes[6] = { "lcd", "stl", "amf", "obj", "off", "gcode" };
+
 // Message handler for about box.
 INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -118,7 +121,6 @@ Command(int message, int wParam, int lParam)
     char buf[64];
     int i;
     BOOL rc;
-    char* filetypes[6] = {"lcd", "stl", "amf", "obj", "off", "gcode"};
 
     // Check for micro moves
     if (micro_moved)
