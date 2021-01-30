@@ -421,7 +421,7 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
         if (fgets(buf, MAXLINE, f) == NULL)
             break;
 
-        step_file_progress(f);
+        step_file_progress(strlen(buf));
 
         tok = strtok_s(buf, " \t\n", &nexttok);
         if (strcmp(tok, "LOFTYCAD") == 0)

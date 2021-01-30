@@ -12,6 +12,7 @@
 // File progress statics.
 int file_size;
 int file_prog;
+int file_read;
 
 // Show status in the status bar. Set to blank strings to clear it.
 void show_status(char* heading, char* string)
@@ -88,6 +89,7 @@ void start_file_progress(FILE *f, char *header, char *filename)
     fseek(f, 0, SEEK_END);
     file_size = ftell(f);
     file_prog = 0;
+    file_read = 0;
     fseek(f, 0, SEEK_SET);
     show_status(header, filename);    // TODO: Strip directory (just show the filename) so it fits in bar
 
@@ -96,13 +98,13 @@ void start_file_progress(FILE *f, char *header, char *filename)
 }
 
 // Step the progress when file size grows by 1MB.
-void step_file_progress(FILE* f)
+void step_file_progress(int read)
 {
-    int fp = ftell(f);
+    file_read += read;
 
-    if (fp / MB > file_prog)
+    if (file_read / MB > file_prog)
     {
-        file_prog = fp / MB;
+        file_prog = file_read / MB;
         set_progress(file_prog);
     }
 }

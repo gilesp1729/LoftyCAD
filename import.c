@@ -122,7 +122,7 @@ read_stl_to_group(Group *group, char *filename)
         if (fgets(buf, 512, f) == NULL)
             break;
 
-        step_file_progress(f);
+        step_file_progress(strlen(buf));
 
         tok = strtok_s(buf, " \t\n", &nexttok);
         if (tok == NULL)
@@ -222,7 +222,7 @@ binary_stl:
     i = 0;
     while (TRUE)
     {
-        step_file_progress(f);
+        step_file_progress(50);
 
         if (fread_s(&norm.A, 4, 1, 4, f) != 4)
             goto binary_eof;
@@ -335,9 +335,10 @@ read_obj_to_group(Group* group, char* filename)
     mat = 0;
     while (1)
     {
-        step_file_progress(f);
         if (fgets(buf, 512, f) == NULL)     // skip any comments and blank lines
             goto error;
+        step_file_progress(strlen(buf));
+
         tok = strtok_s(buf, " \t\n", &nexttok);
         if (tok == NULL)
             continue;
@@ -558,7 +559,7 @@ read_off_to_group(Group *group, char *filename)
         nexttok = NULL;
         if (fgets(buf, 512, f) == NULL)
             goto error;
-        step_file_progress(f);
+        step_file_progress(strlen(buf));
 
         tok = strtok_s(buf, " \t\n", &nexttok);
         p->x = (float)atof(tok);
@@ -580,7 +581,7 @@ read_off_to_group(Group *group, char *filename)
         nexttok = NULL;
         if (fgets(buf, 512, f) == NULL)
             goto error;
-        step_file_progress(f);
+        step_file_progress(strlen(buf));
 
         tok = strtok_s(buf, " \t\n", &nexttok);
         np = atoi(tok);
@@ -655,7 +656,7 @@ next_token(FILE* f)
     {
         if (fgets(buf, 512, f) == NULL)
             return FALSE;
-        step_file_progress(f);
+        step_file_progress(strlen(buf));
         tok = strtok_s(buf, " >\n", &nexttok);
     }
     return TRUE;
@@ -976,7 +977,7 @@ read_gcode_to_group(Group* group, char* filename)
         if (fgets(buf, 512, f) == NULL)
             break;
 
-        step_file_progress(f);
+        step_file_progress(strlen(buf));
 
         tok = strtok_s(buf, " \t\n", &nexttok);
 
