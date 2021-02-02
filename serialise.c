@@ -143,12 +143,15 @@ serialise_obj(Object *obj, FILE *f)
 
     case OBJ_FACE:
         face = (Face *)obj;
-        n += fprintf_s(f, "%s%s %d %f %f %f %f %f %f ",
-                  facetypes[face->type & ~FACE_CONSTRUCTION],
-                  (face->type & FACE_CONSTRUCTION) ? "(C)" : (obj->show_dims ? "(D)" : ""),
-                  face->initial_point->hdr.ID,
-                  face->normal.refpt.x, face->normal.refpt.y, face->normal.refpt.z,
-                  face->normal.A, face->normal.B, face->normal.C);
+        n += fprintf_s(f, "%s%s %d ",
+                    facetypes[face->type & ~FACE_CONSTRUCTION],
+                    (face->type & FACE_CONSTRUCTION) ? "(C)" : (obj->show_dims ? "(D)" : ""),
+                    face->initial_point->hdr.ID);
+#if 0 // We no longer write face normals.
+        n += fprintf_s(f, "%f %f %f %f %f %f ",
+                    face->normal.refpt.x, face->normal.refpt.y, face->normal.refpt.z,
+                    face->normal.A, face->normal.B, face->normal.C);
+#endif
         for (i = 0; i < face->n_edges; i++)
         {
             if (n >= MAXLINE - 20)          // not enough room for one more ID
@@ -662,7 +665,7 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
         {
             int pid;
             Face *face;
-            Plane norm;
+            Plane norm = { 0, };
             FACE type;
             Point *init_pt;
             BOOL dims = FALSE;
@@ -731,29 +734,30 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
             ASSERT(pid != 0 && object[pid] != NULL && object[pid]->type == OBJ_POINT, "Bad initial point ID");
             init_pt = (Point *)object[pid];
 
+            // See if a normal is present in the file (6 floats). If not, the face ID's (integers) start here.
             tok = strtok_s(NULL, " \t\n", &nexttok);
-            norm.refpt.x = (float)atof(tok);
-            tok = strtok_s(NULL, " \t\n", &nexttok);
-            norm.refpt.y = (float)atof(tok);
-            tok = strtok_s(NULL, " \t\n", &nexttok);
-            norm.refpt.z = (float)atof(tok);
-            tok = strtok_s(NULL, " \t\n", &nexttok);
-            norm.A = (float)atof(tok);
-            tok = strtok_s(NULL, " \t\n", &nexttok);
-            norm.B = (float)atof(tok);
-            tok = strtok_s(NULL, " \t\n", &nexttok);
-            norm.C = (float)atof(tok);
+            if (strchr(tok, '.') != NULL)
+            {
+                norm.refpt.x = (float)atof(tok);
+                tok = strtok_s(NULL, " \t\n", &nexttok);
+                norm.refpt.y = (float)atof(tok);
+                tok = strtok_s(NULL, " \t\n", &nexttok);
+                norm.refpt.z = (float)atof(tok);
+                tok = strtok_s(NULL, " \t\n", &nexttok);
+                norm.A = (float)atof(tok);
+                tok = strtok_s(NULL, " \t\n", &nexttok);
+                norm.B = (float)atof(tok);
+                tok = strtok_s(NULL, " \t\n", &nexttok);
+                norm.C = (float)atof(tok);
+                tok = strtok_s(NULL, " \t\n", &nexttok);
+            }
 
-            face = face_new(type, norm);
+            face = face_new(type, norm);        // any norm will do
             face->initial_point = init_pt;
 
-            while (TRUE)
+            while (tok != NULL)
             {
                 int eid;
-
-                tok = strtok_s(NULL, " \t\n", &nexttok);
-                if (tok == NULL)
-                    break;
 
                 if (tok[0] == '+')    // handle continuation character '+' at end of line
                 {
@@ -774,6 +778,8 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
                 face->edges[face->n_edges++] = (Edge *)object[eid];
                 if (((Edge*)object[eid])->corner)
                     face->has_corners = TRUE;
+
+                tok = strtok_s(NULL, " \t\n", &nexttok);
             }
 
             face->hdr.ID = id;
