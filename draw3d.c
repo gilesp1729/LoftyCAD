@@ -9,7 +9,8 @@ static int num_moves = 0;
 
 static Plane temp_plane;
 
-// Current drawn number (increments for every draw, eventualy rolls over - how soon? TODO)
+// Current drawn number increments for every invalidate and draw.
+// (rollover after 2^32 invalidates - unlikely ever)
 static unsigned int curr_drawn_no = 0;
 
 // The halo list. Initialise to NULL here so rogue pointers don't escape into free lists.
@@ -21,8 +22,17 @@ Material materials[MAX_MATERIAL];
 // Flag to turn drawing off while building display lists.
 BOOL suppress_drawing = FALSE;
 
-// Flags to indicate object tree DL is valid and can be replayed. 
-BOOL draw_dl_valid = FALSE;
+// Display lists for commonly drawn collections of objects.
+// Flags to indicate each DL is valid and can be replayed. 
+#define DRAW_DL 3000
+#define HL_DL   3001
+#define SEL_DL  3002    // Problem: the selction is drawn differently depending on what is highlighted...
+BOOL draw_dl_valid = FALSE;         // The object tree
+BOOL hl_dl_valid = FALSE;           // The highlighted object
+BOOL sel_dl_valid = FALSE;          // The selected object(s)
+
+// Object ID for the highlight DL, so it can be reused if the object is revisited unchanged
+Object* hl_dl_obj = NULL;
 
 #ifdef TIME_DRAWING
 LARGE_INTEGER draw_clock_start, draw_clock_end, draw_clock, clock_freq;
@@ -247,8 +257,6 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
     BOOL snapping = pres & DRAW_HIGHLIGHT_LOCKED;
     // Whether to show dimensions (all the time if highlighted or selected, but don't pass to components)
     BOOL show_dims = obj->show_dims || (pres & DRAW_WITH_DIMENSIONS);
-    // We cannot optimise multiple objects as they need individual names pushed.
-    BOOL no_optimise = selected || highlighted || in_halo || snapping;
 
     BOOL draw_components = !highlighted || !snapping;
 
@@ -446,7 +454,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             mesh_foreach_face_coords_mat(vol->mesh, draw_triangle, NULL);
             glEnd();
         }
-        else if (vol->max_facetype == FACE_TRI && !no_optimise) // special cases for speed
+        else if (vol->max_facetype == FACE_TRI) // special cases for speed
         {
             ListHead elist = { NULL, NULL };
 
@@ -1733,11 +1741,11 @@ Draw(void)
 #endif
     if (draw_dl_valid)
     {
-        glCallList(3000);
+        glCallList(DRAW_DL);
     }
     else
     {
-        glNewList(3000, GL_COMPILE_AND_EXECUTE);
+        glNewList(DRAW_DL, GL_COMPILE_AND_EXECUTE);
         pres = 0;
         if (app_state >= STATE_STARTING_EDGE)
             pres |= DRAW_HIGHLIGHT_LOCKED;
@@ -2093,4 +2101,7 @@ Draw(void)
 void invalidate_dl(void)
 {
     draw_dl_valid = FALSE;
+    sel_dl_valid = FALSE;
+    hl_dl_valid = FALSE;
+    hl_dl_obj = NULL;
 }
