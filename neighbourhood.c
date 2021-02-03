@@ -375,31 +375,32 @@ Object* pick_face(Face* f, LOCK parent_lock, Plane* line, float* dist)
     Point2D pt;
     float a, b, c;
 
-    // If a flat face is turning away, no need to consider it.
-    if (IS_FLAT(f) && pldot(line, &f->normal) >= 0)
-        return NULL;
-
-    // Check if the edges are hit first.
-    if (parent_lock < LOCK_EDGES)
-    {
-        int i;
-
-        for (i = 0; i < f->n_edges; i++)
-        {
-            Object* test = pick_edge(f->edges[i], parent_lock, line, dist);
-
-            if (test != NULL)
-                return test;
-        }
-    }
-
-    // Find the intersection point and check if it lies in the face.
     switch (f->type & ~FACE_CONSTRUCTION)
     {
     case FACE_TRI:
     case FACE_RECT:
     case FACE_FLAT:
     case FACE_CIRCLE:
+        // If a flat face is turning away, no need to consider it. We also don't
+        // want to pick edges bounded by faces both turned away.
+        if (pldot(line, &f->normal) >= 0)
+            return NULL;
+
+        // Check if the edges are hit first.
+        if (parent_lock < LOCK_EDGES)
+        {
+            int i;
+
+            for (i = 0; i < f->n_edges; i++)
+            {
+                Object* test = pick_edge(f->edges[i], parent_lock, line, dist);
+
+                if (test != NULL)
+                    return test;
+            }
+        }
+
+        // Find the intersection point and check if it lies in the face.
         if (intersect_line_plane(line, &f->normal, &point) > 0)
         {
             a = fabsf(f->normal.A);
@@ -433,6 +434,20 @@ Object* pick_face(Face* f, LOCK parent_lock, Plane* line, float* dist)
     case FACE_CYLINDRICAL:
     case FACE_BARREL:
     case FACE_BEZIER:
+        // Check if the edges are hit first.
+        if (parent_lock < LOCK_EDGES)
+        {
+            int i;
+
+            for (i = 0; i < f->n_edges; i++)
+            {
+                Object* test = pick_edge(f->edges[i], parent_lock, line, dist);
+
+                if (test != NULL)
+                    return test;
+            }
+        }
+
         // These faces have facets in their view lists. Test each one separately. Could be slow...
         for (p = (Point*)f->view_list.head; p != NULL; )
         {

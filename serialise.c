@@ -6,7 +6,7 @@
 #define MAXLINE 1024
 
 // Version of output file
-double file_version = 0.4;
+double file_version = 0.5;
 
 // A constantly incrementing ID. 
 // Should not need to worry about it overflowing 32-bits (4G objects!)
@@ -23,17 +23,40 @@ static unsigned int save_count = 1;
 // Marks whether a material has been written out.
 static BOOL mat_written[MAX_MATERIAL] = { 0, };
 
-// Names of things that make the serialised format a little easier to read.
+// Names of things that make the serialised format a little easier to read/write.
 // Agree with enums in objtree.h
-char *objname[] = { "(none)", "POINT", "EDGE", "FACE", "VOLUME", "ENDGROUP" };
-char *locktypes[] = { "N", "P", "E", "F", "V", "G" };
+
+char* locktypes[] = { "N", "P", "E", "F", "V", "G" };
+
+#if 0
+char* objname[] = { "(none)", "POINT", "}EDGE", "}FACE", "}VOLUME", "}GROUP" };
 char *edgetypes[] = { "STRAIGHT", "ARC", "BEZIER" };
 char *facetypes[] = { "TRI", "RECT", "CIRCLE", "CYLINDRICAL", "FLAT", "BARREL", "BEZIER" };
 char *optypes[] = { "UNION", "INTER", "DIFF", "NONE" };
+#else // compact versions
+char* objname[] = { "(none)", "P", "}E", "}F", "}V", "}G" };
+char* edgetypes[] = { "S", "ARC", "BEZ" };
+char* facetypes[] = { "T", "R", "C", "CYL", "F", "BAR", "BEZ" };
+char* optypes[] = { "U", "I", "D", "N" };
+#endif
+
+#ifdef PRETTY_INDENT
+// Indent by (level * 2) spaces.
+void
+indent(int level, FILE *f)
+{
+    char spaces[65] = "                                                                ";
+
+    fprintf_s(f, "%s", &spaces[64 - 2 * level]);
+}
+#define INDENT(level, f) indent(level, f)
+#else
+#define INDENT(level, f)
+#endif
 
 // Serialise an object. Children go out before their parents, in general.
 void
-serialise_obj(Object *obj, FILE *f)
+serialise_obj(Object *obj, FILE *f, int level)
 {
     int i, n;
     Edge *e;
@@ -62,48 +85,57 @@ serialise_obj(Object *obj, FILE *f)
             return;                  // don't serialise these
 
         constr = ((Edge *)obj)->type & EDGE_CONSTRUCTION;
-        fprintf_s(f, "BEGIN %d\n", obj->ID);
+        INDENT(level, f);
+        //  fprintf_s(f, "BEGIN %d\n", obj->ID);
+        fprintf_s(f, "{\n");
         e = (Edge *)obj;
-        serialise_obj((Object *)e->endpoints[0], f);
-        serialise_obj((Object *)e->endpoints[1], f);
+        serialise_obj((Object *)e->endpoints[0], f, level + 1);
+        serialise_obj((Object *)e->endpoints[1], f, level + 1);
         switch (type)
         {
         case EDGE_ARC:
             ae = (ArcEdge *)obj;
-            serialise_obj((Object *)ae->centre, f);
+            serialise_obj((Object *)ae->centre, f, level + 1);
             break;
 
         case EDGE_BEZIER:
             be = (BezierEdge *)obj;
-            serialise_obj((Object *)be->ctrlpoints[0], f);
-            serialise_obj((Object *)be->ctrlpoints[1], f);
+            serialise_obj((Object *)be->ctrlpoints[0], f, level + 1);
+            serialise_obj((Object *)be->ctrlpoints[1], f, level + 1);
             break;
         }
         break;
 
     case OBJ_FACE:
-        fprintf_s(f, "BEGIN %d\n", obj->ID);
+        INDENT(level, f);
+      //  fprintf_s(f, "BEGIN %d\n", obj->ID);
+        fprintf_s(f, "{\n");
         face = (Face *)obj;
         for (i = 0; i < face->n_edges; i++)
-            serialise_obj((Object *)face->edges[i], f);
+            serialise_obj((Object *)face->edges[i], f, level + 1);
         break;
 
     case OBJ_VOLUME:
-        fprintf_s(f, "BEGIN %d\n", obj->ID);
+        INDENT(level, f);
+      // fprintf_s(f, "BEGIN %d\n", obj->ID);
+        fprintf_s(f, "{\n");
         vol = (Volume *)obj;
         for (face = (Face *)vol->faces.head; face != NULL; face = (Face *)face->hdr.next)
-            serialise_obj((Object *)face, f);
+            serialise_obj((Object *)face, f, level + 1);
         break;
 
     case OBJ_GROUP:
         group = (Group *)obj;
-        fprintf_s(f, "BEGINGROUP %d %s\n", obj->ID, group->title);
+        INDENT(level, f);
+      // fprintf_s(f, "BEGINGROUP %d %s\n", obj->ID, group->title);
+        fprintf_s(f, "{GROUP %d %s\n", obj->ID, group->title);
         for (o = group->obj_list.head; o != NULL; o = o->next)
-            serialise_obj(o, f);
+            serialise_obj(o, f, level + 1);
         break;
     }
 
     // Now write the object itself
+    INDENT(level, f);
     n = fprintf_s(f, "%s %d %s ", objname[obj->type], obj->ID, locktypes[obj->lock]);
     switch (obj->type)
     {
@@ -138,7 +170,10 @@ serialise_obj(Object *obj, FILE *f)
             break;
         }
         if (e->corner)
+        {
+            INDENT(level, f);
             fprintf_s(f, "CORNER %d\n", obj->ID);
+        }
         break;
 
     case OBJ_FACE:
@@ -160,12 +195,14 @@ serialise_obj(Object *obj, FILE *f)
                     fprintf_s(f, "+");      // write continuation char if more to come
                 fprintf_s(f, "\n");         // and start a new line
                 n = 0;
+                INDENT(level, f);
             }
             n += fprintf_s(f, "%d ", face->edges[i]->hdr.ID);
         }
         fprintf_s(f, "\n");
         if (face->n_contours != 0)
         {
+            INDENT(level, f);
             fprintf_s(f, "CONTOUR %d ", obj->ID);
             for (i = 0; i < face->n_contours; i++)  // TODO: Handle lines longer than 1024 (approx. 80 contours)
                 fprintf_s(f, "%d %d %d ", 
@@ -177,6 +214,8 @@ serialise_obj(Object *obj, FILE *f)
         if (face->text != NULL)
         {
             Text *text = face->text;
+
+            INDENT(level, f);
             fprintf_s(f, "TEXT %d %f %f %f %f %f %f %f %f %f %s\n",
                       obj->ID,
                       text->origin.x, text->origin.y, text->origin.z,
@@ -187,7 +226,10 @@ serialise_obj(Object *obj, FILE *f)
                       obj->ID, text->bold, text->italic, text->font);
         }
         if (face->corner)
+        {
+            INDENT(level, f);
             fprintf_s(f, "CORNER %d\n", obj->ID);
+        }
         break;
 
     case OBJ_VOLUME:
@@ -201,12 +243,14 @@ serialise_obj(Object *obj, FILE *f)
                     fprintf_s(f, "+");
                 fprintf_s(f, "\n");
                 n = 0;
+                INDENT(level, f);
             }
             n += fprintf_s(f, "%d ", face->hdr.ID);
         }
         fprintf_s(f, "\n");
         if (vol->material != 0)
         {
+            INDENT(level, f);
             if (mat_written[vol->material])
             {
                 fprintf_s(f, "MATERIAL %d %d\n",
@@ -284,7 +328,7 @@ serialise_tree(Group *tree, char *filename)
     for (obj = tree->obj_list.head; obj != NULL; obj = obj->next)
     {
         bump_progress();
-        serialise_obj(obj, f);
+        serialise_obj(obj, f, 0);
     }
 
     // Write selection out.
@@ -370,6 +414,47 @@ optype_of(char *tok)
     return OP_MAX;
 }
 
+// Match the first part of an object type string, with a possible optional leading '}'.
+// e.g. tok = EDGE, E, or }E would match EDGE, but ENDGROUP would not.
+BOOL
+objtype_of(char* tok, char* match)
+{
+    int tok_len, match_len;
+
+    if (tok[0] == '}')
+        tok++;
+
+    tok_len = strlen(tok);
+    match_len = strlen(match);
+
+    return strncmp(tok, match, min(match_len, tok_len)) == 0;
+}
+
+// Match the first part as above, and if found, return construction and dims flags
+// based on finding "(C)" or "(D)". Used for face and edge types.
+BOOL
+subtype_of(char* tok, char* match, BOOL *constr, BOOL *dims)
+{
+    int tok_len, match_len;
+    char* paren;
+
+    *constr = *dims = FALSE;
+    paren = strchr(tok, '(');
+    if (paren != NULL)
+    {
+        *constr = *(paren + 1) == 'C';
+        *dims = *(paren + 1) == 'D';
+        *paren = '\0';
+    }
+
+    tok_len = strlen(tok);
+    match_len = strlen(match);
+
+    return strncmp(tok, match, min(match_len, tok_len)) == 0;
+
+    return FALSE;
+}
+
 
 // Deserialise a tree from file. 
 BOOL
@@ -377,7 +462,7 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
 {
     FILE *f;
     char buf[MAXLINE];
-    int stack[10], stkptr;
+    int stack[64], stkptr;
     int objsize = 1000;
     int id_offset, mat_offset, mat;
     double version = 0.1;
@@ -485,15 +570,19 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
 
         }
 #endif // 0
-        else if (strcmp(tok, "BEGIN") == 0)
+        else if (strcmp(tok, "{") == 0 || strcmp(tok, "BEGIN") == 0)
         {
+#if 0
             // Stack the object ID being constructed
             tok = strtok_s(NULL, " \t\n", &nexttok);
             id = atoi(tok) + id_offset;
             check_and_grow(id, &object, &objsize);
             stack[stkptr++] = id;
+#else
+            stack[stkptr++] = 0;
+#endif
         }
-        else if (strcmp(tok, "BEGINGROUP") == 0)
+        else if (strcmp(tok, "{GROUP") == 0 || strcmp(tok, "BEGINGROUP") == 0)
         {
             // Stack the object ID being constructed. 
             tok = strtok_s(NULL, " \t\n", &nexttok);
@@ -510,7 +599,7 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
             if (tok != NULL)
                 strcpy_s(grp->title, 256, tok);
         }
-        else if (strcmp(tok, "POINT") == 0)
+        else if (objtype_of(tok, "POINT"))
         {
             Point *p;
             float x, y, z;
@@ -535,12 +624,13 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
             else if (IS_GROUP(object[stack[stkptr - 1]]))
                 link_tail_group((Object *)p, (Group *)object[stack[stkptr - 1]]);
         }
-        else if (strcmp(tok, "EDGE") == 0)
+        else if (objtype_of(tok, "EDGE"))
         {
             int end0, end1, ctrl0, ctrl1, ctr;
             Edge *edge = NULL;
             ArcEdge *ae;
             BezierEdge *be;
+            BOOL constr, dims;
 
             tok = strtok_s(NULL, " \t\n", &nexttok);
             id = atoi(tok) + id_offset;
@@ -549,16 +639,17 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
             lock = locktype_of(tok);
 
             tok = strtok_s(NULL, " \t\n", &nexttok);
-            if (strcmp(tok, "STRAIGHT") == 0 || strcmp(tok, "STRAIGHT(C)") == 0 || strcmp(tok, "STRAIGHT(D)") == 0)
+            if (subtype_of(tok, "STRAIGHT", &constr, &dims))
             {
                 edge = edge_new(EDGE_STRAIGHT);
-                if (strcmp(tok, "STRAIGHT(C)") == 0)
+                if (constr)
                 {
                     edge->type |= EDGE_CONSTRUCTION;
                     ((Object *)edge)->show_dims = TRUE;
                 }
-                if (strcmp(tok, "STRAIGHT(D)") == 0)
+                if (dims)
                     ((Object *)edge)->show_dims = TRUE;
+
                 tok = strtok_s(NULL, " \t\n", &nexttok);
                 end0 = atoi(tok) + id_offset;
                 ASSERT(end0 > 0 && object[end0] != NULL, "Bad endpoint ID");
@@ -568,16 +659,17 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
                 edge->endpoints[0] = (Point *)object[end0];
                 edge->endpoints[1] = (Point *)object[end1];
             }
-            else if (strcmp(tok, "ARC") == 0 || strcmp(tok, "ARC(C)") == 0 || strcmp(tok, "ARC(D)") == 0)
+            else if (subtype_of(tok, "ARC", &constr, &dims))
             {
                 edge = edge_new(EDGE_ARC);
-                if (strcmp(tok, "ARC(C)") == 0)
+                if (constr)
                 {
                     edge->type |= EDGE_CONSTRUCTION;
                     ((Object *)edge)->show_dims = TRUE;
                 }
-                if (strcmp(tok, "ARC(D)") == 0)
+                if (dims)
                     ((Object *)edge)->show_dims = TRUE;
+
                 tok = strtok_s(NULL, " \t\n", &nexttok);
                 end0 = atoi(tok) + id_offset;
                 ASSERT(end0 > 0 && object[end0] != NULL, "Bad endpoint ID");
@@ -614,7 +706,7 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
                     edge->nsteps = atoi(tok);
                 }
             }
-            else if (strcmp(tok, "BEZIER") == 0)
+            else if (subtype_of(tok, "BEZIER", &constr, &dims))
             {
                 edge = edge_new(EDGE_BEZIER);
                 tok = strtok_s(NULL, " \t\n", &nexttok);
@@ -654,20 +746,21 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
             edge->hdr.ID = id;
             edge->hdr.lock = lock;
             object[id] = (Object *)edge;
-            ASSERT(stkptr > 0 && id == stack[stkptr - 1], "Badly formed edge record");
+          //  ASSERT(stkptr > 0 && id == stack[stkptr - 1], "Badly formed edge record");
             stkptr--;
             if (stkptr == 0)
                 link_tail_group((Object *)edge, tree);
             else if (IS_GROUP(object[stack[stkptr - 1]]))
                 link_tail_group((Object *)edge, (Group *)object[stack[stkptr - 1]]);
         }
-        else if (strcmp(tok, "FACE") == 0)
+        else if (objtype_of(tok, "FACE"))
         {
             int pid;
             Face *face;
             Plane norm = { 0, };
             FACE type;
             Point *init_pt;
+            BOOL constr;
             BOOL dims = FALSE;
 
             tok = strtok_s(NULL, " \t\n", &nexttok);
@@ -677,50 +770,35 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
             lock = locktype_of(tok);
 
             tok = strtok_s(NULL, " \t\n", &nexttok);
-            if (strcmp(tok, "RECT") == 0)
+            if (subtype_of(tok, "RECT", &constr, &dims))
             {
                 type = FACE_RECT;
+                if (constr)
+                    type = FACE_RECT | FACE_CONSTRUCTION;
             }
-            else if (strcmp(tok, "RECT(C)") == 0)
-            {
-                type = FACE_RECT | FACE_CONSTRUCTION;
-            }
-            else if (strcmp(tok, "RECT(D)") == 0)
-            {
-                type = FACE_RECT;
-                dims = TRUE;
-            }
-            else if (strcmp(tok, "CIRCLE") == 0)
+            else if (subtype_of(tok, "CIRCLE", &constr, &dims)) // test this first so "C" matches circle and not cylinder
             {
                 type = FACE_CIRCLE;
+                if (constr)
+                    type = FACE_CIRCLE | FACE_CONSTRUCTION;
             }
-            else if (strcmp(tok, "CIRCLE(C)") == 0)
-            {
-                type = FACE_CIRCLE | FACE_CONSTRUCTION;
-                dims = TRUE;
-            }
-            else if (strcmp(tok, "CIRCLE(D)") == 0)
-            {
-                type = FACE_CIRCLE;
-                dims = TRUE;
-            }
-            else if (strcmp(tok, "TRI") == 0)
+            else if (subtype_of(tok, "TRI", &constr, &dims))
             {
                 type = FACE_TRI;
             }
-            else if (strcmp(tok, "FLAT") == 0)
+            else if (subtype_of(tok, "FLAT", &constr, &dims))
             {
                 type = FACE_FLAT;
             }
-            else if (strcmp(tok, "CYLINDRICAL") == 0)
+            else if (subtype_of(tok, "CYLINDRICAL", &constr, &dims))
             {
                 type = FACE_CYLINDRICAL;
             }
-            else if (strcmp(tok, "BARREL") == 0)
+            else if (subtype_of(tok, "BARREL", &constr, &dims))
             {
                 type = FACE_BARREL;
             }
-            else if (strcmp(tok, "BEZIER") == 0)
+            else if (subtype_of(tok, "BEZIER", &constr, &dims))
             {
                 type = FACE_BEZIER;
             }
@@ -786,7 +864,7 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
             face->hdr.lock = lock;
             face->hdr.show_dims = dims;
             object[id] = (Object *)face;
-            ASSERT(stkptr > 0 && id == stack[stkptr - 1], "Badly formed face record");
+           // ASSERT(stkptr > 0 && id == stack[stkptr - 1], "Badly formed face record");
             stkptr--;
             if (stkptr == 0)
                 link_tail_group((Object *)face, tree);
@@ -887,7 +965,7 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
                 break;
             }
         }
-        else if (strcmp(tok, "VOLUME") == 0)
+        else if (objtype_of(tok, "VOLUME"))
         {
             Volume *vol;
             Face *last_face = NULL;
@@ -940,14 +1018,14 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
 
             calc_extrude_heights(vol);
 
-            ASSERT(stkptr > 0 && id == stack[stkptr - 1], "Badly formed volume record");
+          //  ASSERT(stkptr > 0 && id == stack[stkptr - 1], "Badly formed volume record");
             stkptr--;
             if (stkptr == 0)
                 link_tail_group((Object *)vol, tree);
             else if (IS_GROUP(object[stack[stkptr - 1]]))
                 link_tail_group((Object *)vol, (Group *)object[stack[stkptr - 1]]);
         }
-        else if (strcmp(tok, "ENDGROUP") == 0)
+        else if (objtype_of(tok, "GROUP") || strcmp(tok, "ENDGROUP") == 0)  
         {
             tok = strtok_s(NULL, " \t\n", &nexttok);
             id = atoi(tok) + id_offset;

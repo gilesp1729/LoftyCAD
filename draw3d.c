@@ -236,7 +236,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
     Volume *vol;
     Group *group;
     float dx, dy, dz;
-    BOOL locked, constr_edge;
+    BOOL locked, constr_edge, re_enable;
     // This object is selected. Color it and all its components.
     BOOL selected = pres & DRAW_SELECTED;
     // This object is highlighted because the mouse is hovering on it.
@@ -251,9 +251,6 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
     BOOL no_optimise = selected || highlighted || in_halo || snapping;
 
     BOOL draw_components = !highlighted || !snapping;
-
-    if (!view_rendered && !view_printer)
-        glEnable(GL_BLEND);
 
     switch (obj->type)
     {
@@ -334,8 +331,10 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
         constr_edge = (pres & DRAW_PATH) != 0 || (edge->type & EDGE_CONSTRUCTION) != 0;
 
         // Disable blending here so highlight shows up with multiply-blending
+        re_enable = FALSE;
         if (selected || highlighted || in_halo || (pres & DRAW_PATH) != 0)
         {
+            re_enable = glIsEnabled(GL_BLEND);
             glDisable(GL_BLEND);
         }
         else  // normal drawing, check the drawn no. and don't draw shared edges twice (unless in halo)
@@ -401,6 +400,10 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             spaghetti(zedge, print_zmin, print_zmax);
             break;
         }
+
+        if (re_enable)
+            glEnable(GL_BLEND);
+        
         break;
 
     case OBJ_FACE:

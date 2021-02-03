@@ -373,13 +373,13 @@ extern ListHead free_list_zedge;
 // Flatness test for faces based on their type
 #define IS_FLAT(face)       \
     (       \
+        ((face)->type & ~FACE_CONSTRUCTION) == FACE_TRI    \
+        || \
         ((face)->type & ~FACE_CONSTRUCTION) == FACE_RECT     \
         || \
         ((face)->type & ~FACE_CONSTRUCTION) == FACE_CIRCLE    \
         || \
         ((face)->type & ~FACE_CONSTRUCTION) == FACE_FLAT    \
-        || \
-        ((face)->type & ~FACE_CONSTRUCTION) == FACE_TRI    \
     )
 
 // Prototypes for object functions: 

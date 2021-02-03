@@ -636,7 +636,10 @@ Command(int message, int wParam, int lParam)
                 gen_view_list_tree_volumes(&object_tree);
                 populate_treeview();
             }
-
+            else
+            {
+                invalidate_dl();
+            }
             break;
 
         case ID_FILE_SAVE:
