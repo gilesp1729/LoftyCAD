@@ -460,14 +460,16 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
 
             gen_view_list_vol(vol);
 
-            // Output triangle faces, putting their edges in a queue to do later
+            // Output triangle faces, putting their edges in a queue to do later.
+            // There will be no construction faces in any volume, so just color it once.
             locked = parent_lock > OBJ_FACE;
+            color_as(OBJ_FACE, 1.0f, FALSE, pres, locked);
             glBegin(GL_TRIANGLES);
             for (face = (Face*)vol->faces.head; face != NULL; face = (Face*)face->hdr.next)
             {
-                color((Object*)face, face->type & FACE_CONSTRUCTION, pres, locked);
                 for (i = 0, p = (Point*)face->view_list.head; i < 3 && p != NULL; i++, p = (Point*)p->hdr.next)
                     glVertex3d(p->x, p->y, p->z);
+
                 if (draw_components)
                 {
                     for (i = 0; i < face->n_edges; i++)
@@ -482,12 +484,12 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             }
             glEnd();
 
-            // Draw all the edges
+            // Draw all the edges. There will be no construction edges, so just color it once.
             locked = parent_lock >= OBJ_EDGE;
+            color_as(OBJ_EDGE, 1.0f, FALSE, pres, locked);
             glBegin(GL_LINES);
             for (edge = (Edge*)elist.head; edge != NULL; edge = (Edge*)edge->hdr.next)
             {
-                color((Object*)edge, edge->type & EDGE_CONSTRUCTION, pres, locked);
                 glVertex3d(edge->endpoints[0]->x, edge->endpoints[0]->y, edge->endpoints[0]->z);
                 glVertex3d(edge->endpoints[1]->x, edge->endpoints[1]->y, edge->endpoints[1]->z);
             }

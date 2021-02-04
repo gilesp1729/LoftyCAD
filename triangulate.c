@@ -478,8 +478,8 @@ gen_view_list_vol(Volume *vol)
         if (!f->view_valid)
             break;
     }
-    if (f == NULL && vol->mesh_valid)
-        return FALSE;     // all faces and mesh are valid, nothing to do
+    if (f == NULL)
+        return FALSE;     // all faces are valid, nothing to do
 
     if (f != NULL)
     {
@@ -495,6 +495,7 @@ gen_view_list_vol(Volume *vol)
     if (vol->mesh != NULL)
         mesh_destroy(vol->mesh);
     vol->mesh = mesh_new(vol->material);
+    vol->mesh_valid = FALSE;
 
     // generate view lists for all the faces
     for (f = (Face *)vol->faces.head; f != NULL; f = (Face *)f->hdr.next)
