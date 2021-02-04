@@ -41,7 +41,7 @@ int num_draws = 0;
 
 // Set material and lighting up for the rendered view
 void
-SetMaterial(int mat)
+SetMaterial(int mat, BOOL force_set)
 {
     static float front_mat_shininess[] = { 30.0f };
     static float front_mat_ambient[] = { 0.2f, 0.2f, 0.2f, 1.0f };
@@ -55,7 +55,7 @@ SetMaterial(int mat)
 
     static int curr_mat = -1;
 
-    if (mat != curr_mat)
+    if (mat != curr_mat || force_set)
     {
         if (mat == 0)
         {
@@ -216,7 +216,7 @@ draw_triangle(void *arg, int mat, float x[3], float y[3], float z[3])
     int i;
     float A, B, C, length;
 
-    SetMaterial(mat);
+    SetMaterial(mat, FALSE);
     cross(x[1] - x[0], y[1] - y[0], z[1] - z[0], x[2] - x[0], y[2] - y[0], z[2] - z[0], &A, &B, &C);
     length = (float)sqrt(A * A + B * B + C * C);
     if (!nz(length))
@@ -1972,7 +1972,7 @@ Draw(void)
     {
         double axis = 100;
 
-        SetMaterial(0);
+        SetMaterial(0, TRUE);
 
         if (view_printbed)
         {

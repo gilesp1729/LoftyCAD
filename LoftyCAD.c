@@ -257,7 +257,7 @@ Init(void)
 
     materials[0].valid = TRUE;
     strcpy_s(materials[0].name, 64, "(default)");
-    SetMaterial(0);
+    SetMaterial(0, TRUE);
 
     // Enable alpha blending, so we can have transparency
     //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);      // alpha blending
