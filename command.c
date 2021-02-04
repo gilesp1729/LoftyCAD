@@ -1053,6 +1053,7 @@ Command(int message, int wParam, int lParam)
                 mesh_destroy(object_tree.mesh);
             object_tree.mesh = NULL;
             object_tree.mesh_valid = FALSE;
+            gen_view_list_tree_volumes(&object_tree);
             gen_view_list_tree_surfaces(&object_tree, &object_tree);
             break;
         }

@@ -215,7 +215,7 @@ invalidate_all_view_lists(Object *parent, Object *obj, float dx, float dy, float
     }
 }
 
-// Generate volume view lists for all volumes in tree. Return TRUE if something new
+// Generate volume view lists (meshes) for all volumes in tree. Return TRUE if something new
 // was generated, FALSE if everything was up to date.
 BOOL
 gen_view_list_tree_volumes(Group *tree)
@@ -227,13 +227,15 @@ gen_view_list_tree_volumes(Group *tree)
     Bbox *box;
 
     // generate all view lists for all volumes, to make sure they are all up to date
+    // test the existence of the mesh too, in case subsequent raws have cleaned up
+    // its view lists
     for (obj = tree->obj_list.head; obj != NULL; obj = obj->next)
     {
         switch (obj->type)
         {
         case OBJ_VOLUME:
             vol = (Volume * )obj;
-            if (gen_view_list_vol(vol))
+            if (gen_view_list_vol(vol) || !vol->mesh_valid)
                 rc = TRUE;
 
             // update the group bbox with the volume bbox
