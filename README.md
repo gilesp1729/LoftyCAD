@@ -44,9 +44,9 @@ In particular, it will:
 
 # Works in progress
 - Multi-material slicing
-- Directly control, and print to, a USB or serial connected printer
+- Directly control and print to a USB, serial or Octoprint connected printer
 - Repairing imported triangle meshes
-- Allow manipulation of triangle meshes: smooth extrusion, refinement, and more
+- Allow manipulation of triangle meshes: smooth extrusion, refinement, surface fitting, and more
 - Tubing and lofting (a nod to the original Lofty, LoftyCAD's spiritual ancestor)
 
 # Installing LoftyCAD from the prebuilt installer

@@ -222,17 +222,25 @@ gen_view_list_tree_volumes(Group *tree)
 {
     Object *obj;
     Volume *vol;
+    Edge* edge;
     Group *group;
     BOOL rc = FALSE;
     Bbox *box;
 
-    // generate all view lists for all volumes, to make sure they are all up to date
-    // test the existence of the mesh too, in case subsequent raws have cleaned up
+    // Generate all view lists for all volumes, to make sure they are all up to date
+    // Test the existence of the mesh too, in case subsequent raws have cleaned up
     // its view lists
     for (obj = tree->obj_list.head; obj != NULL; obj = obj->next)
     {
         switch (obj->type)
         {
+        case OBJ_EDGE:
+            // Just here for the bbox
+            edge = (Edge*)obj;
+            expand_bbox(&tree->bbox, edge->endpoints[0]);
+            expand_bbox(&tree->bbox, edge->endpoints[1]);
+            break;
+
         case OBJ_VOLUME:
             vol = (Volume * )obj;
             if (gen_view_list_vol(vol) || !vol->mesh_valid)
