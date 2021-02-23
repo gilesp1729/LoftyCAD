@@ -36,7 +36,7 @@ contextmenu(Object *picked_obj, POINT pt)
     HMENU hMenu;
     int rc;
     Object *parent, *sel_obj, *o, *o_next;
-    char buf[128];
+    char buf[128], buf2[128];
     LOCK old_parent_lock;
     BOOL group_changed = FALSE;
     BOOL dims_changed = FALSE;
@@ -58,25 +58,16 @@ contextmenu(Object *picked_obj, POINT pt)
     float xc, yc, zc;
     Bbox box;
 
-    // Display the object ID at the top of the menu
-    switch (picked_obj->type)
+    // Display the object ID and parent group (optionally) at the top of the menu
+    brief_description(picked_obj, buf, 128);
+    if (picked_obj->parent_group != NULL && picked_obj->parent_group->hdr.ID != 0)
     {
-    case OBJ_POINT:
-        sprintf_s(buf, 128, "Point %d", picked_obj->ID);
-        break;
-    case OBJ_EDGE:
-        sprintf_s(buf, 128, "Edge %d", picked_obj->ID);
-        break;
-    case OBJ_FACE:
-        sprintf_s(buf, 128, "Face %d", picked_obj->ID);
-        break;
-    case OBJ_VOLUME:
-        sprintf_s(buf, 128, "Volume %d", picked_obj->ID);
-        break;
-    case OBJ_GROUP:
-        sprintf_s(buf, 128, "Group %d: %s", picked_obj->ID, ((Group *)picked_obj)->title);
-        break;
+        strcat_s(buf, 128, " (");
+        brief_description((Object*)picked_obj->parent_group, buf2, 128);
+        strcat_s(buf, 128, buf2);
+        strcat_s(buf, 128, ")");
     }
+
 
     // Find the parent object. 
     // Select a menu, and disable irrelevant menu items based on the parent.

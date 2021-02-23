@@ -593,6 +593,7 @@ Pick(GLint x_pick, GLint y_pick, BOOL force_pick)
     Plane line;
     float dist = LARGE_COORD;
     float ret_dist = LARGE_COORD;
+    BOOL edit_in_groups = FALSE;
 
     // Get ray from eye position.
     ray_from_eye(x_pick, y_pick, &line);
@@ -605,19 +606,52 @@ Pick(GLint x_pick, GLint y_pick, BOOL force_pick)
 
         if (test != NULL)
         {
-            // Special case: if we are in STATE_NONE and we have a face on a fully locked volume,
-            // just look straight through it so we can pick things behind it. However, we must still
+            Object *parent = find_top_level_parent(&object_tree, test);
+
+            // Special cases: if we are in STATE_NONE and we have a face on a fully locked volume,
+            // or some other object locked it is own level, just look straight through it 
+            // so we can pick things behind it. However, we must still
             // be able to right-click things, so don't do it if force_pick is set TRUE.
             if
-                (
-                    !force_pick
-                    &&
-                    test->type == OBJ_FACE
-                    &&
-                    ((Face*)test)->vol != NULL
-                    &&
-                    ((Face*)test)->vol->hdr.lock >= LOCK_VOLUME
-                    )
+            (
+                !force_pick
+                &&
+                test->type == OBJ_FACE          // Face on a locked volume
+                &&
+                ((Face*)test)->vol != NULL
+                &&
+                ((Face*)test)->vol->hdr.lock >= LOCK_VOLUME
+            )
+            {
+                raw_picked_obj = test;
+                test = NULL;
+            }
+            else if
+            (
+                !force_pick
+                &&
+                test->type == OBJ_FACE          // Face out on its own, locked at face level
+                &&
+                ((Face*)test)->vol == NULL
+                &&
+                test->lock >= LOCK_FACES
+            )
+            {
+                raw_picked_obj = test;
+                test = NULL;
+            }
+            else if
+            (
+                !force_pick
+                &&
+                test->type == OBJ_FACE          // Face on a volume in a locked group
+                &&
+                ((Face*)test)->vol != NULL
+                &&
+                parent != NULL
+                &&
+                parent->lock == LOCK_GROUP
+            )
             {
                 raw_picked_obj = test;
                 test = NULL;
@@ -632,7 +666,7 @@ Pick(GLint x_pick, GLint y_pick, BOOL force_pick)
         }
     }
 
-    // Some special cases:
+    // Some more special cases:
     // If the object is in a group, then return the group.
     // If the object is a face, but it belongs to a volume that is locked at the
     // face or volume level, then return the parent volume instead.
@@ -648,7 +682,7 @@ Pick(GLint x_pick, GLint y_pick, BOOL force_pick)
             if (face->vol->hdr.lock >= LOCK_FACES)
                 ret_obj = (Object*)face->vol;
 
-            if (face->vol->hdr.parent_group->hdr.parent_group != NULL)
+            if (!edit_in_groups && face->vol->hdr.parent_group->hdr.parent_group != NULL)
                 ret_obj = find_top_level_parent(&object_tree, (Object*)face->vol->hdr.parent_group);  // this is fast
             if (ret_obj->lock >= ret_obj->type && !force_pick)
                 ret_obj = NULL; // this object is locked
@@ -657,7 +691,7 @@ Pick(GLint x_pick, GLint y_pick, BOOL force_pick)
         {
             Object* parent = find_top_level_parent(&object_tree, ret_obj);               // this is not so fast
 
-            if (parent != NULL && parent->type == OBJ_GROUP)
+            if (!edit_in_groups && parent != NULL && parent->type == OBJ_GROUP)
                 ret_obj = parent;
         }
     }

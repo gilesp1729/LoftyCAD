@@ -260,6 +260,7 @@ gen_view_list_tree_volumes(Group *tree)
             box->xc = (box->xmin + box->xmax) / 2;
             box->yc = (box->ymin + box->ymax) / 2;
             box->zc = (box->zmin + box->zmax) / 2;
+            union_bbox(&group->bbox, &tree->bbox, &tree->bbox);
             break;
         }
     }

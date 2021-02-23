@@ -670,12 +670,20 @@ show_dims_on(Object *obj, PRESENTATION pres, LOCK parent_lock)
         if (has_dims(obj))
             glCallLists(2, GL_UNSIGNED_BYTE, ": ");
         glCallLists(strlen(buf), GL_UNSIGNED_BYTE, buf);
+
+        // If picking objects in an open group, show the group name too.
+        if (obj->parent_group != NULL && obj->parent_group->hdr.ID != 0)
+        {
+            glCallLists(2, GL_UNSIGNED_BYTE, " (");
+            brief_description((Object*)obj->parent_group, buf, 64);
+            glCallLists(strlen(buf), GL_UNSIGNED_BYTE, buf);
+            glCallLists(1, GL_UNSIGNED_BYTE, ")");
+        }
     }
 }
 
 
-// Wndproc for the dimensions dialog. Normally it's only for display while dragging
-// but we can also type dimensions into it.
+// Wndproc for the dimensions dialog. 
 int WINAPI
 dimensions_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
