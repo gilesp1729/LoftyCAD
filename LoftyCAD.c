@@ -87,6 +87,9 @@ Point new_point;
 // When picked_obj is a volume or group due to locking, this is the underlying face.
 Object *raw_picked_obj = NULL;
 
+// When an object inside a group is picked, this saves its immediate parent group.
+Object* parent_picked = NULL;
+
 // Starts at picked_point, but is updated throughout a move/drag.
 Point last_point;
 
@@ -287,7 +290,7 @@ Init(void)
 
     object_tree.hdr.type = OBJ_GROUP;  // set up object tree groups
     gcode_tree.hdr.type = OBJ_GROUP;
-    gcode_tree.hdr.lock = LOCK_GROUP;
+    gcode_tree.hdr.lock = LOCK_VOLUME;
 
     init_comms();               // initialise Winsock for comms to Octoprint
 }

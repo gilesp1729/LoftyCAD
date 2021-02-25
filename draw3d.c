@@ -340,14 +340,14 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
 
         // Disable blending here so highlight shows up with multiply-blending
         re_enable = FALSE;
-        if (selected || highlighted || in_halo || (pres & DRAW_PATH) != 0)
+        if (selected || highlighted /*|| in_halo*/ || (pres & DRAW_PATH) != 0)
         {
             re_enable = glIsEnabled(GL_BLEND);
             glDisable(GL_BLEND);
         }
-        else  // normal drawing, check the drawn no. and don't draw shared edges twice (unless in halo)
+        else  // normal drawing, check the drawn no. and don't draw shared edges twice
         {
-            if (edge->drawn == curr_drawn_no && !in_halo)
+            if (edge->drawn == curr_drawn_no /*&& !in_halo*/)
                 return;
             edge->drawn = curr_drawn_no;
         }
@@ -684,6 +684,12 @@ Draw(void)
                     highlight_obj = NULL;
                 }
             }
+
+#if 0  // Left this out, as I can't get it to look any good.
+            // If we're editing any object in a group, highlight the whole group softly.
+            if (highlight_obj != NULL && parent_picked != NULL)
+                link_single(parent_picked, &halo);
+#endif
         }
 
         // Set up the halo if we are doing halo highlighting for smooth extrusions, etc.

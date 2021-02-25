@@ -138,11 +138,6 @@ contextmenu(Object *picked_obj, POINT pt)
                 hMenu = LoadMenu(hInst, MAKEINTRESOURCE(IDR_CONTEXT_GROUP));
                 hMenu = GetSubMenu(hMenu, 0);
                 ModifyMenu(hMenu, 0, MF_BYPOSITION | MF_GRAYED | MF_STRING, 0, buf);
-
-                EnableMenuItem(hMenu, ID_LOCKING_FACES, MF_GRAYED);
-                EnableMenuItem(hMenu, ID_LOCKING_EDGES, MF_GRAYED);
-                EnableMenuItem(hMenu, ID_LOCKING_POINTS, MF_GRAYED);
-                EnableMenuItem(hMenu, ID_LOCKING_UNLOCKED, MF_GRAYED);
             }
             break;
         }

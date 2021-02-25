@@ -592,14 +592,17 @@ finished:
 }
 
 // Move any edges or faces that have been put in the halo list by find_corner_edges.
-// Ignore any smooth factors.
+// Ignore any smooth factors, and ignore any groups in the halo list.
 void
 move_corner_edges(ListHead *halo, float xoffset, float yoffset, float zoffset)
 {
     Object* obj;
 
     for (obj = halo->head; obj != NULL; obj = obj->next)
-        move_obj(obj->prev, xoffset, yoffset, zoffset);
+    {
+        if (obj->prev->type != OBJ_GROUP)
+            move_obj(obj->prev, xoffset, yoffset, zoffset);
+    }
 }
 
 // Find a suitable (x,y,z) point about which to rotate any object.

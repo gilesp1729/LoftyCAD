@@ -345,12 +345,9 @@ BEGIN
         MENUITEM SEPARATOR
         POPUP "Locking"
         BEGIN
-            MENUITEM "Group",                       ID_LOCKING_GROUP
-            MENUITEM "Volume",                      ID_LOCKING_VOLUME
-            MENUITEM "Faces",                       ID_LOCKING_FACES
-            MENUITEM "Edges",                       ID_LOCKING_EDGES
-            MENUITEM "Points",                      ID_LOCKING_POINTS
-            MENUITEM "Unlocked",                    ID_LOCKING_UNLOCKED
+            MENUITEM "Group (Locked group)",        ID_LOCKING_GROUP
+            MENUITEM "Volume (Closed group)",       ID_LOCKING_VOLUME
+            MENUITEM "Faces (Open group for editing)", ID_LOCKING_FACES
         END
         POPUP "Rendering Operation"
         BEGIN

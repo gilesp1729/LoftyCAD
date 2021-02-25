@@ -48,14 +48,16 @@ typedef enum
 // For edge groups these have special meanings: 
 // LOCK_POINTS = open edge group 
 // LOCK_EDGES = closed edge group
-// LOCK_GROUP = ZPoly edge group (used for G-code visualisations)
+// LOCK_VOLUME = ZPoly edge group (used for G-code visualisations)
 typedef enum
 {
     LOCK_NONE = OBJ_NONE,          // Fully unlocked
     LOCK_POINTS = OBJ_POINT,       // The points are locked; the edges and faces may be selected
     LOCK_EDGES = OBJ_EDGE,         // The edges are locked; the faces may be selected
-    LOCK_FACES = OBJ_FACE,         // The faces are locked; only the whole volume can be selected
-    LOCK_VOLUME = OBJ_VOLUME,      // The whole volume is locked; nothing can be selected or changed
+    LOCK_FACES = OBJ_FACE,         // The faces are locked; only the whole volume can be selected.
+                                   // TODO: For a group, the group is open for editing.
+    LOCK_VOLUME = OBJ_VOLUME,      // The whole volume is locked; nothing can be selected or changed.
+                                   // For a group, only the whole group can be selected or moved.
     LOCK_GROUP = OBJ_GROUP         // For groups only: the group is locked and cannot be selected or moved
 } LOCK;
 

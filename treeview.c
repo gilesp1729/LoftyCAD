@@ -103,20 +103,41 @@ char *obj_description(Object *obj, char *descr, int descr_len, BOOL verbose)
 
     case OBJ_GROUP:
         grp = (Group *)obj;
-        if (grp->title[0] == '\0' || !verbose)
-            sprintf_s(descr, descr_len, "%s Group %d", 
-                    op_string[grp->op], 
-                    obj->ID
-                    );
-        else
+        if (obj->lock <= LOCK_EDGES)        // It's an edge group
         {
-            sprintf_s(tmpbuf, 256, "%s Group %d: %s",
-                op_string[grp->op],
-                obj->ID,
-                grp->title
-            );
-            tmpbuf[descr_len - 1] = '\0';
-            strcpy_s(descr, descr_len, tmpbuf);
+            if (grp->title[0] == '\0' || !verbose)
+                sprintf_s(descr, descr_len, "%s Edge Group %d",
+                    op_string[grp->op],
+                    obj->ID
+                );
+            else
+            {
+                sprintf_s(tmpbuf, 256, "%s Edge Group %d: %s",
+                    op_string[grp->op],
+                    obj->ID,
+                    grp->title
+                );
+                tmpbuf[descr_len - 1] = '\0';
+                strcpy_s(descr, descr_len, tmpbuf);
+            }
+        }
+        else                        // A normal group
+        {
+            if (grp->title[0] == '\0' || !verbose)
+                sprintf_s(descr, descr_len, "%s Group %d",
+                    op_string[grp->op],
+                    obj->ID
+                );
+            else
+            {
+                sprintf_s(tmpbuf, 256, "%s Group %d: %s",
+                    op_string[grp->op],
+                    obj->ID,
+                    grp->title
+                );
+                tmpbuf[descr_len - 1] = '\0';
+                strcpy_s(descr, descr_len, tmpbuf);
+            }
         }
         break;
     }
@@ -167,16 +188,33 @@ char* brief_description(Object* obj, char* descr, int descr_len)
 
     case OBJ_GROUP:
         grp = (Group*)obj;
-        if (grp->title[0] == '\0')
-            sprintf_s(descr, descr_len, "Group %d", obj->ID);
-        else
+        if (obj->lock <= LOCK_EDGES)        // It's an edge group
         {
-            sprintf_s(tmpbuf, 256, "G%d: %s",
-                obj->ID,
-                grp->title
-            );
-            tmpbuf[descr_len - 1] = '\0';
-            strcpy_s(descr, descr_len, tmpbuf);
+            if (grp->title[0] == '\0')
+                sprintf_s(descr, descr_len, "Edge Group %d", obj->ID);
+            else
+            {
+                sprintf_s(tmpbuf, 256, "EG%d: %s",
+                    obj->ID,
+                    grp->title
+                );
+                tmpbuf[descr_len - 1] = '\0';
+                strcpy_s(descr, descr_len, tmpbuf);
+            }
+        }
+        else                                // It's a normal group
+        {
+            if (grp->title[0] == '\0')
+                sprintf_s(descr, descr_len, "Group %d", obj->ID);
+            else
+            {
+                sprintf_s(tmpbuf, 256, "G%d: %s",
+                    obj->ID,
+                    grp->title
+                );
+                tmpbuf[descr_len - 1] = '\0';
+                strcpy_s(descr, descr_len, tmpbuf);
+            }
         }
         break;
     }

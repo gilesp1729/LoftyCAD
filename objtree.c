@@ -208,7 +208,7 @@ Group *group_new(void)
 
     grp->hdr.type = OBJ_GROUP;
     grp->hdr.ID = objid++;
-    grp->hdr.lock = LOCK_FACES;
+    grp->hdr.lock = LOCK_VOLUME;
     grp->op = OP_NONE;
     clear_bbox(&grp->bbox);
     return grp;
@@ -477,7 +477,7 @@ purge_obj(Object *obj)
 void
 purge_zpoly_edges(Group* group)
 {
-    ASSERT(group->hdr.lock = LOCK_GROUP, "Group is not a ZPolyEdge group");
+    ASSERT(group->hdr.lock == LOCK_VOLUME, "Group is not a ZPolyEdge group");
     if (free_list_zedge.head == NULL)
         free_list_zedge.head = group->obj_list.head;
     else

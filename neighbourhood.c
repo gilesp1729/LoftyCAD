@@ -590,10 +590,10 @@ Pick(GLint x_pick, GLint y_pick, BOOL force_pick)
     Object* test = NULL;
     Object* ret_obj = NULL;
     Object* obj;
+    Object* parent;
     Plane line;
     float dist = LARGE_COORD;
     float ret_dist = LARGE_COORD;
-    BOOL edit_in_groups = FALSE;
 
     // Get ray from eye position.
     ray_from_eye(x_pick, y_pick, &line);
@@ -606,7 +606,7 @@ Pick(GLint x_pick, GLint y_pick, BOOL force_pick)
 
         if (test != NULL)
         {
-            Object *parent = find_top_level_parent(&object_tree, test);
+            parent = find_top_level_parent(&object_tree, test);
 
             // Special cases: if we are in STATE_NONE and we have a face on a fully locked volume,
             // or some other object locked it is own level, just look straight through it 
@@ -667,213 +667,74 @@ Pick(GLint x_pick, GLint y_pick, BOOL force_pick)
     }
 
     // Some more special cases:
-    // If the object is in a group, then return the group.
+
+    // If the object is in a locked group, then return the group. Take account
+    // of nested groups and return the topmost locked parent group.
+
     // If the object is a face, but it belongs to a volume that is locked at the
     // face or volume level, then return the parent volume instead.
     // Do the face test first, as if we have its volume we can find any parent
     // group quickly without a full search.
+    parent_picked = NULL;
     if (ret_obj != NULL)
     {
+        raw_picked_obj = ret_obj;
+        parent = NULL;
         if (ret_obj->type == OBJ_FACE && ((Face*)ret_obj)->vol != NULL)
         {
             Face* face = (Face*)ret_obj;
 
-            raw_picked_obj = ret_obj;
             if (face->vol->hdr.lock >= LOCK_FACES)
                 ret_obj = (Object*)face->vol;
 
-            if (!edit_in_groups && face->vol->hdr.parent_group->hdr.parent_group != NULL)
-                ret_obj = find_top_level_parent(&object_tree, (Object*)face->vol->hdr.parent_group);  // this is fast
-            if (ret_obj->lock >= ret_obj->type && !force_pick)
-                ret_obj = NULL; // this object is locked
+            if (face->vol->hdr.parent_group != NULL && face->vol->hdr.parent_group->hdr.parent_group != NULL)
+                parent = (Object *)face->vol->hdr.parent_group;
         }
         else
         {
-            Object* parent = find_top_level_parent(&object_tree, ret_obj);               // this is not so fast
-
-            if (!edit_in_groups && parent != NULL && parent->type == OBJ_GROUP)
-                ret_obj = parent;
+            // Some other sort of object. See if it is in a group.
+            if (ret_obj->parent_group != NULL && ret_obj->parent_group->hdr.parent_group != NULL)
+                parent = (Object *)ret_obj->parent_group;
         }
+
+        // Look up the ownership chain for the topmost locked group.
+        // Return it if found. Otherwise just return the original ret_obj.
+
+        // LOCK_GROUP, VOLUME = ordinary group, locked
+        // LOCK_EDGES, POINTS = edge groups, locked
+        // LOCK_FACES is the only case that is unlocked.
+        if (parent != NULL)
+        {
+            for (; (Object*)parent->parent_group != NULL; parent = (Object*)parent->parent_group)
+            {
+                if (parent->lock != LOCK_FACES)
+                    ret_obj = parent;
+            }
+        }
+
+        // See if the final object (whatever it is) is fully locked and can't be picked.
+        // (unless force picking)
+        if (ret_obj->lock >= ret_obj->type && !force_pick)
+            ret_obj = NULL;
+
+        // Keep a pointer to the immediate parent group of whatever is returned, in case we need to highlight it.
+        if (ret_obj->parent_group != NULL && ret_obj->parent_group->hdr.parent_group != NULL)
+            parent_picked = (Object*)ret_obj->parent_group;
     }
 
     return ret_obj;
 }
 
-
-
-
-#if 0
-    GLuint buffer[512];
-    GLint num_hits;
-    GLuint min_obj = 0;
-    OBJECT priority = OBJ_MAX;
-    Object* obj = NULL;
-    OBJECT min_priority = OBJ_MAX;
-    BOOL edit_in_groups = FALSE;        // This is very problematical wrt. moving objects or sub-components.
-
-    // Find the object under the cursor, if any
-    glSelectBuffer(512, buffer);
-    glRenderMode(GL_SELECT);
-    Draw(TRUE, x_pick, y_pick, 3, 3);
-    num_hits = glRenderMode(GL_RENDER);
-    raw_picked_obj = NULL;
-
-    // if (num_hits < 0)
-    //     DebugBreak();
-    if (num_hits > 0)
-    {
-        int n = 0;
-        int i;
-#ifdef DEBUG_PICK
-        int j, len;
-        char buf[512];
-        size_t size = 512;
-        char* p = buf;
-        char* obj_prefix[] = { "N", "P", "E", "F", "V", "G" };
-#endif
-        GLuint min_depth = 0xFFFFFFFF;
-        GLuint depth = 0xFFFFFFFF;
-
-        for (i = 0; i < num_hits; i++)
-        {
-            int num_objs = buffer[n];
-
-            if (num_objs == 0)
-            {
-                n += 3;         // skip count, min and max
-                continue;       // see if the next hit has anything for us
-            }
-
-            // buffer = {{num objs, min depth, max depth, obj name, ...}, ...}
-
-            // find top-of-stack and what kind of object it is
-            obj = (Object*)buffer[n + num_objs + 2];
-            if (obj == NULL)
-            {
-                // no object worth picking
-                priority = OBJ_MAX;
-            }
-            else
-            {
-                priority = obj->type;
-                depth = buffer[n + 1];
-
-                // special case: if we are in STATE_NONE and we have a face on a fully locked volume,
-                // just look straight through it so we can pick things behind it. However, we must still
-                // be able to right-click things, so don't do it if force_pick is set TRUE.
-                if
-                    (
-                        !force_pick
-                        &&
-                        obj->type == OBJ_FACE
-                        &&
-                        ((Face*)obj)->vol != NULL
-                        &&
-                        ((Face*)obj)->vol->hdr.lock >= LOCK_VOLUME
-                        )
-                {
-                    raw_picked_obj = obj;
-                    obj = NULL;
-                    priority = OBJ_MAX;
-                    depth = 0xFFFFFFFF;
-                }
-            }
-
-            // store the lowest priority object, closest to the viewer
-            if (priority < min_priority || depth < min_depth)
-            {
-                min_depth = buffer[n + 1];
-                min_priority = priority;
-                min_obj = (GLuint)obj; //  buffer[n + num_objs + 2];  // top of stack is last element in buffer
-            }
-
-#ifdef DEBUG_PICK_ALL
-            if (view_debug)
-            {
-                len = sprintf_s(p, size, "objs %d min %x max %x: ", buffer[n], buffer[n + 1], buffer[n + 2]);
-                p += len;
-                size -= len;
-                n += 3;
-                for (j = 0; j < num_objs; j++)
-                {
-                    Object* obj = (Object*)buffer[n];
-
-                    if (obj == NULL)
-                        len = sprintf_s(p, size, "NULL ");
-                    else
-                        len = sprintf_s(p, size, "%s%d ", obj_prefix[obj->type], obj->ID);
-                    p += len;
-                    size -= len;
-                    n++;
-                }
-                len = sprintf_s(p, size, "\r\n");
-                Log(buf);
-                p = buf;
-                size = 512;
-            }
-            else  // not logging, still need to skip the data
-#endif
-            {
-                n += num_objs + 3;
-            }
-        }
-
-        // Some special cases:
-        // If the object is in a group, then return the group.
-        // If the object is a face, but it belongs to a volume that is locked at the
-        // face or volume level, then return the parent volume instead.
-        // Do the face test first, as if we have its volume we can find any parent
-        // group quickly without a full search.
-        obj = (Object*)min_obj;
-        if (obj != NULL)
-        {
-            if (obj->type == OBJ_FACE && ((Face*)obj)->vol != NULL)
-            {
-                Face* face = (Face*)obj;
-
-                raw_picked_obj = obj;
-                if (face->vol->hdr.lock >= LOCK_FACES)
-                    obj = (Object*)face->vol;
-
-                if (!edit_in_groups && face->vol->hdr.parent_group->hdr.parent_group != NULL)
-                    obj = find_top_level_parent(&object_tree, (Object*)face->vol->hdr.parent_group);  // this is fast
-                if (obj->lock >= obj->type && !force_pick)
-                    obj = NULL; // this object is locked
-            }
-            else
-            {
-                Object* parent = find_top_level_parent(&object_tree, obj);               // this is not so fast
-                if (!edit_in_groups && parent != NULL && parent->type == OBJ_GROUP)
-                    obj = parent;
-            }
-        }
-
-#ifdef DEBUG_PICK
-        if (view_debug)
-        {
-            if (obj == NULL)
-                len = sprintf_s(p, size, "Picked: NULL\r\n");
-            else
-                len = sprintf_s(p, size, "Picked: %s%d\r\n", obj_prefix[obj->type], obj->ID);
-
-            Log(buf);
-        }
-#endif
-    }
-
-    return obj;
-#endif // 0
-
-
 // Pick all top-level objects intersecting the given rect and select.
 void
 Pick_all_in_rect(GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
 {
-
+    // Unfinished!
 
 }
 
 
+// Old code
 
 #if 0
     GLuint buffer[4096];

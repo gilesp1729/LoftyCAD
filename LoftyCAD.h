@@ -121,6 +121,7 @@ extern BOOL drawing_changed;
 extern Object *curr_obj;
 extern Object *picked_obj;
 extern Object *raw_picked_obj;
+extern Object* parent_picked;
 extern Point picked_point;
 extern Point new_point;
 extern Point last_point;
