@@ -203,8 +203,10 @@ color(Object* obj, BOOL construction, PRESENTATION pres, BOOL locked)
 {
     float color_decay = 1.0f;
 
+    if (pres & DRAW_HIGHLIGHT_HALO)
+        color_decay = 0;
     if (obj->type == OBJ_FACE)
-        color_decay = ((Face*)obj)->color_decay;
+        color_decay *= ((Face*)obj)->color_decay;
 
     color_as(obj->type, color_decay, construction, pres, locked);
 }
@@ -685,11 +687,9 @@ Draw(void)
                 }
             }
 
-#if 0  // Left this out, as I can't get it to look any good.
             // If we're editing any object in a group, highlight the whole group softly.
             if (highlight_obj != NULL && parent_picked != NULL)
                 link_single(parent_picked, &halo);
-#endif
         }
 
         // Set up the halo if we are doing halo highlighting for smooth extrusions, etc.
