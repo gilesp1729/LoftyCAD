@@ -670,6 +670,7 @@ Draw(void)
             }
             else if (highlight_obj->type == OBJ_EDGE)
             {
+                // Mark out adjacent corner edges.
                 find_corner_edges
                 (
                     highlight_obj,
@@ -685,9 +686,13 @@ Draw(void)
                 {
                     highlight_obj = NULL;
                 }
+
+                // Mark out adjacent points in an edge group, so they are kept together
+                if (highlight_obj != NULL && is_edge_group((Group *)parent_picked))
+                    find_adjacent_points((Edge *)highlight_obj, (Group *)parent_picked, &halo);
             }
 
-            // If we're editing any object in a group, highlight the whole group softly.
+            // If we're editing any object in a group, highlight the whole group softly
             if (highlight_obj != NULL && parent_picked != NULL)
                 link_single(parent_picked, &halo);
         }
@@ -1827,8 +1832,8 @@ Draw(void)
             draw_object(highlight_obj, pres, parent != NULL ? parent->lock : LOCK_NONE);
 
             // Draw parent object so its dimensions are updated and shown 
-            // (edges/faces only; volumes are handled by extrusion)
-            if (parent != NULL && parent != highlight_obj && parent->type <= OBJ_FACE)
+            // (faces only; volumes are handled by extrusion)
+            if (parent != NULL && parent != highlight_obj && parent->type == OBJ_FACE)
             {
                 pres = DRAW_HIGHLIGHT | DRAW_WITH_DIMENSIONS;
                 if (app_state >= STATE_STARTING_EDGE)

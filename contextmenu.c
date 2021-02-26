@@ -123,15 +123,18 @@ contextmenu(Object *picked_obj, POINT pt)
             break;
 
         case OBJ_GROUP:
-            if (parent->lock <= LOCK_EDGES)     // Special treatment for connected edge groups
+            if (is_edge_group((Group *)parent))     // Special treatment for connected edge groups
             {
+                BOOL closed;
+
                 hMenu = LoadMenu(hInst, MAKEINTRESOURCE(IDR_CONTEXT_EDGEGROUP));
                 hMenu = GetSubMenu(hMenu, 0);
                 ModifyMenu(hMenu, 0, MF_BYPOSITION | MF_GRAYED | MF_STRING, 0, buf);
 
                 // The edge group must be closed to make a face, but open to make a path.
-                EnableMenuItem(hMenu, ID_OBJ_MAKEFACE, parent->lock == LOCK_EDGES ? MF_ENABLED : MF_GRAYED);
-                EnableMenuItem(hMenu, ID_OBJ_MAKEPATH, parent->lock == LOCK_POINTS ? MF_ENABLED : MF_GRAYED);
+                closed = is_closed_edge_group((Group *)parent);
+                EnableMenuItem(hMenu, ID_OBJ_MAKEFACE, closed ? MF_ENABLED : MF_GRAYED);
+                EnableMenuItem(hMenu, ID_OBJ_MAKEPATH, !closed ? MF_ENABLED : MF_GRAYED);
             }
             else
             {

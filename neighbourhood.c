@@ -594,6 +594,7 @@ Pick(GLint x_pick, GLint y_pick, BOOL force_pick)
     Plane line;
     float dist = LARGE_COORD;
     float ret_dist = LARGE_COORD;
+    BOOL locked_edge_group;
 
     // Get ray from eye position.
     ray_from_eye(x_pick, y_pick, &line);
@@ -699,27 +700,31 @@ Pick(GLint x_pick, GLint y_pick, BOOL force_pick)
 
         // Look up the ownership chain for the topmost locked group.
         // Return it if found. Otherwise just return the original ret_obj.
-
-        // LOCK_GROUP, VOLUME = ordinary group, locked
-        // LOCK_EDGES, POINTS = edge groups, locked
-        // LOCK_FACES is the only case that is unlocked.
+        locked_edge_group = FALSE;
         if (parent != NULL)
         {
             for (; (Object*)parent->parent_group != NULL; parent = (Object*)parent->parent_group)
             {
-                if (parent->lock != LOCK_FACES)
+                if (parent->lock != LOCK_FACES && parent->lock != LOCK_NONE)
+                {
                     ret_obj = parent;
+                    locked_edge_group = parent->lock == LOCK_EDGES;
+                }
             }
         }
 
         // See if the final object (whatever it is) is fully locked and can't be picked.
-        // (unless force picking)
-        if (ret_obj->lock >= ret_obj->type && !force_pick)
+        // (unless force picking). Special case for locked edge group (LOCK_EDGES)
+        if ((locked_edge_group || ret_obj->lock >= ret_obj->type) && !force_pick)
+        {
             ret_obj = NULL;
-
-        // Keep a pointer to the immediate parent group of whatever is returned, in case we need to highlight it.
-        if (ret_obj->parent_group != NULL && ret_obj->parent_group->hdr.parent_group != NULL)
-            parent_picked = (Object*)ret_obj->parent_group;
+        }
+        else
+        {
+            // Keep a pointer to the immediate parent group of whatever is returned, in case we need to highlight it.
+            if (ret_obj->parent_group != NULL && ret_obj->parent_group->hdr.parent_group != NULL)
+                parent_picked = (Object*)ret_obj->parent_group;
+        }
     }
 
     return ret_obj;

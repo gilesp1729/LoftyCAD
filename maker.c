@@ -7,8 +7,7 @@
 // Routines to build up faces and volumes.
 
 // Search for a closed chain of connected edges (having coincident endpoints within tol)
-// and if found, make a group out of them. If the chain is closed, the group is locked
-// at the edge level; if the chain is found but open, the group is locked at point level.
+// and if found, make a group out of them. The chain may be closed or open.
 Group*
 group_connected_edges(Edge* edge)
 {
@@ -116,10 +115,8 @@ group_connected_edges(Edge* edge)
 
             if (near_pt(end0.edge->endpoints[end0.which_end], end1.edge->endpoints[end1.which_end], snap_tol))
             {
-                // We have closed the chain. Mark the group as a closed edge group by
-                // setting its lock to Edges (it's hacky, but the lock is written to the
-                // file, and it's not used for anything else)
-                group->hdr.lock = LOCK_EDGES;
+                // We have closed the chain.
+                group->hdr.lock = LOCK_POINTS;
                 return group;
             }
         }
@@ -129,9 +126,49 @@ group_connected_edges(Edge* edge)
             break;
     }
 
-    // Return an open edge group.
     group->hdr.lock = LOCK_POINTS;
     return group;
+}
+
+// Check if a group is an edge group. Very cursory check.
+BOOL
+is_edge_group(Group* group)
+{
+    if (group == NULL)
+        return FALSE;
+    if (group->hdr.type != OBJ_GROUP)
+        return FALSE;
+    if (group->hdr.lock > LOCK_EDGES)
+        return FALSE;
+    if (group->obj_list.head == NULL)
+        return FALSE;
+    if (group->obj_list.head->type != OBJ_EDGE)
+        return FALSE;
+
+    return TRUE;
+}
+
+// Check if an edge group is closed.
+BOOL
+is_closed_edge_group(Group* group)
+{
+    Edge* first, * last;
+
+    if (!is_edge_group(group))
+        return FALSE;
+
+    first = (Edge*)group->obj_list.head;
+    last = (Edge*)group->obj_list.tail;
+    if (near_pt(first->endpoints[0], last->endpoints[0], snap_tol))
+        return TRUE;
+    if (near_pt(first->endpoints[0], last->endpoints[1], snap_tol))
+        return TRUE;
+    if (near_pt(first->endpoints[1], last->endpoints[0], snap_tol))
+        return TRUE;
+    if (near_pt(first->endpoints[1], last->endpoints[1], snap_tol))
+        return TRUE;
+
+    return FALSE;
 }
 
 // Make a face object out of a closed group of connected edges, sharing points as we go.
@@ -152,7 +189,7 @@ make_face(Group* group)
 
     // Check that the group is locked at Edges (made by group-connected_edges)
     // meaning that it is closed.
-    if (group->hdr.lock != LOCK_EDGES)
+    if (!is_closed_edge_group(group))
         return NULL;
 
     // Determine normal of points gathered up so far. From this we decide

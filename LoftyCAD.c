@@ -966,7 +966,7 @@ left_click(AUX_EVENTREC *event)
 
     // We cannot select objects that are locked at their own level
     parent = find_parent_object(&object_tree, picked_obj, FALSE);
-    if (parent->lock >= picked_obj->type)
+    if (parent != NULL && parent->lock >= picked_obj->type)
         return;
 
     display_help("Selection");

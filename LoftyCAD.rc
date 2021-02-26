@@ -345,9 +345,9 @@ BEGIN
         MENUITEM SEPARATOR
         POPUP "Locking"
         BEGIN
-            MENUITEM "Group (Locked group)",        ID_LOCKING_GROUP
-            MENUITEM "Volume (Closed group)",       ID_LOCKING_VOLUME
-            MENUITEM "Faces (Open group for editing)", ID_LOCKING_FACES
+            MENUITEM "Group (Locked)",              ID_LOCKING_GROUP
+            MENUITEM "Volume (Closed for editing)", ID_LOCKING_VOLUME
+            MENUITEM "Faces (Open for editing)",    ID_LOCKING_FACES
         END
         POPUP "Rendering Operation"
         BEGIN
@@ -467,6 +467,12 @@ BEGIN
     BEGIN
         MENUITEM "Object type",                 ID_OBJ_OBJECTTYPE, INACTIVE
         MENUITEM SEPARATOR
+        POPUP "Locking"
+        BEGIN
+            MENUITEM "Edges (Locked)",              ID_LOCKING_EDGES
+            MENUITEM "Points (Closed for editing)", ID_LOCKING_POINTS
+            MENUITEM "Unlocked (Open for editing)", ID_LOCKING_UNLOCKED
+        END
         MENUITEM "Reflect",                     ID_OBJ_REFLECT
         MENUITEM "Rotate 90",                   ID_OBJ_ROTATE90
         MENUITEM SEPARATOR
