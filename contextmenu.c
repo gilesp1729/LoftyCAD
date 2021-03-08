@@ -135,6 +135,7 @@ contextmenu(Object *picked_obj, POINT pt)
                 closed = is_closed_edge_group((Group *)parent);
                 EnableMenuItem(hMenu, ID_OBJ_MAKEFACE, closed ? MF_ENABLED : MF_GRAYED);
                 EnableMenuItem(hMenu, ID_OBJ_MAKEPATH, !closed ? MF_ENABLED : MF_GRAYED);
+                EnableMenuItem(hMenu, ID_OBJ_MAKEBODYREV, curr_path != NULL ? MF_ENABLED : MF_GRAYED);
             }
             else
             {

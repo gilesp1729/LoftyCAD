@@ -722,6 +722,7 @@ Pick(GLint x_pick, GLint y_pick, BOOL force_pick)
         else
         {
             // Keep a pointer to the immediate parent group of whatever is returned, in case we need to highlight it.
+            // TODO: make sure this works with components, not just objects directly in the group (e.g. points in an edge group)
             if (ret_obj->parent_group != NULL && ret_obj->parent_group->hdr.parent_group != NULL)
                 parent_picked = (Object*)ret_obj->parent_group;
         }

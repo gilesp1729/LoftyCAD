@@ -430,6 +430,7 @@ void calc_halo_params(Face* face, ListHead *halo);
 void move_halo_around_face(Face* face, float xoffset, float yoffset, float zoffset);
 BOOL find_corner_edges(Object* obj, Object* parent, ListHead *halo);
 void find_adjacent_points(Edge* edge, Group* group, ListHead* halo);
+void find_adjacent_point(Point* pt, Group* group, ListHead* halo);
 void move_corner_edges(ListHead *halo, float xoffset, float yoffset, float zoffset);
 void clear_move_copy_flags(Object *obj);
 Face *clone_face_reverse(Face *face);
