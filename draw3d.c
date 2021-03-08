@@ -686,17 +686,6 @@ Draw(void)
                 {
                     highlight_obj = NULL;
                 }
-
-                // Mark out adjacent points in an edge group, so they are kept together
-                if (highlight_obj != NULL && is_edge_group((Group *)parent_picked))
-                    find_adjacent_points((Edge *)highlight_obj, (Group *)parent_picked, &halo);
-            }
-            else if (highlight_obj->type == OBJ_POINT)
-            {
-                // Mark out an adjacent point in an edge group, so they are kept together
-                // TODO - this doesn't work, because the points don't show up as being in the parent edge group.
-                if (highlight_obj != NULL && is_edge_group((Group*)parent_picked))
-                    find_adjacent_point((Point*)highlight_obj, (Group*)parent_picked, &halo);
             }
 
             // If we're editing any object in a group, highlight the whole group softly

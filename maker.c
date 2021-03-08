@@ -74,6 +74,10 @@ group_connected_edges(Edge* edge)
                 delink_group(obj, &object_tree);
                 link_group(obj, group);
 
+                // Share the endpoints. Return unused points to the free list.
+                purge_obj((Object *)e->endpoints[0]);
+                e->endpoints[0] = end0.edge->endpoints[end0.which_end];
+
                 // Update end0 to point to the other end of the new edge we just added
                 end0.edge = e;
                 end0.which_end = 1;
@@ -86,6 +90,8 @@ group_connected_edges(Edge* edge)
             {
                 delink_group(obj, &object_tree);
                 link_group(obj, group);
+                purge_obj((Object*)e->endpoints[1]);
+                e->endpoints[1] = end0.edge->endpoints[end0.which_end];
                 end0.edge = e;
                 end0.which_end = 0;
                 n_edges++;
@@ -97,6 +103,8 @@ group_connected_edges(Edge* edge)
             {
                 delink_group(obj, &object_tree);
                 link_tail_group(obj, group);
+                purge_obj((Object*)e->endpoints[0]);
+                e->endpoints[0] = end1.edge->endpoints[end1.which_end];
                 end1.edge = e;
                 end1.which_end = 1;
                 n_edges++;
@@ -107,6 +115,8 @@ group_connected_edges(Edge* edge)
             {
                 delink_group(obj, &object_tree);
                 link_tail_group(obj, group);
+                purge_obj((Object*)e->endpoints[1]);
+                e->endpoints[1] = end1.edge->endpoints[end1.which_end];
                 end1.edge = e;
                 end1.which_end = 0;
                 n_edges++;
@@ -116,6 +126,8 @@ group_connected_edges(Edge* edge)
             if (near_pt(end0.edge->endpoints[end0.which_end], end1.edge->endpoints[end1.which_end], snap_tol))
             {
                 // We have closed the chain.
+                purge_obj((Object*)end0.edge->endpoints[end0.which_end]);
+                end0.edge->endpoints[end0.which_end] = end1.edge->endpoints[end1.which_end];
                 group->hdr.lock = LOCK_POINTS;
                 return group;
             }
@@ -159,19 +171,85 @@ is_closed_edge_group(Group* group)
 
     first = (Edge*)group->obj_list.head;
     last = (Edge*)group->obj_list.tail;
-    if (near_pt(first->endpoints[0], last->endpoints[0], snap_tol))
+    if (first->endpoints[0] == last->endpoints[0])
         return TRUE;
-    if (near_pt(first->endpoints[0], last->endpoints[1], snap_tol))
+    if (first->endpoints[0] == last->endpoints[1])
         return TRUE;
-    if (near_pt(first->endpoints[1], last->endpoints[0], snap_tol))
+    if (first->endpoints[1] == last->endpoints[0])
         return TRUE;
-    if (near_pt(first->endpoints[1], last->endpoints[1], snap_tol))
+    if (first->endpoints[1] == last->endpoints[1])
         return TRUE;
 
     return FALSE;
 }
 
-// Make a face object out of a closed group of connected edges, sharing points as we go.
+// Disconnect the shared points of all the edges in an edge group, in preparation
+// for ungrouping them.
+void
+disconnect_edges_in_group(Group* group)
+{
+    Edge* e, *next_edge;
+    Point* pt;
+    int initial, final;
+
+    if (!is_edge_group(group))
+        return;
+
+    // Find the initial point
+    e = (Edge*)group->obj_list.head;
+    next_edge = (Edge*)group->obj_list.head->next;
+    if (e->endpoints[0] == next_edge->endpoints[0])
+    {
+        initial = 1;
+        pt = e->endpoints[0];
+    }
+    else if (e->endpoints[0] == next_edge->endpoints[1])
+    {
+        initial = 1;
+        pt = e->endpoints[0];
+    }
+    else if (e->endpoints[1] == next_edge->endpoints[0])
+    {
+        initial = 0;
+        pt = e->endpoints[1];
+    }
+    else if (e->endpoints[1] == next_edge->endpoints[1])
+    {
+        initial = 0;
+        pt = e->endpoints[1];
+    }
+    else
+    {
+        return;     // edges are not connected
+    }
+
+    for (; e->hdr.next != NULL; e = next_edge)
+    {
+        next_edge = (Edge*)e->hdr.next;
+
+        if (next_edge->endpoints[0] == pt)
+        {
+            next_edge->endpoints[0] = point_newp(pt);
+            final = 1;
+        }
+        else if (next_edge->endpoints[1] == pt)
+        {
+            next_edge->endpoints[1] = point_newp(pt);
+            final = 0;
+        }
+        else
+        {
+            return;
+        }
+        pt = next_edge->endpoints[final];
+    }
+
+    e = (Edge*)group->obj_list.head;
+    if (pt == e->endpoints[initial])
+        e->endpoints[initial] = point_newpv(pt);
+}
+
+// Make a face object out of a closed group of connected edges.
 // The original group is deleted and the face is put into the object tree.
 Face*
 make_face(Group* group)
@@ -187,8 +265,7 @@ make_face(Group* group)
     FACE face_type;
     EDGE edge_types[4], min_type, max_type;
 
-    // Check that the group is locked at Edges (made by group-connected_edges)
-    // meaning that it is closed.
+    // Check (quickly) that the group is closed.
     if (!is_closed_edge_group(group))
         return NULL;
 
@@ -198,22 +275,22 @@ make_face(Group* group)
     // anything else)
     e = (Edge*)group->obj_list.head;
     next_edge = (Edge*)group->obj_list.head->next;
-    if (near_pt(e->endpoints[0], next_edge->endpoints[0], snap_tol))
+    if (e->endpoints[0] == next_edge->endpoints[0])
     {
         initial = 1;
         pt = e->endpoints[0];
     }
-    else if (near_pt(e->endpoints[0], next_edge->endpoints[1], snap_tol))
+    else if (e->endpoints[0] == next_edge->endpoints[1])
     {
         initial = 1;
         pt = e->endpoints[0];
     }
-    else if (near_pt(e->endpoints[1], next_edge->endpoints[0], snap_tol))
+    else if (e->endpoints[1] == next_edge->endpoints[0])
     {
         initial = 0;
         pt = e->endpoints[1];
     }
-    else if (near_pt(e->endpoints[1], next_edge->endpoints[1], snap_tol))
+    else if (e->endpoints[1] == next_edge->endpoints[1])
     {
         initial = 0;
         pt = e->endpoints[1];
@@ -237,29 +314,23 @@ make_face(Group* group)
         // Strip construction edges, as we can't consistently create them
         e->type &= ~EDGE_CONSTRUCTION;
 
-        if (near_pt(next_edge->endpoints[0], pt, snap_tol))
+        if (next_edge->endpoints[0] == pt)
         {
-            next_edge->endpoints[0] = pt;       // share the point
             link_tail((Object*)next_edge->endpoints[0], &plist);
             final = 1;
         }
-        else if (near_pt(next_edge->endpoints[1], pt, snap_tol))
+        else if (next_edge->endpoints[1] == pt)
         {
-            next_edge->endpoints[1] = pt;
             link_tail((Object*)next_edge->endpoints[1], &plist);
             final = 0;
         }
         else
         {
-            return FALSE;
+            return NULL;
         }
         pt = next_edge->endpoints[final];
         n_edges++;
     }
-
-    // Share the last point back to the beginning
-    ASSERT(near_pt(((Edge*)group->obj_list.head)->endpoints[initial], pt, snap_tol), "The edges don't close at the starting point");
-    next_edge->endpoints[final] = ((Edge*)group->obj_list.head)->endpoints[initial];
 
     // Get the normal and see if we need to reverse. This depends on the face being generally
     // in one plane (it may be a bit curved, but a full circle cylinder will confuse things..)
@@ -361,7 +432,7 @@ make_face(Group* group)
             face->edges = realloc(face->edges, face->max_edges * sizeof(Edge*));
     }
 
-    // Populate the edge list, sharing points along the way. 
+    // Populate the edge list. 
     if (reverse)
     {
         face->initial_point = next_edge->endpoints[final];
@@ -535,11 +606,13 @@ make_body_of_revolution(Group* group, BOOL negative)
     Point top_centre, bottom_centre;
     Plane axis, group_norm, top_axis, outward;
     int idx, initial, final, n_steps;
-    BOOL open = group->hdr.lock == LOCK_POINTS;
+    BOOL open = !is_closed_edge_group(group);
     BOOL wind_reverse;
     float r, rad;
 
     // Some checks first.
+    if (!is_edge_group(group))
+        return NULL;
     if (curr_path == NULL)
         return NULL;
     if (curr_path->type == OBJ_GROUP)
@@ -550,28 +623,28 @@ make_body_of_revolution(Group* group, BOOL negative)
     if (path->hdr.type != OBJ_EDGE)
         return NULL;
 
-    // Join the edges up by sharing their endpoints and find the initial point index. 
+    // Find the initial point index. 
     // If there is only one edge, arbitrarily use endpoint 0 for the initial point.
     e = (Edge*)group->obj_list.head;
     ne = (Edge*)group->obj_list.head->next;
     if (ne != NULL)
     {
-        if (near_pt(e->endpoints[0], ne->endpoints[0], snap_tol))
+        if (e->endpoints[0] == ne->endpoints[0])
         {
             initial = 1;
             pt = e->endpoints[0];
         }
-        else if (near_pt(e->endpoints[0], ne->endpoints[1], snap_tol))
+        else if (e->endpoints[0] == ne->endpoints[1])
         {
             initial = 1;
             pt = e->endpoints[0];
         }
-        else if (near_pt(e->endpoints[1], ne->endpoints[0], snap_tol))
+        else if (e->endpoints[1] == ne->endpoints[0])
         {
             initial = 0;
             pt = e->endpoints[1];
         }
-        else if (near_pt(e->endpoints[1], ne->endpoints[1], snap_tol))
+        else if (e->endpoints[1] == ne->endpoints[1])
         {
             initial = 0;
             pt = e->endpoints[1];
@@ -612,15 +685,13 @@ make_body_of_revolution(Group* group, BOOL negative)
         // Strip construction edges, as we can't consistently create them
         e->type &= ~EDGE_CONSTRUCTION;
 
-        if (near_pt(ne->endpoints[0], pt, snap_tol))
+        if (ne->endpoints[0] == pt)
         {
-            ne->endpoints[0] = pt;       // share the point
             link_tail((Object*)ne->endpoints[0], &plist);
             final = 1;
         }
-        else if (near_pt(ne->endpoints[1], pt, snap_tol))
+        else if (ne->endpoints[1] == pt)
         {
-            ne->endpoints[1] = pt;
             link_tail((Object*)ne->endpoints[1], &plist);
             final = 0;
         }
@@ -637,12 +708,6 @@ make_body_of_revolution(Group* group, BOOL negative)
             rad = r;
     }
 
-    // If closed, share the last point back to the beginning.
-    if (!open)
-    {
-        ASSERT(near_pt(((Edge*)group->obj_list.head)->endpoints[initial], pt, snap_tol), "The edges don't close at the starting point");
-        ne->endpoints[final] = ((Edge*)group->obj_list.head)->endpoints[initial];
-    }
     r = dist_point_to_perp_line(ne->endpoints[final], path, &bottom_centre);
     if (r > rad)
         rad = r;

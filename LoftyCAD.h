@@ -321,10 +321,11 @@ void contextmenu(Object *picked_obj, POINT pt);
 void load_materials_menu(HMENU hMenu, BOOL show_all_checks, int which_check);
 void enable_rendered_view_items(void);
 
-// Face and volume building (maker.c)
+// Edge group, face and volume building (maker.c)
 Group* group_connected_edges(Edge * edge);
 BOOL is_edge_group(Group * group);
 BOOL is_closed_edge_group(Group * group);
+void disconnect_edges_in_group(Group * group);
 Face* make_face(Group * group);
 void insert_chamfer_round(Point * pt, Face * parent, float size, EDGE edge_type, BOOL restricted);
 Volume* make_body_of_revolution(Group * group, BOOL negative);

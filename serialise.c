@@ -572,15 +572,8 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
 #endif // 0
         else if (strcmp(tok, "{") == 0 || strcmp(tok, "BEGIN") == 0)
         {
-#if 0
-            // Stack the object ID being constructed
-            tok = strtok_s(NULL, " \t\n", &nexttok);
-            id = atoi(tok) + id_offset;
-            check_and_grow(id, &object, &objsize);
-            stack[stkptr++] = id;
-#else
+            // Push the stack
             stack[stkptr++] = 0;
-#endif
         }
         else if (strcmp(tok, "{GROUP") == 0 || strcmp(tok, "BEGINGROUP") == 0)
         {
@@ -746,7 +739,6 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
             edge->hdr.ID = id;
             edge->hdr.lock = lock;
             object[id] = (Object *)edge;
-          //  ASSERT(stkptr > 0 && id == stack[stkptr - 1], "Badly formed edge record");
             stkptr--;
             if (stkptr == 0)
                 link_tail_group((Object *)edge, tree);
@@ -864,7 +856,6 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
             face->hdr.lock = lock;
             face->hdr.show_dims = dims;
             object[id] = (Object *)face;
-           // ASSERT(stkptr > 0 && id == stack[stkptr - 1], "Badly formed face record");
             stkptr--;
             if (stkptr == 0)
                 link_tail_group((Object *)face, tree);
@@ -1018,7 +1009,6 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
 
             calc_extrude_heights(vol);
 
-          //  ASSERT(stkptr > 0 && id == stack[stkptr - 1], "Badly formed volume record");
             stkptr--;
             if (stkptr == 0)
                 link_tail_group((Object *)vol, tree);

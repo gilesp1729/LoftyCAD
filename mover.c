@@ -591,6 +591,7 @@ finished:
     return rc;
 }
 
+#if 0
 // Find adjacent points to an edge in an edge group, so they can be moved together.
 // The group is assumed to be a valid edge group.
 void
@@ -646,6 +647,7 @@ find_adjacent_point(Point* pt, Group* group, ListHead* halo)
         }
     }
 }
+#endif // 0
 
 
 // Move any points, edges or faces that have been put in the halo list 

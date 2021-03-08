@@ -382,6 +382,8 @@ contextmenu(Object *picked_obj, POINT pt)
     case ID_OBJ_UNGROUP:
         group = (Group*)picked_obj;
         delink_group(picked_obj, &object_tree);
+        if (is_edge_group(group))
+            disconnect_edges_in_group(group);
         for (o = group->obj_list.head; o != NULL; o = o_next)
         {
             o_next = o->next;
