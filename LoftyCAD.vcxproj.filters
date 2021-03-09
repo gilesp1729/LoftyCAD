@@ -323,5 +323,8 @@
     <None Include="face5.cur">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="face6.cur">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

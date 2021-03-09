@@ -191,6 +191,7 @@
     <None Include="face3.cur" />
     <None Include="face4.cur" />
     <None Include="face5.cur" />
+    <None Include="face6.cur" />
     <None Include="resize1.cur" />
     <None Include="resize2.cur" />
   </ItemGroup>

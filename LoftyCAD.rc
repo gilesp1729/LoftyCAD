@@ -863,6 +863,8 @@ IDC_FACE4               CURSOR                  "face4.cur"
 
 IDC_FACE5               CURSOR                  "face5.cur"
 
+IDC_FACE6               CURSOR                  "face6.cur"
+
 
 /////////////////////////////////////////////////////////////////////////////
 //

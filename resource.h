@@ -56,7 +56,6 @@
 #define IDS_ROTATE                      123
 #define IDS_TEXT                        124
 #define IDS_EXTRUDE_LOCAL               125
-#define DS_HEX                          126
 #define IDS_HEX                         126
 #define IDS_CONST_HEX                   127
 #define IDR_MAINFRAME                   128
@@ -112,6 +111,7 @@
 #define IDC_RESIZE2                     171
 #define IDC_FACE4                       172
 #define IDC_FACE5                       173
+#define IDC_FACE6                       174
 #define IDC_DEBUG                       1002
 #define IDB_CLEARDEBUG                  1003
 #define IDC_DIMENSIONS                  1004
