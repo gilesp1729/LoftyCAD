@@ -131,11 +131,15 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 break;
 
             case IDB_CONST_RECT:
-            case IDB_CONST_HEX:
                 construction = TRUE;
             case IDB_RECT:
-            case IDB_HEX:
                 change_state(STATE_STARTING_RECT);
+                break;
+
+            case IDB_CONST_HEX:
+                construction = TRUE;
+            case IDB_HEX:
+                change_state(STATE_STARTING_HEX);
                 break;
 
             case IDB_CONST_CIRCLE:

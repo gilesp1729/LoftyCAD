@@ -768,6 +768,12 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
                 if (constr)
                     type = FACE_RECT | FACE_CONSTRUCTION;
             }
+            else if (subtype_of(tok, "HEX", &constr, &dims))
+            {
+                type = FACE_HEX;
+                if (constr)
+                    type = FACE_HEX | FACE_CONSTRUCTION;
+            }
             else if (subtype_of(tok, "CIRCLE", &constr, &dims)) // test this first so "C" matches circle and not cylinder
             {
                 type = FACE_CIRCLE;

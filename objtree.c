@@ -159,7 +159,7 @@ Face *face_new(FACE face_type, Plane norm)
     face->type = face_type;
     face->normal = norm;
 
-    // Have a stab at allocating the edge array
+    // Have a stab at allocating the edge array. Always a power of 2.
     switch (face_type & ~FACE_CONSTRUCTION)
     {
     case FACE_TRI:
@@ -170,6 +170,11 @@ Face *face_new(FACE face_type, Plane norm)
     case FACE_CYLINDRICAL:
     default:                // barrel/bezier types here too
         face->max_edges = 4;
+        break;
+
+    case FACE_HEX:
+        face->hdr.show_dims = face_type & FACE_CONSTRUCTION;
+        face->max_edges = 8;
         break;
 
     case FACE_FLAT:

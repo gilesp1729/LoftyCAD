@@ -379,6 +379,7 @@ Object* pick_face(Face* f, LOCK parent_lock, Plane* line, float* dist)
     {
     case FACE_TRI:
     case FACE_RECT:
+    case FACE_HEX:
     case FACE_FLAT:
     case FACE_CIRCLE:
         // If a flat face is turning away, no need to consider it. We also don't

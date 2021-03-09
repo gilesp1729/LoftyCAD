@@ -477,6 +477,7 @@ left_down(AUX_EVENTREC *event)
 
     case STATE_STARTING_EDGE:
     case STATE_STARTING_RECT:
+    case STATE_STARTING_HEX:
     case STATE_STARTING_CIRCLE:
     case STATE_STARTING_BEZIER:
     case STATE_STARTING_ARC:
@@ -672,6 +673,7 @@ left_down(AUX_EVENTREC *event)
         break;
 
     case STATE_DRAWING_RECT:
+    case STATE_DRAWING_HEX:
     case STATE_DRAWING_CIRCLE:
     case STATE_DRAWING_ARC:
     case STATE_DRAWING_BEZIER:
@@ -842,12 +844,70 @@ left_up(AUX_EVENTREC *event)
             rf->view_valid = FALSE;
             gen_view_list_face(rf);
         }
+
+        goto add_new_object;
+
+    case STATE_DRAWING_HEX:
+        if (curr_obj != NULL)
+        {
+            Point* p00, * p01, * p02, * p03, *p04, *p05;
+            EDGE type;
+
+            // Create the edges for the hex here as a special case, as the order
+            // is not known till the mouse is released.
+            // Generate six edges, and put them on the face's edge list.
+            rf = (Face*)curr_obj;
+            p00 = (Point*)rf->view_list.head;
+            p01 = (Point*)p00->hdr.next;
+            p02 = (Point*)p01->hdr.next;
+            p03 = (Point*)p02->hdr.next;
+            p04 = (Point*)p03->hdr.next;
+            p05 = (Point*)p04->hdr.next;
+
+            type = EDGE_STRAIGHT | (construction ? EDGE_CONSTRUCTION : 0);
+            e = (Edge*)edge_new(type);
+            e->endpoints[0] = p00;
+            e->endpoints[1] = p01;
+            rf->edges[0] = e;
+            e = (Edge*)edge_new(type);
+            e->endpoints[0] = p01;
+            e->endpoints[1] = p02;
+            rf->edges[1] = e;
+            e = (Edge*)edge_new(type);
+            e->endpoints[0] = p02;
+            e->endpoints[1] = p03;
+            rf->edges[2] = e;
+            e = (Edge*)edge_new(type);
+            e->endpoints[0] = p03;
+            e->endpoints[1] = p04;
+            rf->edges[3] = e;
+            e = (Edge*)edge_new(type);
+            e->endpoints[0] = p04;
+            e->endpoints[1] = p05;
+            rf->edges[4] = e;
+            e = (Edge*)edge_new(type);
+            e->endpoints[0] = p05;
+            e->endpoints[1] = p00;
+            rf->edges[5] = e;
+
+            // Take the points out of the face's view list, as they are about
+            // to be freed when the view list is regenerated.
+            rf->view_list.head = NULL;
+            rf->view_list.tail = NULL;
+
+            // the face now has its edges. Generate its view list and the normal
+            rf->n_edges = 6;
+            rf->view_valid = FALSE;
+            gen_view_list_face(rf);
+        }
+
         // fallthrough
     case STATE_DRAWING_EDGE:
     case STATE_DRAWING_CIRCLE:
     case STATE_DRAWING_BEZIER:
     case STATE_DRAWING_ARC:
     case STATE_DRAWING_TEXT:
+    add_new_object:
         // add new object to the object tree
         if (curr_obj != NULL)
         {
@@ -886,6 +946,7 @@ left_up(AUX_EVENTREC *event)
         break;
 
     case STATE_STARTING_RECT:
+    case STATE_STARTING_HEX:
     case STATE_STARTING_CIRCLE:
     case STATE_STARTING_ARC:
     case STATE_STARTING_BEZIER:

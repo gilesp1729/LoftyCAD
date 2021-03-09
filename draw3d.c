@@ -731,8 +731,8 @@ Draw(void)
         // position to check for gross movement.
         if (pt.x != left_mouseX || pt.y != left_mouseY)
         {
-            Point   p1, p3;
-            Point   *p00, *p01, *p02, *p03;
+            Point   p1, p2, p3, p4;
+            Point   *p00, *p01, *p02, *p03, *p04, *p05;
             Point d1, d3, dn, da;
             Edge *e;
             ArcEdge *ae;
@@ -1060,7 +1060,7 @@ Draw(void)
                     snap_to_angle(picked_plane, &picked_point, &new_point, 45);
                 else if (snapping_to_angle)
                     snap_to_angle(picked_plane, &picked_point, &new_point, angle_snap);
-                snap_to_grid(picked_plane, &new_point, key_status& AUX_CONTROL);
+                snap_to_grid(picked_plane, &new_point, key_status & AUX_CONTROL);
 
                 // generate the other corners. The rect goes in the 
                 // order picked-p1-new-p3. 
@@ -1240,6 +1240,132 @@ Draw(void)
                     p03->x = p3.x;
                     p03->y = p3.y;
                     p03->z = p3.z;
+
+                    update_view_list_2D(rf);
+                }
+
+                break;
+
+            case STATE_DRAWING_HEX:
+                if (picked_plane == NULL)
+                    assign_picked_plane(pt);
+                if (picked_plane == NULL)
+                    break;
+
+                // Move the opposite corner point
+                intersect_ray_plane(pt.x, pt.y, picked_plane, &new_point);
+                if (key_status & AUX_SHIFT)
+                    snap_to_angle(picked_plane, &picked_point, &new_point, 45);
+                else if (snapping_to_angle)
+                    snap_to_angle(picked_plane, &picked_point, &new_point, angle_snap);
+                snap_to_grid(picked_plane, &new_point, key_status & AUX_CONTROL);
+
+                // Generate the other corners. The hex is in the picked plane,
+                // and goes in the order picked-p1-p2-new-p3-p4.
+                dn.x = new_point.x - picked_point.x;
+                dn.y = new_point.y - picked_point.y;
+                dn.z = new_point.z - picked_point.z;
+                dist = length(&new_point, &picked_point);
+
+                grad0.A = dn.x;
+                grad0.B = dn.y;
+                grad0.C = dn.z;
+                normalise_plane(&grad0);
+                plcross(&grad0, picked_plane, &grad1);
+
+                p1.x = picked_point.x + dist * (0.25f * grad0.A + 0.433f * grad1.A);
+                p1.y = picked_point.y + dist * (0.25f * grad0.B + 0.433f * grad1.B);
+                p1.z = picked_point.z + dist * (0.25f * grad0.C + 0.433f * grad1.C);
+                p2.x = picked_point.x + dist * (0.75f * grad0.A + 0.433f * grad1.A);
+                p2.y = picked_point.y + dist * (0.75f * grad0.B + 0.433f * grad1.B);
+                p2.z = picked_point.z + dist * (0.75f * grad0.C + 0.433f * grad1.C);
+                p3.x = picked_point.x + dist * (0.75f * grad0.A - 0.433f * grad1.A);
+                p3.y = picked_point.y + dist * (0.75f * grad0.B - 0.433f * grad1.B);
+                p3.z = picked_point.z + dist * (0.75f * grad0.C - 0.433f * grad1.C);
+                p4.x = picked_point.x + dist * (0.25f * grad0.A - 0.433f * grad1.A);
+                p4.y = picked_point.y + dist * (0.25f * grad0.B - 0.433f * grad1.B);
+                p4.z = picked_point.z + dist * (0.25f * grad0.C - 0.433f * grad1.C);
+
+                // Make sure the normal vector is pointing towards the eye,
+                // swapping points if necessary.
+                if (normal3(&p1, &picked_point, &p4, &norm))
+                {
+#ifdef DEBUG_DRAW_RECT_NORMAL
+                    {
+                        char buf[256];
+                        sprintf_s(buf, 256, "%f %f %f\r\n", norm.A, norm.B, norm.C);
+                        Log(buf);
+                    }
+#endif
+                    if (dot(norm.A, norm.B, norm.C, picked_plane->A, picked_plane->B, picked_plane->C) < 0)
+                    {
+                        Point swap = p1;
+                        p1 = p4;
+                        p4 = swap;
+                        swap = p2;
+                        p2 = p3;
+                        p3 = swap;
+                    }
+                }
+
+                // If first move, create the hex here.
+                // Create a special face with no edges but a 4-point view list.
+                // Only create the edges when completed, as we have to keep the anticlockwise
+                // order of the points no matter how the mouse is dragged around.
+                if (curr_obj == NULL)
+                {
+                    rf = face_new(FACE_HEX | (construction ? FACE_CONSTRUCTION : 0), *picked_plane);
+
+                    // generate six points for the view list
+                    p00 = point_newp(&picked_point);
+                    p01 = point_newp(&p1);
+                    p02 = point_newp(&p2);
+                    p03 = point_newp(&new_point);
+                    p04 = point_newp(&p3);
+                    p05 = point_newp(&p4);
+
+                    // put the points into the view list. Only the head/next used for now
+                    rf->view_list.head = (Object*)p00;
+                    rf->initial_point = p00;
+                    p00->hdr.next = (Object*)p01;
+                    p01->hdr.next = (Object*)p02;
+                    p02->hdr.next = (Object*)p03;
+                    p03->hdr.next = (Object*)p04;
+                    p04->hdr.next = (Object*)p05;
+
+                    // set it valid, so Draw doesn't try to overwrite it
+                    rf->view_valid = TRUE;
+
+                    curr_obj = (Object*)rf;
+                }
+                else
+                {
+                    rf = (Face*)curr_obj;
+
+                    // Dig out the points that need updating, and update them
+                    p00 = (Point*)rf->view_list.head;
+                    p01 = (Point*)p00->hdr.next;
+                    p02 = (Point*)p01->hdr.next;
+                    p03 = (Point*)p02->hdr.next;
+                    p04 = (Point*)p03->hdr.next;
+                    p05 = (Point*)p04->hdr.next;
+
+                    // Update the points
+                    p01->x = p1.x;
+                    p01->y = p1.y;
+                    p01->z = p1.z;
+                    p02->x = p2.x;
+                    p02->y = p2.y;
+                    p02->z = p2.z;
+                    p03->x = new_point.x;
+                    p03->y = new_point.y;
+                    p03->z = new_point.z;
+                    p04->x = p3.x;
+                    p04->y = p3.y;
+                    p04->z = p3.z;
+                    p05->x = p4.x;
+                    p05->y = p4.y;
+                    p05->z = p4.z;
 
                     update_view_list_2D(rf);
                 }

@@ -618,6 +618,7 @@ gen_view_list_face(Face* face)
     {
     case FACE_TRI:
     case FACE_RECT:
+    case FACE_HEX:
     case FACE_CIRCLE:
     case FACE_FLAT:
         // For flat faces, construct the view list directly, as there is only one facet. 
