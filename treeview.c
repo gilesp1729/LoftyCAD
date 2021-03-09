@@ -7,8 +7,8 @@
 
 // The names follow the ones from serialise.c, but cased differently to be more readable.
 char* edge_names[] = { "Straight", "Arc", "Bezier" };
-char* face_names[] = { "Triangle", "Rect", "Circle", "Cylindrical", "Flat", "Barrel", "Bezier" };
-char* vol_names[] = { "Triangle Mesh", "Rect Prism", "Circle", "Cylinder", "Flat Prism", "Volume of Revolution", "Bezier Surface" };
+char* face_names[] = { "Triangle", "Rect", "Hex", "Circle", "Flat", "Cylindrical", "Barrel", "Bezier" };
+char* vol_names[] = { "Triangle Mesh", "Rect Prism", "Circle", "Flat Prism", "Cylinder", "Volume of Revolution", "Bezier Surface" };
 
 // Indexed by enum OPERATION
 char *op_string[OP_MAX] = { "U", "^", "-", " " };

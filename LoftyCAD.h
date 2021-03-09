@@ -31,6 +31,7 @@ typedef enum STATE
     // In starting states, snapping targets are displayed at the mouse position.
     STATE_STARTING_EDGE,        // Starting to draw (toolbar button pressed, but mouse not yet down)
     STATE_STARTING_RECT,
+    STATE_STARTING_HEX,
     STATE_STARTING_CIRCLE,
     STATE_STARTING_BEZIER,
     STATE_STARTING_ARC,
@@ -42,6 +43,7 @@ typedef enum STATE
 
     STATE_DRAWING_EDGE,         // Actually drawing something (left mouse down and dragging)
     STATE_DRAWING_RECT,         // NOTE: These must be in the same order as the starting states
+    STATE_DRAWING_HEX,
     STATE_DRAWING_CIRCLE,
     STATE_DRAWING_BEZIER,
     STATE_DRAWING_ARC,

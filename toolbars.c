@@ -84,9 +84,11 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         hWndToolbar = hWnd;
         LoadAndDisplayIcon(hWnd, IDI_EDGE, IDB_EDGE, IDS_EDGE);
         LoadAndDisplayIcon(hWnd, IDI_RECT, IDB_RECT, IDS_RECT);
+        LoadAndDisplayIcon(hWnd, IDI_HEX, IDB_HEX, IDS_HEX);
         LoadAndDisplayIcon(hWnd, IDI_CIRCLE, IDB_CIRCLE, IDS_CIRCLE);
         LoadAndDisplayIcon(hWnd, IDI_CONST_EDGE, IDB_CONST_EDGE, IDS_CONST_EDGE);
         LoadAndDisplayIcon(hWnd, IDI_CONST_RECT, IDB_CONST_RECT, IDS_CONST_RECT);
+        LoadAndDisplayIcon(hWnd, IDI_CONST_HEX, IDB_CONST_HEX, IDS_CONST_HEX);
         LoadAndDisplayIcon(hWnd, IDI_CONST_CIRCLE, IDB_CONST_CIRCLE, IDS_CONST_CIRCLE);
         LoadAndDisplayIcon(hWnd, IDI_BEZIER_EDGE, IDB_BEZIER_EDGE, IDS_BEZIER_EDGE);
         LoadAndDisplayIcon(hWnd, IDI_ARC_EDGE, IDB_ARC_EDGE, IDS_ARC_EDGE);
@@ -129,8 +131,10 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 break;
 
             case IDB_CONST_RECT:
+            case IDB_CONST_HEX:
                 construction = TRUE;
             case IDB_RECT:
+            case IDB_HEX:
                 change_state(STATE_STARTING_RECT);
                 break;
 

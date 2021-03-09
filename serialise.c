@@ -31,12 +31,12 @@ char* locktypes[] = { "N", "P", "E", "F", "V", "G" };
 #if 0
 char* objname[] = { "(none)", "POINT", "}EDGE", "}FACE", "}VOLUME", "}GROUP" };
 char *edgetypes[] = { "STRAIGHT", "ARC", "BEZIER" };
-char *facetypes[] = { "TRI", "RECT", "CIRCLE", "CYLINDRICAL", "FLAT", "BARREL", "BEZIER" };
+char *facetypes[] = { "TRI", "RECT", "HEX", "CIRCLE", "FLAT", "CYLINDRICAL", "BARREL", "BEZIER" };
 char *optypes[] = { "UNION", "INTER", "DIFF", "NONE" };
 #else // compact versions
 char* objname[] = { "(none)", "P", "}E", "}F", "}V", "}G" };
 char* edgetypes[] = { "S", "ARC", "BEZ" };
-char* facetypes[] = { "T", "R", "C", "CYL", "F", "BAR", "BEZ" };
+char* facetypes[] = { "T", "R", "H", "C", "F", "CYL", "BAR", "BEZ" };
 char* optypes[] = { "U", "I", "D", "N" };
 #endif
 

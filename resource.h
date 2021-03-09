@@ -26,6 +26,8 @@
 #define IDB_ROTATE                      22
 #define IDB_TEXT                        23
 #define IDB_EXTRUDE_LOCAL               24
+#define IDB_HEX                         25
+#define IDB_CONST_HEX                   26
 #define IDD_LOFTYCAD_DIALOG             102
 #define IDS_APP_TITLE                   103
 #define IDD_ABOUTBOX                    103
@@ -54,6 +56,9 @@
 #define IDS_ROTATE                      123
 #define IDS_TEXT                        124
 #define IDS_EXTRUDE_LOCAL               125
+#define DS_HEX                          126
+#define IDS_HEX                         126
+#define IDS_CONST_HEX                   127
 #define IDR_MAINFRAME                   128
 #define IDD_TOOLBAR                     129
 #define IDI_RECT                        131
@@ -87,8 +92,10 @@
 #define IDI_EXTRUDE_LOCAL               161
 #define IDC_EDGE1                       162
 #define IDD_MATERIALS                   162
+#define IDI_HEX                         162
 #define IDC_EDGE2                       163
 #define IDR_OPENORIMPORT                163
+#define IDI_CONST_HEX                   163
 #define IDC_EDGE3                       164
 #define IDR_CONTEXT_GROUP               164
 #define IDC_FACE                        165

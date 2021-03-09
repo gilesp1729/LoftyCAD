@@ -262,6 +262,8 @@ BEGIN
     IDS_ROTATE              "Drag a point on an object to rotate it about its centre in the facing plane."
     IDS_TEXT                "Click and drag to place text.\r\n\r\nThe text is placed on the current face, or on the default plane."
     IDS_EXTRUDE_LOCAL       "Drag a curved face to move its points along their local normals."
+    IDS_HEX                 "Drag a hexagon (corner to corner)\r\n\r\nThe hexagon is drawn on the current face, or on the default plane."
+    IDS_CONST_HEX           "Drag a construction hexagon.\r\n\r\nThe hexagon is drawn on the current face, or on the default plane."
 END
 
 #endif    // English (United States) resources
@@ -321,6 +323,10 @@ IDI_ROTATE              ICON                    "icon-rotate.ico"
 IDI_TEXT                ICON                    "icon-text.ico"
 
 IDI_EXTRUDE_LOCAL       ICON                    "icon-extrudelocal.ico"
+
+IDI_HEX                 ICON                    "icon-hex.ico"
+
+IDI_CONST_HEX           ICON                    "icon-const-hex.ico"
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -497,10 +503,10 @@ FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
     PUSHBUTTON      "RECT",IDB_RECT,6,65,27,25,BS_ICON | BS_CENTER | BS_VCENTER | BS_FLAT
     PUSHBUTTON      "EDGE",IDB_EDGE,6,23,27,25,BS_ICON | BS_CENTER | BS_VCENTER | BS_FLAT
-    PUSHBUTTON      "CIRCLE",IDB_CIRCLE,60,65,27,25,BS_ICON | BS_CENTER | BS_VCENTER | BS_FLAT
+    PUSHBUTTON      "CIRCLE",IDB_CIRCLE,115,65,27,25,BS_ICON | BS_CENTER | BS_VCENTER | BS_FLAT
     PUSHBUTTON      "C.RECT",IDB_CONST_RECT,33,65,27,25,BS_ICON | BS_CENTER | BS_VCENTER | BS_FLAT
     PUSHBUTTON      "C.EDGE",IDB_CONST_EDGE,33,23,27,25,BS_ICON | BS_CENTER | BS_VCENTER | BS_FLAT
-    PUSHBUTTON      "C.CIRCLE",IDB_CONST_CIRCLE,87,65,27,25,BS_ICON | BS_CENTER | BS_VCENTER | BS_FLAT
+    PUSHBUTTON      "C.CIRCLE",IDB_CONST_CIRCLE,142,65,27,25,BS_ICON | BS_CENTER | BS_VCENTER | BS_FLAT
     PUSHBUTTON      "TOP",IDB_XY,216,8,27,25,BS_ICON | BS_CENTER | BS_VCENTER | BS_FLAT
     PUSHBUTTON      "FRONT",IDB_YZ,216,33,27,25,BS_ICON | BS_CENTER | BS_VCENTER | BS_FLAT
     PUSHBUTTON      "EXTRUDE",IDB_EXTRUDE,6,109,27,25,BS_ICON | BS_CENTER | BS_VCENTER | BS_FLAT
@@ -513,13 +519,15 @@ BEGIN
     PUSHBUTTON      "RENDER",IDB_RENDERED,216,157,27,25,BS_ICON | BS_CENTER | BS_VCENTER | BS_FLAT
     PUSHBUTTON      "SCALE",IDB_SCALE,6,152,27,25,BS_ICON | BS_CENTER | BS_VCENTER | BS_FLAT
     PUSHBUTTON      "ROTATE",IDB_ROTATE,33,152,27,25,BS_ICON | BS_CENTER | BS_VCENTER | BS_FLAT
-    PUSHBUTTON      "TEXT",IDB_TEXT,113,65,27,25,BS_ICON | BS_CENTER | BS_VCENTER | BS_FLAT
+    PUSHBUTTON      "TEXT",IDB_TEXT,168,65,27,25,BS_ICON | BS_CENTER | BS_VCENTER | BS_FLAT
     PUSHBUTTON      "EXT.LOC",IDB_EXTRUDE_LOCAL,33,109,27,25,BS_ICON | BS_CENTER | BS_VCENTER | BS_FLAT
     LTEXT           "Edges:",IDC_STATIC,10,11,23,8
     LTEXT           "Faces:",IDC_STATIC,11,54,23,8
     LTEXT           "Extrusion:",IDC_STATIC,11,97,34,8
     LTEXT           "Transforms:",IDC_STATIC,11,140,42,8
     LTEXT           "Views:",IDC_STATIC,185,17,23,8
+    PUSHBUTTON      "HEX",IDB_HEX,60,65,27,25,BS_ICON | BS_CENTER | BS_VCENTER | BS_FLAT
+    PUSHBUTTON      "C.HEX",IDB_CONST_HEX,88,65,27,25,BS_ICON | BS_CENTER | BS_VCENTER | BS_FLAT
 END
 
 IDD_DIMENSIONS DIALOGEX 0, 0, 180, 28

@@ -279,6 +279,12 @@
     <Image Include="icon-extrudelocal.ico">
       <Filter>Resource Files</Filter>
     </Image>
+    <Image Include="icon-hex.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="icon-const-hex.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <None Include="cursor1.cur">

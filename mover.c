@@ -591,65 +591,6 @@ finished:
     return rc;
 }
 
-#if 0
-// Find adjacent points to an edge in an edge group, so they can be moved together.
-// The group is assumed to be a valid edge group.
-void
-find_adjacent_points(Edge* edge, Group* group, ListHead* halo)
-{
-    Edge* e;
-
-    for (e = (Edge *)group->obj_list.head; e != NULL; e = (Edge *)e->hdr.next)
-    {
-        if (e == edge)
-            continue;
-
-        if
-        (
-            near_pt(e->endpoints[0], edge->endpoints[0], snap_tol)
-            ||
-            near_pt(e->endpoints[0], edge->endpoints[1], snap_tol)
-        )
-        link_single((Object *)e->endpoints[0], halo);
-    
-        if
-        (
-            near_pt(e->endpoints[1], edge->endpoints[0], snap_tol)
-            ||
-            near_pt(e->endpoints[1], edge->endpoints[1], snap_tol)
-        )
-        link_single((Object*)e->endpoints[1], halo);
-    }
-}
-
-// As above, but for a single point. 
-void 
-find_adjacent_point(Point* pt, Group* group, ListHead* halo)
-{
-    Edge* e;
-
-    for (e = (Edge*)group->obj_list.head; e != NULL; e = (Edge*)e->hdr.next)
-    {
-        if (e->endpoints[0] == pt)
-            continue;
-        if (e->endpoints[1] == pt)
-            continue;
-
-        if (near_pt(e->endpoints[0], pt, snap_tol))
-        {
-            link_single((Object*)e->endpoints[0], halo);
-            return;
-        }
-        if (near_pt(e->endpoints[1], pt, snap_tol))
-        {
-            link_single((Object*)e->endpoints[1], halo);
-            return;
-        }
-    }
-}
-#endif // 0
-
-
 // Move any points, edges or faces that have been put in the halo list 
 // by find_corner_edges or find_adjacent_points.
 // Ignore any smooth factors, and ignore any groups in the halo list.

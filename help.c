@@ -18,6 +18,7 @@ char *state_key[STATE_MAX] =
     "Drawing_Edge",
     "Drawing_Face",
     "Drawing_Face",
+    "Drawing_Face",
     "Drawing_Edge",
     "Drawing_Edge",
     "Drawing_Extrude",
@@ -27,6 +28,7 @@ char *state_key[STATE_MAX] =
     "Drawing_Rotate",
 
     "Drawing_Edge",
+    "Drawing_Face",
     "Drawing_Face",
     "Drawing_Face",
     "Drawing_Edge",
@@ -51,7 +53,8 @@ struct
 
     { (HINSTANCE)1, MAKEINTRESOURCE(IDC_EDGE1), NULL },
     { (HINSTANCE)1, MAKEINTRESOURCE(IDC_FACE1), NULL },
-    { (HINSTANCE)1, MAKEINTRESOURCE(IDC_FACE2), NULL },
+    { (HINSTANCE)1, MAKEINTRESOURCE(IDC_FACE1), NULL }, // Hex same as Rect for the moment
+    { (HINSTANCE)1, MAKEINTRESOURCE(IDC_FACE2), NULL }, 
     { (HINSTANCE)1, MAKEINTRESOURCE(IDC_EDGE3), NULL },
     { (HINSTANCE)1, MAKEINTRESOURCE(IDC_EDGE2), NULL },
     { (HINSTANCE)1, MAKEINTRESOURCE(IDC_FACE3), NULL },
@@ -62,7 +65,8 @@ struct
 
     { (HINSTANCE)1, MAKEINTRESOURCE(IDC_EDGE1), NULL },
     { (HINSTANCE)1, MAKEINTRESOURCE(IDC_FACE1), NULL },
-    { (HINSTANCE)1, MAKEINTRESOURCE(IDC_FACE2), NULL },
+    { (HINSTANCE)1, MAKEINTRESOURCE(IDC_FACE1), NULL },// Hex same as Rect for the moment
+    { (HINSTANCE)1, MAKEINTRESOURCE(IDC_FACE2), NULL },  
     { (HINSTANCE)1, MAKEINTRESOURCE(IDC_EDGE3), NULL },
     { (HINSTANCE)1, MAKEINTRESOURCE(IDC_EDGE2), NULL },
     { (HINSTANCE)1, MAKEINTRESOURCE(IDC_FACE3), NULL },

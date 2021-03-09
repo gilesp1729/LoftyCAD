@@ -6,11 +6,11 @@
 ArcEdge *
 first_arc_edge(Face* f)
 {
-    ASSERT(f->type == FACE_CIRCLE, "Face must be a circle");
-    if (f->edges[0]->type == EDGE_ARC)
+    ASSERT((f->type & ~FACE_CONSTRUCTION) == FACE_CIRCLE, "Face must be a circle");
+    if ((f->edges[0]->type & ~EDGE_CONSTRUCTION) == EDGE_ARC)
         return (ArcEdge*)f->edges[0];
 
-    ASSERT(f->edges[1]->type == EDGE_ARC, "Something is wrong with the circle face");
+    ASSERT((f->edges[1]->type & ~EDGE_CONSTRUCTION) == EDGE_ARC, "Something is wrong with the circle face");
     return (ArcEdge*)f->edges[1];
 }
 
@@ -61,6 +61,7 @@ has_dims(Object *obj)
         case FACE_CYLINDRICAL:
         case FACE_BARREL:
         case FACE_BEZIER:
+        default:
             return FALSE;
         }
         break;
