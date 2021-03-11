@@ -44,6 +44,7 @@ has_dims(Object *obj)
         switch (((Face *)obj)->type & ~FACE_CONSTRUCTION)
         {
         case FACE_RECT:
+        case FACE_HEX:
         case FACE_CIRCLE:
             return TRUE;
 
@@ -138,7 +139,7 @@ process_messages(void)
 void
 update_dims(Object *obj, char *buf)
 {
-    Edge *e, *e0, *e1, *e2, *e3;
+    Edge *e, *e0, *e1, *e2, *e3, *e4, *e5;
     ArcEdge *ae, *ae1, *ae2;
     Face *f, *c1, *c2;
     Volume *vol;
@@ -147,6 +148,7 @@ update_dims(Object *obj, char *buf)
     char *nexttok = NULL;
     char *tok;
     Object *parent;
+    Point centre;
     double matrix[16], v[4], res[4];
 
     // parse the changed string
@@ -220,6 +222,28 @@ update_dims(Object *obj, char *buf)
             new_length(e2->endpoints[1], e2->endpoints[0], len);
             new_length(e3->endpoints[1], e3->endpoints[0], len2);
             new_length(e1->endpoints[0], e1->endpoints[1], len2);
+            break;
+
+        case FACE_HEX:
+            e0 = f->edges[0];
+            e1 = f->edges[1];
+            e2 = f->edges[2];
+            e3 = f->edges[3];
+            e4 = f->edges[4];
+            e5 = f->edges[5];
+            len = (float)atof(buf);
+            if (len == 0)
+                break;
+            len /= (0.866f * 2);
+            centre.x = (e0->endpoints[0]->x + e3->endpoints[0]->x) / 2;
+            centre.y = (e0->endpoints[0]->y + e3->endpoints[0]->y) / 2;
+            centre.z = (e0->endpoints[0]->z + e3->endpoints[0]->z) / 2;
+            new_length(&centre, e0->endpoints[0], len);
+            new_length(&centre, e1->endpoints[0], len);
+            new_length(&centre, e2->endpoints[0], len);
+            new_length(&centre, e3->endpoints[0], len);
+            new_length(&centre, e4->endpoints[0], len);
+            new_length(&centre, e5->endpoints[0], len);
             break;
 
         case FACE_CIRCLE:
@@ -319,7 +343,7 @@ char *
 get_dims_string(Object *obj, char buf[64])
 {
     char buf2[64], buf3[64];
-    Point *p0, *p1, *p2;
+    Point *p0, *p1, *p2, *p3;
     Edge *e, *e1;
     ArcEdge *ae, *ae1, *ae2;
     Face *f, *c1, *c2;
@@ -392,7 +416,7 @@ get_dims_string(Object *obj, char buf[64])
             switch (f->type & ~FACE_CONSTRUCTION)
             {
             case FACE_RECT:
-                // use view list here, then it works for drawing rects
+                // use view list here, then it works for drawing rects or hexes
                 // protect against NULL view list (transitory)
                 p0 = (Point *)f->view_list.head;
                 if (p0 == NULL)
@@ -402,6 +426,17 @@ get_dims_string(Object *obj, char buf[64])
                 sprintf_s(buf, 64, "%s,%s mm",
                           display_rounded(buf, length(p0, p1)),
                           display_rounded(buf2, length(p1, p2)));
+                break;
+
+            case FACE_HEX:
+                p0 = (Point*)f->view_list.head;
+                if (p0 == NULL)
+                    break;
+                p1 = (Point*)p0->hdr.next;
+                p2 = (Point*)p1->hdr.next;
+                p3 = (Point*)p2->hdr.next;
+                sprintf_s(buf, 64, "%s mm",
+                    display_rounded(buf, 0.866f * length(p0, p3)));
                 break;
 
             case FACE_CIRCLE:
@@ -616,7 +651,7 @@ show_dims_on(Object *obj, PRESENTATION pres, LOCK parent_lock)
             break;
 
         default:
-            // use view list here if there are no edges yet, then it works for rects being drawn in.
+            // use view list here if there are no edges yet, then it works for rects or hexes being drawn in.
             if (f->n_edges == 0)
             {
                 p0 = (Point *)f->view_list.head;

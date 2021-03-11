@@ -66,7 +66,8 @@ BOOL normalise_point(Point *p);
 BOOL normalised(Plane* p);
 BOOL normalise_plane(Plane* p);
 
-void new_length(Point *p0, Point *p1, float len);
+void new_length(Point* p0, Point* p1, float len);
+void new_length_mid(Point* p0, Point* p1, float len);
 
 void snap_to_grid(Plane *plane, Point *point, BOOL inhibit_snapping);
 void snap_to_scale(float *length, BOOL inhibit_snapping);

@@ -794,7 +794,7 @@ look_at_centre_d(Point c, Point p1, Plane n, double matrix[16])
 
 // make the line p0-p1 a new length of len, by moving p1.
 void
-new_length(Point *p0, Point *p1, float len)
+new_length(Point* p0, Point* p1, float len)
 {
     Point v;
 
@@ -805,6 +805,29 @@ new_length(Point *p0, Point *p1, float len)
     p1->x = p0->x + v.x * len;
     p1->y = p0->y + v.y * len;
     p1->z = p0->z + v.z * len;
+}
+
+// make the line p0-p1 a new length of len, by moving both p0 and p1
+// about the line's midpoint.
+void
+new_length_mid(Point* p0, Point* p1, float len)
+{
+    Point v;
+
+    v.x = p1->x - p0->x;
+    v.y = p1->y - p0->y;
+    v.z = p1->z - p0->z;
+    normalise_point(&v);
+    p1->x = p0->x + v.x * len;
+    p1->y = p0->y + v.y * len;
+    p1->z = p0->z + v.z * len;
+    len /= 2;
+    p0->x -= v.x * len;
+    p0->y -= v.y * len;
+    p0->z -= v.z * len;
+    p1->x -= v.x * len;
+    p1->y -= v.y * len;
+    p1->z -= v.z * len;
 }
 
 // set 3x3 to identity
