@@ -97,6 +97,7 @@ contextmenu(Object *picked_obj, POINT pt)
             ModifyMenu(hMenu, 0, MF_BYPOSITION | MF_GRAYED | MF_STRING, 0, buf);
 
             EnableMenuItem(hMenu, ID_LOCKING_VOLUME, MF_GRAYED);
+            EnableMenuItem(hMenu, ID_OBJ_MAKEEDGEGROUP, ((Face *)parent)->vol == NULL ? MF_ENABLED : MF_GRAYED);
             break;
 
         case OBJ_VOLUME:
@@ -365,6 +366,17 @@ contextmenu(Object *picked_obj, POINT pt)
         }
         break;
 
+    case ID_OBJ_MAKEEDGEGROUP:
+        delink_group(picked_obj, &object_tree);         // TODO this and other places - don't assume we're in the object tree!
+        face = (Face*)picked_obj;
+        group = group_new();
+        for (i = 0; i < face->n_edges; i++)
+            link_tail_group((Object *)face->edges[i], group);   // TODO watch circles - the normal comes out wrong
+        group->hdr.lock = LOCK_POINTS;
+        link_group((Object *)group, &object_tree);
+        group_changed = TRUE;
+        break;
+
     case ID_OBJ_GROUPSELECTED:
         group = group_new();
         link_group((Object*)group, &object_tree);
@@ -381,7 +393,7 @@ contextmenu(Object *picked_obj, POINT pt)
 
     case ID_OBJ_UNGROUP:
         group = (Group*)picked_obj;
-        delink_group(picked_obj, &object_tree);
+        delink_group(picked_obj, &object_tree);         // TODO this and other places - don't assume we're in the object tree!
         if (is_edge_group(group))
             disconnect_edges_in_group(group);
         for (o = group->obj_list.head; o != NULL; o = o_next)

@@ -724,7 +724,7 @@ left_up(AUX_EVENTREC *event)
         vec[0] = fabsf(nvec[0]);
         vec[1] = fabsf(nvec[1]);
         vec[2] = fabsf(nvec[2]);
-        if (vec[0] > vec[1] && vec[0] > vec[2])
+        if (vec[0] > vec[1] && vec[0] > vec[2])             // TODO check these - sometimes the normal of a new face comes out backwards, also in rotation code
         {
             if (nvec[0] > 0)
             {

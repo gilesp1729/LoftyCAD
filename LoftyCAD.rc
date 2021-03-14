@@ -424,6 +424,7 @@ BEGIN
         MENUITEM "Always show dimensions",      ID_OBJ_ALWAYSSHOWDIMS
         MENUITEM "Enter dimensions...",         ID_OBJ_ENTERDIMENSIONS
         MENUITEM SEPARATOR
+        MENUITEM "Make Edge Group from Face",   ID_OBJ_MAKEEDGEGROUP
         MENUITEM "Edit text...",                ID_OBJ_EDITTEXT
         MENUITEM "Chamfer corner",              ID_OBJ_CHAMFERCORNER
         MENUITEM "Round corner",                ID_OBJ_ROUNDCORNER
