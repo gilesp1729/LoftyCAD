@@ -144,7 +144,7 @@ update_dims(Object *obj, char *buf)
     Face *f, *c1, *c2;
     Volume *vol;
     double angle;
-    float len, len2, rad;
+    float len, len2, rad, ecc;
     char *nexttok = NULL;
     char *tok;
     Object *parent;
@@ -183,10 +183,16 @@ update_dims(Object *obj, char *buf)
             else
                 angle = angle / RAD;
 
+            tok = strtok_s(NULL, " ,\t\n", &nexttok);
+            ecc = (float)atof(tok);
+            if (ecc == 0)
+                ecc = 1.0f;
+            ae->ecc = ecc;
+
             // transform arc to XY plane, centre at origin, endpoint 0 on x axis
             look_at_centre_d(*ae->centre, *e->endpoints[0], ae->normal, matrix);
             v[0] = len * cos(angle);
-            v[1] = len * sin(angle);
+            v[1] = len * ae->ecc * sin(angle);
             v[2] = 0;
             v[3] = 1;
             mat_mult_by_col_d(matrix, v, res);
@@ -238,6 +244,7 @@ update_dims(Object *obj, char *buf)
             centre.x = (e0->endpoints[0]->x + e3->endpoints[0]->x) / 2;
             centre.y = (e0->endpoints[0]->y + e3->endpoints[0]->y) / 2;
             centre.z = (e0->endpoints[0]->z + e3->endpoints[0]->z) / 2;
+
             new_length(&centre, e0->endpoints[0], len);
             new_length(&centre, e1->endpoints[0], len);
             new_length(&centre, e2->endpoints[0], len);
@@ -247,13 +254,20 @@ update_dims(Object *obj, char *buf)
             break;
 
         case FACE_CIRCLE:
-            e = f->edges[0];
-            ae = (ArcEdge *)e;
-            rad = (float)atof(buf);
+            ae = first_arc_edge(f);
+            e = (Edge*)ae;
+            tok = strtok_s(buf, " ,\t\n", &nexttok);
+            rad = (float)atof(tok);
             if (rad == 0)
                 break;
+            tok = strtok_s(NULL, " ,\t\n", &nexttok);
+            ecc = (float)atof(tok);
+            if (ecc == 0)
+                ecc = 1.0f;
+
             new_length(ae->centre, e->endpoints[0], rad);
             new_length(ae->centre, e->endpoints[1], rad);
+            ae->ecc = ecc;
             break;
         }
         break;
@@ -279,6 +293,7 @@ update_dims(Object *obj, char *buf)
             len = (float)atof(tok);
             if (len == 0)
                 break;
+
             new_length(ae1->centre, e1->endpoints[0], rad);
             new_length(ae1->centre, e1->endpoints[1], rad);
             new_length(ae2->centre, e2->endpoints[0], rad);
@@ -381,10 +396,11 @@ get_dims_string(Object *obj, char buf[64])
                 angle = RAD * angle3(e->endpoints[0], ae->centre, e->endpoints[1], &ae->normal);
             if (angle < 0)
                 angle += 360;
-            sprintf_s(buf, 64, "%s,%s mmR/deg",
-                      display_rounded(buf, length(ae->centre, e->endpoints[0])),
-                      display_rounded(buf2, (float)angle)
-                      );
+            sprintf_s(buf, 64, "%s,%s,%s mmR/deg/ecc",
+                    display_rounded(buf, length(ae->centre, e->endpoints[0])),
+                    display_rounded(buf2, (float)angle),
+                    display_rounded(buf3, ae->ecc)
+                    );
             break;
         }
         break;
@@ -442,7 +458,9 @@ get_dims_string(Object *obj, char buf[64])
             case FACE_CIRCLE:
                 ae = first_arc_edge(f);
                 e = (Edge*)ae;
-                sprintf_s(buf, 64, "%s mmR", display_rounded(buf2, length(ae->centre, e->endpoints[0])));
+                sprintf_s(buf, 64, "%s,%s mmR/ecc", 
+                    display_rounded(buf, length(ae->centre, e->endpoints[0])),
+                    display_rounded(buf2, ae->ecc));
                 break;
             }
         }

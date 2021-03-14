@@ -1823,7 +1823,7 @@ gen_view_list_arc(ArcEdge *ae)
         for (t = 0, i = 0; t > theta; t -= step, i++)
         {
             v[0] = rad * cos(t);
-            v[1] = rad * sin(t);
+            v[1] = rad * ae->ecc * sin(t);
             v[2] = 0;
             v[3] = 1;
             mat_mult_by_col_d(matrix, v, res);
@@ -1849,7 +1849,7 @@ gen_view_list_arc(ArcEdge *ae)
         for (t = 0, i = 0; t < theta; t += step, i++)
         {
             v[0] = rad * cos(t);
-            v[1] = rad * sin(t);
+            v[1] = rad * ae->ecc * sin(t);
             v[2] = 0;
             v[3] = 1;
             mat_mult_by_col_d(matrix, v, res);

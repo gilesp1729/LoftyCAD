@@ -221,6 +221,7 @@ typedef struct ArcEdge
                                     // to endpoint 1, as seen from the facing plane.
                                     // If FALSE they go anticlockwise.
     struct Point    *centre;        // The centre of the arc.
+    float           ecc;            // Eccentricity (1.0 for a circle, taking line centre-endpoint[0] as being 1)
 } ArcEdge;
 
 typedef struct BezierEdge

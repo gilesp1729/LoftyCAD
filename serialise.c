@@ -155,11 +155,12 @@ serialise_obj(Object *obj, FILE *f, int level)
 
         case EDGE_ARC:
             ae = (ArcEdge *)obj;
-            fprintf_s(f, "%s %d %f %f %f %d %f %d\n",
+            fprintf_s(f, "%s %d %f %f %f %d %f %d %f\n",
                       ae->clockwise ? "C" : "AC",
                       ae->centre->hdr.ID,
                       ae->normal.A, ae->normal.B, ae->normal.C,
-                      e->stepping, e->stepsize, e->nsteps);
+                      e->stepping, e->stepsize, e->nsteps,
+                      ae->ecc);
             break;
 
         case EDGE_BEZIER:
@@ -697,6 +698,11 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
                     edge->stepsize = (float)atof(tok);
                     tok = strtok_s(NULL, " \t\n", &nexttok);
                     edge->nsteps = atoi(tok);
+                    tok = strtok_s(NULL, " \t\n", &nexttok);
+                    if (tok != NULL)
+                        ae->ecc = (float)atof(tok);
+                    else
+                        ae->ecc = 1.0f;
                 }
             }
             else if (subtype_of(tok, "BEZIER", &constr, &dims))

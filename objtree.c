@@ -147,6 +147,9 @@ Edge *edge_new(EDGE edge_type)
     e->hdr.show_dims = edge_type & EDGE_CONSTRUCTION;
     e->type = edge_type;
 
+    if ((edge_type & ~EDGE_CONSTRUCTION) == EDGE_ARC)
+        ((ArcEdge*)e)->ecc = 1.0f;
+
     return e;
 }
 

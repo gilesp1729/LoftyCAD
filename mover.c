@@ -1280,24 +1280,36 @@ move_smoothed_point(Point* p, float xoffset, float yoffset, float zoffset)
     move_obj((Object*)p, xoffset * smooth, yoffset * smooth, zoffset * smooth);
 }
 
-// Calculate the centroid of the central face (just do a quick simple average for now)
+// Calculate the centroid of the central face (just do a quick simple average for now,
+// except for circles, which go about their centre)
 void
 centroid_face(Face *face, Point *cent)
 {
     int i;
 
-    cent->x = cent->y = cent->z = 0;
-    for (i = 0; i < face->n_edges; i++)
+    if ((face->type & ~FACE_CONSTRUCTION) == FACE_CIRCLE)
     {
-        Edge* e = face->edges[i];
+        ArcEdge* ae = first_arc_edge(face);
 
-        cent->x += e->endpoints[0]->x;
-        cent->y += e->endpoints[0]->y;
-        cent->z += e->endpoints[0]->z;
+        cent->x = ae->centre->x;
+        cent->y = ae->centre->y;
+        cent->z = ae->centre->z;
     }
-    cent->x /= face->n_edges;
-    cent->y /= face->n_edges;
-    cent->z /= face->n_edges;
+    else
+    {
+        cent->x = cent->y = cent->z = 0;
+        for (i = 0; i < face->n_edges; i++)
+        {
+            Edge* e = face->edges[i];
+
+            cent->x += e->endpoints[0]->x;
+            cent->y += e->endpoints[0]->y;
+            cent->z += e->endpoints[0]->z;
+        }
+        cent->x /= face->n_edges;
+        cent->y /= face->n_edges;
+        cent->z /= face->n_edges;
+    }
 }
 
 // Calculate the movement factors for the points in a halo around a face.
