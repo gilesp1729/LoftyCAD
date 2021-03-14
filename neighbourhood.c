@@ -4,6 +4,11 @@
 
 // Neighbourhood functions - use for picking when dragging a 3D object.
 
+// Distance biases for tie-breaking picks.
+#define BIAS_FACE   (0.1f * tolerance)
+#define BIAS_EDGE   (0.2f * tolerance)
+#define BIAS_POINT  (0.3f * tolerance)
+
 // Helpers for point-in-polygon test.
 // From Sunday, "Inclusion of a point in a polygon" http://geomalgorithms.com/a03-_inclusion.html
 // isLeft(): tests if a point is Left|On|Right of an infinite line.
@@ -293,20 +298,20 @@ find_in_neighbourhood(Object *match_obj, Group *tree)
 // Picking helpers: return an intersecting object with a ray. Also return the distance
 // to the ray's near plane (the refpt of the Plane) to help with sorting.
 // For faces, only viewable faces are considered (normal towards eye)
-Object* pick_point(Point* p, LOCK parent_lock, Plane* line, float *dist)
+Object* pick_point(Point* p, LOCK parent_lock, Plane* line, float *dist, float bias)
 {
     Point point;
 
     if (dist_point_to_ray(p, line, &point) < snap_tol)
     {
-        *dist = length(&line->refpt, &point);
+        *dist = length(&line->refpt, &point) - bias;
         return (Object*)p;
     }
 
     return NULL;
 }
 
-Object* pick_edge(Edge* e, LOCK parent_lock, Plane* line, float* dist)
+Object* pick_edge(Edge* e, LOCK parent_lock, Plane* line, float* dist, float bias)
 {
     Point point;
     Point* p;
@@ -317,10 +322,10 @@ Object* pick_edge(Edge* e, LOCK parent_lock, Plane* line, float* dist)
     // Check if the endpoints are hit first.
     if (parent_lock < LOCK_POINTS)
     {
-        test = pick_point(e->endpoints[0], parent_lock, line, dist);
+        test = pick_point(e->endpoints[0], parent_lock, line, dist, BIAS_POINT);
         if (test != NULL)
             return test;
-        test = pick_point(e->endpoints[1], parent_lock, line, dist);
+        test = pick_point(e->endpoints[1], parent_lock, line, dist, BIAS_POINT);
         if (test != NULL)
             return test;
     }
@@ -330,24 +335,24 @@ Object* pick_edge(Edge* e, LOCK parent_lock, Plane* line, float* dist)
     case EDGE_STRAIGHT:
         if (dist_ray_to_edge(line, e, &point) < snap_tol)
         {
-            *dist = length(&line->refpt, &point);
+            *dist = length(&line->refpt, &point) - bias;
             return (Object*)e;
         }
         break;
 
     case EDGE_ARC:
         ae = (ArcEdge*)e;
-        test = pick_point(ae->centre, parent_lock, line, dist);
+        test = pick_point(ae->centre, parent_lock, line, dist, BIAS_POINT);
         if (test != NULL)
             return test;
         goto test_edge;
 
     case EDGE_BEZIER:
         be = (BezierEdge*)e;
-        test = pick_point(be->ctrlpoints[0], parent_lock, line, dist);
+        test = pick_point(be->ctrlpoints[0], parent_lock, line, dist, BIAS_POINT);
         if (test != NULL)
             return test;
-        test = pick_point(be->ctrlpoints[1], parent_lock, line, dist);
+        test = pick_point(be->ctrlpoints[1], parent_lock, line, dist, BIAS_POINT);
         if (test != NULL)
             return test;
 
@@ -358,7 +363,7 @@ Object* pick_edge(Edge* e, LOCK parent_lock, Plane* line, float* dist)
         {
             if (dist_ray_to_segment(line, p, (Point *)p->hdr.next, &point) < snap_tol)
             {
-                *dist = length(&line->refpt, &point);
+                *dist = length(&line->refpt, &point) - bias;
                 return (Object*)e;
             }
         }
@@ -368,7 +373,7 @@ Object* pick_edge(Edge* e, LOCK parent_lock, Plane* line, float* dist)
     return NULL;
 }
 
-Object* pick_face(Face* f, LOCK parent_lock, Plane* line, float* dist)
+Object* pick_face(Face* f, LOCK parent_lock, Plane* line, float* dist, float bias)
 {
     Point point;
     Point* p;
@@ -394,7 +399,7 @@ Object* pick_face(Face* f, LOCK parent_lock, Plane* line, float* dist)
 
             for (i = 0; i < f->n_edges; i++)
             {
-                Object* test = pick_edge(f->edges[i], parent_lock, line, dist);
+                Object* test = pick_edge(f->edges[i], parent_lock, line, dist, BIAS_EDGE);
 
                 if (test != NULL)
                     return test;
@@ -426,7 +431,7 @@ Object* pick_face(Face* f, LOCK parent_lock, Plane* line, float* dist)
 
             if (point_in_polygon2D(pt, f->view_list2D, f->n_view2D))
             {
-                *dist = length(&line->refpt, &point);
+                *dist = length(&line->refpt, &point) - bias;
                 return (Object*)f;
             }
         }
@@ -442,7 +447,7 @@ Object* pick_face(Face* f, LOCK parent_lock, Plane* line, float* dist)
 
             for (i = 0; i < f->n_edges; i++)
             {
-                Object* test = pick_edge(f->edges[i], parent_lock, line, dist);
+                Object* test = pick_edge(f->edges[i], parent_lock, line, dist, BIAS_EDGE);
 
                 if (test != NULL)
                     return test;
@@ -526,7 +531,7 @@ Object* pick_face(Face* f, LOCK parent_lock, Plane* line, float* dist)
                 facet2D[4] = facet2D[0];        // close the polygon
                 if (point_in_polygon2D(pt, facet2D, 4))
                 {
-                    *dist = length(&line->refpt, &point);
+                    *dist = length(&line->refpt, &point) - bias;
                     return (Object*)f;
                 }
             }
@@ -549,21 +554,21 @@ Object* pick_object(Object* obj, LOCK parent_lock, Plane* line, float* dist)
     switch (obj->type)
     {
     case OBJ_POINT:
-        test = pick_point((Point*)obj, parent_lock, line, dist);
+        test = pick_point((Point*)obj, parent_lock, line, dist, BIAS_POINT);
         break;
 
     case OBJ_EDGE:
-        test = pick_edge((Edge*)obj, parent_lock, line, dist);
+        test = pick_edge((Edge*)obj, parent_lock, line, dist, BIAS_EDGE);
         break;
 
     case OBJ_FACE:
-        test = pick_face((Face*)obj, parent_lock, line, dist);
+        test = pick_face((Face*)obj, parent_lock, line, dist, BIAS_FACE);
         break;
 
     case OBJ_VOLUME:
         for (f = (Face*)((Volume*)obj)->faces.head; f != NULL; f = (Face*)f->hdr.next)
         {
-            test = pick_face(f, parent_lock, line, dist);
+            test = pick_face(f, parent_lock, line, dist, 0);
             if (test != NULL)
                 break;
         }
@@ -680,6 +685,12 @@ Pick(GLint x_pick, GLint y_pick, BOOL force_pick)
     parent_picked = NULL;
     if (ret_obj != NULL)
     {
+#ifdef DEBUG_PICK
+        char buf[128];
+
+        sprintf_s(buf, 128, "Raw picked obj %d dist %f\r\n", ret_obj->ID, ret_dist);
+        Log(buf);
+#endif
         raw_picked_obj = ret_obj;
         parent = NULL;
         if (ret_obj->type == OBJ_FACE && ((Face*)ret_obj)->vol != NULL)
