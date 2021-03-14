@@ -117,7 +117,9 @@ float effective_angle;
 float eff_sx, eff_sy, eff_sz;
 
 
-// Standard planes
+// Standard planes.
+// Note that when indices for XZ and -XZ are chosen, the actual plane is negated.
+// This is because the other axis (the Y) is negated relative to a RH coordiate system.
 Plane plane_XY = { 0, };
 Plane plane_XZ = { 0, };
 Plane plane_YZ = { 0, };
@@ -125,6 +127,7 @@ Plane plane_mXY = { 0, };
 Plane plane_mXZ = { 0, };
 Plane plane_mYZ = { 0, };
 
+// Quaternions for the standard planes.
 float quat_XY[4] = { 0, 0, 0, 1 };
 float quat_YZ[4] = { -0.5f, -0.5f, -0.5f, -0.5f };
 float quat_XZ[4] = { -0.707f, 0, 0, -0.707f };
@@ -724,7 +727,7 @@ left_up(AUX_EVENTREC *event)
         vec[0] = fabsf(nvec[0]);
         vec[1] = fabsf(nvec[1]);
         vec[2] = fabsf(nvec[2]);
-        if (vec[0] > vec[1] && vec[0] > vec[2])             // TODO check these - sometimes the normal of a new face comes out backwards, also in rotation code
+        if (vec[0] > vec[1] && vec[0] > vec[2])
         {
             if (nvec[0] > 0)
             {
@@ -747,7 +750,7 @@ left_up(AUX_EVENTREC *event)
         {
             if (nvec[1] > 0)
             {
-                facing_plane = &plane_XZ;
+                facing_plane = &plane_mXZ;   // note this negation is deliberate
                 facing_index = PLANE_XZ;
 #ifdef DEBUG_LEFT_UP_FACING
                 Log("Facing plane XZ\r\n");
@@ -755,7 +758,7 @@ left_up(AUX_EVENTREC *event)
             }
             else
             {
-                facing_plane = &plane_mXZ;
+                facing_plane = &plane_XZ;   // note this negation is deliberate
                 facing_index = PLANE_MINUS_XZ;
 #ifdef DEBUG_LEFT_UP_FACING
                 Log("Facing plane -XZ\r\n");

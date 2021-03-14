@@ -212,7 +212,7 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 break;
 
             case IDB_XZ:
-                facing_plane = &plane_XZ;
+                facing_plane = &plane_mXZ;  // note this negation is deliberate
                 facing_index = PLANE_XZ;
 #ifdef DEBUG_TOOLBAR_FACING
                 Log("Facing plane XZ\r\n");
@@ -242,7 +242,7 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 break;
 
             case IDB_MINUS_XZ:
-                facing_plane = &plane_mXZ;
+                facing_plane = &plane_XZ;  // note this negation is deliberate
                 facing_index = PLANE_MINUS_XZ;
 #ifdef DEBUG_TOOLBAR_FACING
                 Log("Facing plane -XZ\r\n");
