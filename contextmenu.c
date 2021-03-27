@@ -56,6 +56,10 @@ contextmenu(Object *picked_obj, POINT pt)
     LOGFONT lf;
     char group_filename[256];
     float xc, yc, zc;
+    Plane z, axis;
+    Point pz, pn, origin;
+    float phi;
+    float quat[4];
     Bbox box;
 
     // Display the object ID and parent group (optionally) at the top of the menu
@@ -97,7 +101,8 @@ contextmenu(Object *picked_obj, POINT pt)
             ModifyMenu(hMenu, 0, MF_BYPOSITION | MF_GRAYED | MF_STRING, 0, buf);
 
             EnableMenuItem(hMenu, ID_LOCKING_VOLUME, MF_GRAYED);
-            EnableMenuItem(hMenu, ID_OBJ_MAKEEDGEGROUP, ((Face *)parent)->vol == NULL ? MF_ENABLED : MF_GRAYED);
+            EnableMenuItem(hMenu, ID_OBJ_MAKEEDGEGROUP, ((Face*)parent)->vol == NULL ? MF_ENABLED : MF_GRAYED);
+            EnableMenuItem(hMenu, ID_OBJ_2DVIEW, IS_FLAT((Face *)parent) ? MF_ENABLED : MF_GRAYED);
             break;
 
         case OBJ_VOLUME:
@@ -375,6 +380,48 @@ contextmenu(Object *picked_obj, POINT pt)
         group->hdr.lock = LOCK_POINTS;
         link_group((Object *)group, &object_tree);
         group_changed = TRUE;
+        break;
+
+    case ID_OBJ_2DVIEW:
+        // Get face normal (we know it is flat) and put it into the trackball as a quaternion
+        face = (Face*)picked_obj;
+        z.A = 0;
+        z.B = 0;
+        z.C = 1;
+        plcross(&z, &face->normal, &axis);
+        if (nz(axis.A) && nz(axis.B) && nz(axis.C))
+        {
+            trackball_InitQuat(quat_XY);
+        }
+        else
+        {
+            pz.x = 0;
+            pz.y = 0;
+            pz.z = 1;
+            origin.x = 0;
+            origin.y = 0;
+            origin.z = 0;
+            pn.x = face->normal.A;
+            pn.y = face->normal.B;
+            pn.z = face->normal.C;
+            phi = angle3(&pz, &origin, &pn, &axis);
+            trackball_axis_to_quat(&axis.A, phi, quat);
+            trackball_InitQuat(quat);
+        }
+
+
+        // Show only objects within a snap_tol of the place of the face
+
+
+
+
+        // Compute cross-section of the rendered triangle mesh and display it on the view
+
+
+
+
+
+
         break;
 
     case ID_OBJ_GROUPSELECTED:

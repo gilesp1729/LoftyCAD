@@ -424,6 +424,8 @@ BEGIN
         MENUITEM "Always show dimensions",      ID_OBJ_ALWAYSSHOWDIMS
         MENUITEM "Enter dimensions...",         ID_OBJ_ENTERDIMENSIONS
         MENUITEM SEPARATOR
+        MENUITEM "2D View of Face",             ID_OBJ_2DVIEW
+        MENUITEM SEPARATOR
         MENUITEM "Make Edge Group from Face",   ID_OBJ_MAKEEDGEGROUP
         MENUITEM "Edit text...",                ID_OBJ_EDITTEXT
         MENUITEM "Chamfer corner",              ID_OBJ_CHAMFERCORNER
@@ -448,10 +450,10 @@ BEGIN
         MENUITEM "Reflect",                     ID_OBJ_REFLECT
         MENUITEM "Rotate 90",                   ID_OBJ_ROTATE90
         MENUITEM SEPARATOR
-        MENUITEM "Make Path from Edge",         ID_OBJ_MAKEPATH
         MENUITEM "Always show dimensions",      ID_OBJ_ALWAYSSHOWDIMS
         MENUITEM "Enter dimensions...",         ID_OBJ_ENTERDIMENSIONS
         MENUITEM SEPARATOR
+        MENUITEM "Make Path from Edge",         ID_OBJ_MAKEPATH
         MENUITEM "Group Connected Edges",       ID_OBJ_GROUPEDGES
     END
 END

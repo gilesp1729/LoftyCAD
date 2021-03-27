@@ -305,6 +305,8 @@
 #define ID_VIEW_SLICEDPRINTPREVIEW      32920
 #define ID_FACE_MAKEEDGEGROUPFROMFACE   32921
 #define ID_OBJ_MAKEEDGEGROUP            32922
+#define ID_FACE_2DVIEWOFFACE            32923
+#define ID_OBJ_2DVIEW                   32924
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -313,7 +315,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        164
-#define _APS_NEXT_COMMAND_VALUE         32923
+#define _APS_NEXT_COMMAND_VALUE         32925
 #define _APS_NEXT_CONTROL_VALUE         1070
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
