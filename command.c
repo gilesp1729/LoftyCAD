@@ -545,6 +545,15 @@ Command(int message, int wParam, int lParam)
             }
             break;
 
+        case ID_VIEW_2DVIEW:
+            hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
+            if (view_2D)
+            {
+                view_2D = FALSE;
+                CheckMenuItem(hMenu, ID_VIEW_2DVIEW, MF_UNCHECKED);
+            }
+            break;
+
         case ID_VIEW_BLEND_OPAQUE:
             view_blend = BLEND_OPAQUE;
             glBlendFunc(GL_ONE, GL_ZERO);                           // no blending
@@ -1079,6 +1088,7 @@ Command(int message, int wParam, int lParam)
             // View menu
             EnableMenuItem((HMENU)wParam, ID_VIEW_CONSTRUCTIONEDGES, (view_rendered || view_printer) ? MF_GRAYED : MF_ENABLED);
             EnableMenuItem((HMENU)wParam, ID_VIEW_RENDEREDVIEW, view_printer ? MF_GRAYED : MF_ENABLED);
+            CheckMenuItem((HMENU)wParam, ID_VIEW_2DVIEW, view_2D ? MF_CHECKED : MF_UNCHECKED);
 
             hMenu = GetSubMenu((HMENU)wParam, 3);   // Materials pop-out
             load_materials_menu(hMenu, TRUE, 0);         // display materials menu with all check marks

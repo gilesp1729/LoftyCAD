@@ -100,6 +100,7 @@ BEGIN
         MENUITEM SEPARATOR
         MENUITEM "Perspective",                 ID_VIEW_PERSPECTIVE
         MENUITEM "Ortho",                       ID_VIEW_ORTHO
+        MENUITEM "&2D View",                    ID_VIEW_2DVIEW
         MENUITEM SEPARATOR
         POPUP "&Orientation"
         BEGIN

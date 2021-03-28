@@ -103,6 +103,7 @@ extern HWND hwndProg;
 extern BOOL view_tools;
 extern BOOL view_debug;
 extern BOOL view_tree;
+extern BOOL view_2D;
 extern BOOL view_help;
 extern BOOL view_rendered;
 extern BOOL view_printer;

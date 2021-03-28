@@ -409,6 +409,12 @@ contextmenu(Object *picked_obj, POINT pt)
             trackball_InitQuat(quat);
         }
 
+        // Suppress orbiting with the left-mouse move, and mark it as such in the status bar
+        view_2D = TRUE;
+
+
+
+
 
         // Show only objects within a snap_tol of the place of the face
 

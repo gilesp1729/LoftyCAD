@@ -46,6 +46,7 @@ BOOL view_tools = TRUE;
 BOOL view_debug = FALSE;
 BOOL view_help = TRUE;
 BOOL view_tree = FALSE;
+BOOL view_2D = FALSE;
 
 // Micro moving (with arrow keys)
 BOOL micro_moved = FALSE;
@@ -459,7 +460,8 @@ left_down(AUX_EVENTREC *event)
         else if (picked_obj == NULL)
         {
             // Orbiting the view
-            trackball_MouseDown(event);
+            if (!view_2D)
+                trackball_MouseDown(event);
         }
         else
         {
