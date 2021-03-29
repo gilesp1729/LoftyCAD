@@ -545,6 +545,22 @@ Command(int message, int wParam, int lParam)
             }
             break;
 
+        case ID_VIEW_CLIPPED:
+            hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
+            if (view_clipped)
+            {
+                view_clipped = FALSE;
+                glDisable(GL_CLIP_PLANE0);
+                CheckMenuItem(hMenu, ID_VIEW_CLIPPED, MF_UNCHECKED);
+            }
+            break;
+
+        case ID_VIEW_CLIPPINGPLANE:
+            DialogBox(hInst, MAKEINTRESOURCE(IDD_CLIP_PLANE), auxGetHWND(), clip_dialog);
+            hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
+            CheckMenuItem(hMenu, ID_VIEW_CLIPPED, view_clipped ? MF_CHECKED : MF_UNCHECKED);
+            break;
+
         case ID_VIEW_BLEND_OPAQUE:
             view_blend = BLEND_OPAQUE;
             glBlendFunc(GL_ONE, GL_ZERO);                           // no blending
@@ -1079,6 +1095,7 @@ Command(int message, int wParam, int lParam)
             // View menu
             EnableMenuItem((HMENU)wParam, ID_VIEW_CONSTRUCTIONEDGES, (view_rendered || view_printer) ? MF_GRAYED : MF_ENABLED);
             EnableMenuItem((HMENU)wParam, ID_VIEW_RENDEREDVIEW, view_printer ? MF_GRAYED : MF_ENABLED);
+            CheckMenuItem((HMENU)wParam, ID_VIEW_CLIPPED, view_clipped ? MF_CHECKED: MF_UNCHECKED);
 
             hMenu = GetSubMenu((HMENU)wParam, 3);   // Materials pop-out
             load_materials_menu(hMenu, TRUE, 0);         // display materials menu with all check marks
@@ -1090,3 +1107,53 @@ Command(int message, int wParam, int lParam)
     return 0;
 }
 
+int WINAPI
+clip_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    char buf[16];
+
+    switch (msg)
+    {
+    case WM_INITDIALOG:
+        sprintf_s(buf, 16, "%.1f", clip_plane[0]);
+        SendDlgItemMessage(hWnd, IDC_CLIP_A, WM_SETTEXT, 0, (LPARAM)buf);
+        sprintf_s(buf, 16, "%.1f", clip_plane[1]);
+        SendDlgItemMessage(hWnd, IDC_CLIP_B, WM_SETTEXT, 0, (LPARAM)buf);
+        sprintf_s(buf, 16, "%.1f", clip_plane[2]);
+        SendDlgItemMessage(hWnd, IDC_CLIP_C, WM_SETTEXT, 0, (LPARAM)buf);
+        sprintf_s(buf, 16, "%.1f", clip_plane[3]);
+        SendDlgItemMessage(hWnd, IDC_CLIP_D, WM_SETTEXT, 0, (LPARAM)buf);
+        break;
+
+    case WM_COMMAND:
+        switch (LOWORD(wParam))
+        {
+        case IDOK:
+        case IDAPPLY:
+            SendDlgItemMessage(hWnd, IDC_CLIP_A, WM_GETTEXT, 16, (LPARAM)buf);
+            clip_plane[0] = atof(buf);
+            SendDlgItemMessage(hWnd, IDC_CLIP_B, WM_GETTEXT, 16, (LPARAM)buf);
+            clip_plane[1] = atof(buf);
+            SendDlgItemMessage(hWnd, IDC_CLIP_C, WM_GETTEXT, 16, (LPARAM)buf);
+            clip_plane[2] = atof(buf);
+            SendDlgItemMessage(hWnd, IDC_CLIP_D, WM_GETTEXT, 16, (LPARAM)buf);
+            clip_plane[3] = atof(buf);
+            view_clipped = TRUE;
+            glEnable(GL_CLIP_PLANE0);
+            if (LOWORD(wParam) == IDOK)
+                EndDialog(hWnd, 1);
+            break;
+
+        case IDCANCEL:
+            EndDialog(hWnd, 0);
+            break;
+
+        case ID_REMOVE:
+            view_clipped = FALSE;
+            glDisable(GL_CLIP_PLANE0);
+            break;
+        }
+    }
+
+    return 0;
+}

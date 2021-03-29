@@ -47,6 +47,11 @@ BOOL view_debug = FALSE;
 BOOL view_help = TRUE;
 BOOL view_tree = FALSE;
 
+// Clipping
+double clip_plane[4] = { 0, };
+BOOL view_clipped = FALSE;
+BOOL draw_on_clip_plane = FALSE;
+
 // Micro moving (with arrow keys)
 BOOL micro_moved = FALSE;
 

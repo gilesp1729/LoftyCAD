@@ -382,7 +382,7 @@ contextmenu(Object *picked_obj, POINT pt)
         group_changed = TRUE;
         break;
 
-    case ID_OBJ_2DVIEW:
+    case ID_OBJ_CLIP_FACE:
         // Get face normal (we know it is flat) and put it into the trackball as a quaternion
         face = (Face*)picked_obj;
         z.A = 0;
@@ -409,19 +409,21 @@ contextmenu(Object *picked_obj, POINT pt)
             trackball_InitQuat(quat);
         }
 
-
-        // Show only objects within a snap_tol of the place of the face
-
-
-
-
-        // Compute cross-section of the rendered triangle mesh and display it on the view
-
-
-
-
-
-
+        // Set up clip plane in GL
+        // Solve plane equation for its 4th component 
+        // (objects on the front side of the face are visible, so D is negated)
+        clip_plane[0] = face->normal.A;
+        clip_plane[1] = face->normal.B;
+        clip_plane[2] = face->normal.C;
+        clip_plane[3] = (
+            face->normal.A * face->normal.refpt.x
+            +
+            face->normal.B * face->normal.refpt.y
+            +
+            face->normal.C * face->normal.refpt.z
+            );
+        glEnable(GL_CLIP_PLANE0);
+        view_clipped = TRUE;
         break;
 
     case ID_OBJ_GROUPSELECTED:
@@ -818,104 +820,3 @@ materials_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     }
     return 0;
 }
-
-#if 0
-LRESULT CALLBACK prefs_dialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
-{
-    int i;
-    static int view_index;
-    char buf[MAXSTR];
-    static BOOL text_changed;
-
-    switch (message)
-    {
-    case WM_INITDIALOG:
-        view_index = 0;
-        for (i = 0; i < n_views; i++)
-        {
-            ViewPrefs* vp = &view_prefs[i];
-
-            SendDlgItemMessage(hDlg, IDC_COMBO_VIEW, CB_INSERTSTRING, i, (LPARAM)vp->title);
-            if (prefs == vp)
-                view_index = i;
-        }
-        SendDlgItemMessage(hDlg, IDC_COMBO_VIEW, CB_SETCURSEL, view_index, 0);
-        SetDlgItemInt(hDlg, IDC_STATIC_VIEW_INDEX, view_index, FALSE);
-        load_prefs(hDlg, prefs);
-        text_changed = FALSE;
-        return 0;
-
-    case WM_COMMAND:
-        switch (LOWORD(wParam))
-        {
-        case IDOK:
-            save_prefs(hDlg, prefs);
-            // fall through
-        case IDCANCEL:
-            EndDialog(hDlg, LOWORD(wParam));
-            return 1;
-
-        case IDC_PREFS_DELETE:
-            if (n_views == 1)   // deleteing last view, just reset it all to defaults
-            {
-                view_index = 0;  // must be already 0
-                *prefs = default_prefs;
-                SendDlgItemMessage(hDlg, IDC_COMBO_VIEW, CB_RESETCONTENT, 0, 0);
-            }
-            else
-            {
-                SendDlgItemMessage(hDlg, IDC_COMBO_VIEW, CB_DELETESTRING, view_index, 0);
-                for (i = view_index + 1; i < n_views; i++)  // shuffle rest down
-                    view_prefs[i - 1] = view_prefs[i];
-                n_views--;
-                if (view_index == n_views)
-                {
-                    view_index--;
-                    prefs = &view_prefs[view_index];
-                }
-                SendDlgItemMessage(hDlg, IDC_COMBO_VIEW, CB_SETCURSEL, view_index, 0);
-            }
-            load_prefs(hDlg, prefs);
-            break;
-
-        case IDC_COMBO_VIEW:
-            switch (HIWORD(wParam))
-            {
-            case CBN_SELCHANGE:
-                save_prefs(hDlg, prefs);
-                view_index = SendDlgItemMessage(hDlg, IDC_COMBO_VIEW, CB_GETCURSEL, 0, 0);
-                SetDlgItemInt(hDlg, IDC_STATIC_VIEW_INDEX, view_index, FALSE);
-                prefs = &view_prefs[view_index];
-                load_prefs(hDlg, prefs);
-                break;
-
-            case CBN_EDITCHANGE:
-                text_changed = TRUE;
-                break;
-
-            case CBN_KILLFOCUS:
-                if (text_changed && n_views < MAX_PREFS - 1)
-                {
-                    text_changed = FALSE;
-                    SendDlgItemMessage(hDlg, IDC_COMBO_VIEW, WM_GETTEXT, MAXSTR, (LPARAM)buf);
-                    if (prefs->title[0] != '\0')  // just overwrite if file has no views in it, otherwise new
-                    {
-                        view_index = n_views;
-                        prefs = &view_prefs[n_views++];
-                        *prefs = default_prefs;
-                    }
-                    strcpy_s(prefs->title, MAXSTR, buf);
-                    SendDlgItemMessage(hDlg, IDC_COMBO_VIEW, CB_ADDSTRING, 0, (LPARAM)prefs->title);
-                    SetDlgItemInt(hDlg, IDC_STATIC_VIEW_INDEX, view_index, FALSE);
-                    load_prefs(hDlg, prefs);
-                }
-                break;
-            }
-            break;
-        }
-        break;
-    }
-    return 0;
-}
-
-#endif /* 0 */

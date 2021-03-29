@@ -100,6 +100,8 @@ BEGIN
         MENUITEM SEPARATOR
         MENUITEM "Perspective",                 ID_VIEW_PERSPECTIVE
         MENUITEM "Ortho",                       ID_VIEW_ORTHO
+        MENUITEM "Clipped",                     ID_VIEW_CLIPPED
+        MENUITEM "Clipping plane...",           ID_VIEW_CLIPPINGPLANE
         MENUITEM SEPARATOR
         POPUP "&Orientation"
         BEGIN
@@ -177,6 +179,26 @@ BEGIN
     LTEXT           "Build",IDC_STATIC_BUILD,47,25,203,8
 END
 
+IDD_CLIP_PLANE DIALOGEX 0, 0, 271, 94
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Clipping Plane"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,159,73,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,214,73,50,14
+    LTEXT           "Clipping plane Ax + By + Cz + D = 0:",IDC_STATIC,17,14,120,8
+    EDITTEXT        IDC_CLIP_A,32,35,40,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_CLIP_B,89,35,40,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_CLIP_C,145,35,40,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_CLIP_D,201,35,40,14,ES_AUTOHSCROLL
+    PUSHBUTTON      "Apply",IDAPPLY,104,73,50,14
+    LTEXT           "A",IDC_STATIC,24,38,8,8
+    LTEXT           "B",IDC_STATIC,81,38,8,8
+    LTEXT           "C",IDC_STATIC,137,38,8,8
+    LTEXT           "D",IDC_STATIC,192,38,8,8
+    PUSHBUTTON      "Remove",ID_REMOVE,47,73,50,14
+END
+
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -192,6 +214,14 @@ BEGIN
         RIGHTMARGIN, 284
         TOPMARGIN, 7
         BOTTOMMARGIN, 96
+    END
+
+    IDD_CLIP_PLANE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 264
+        TOPMARGIN, 6
+        BOTTOMMARGIN, 87
     END
 END
 #endif    // APSTUDIO_INVOKED
@@ -424,7 +454,7 @@ BEGIN
         MENUITEM "Always show dimensions",      ID_OBJ_ALWAYSSHOWDIMS
         MENUITEM "Enter dimensions...",         ID_OBJ_ENTERDIMENSIONS
         MENUITEM SEPARATOR
-        MENUITEM "2D View of Face",             ID_OBJ_2DVIEW
+        MENUITEM "Clip at this Face",           ID_OBJ_CLIP_FACE
         MENUITEM SEPARATOR
         MENUITEM "Make Edge Group from Face",   ID_OBJ_MAKEEDGEGROUP
         MENUITEM "Edit text...",                ID_OBJ_EDITTEXT

@@ -1865,6 +1865,12 @@ Draw(void)
     trackball_CalcRotMatrix(matRot);
     glMultMatrixf(&(matRot[0][0]));
 
+    // Clipping if enabled
+    if (view_clipped)
+    {
+        glClipPlane(GL_CLIP_PLANE0, clip_plane);
+    }
+
     // Draw the object tree. 
 #ifdef TIME_DRAWING
     if (num_draws * num_picks == 0)  // only once

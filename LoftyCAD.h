@@ -149,6 +149,9 @@ extern float bed_ymax;
 extern float layer_height;
 extern float print_zmin;
 extern float print_zmax;
+extern double clip_plane[4];
+extern BOOL view_clipped;
+extern BOOL draw_on_clip_plane;
 
 extern char curr_filename[];
 extern float grid_snap;
@@ -350,4 +353,5 @@ int WINAPI prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 int WINAPI treeview_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 int WINAPI transform_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 int WINAPI materials_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+int WINAPI clip_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
