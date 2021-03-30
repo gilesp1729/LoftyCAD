@@ -56,10 +56,6 @@ contextmenu(Object *picked_obj, POINT pt)
     LOGFONT lf;
     char group_filename[256];
     float xc, yc, zc;
-    Plane z, axis;
-    Point pz, pn, origin;
-    float phi;
-    float quat[4];
     Bbox box;
 
     // Display the object ID and parent group (optionally) at the top of the menu
@@ -102,7 +98,7 @@ contextmenu(Object *picked_obj, POINT pt)
 
             EnableMenuItem(hMenu, ID_LOCKING_VOLUME, MF_GRAYED);
             EnableMenuItem(hMenu, ID_OBJ_MAKEEDGEGROUP, ((Face*)parent)->vol == NULL ? MF_ENABLED : MF_GRAYED);
-            EnableMenuItem(hMenu, ID_OBJ_2DVIEW, IS_FLAT((Face *)parent) ? MF_ENABLED : MF_GRAYED);
+            EnableMenuItem(hMenu, ID_OBJ_CLIP_FACE, IS_FLAT((Face *)parent) ? MF_ENABLED : MF_GRAYED);
             break;
 
         case OBJ_VOLUME:
@@ -383,8 +379,9 @@ contextmenu(Object *picked_obj, POINT pt)
         break;
 
     case ID_OBJ_CLIP_FACE:
-        // Get face normal (we know it is flat) and put it into the trackball as a quaternion
         face = (Face*)picked_obj;
+#if 0
+        // Get face normal (we know it is flat) and put it into the trackball as a quaternion
         z.A = 0;
         z.B = 0;
         z.C = 1;
@@ -408,14 +405,14 @@ contextmenu(Object *picked_obj, POINT pt)
             trackball_axis_to_quat(&axis.A, phi, quat);
             trackball_InitQuat(quat);
         }
+#endif //0 
 
         // Set up clip plane in GL
         // Solve plane equation for its 4th component 
-        // (objects on the front side of the face are visible, so D is negated)
         clip_plane[0] = face->normal.A;
         clip_plane[1] = face->normal.B;
         clip_plane[2] = face->normal.C;
-        clip_plane[3] = (
+        clip_plane[3] = snap_tol - (
             face->normal.A * face->normal.refpt.x
             +
             face->normal.B * face->normal.refpt.y
