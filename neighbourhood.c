@@ -55,6 +55,22 @@ point_in_polygon2D(Point2D P, Point2D* V, int n)
     return wn;
 }
 
+// Helper for all picking tests: determine if a point is clipped out by any
+// clipping plane that is in effect.
+BOOL
+clipped(Point* p)
+{
+    double f;
+
+    if (!view_clipped)
+        return FALSE;
+
+    f = clip_plane[0] * p->x + clip_plane[1] * p->y + clip_plane[2] * p->z + clip_plane[3];
+
+    return f < 0;
+}
+
+
 // Helper for find_in_neighbourhood:
 // Find any snappable component in obj, within snapping distance of point.
 // obj may be a point or a straight edge.
@@ -70,6 +86,9 @@ find_in_neighbourhood_point(Point *point, Object *obj)
     Group *group;
     Object *o;
     int i;
+
+    if (clipped(point))
+        return NULL;
 
     switch (obj->type)
     {
@@ -302,7 +321,7 @@ Object* pick_point(Point* p, LOCK parent_lock, Plane* line, float *dist, float b
 {
     Point point;
 
-    if (dist_point_to_ray(p, line, &point) < snap_tol)
+    if (dist_point_to_ray(p, line, &point) < snap_tol && !clipped(&point))
     {
         *dist = length(&line->refpt, &point) - bias;
         return (Object*)p;
@@ -333,7 +352,7 @@ Object* pick_edge(Edge* e, LOCK parent_lock, Plane* line, float* dist, float bia
     switch (e->type & ~EDGE_CONSTRUCTION)
     {
     case EDGE_STRAIGHT:
-        if (dist_ray_to_edge(line, e, &point) < snap_tol)
+        if (dist_ray_to_edge(line, e, &point) < snap_tol && !clipped(&point))
         {
             *dist = length(&line->refpt, &point) - bias;
             return (Object*)e;
@@ -361,7 +380,7 @@ Object* pick_edge(Edge* e, LOCK parent_lock, Plane* line, float* dist, float bia
             return NULL;
         for (p = (Point *)e->view_list.head; p->hdr.next != NULL; p = (Point *)p->hdr.next)
         {
-            if (dist_ray_to_segment(line, p, (Point *)p->hdr.next, &point) < snap_tol)
+            if (dist_ray_to_segment(line, p, (Point *)p->hdr.next, &point) < snap_tol && !clipped(&point))
             {
                 *dist = length(&line->refpt, &point) - bias;
                 return (Object*)e;
@@ -429,7 +448,7 @@ Object* pick_face(Face* f, LOCK parent_lock, Plane* line, float* dist, float bia
                 pt.y = point.z;
             }
 
-            if (point_in_polygon2D(pt, f->view_list2D, f->n_view2D))
+            if (point_in_polygon2D(pt, f->view_list2D, f->n_view2D) && !clipped(&point))
             {
                 *dist = length(&line->refpt, &point) - bias;
                 return (Object*)f;
@@ -529,7 +548,7 @@ Object* pick_face(Face* f, LOCK parent_lock, Plane* line, float* dist, float bia
 
                 p = (Point*)p->hdr.next;
                 facet2D[4] = facet2D[0];        // close the polygon
-                if (point_in_polygon2D(pt, facet2D, 4))
+                if (point_in_polygon2D(pt, facet2D, 4) && !clipped(&point))
                 {
                     *dist = length(&line->refpt, &point) - bias;
                     return (Object*)f;

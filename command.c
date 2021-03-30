@@ -553,6 +553,12 @@ Command(int message, int wParam, int lParam)
                 glDisable(GL_CLIP_PLANE0);
                 CheckMenuItem(hMenu, ID_VIEW_CLIPPED, MF_UNCHECKED);
             }
+            else
+            {
+                view_clipped = TRUE;
+                glEnable(GL_CLIP_PLANE0);
+                CheckMenuItem(hMenu, ID_VIEW_CLIPPED, MF_CHECKED);
+            }
             break;
 
         case ID_VIEW_CLIPPINGPLANE:

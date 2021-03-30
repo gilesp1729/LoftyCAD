@@ -1865,7 +1865,7 @@ Draw(void)
     trackball_CalcRotMatrix(matRot);
     glMultMatrixf(&(matRot[0][0]));
 
-    // Clipping if enabled
+    // Clipping if enabled (do this every time as it gets translated to eye coords)
     if (view_clipped)
     {
         glClipPlane(GL_CLIP_PLANE0, clip_plane);
