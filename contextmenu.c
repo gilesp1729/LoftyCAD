@@ -412,7 +412,7 @@ contextmenu(Object *picked_obj, POINT pt)
         clip_plane[0] = face->normal.A;
         clip_plane[1] = face->normal.B;
         clip_plane[2] = face->normal.C;
-        clip_plane[3] = snap_tol - (
+        clip_plane[3] = -(
             face->normal.A * face->normal.refpt.x
             +
             face->normal.B * face->normal.refpt.y
@@ -421,6 +421,7 @@ contextmenu(Object *picked_obj, POINT pt)
             );
         glEnable(GL_CLIP_PLANE0);
         view_clipped = TRUE;
+        invalidate_dl();
         break;
 
     case ID_OBJ_GROUPSELECTED:

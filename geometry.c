@@ -331,6 +331,43 @@ intersect_line_plane(Plane *line, Plane *plane, Point *new_point)
     return 1;
 }
 
+// Intersect a line segment with a plane using the same algorithm as above.
+// Return 0 if the intersection point is off the end of the segment.
+int
+intersect_segment_plane(float x0, float y0, float z0, float x1, float y1, float z1, 
+                        Plane* plane, Point* new_point)
+{
+    float Ldotn, dpdotn, d;
+    Point dp;
+    float A = x1 - x0;
+    float B = y1 - y0;
+    float C = z1 - z0;
+
+    Ldotn = plane->A * A + plane->B * B + plane->C * C;
+    dp.x = plane->refpt.x - x0;
+    dp.y = plane->refpt.y - y0;
+    dp.z = plane->refpt.z - z0;
+
+    dpdotn = dp.x * plane->A + dp.y * plane->B + dp.z * plane->C;
+    if (fabsf(Ldotn) < SMALL_COORD)
+    {
+        if (fabsf(dpdotn) < SMALL_COORD)    // the line lines in the plane
+            return -1;
+        else
+            return 0;                       // they do not intersect
+    }
+
+    d = dpdotn / Ldotn;
+    if (d < -SMALL_COORD || d > 1 + SMALL_COORD)
+        return 0;                           // off end of segment
+
+    new_point->x = d * A + x0;
+    new_point->y = d * B + y0;
+    new_point->z = d * C + z0;
+
+    return 1;
+}
+
 // Return the (signed) distance between a point and a plane
 float
 distance_point_plane(Plane *plane, Point *p)

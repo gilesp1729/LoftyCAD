@@ -93,6 +93,7 @@ enable_rendered_view_items(void)
     EnableWindow(GetDlgItem(hWndToolbar, IDB_EDGE), !view_rendered);
     EnableWindow(GetDlgItem(hWndToolbar, IDB_RECT), !view_rendered);
     EnableWindow(GetDlgItem(hWndToolbar, IDB_CIRCLE), !view_rendered);
+    EnableWindow(GetDlgItem(hWndToolbar, IDB_HEX), !view_rendered);
     EnableWindow(GetDlgItem(hWndToolbar, IDB_ARC_EDGE), !view_rendered);
     EnableWindow(GetDlgItem(hWndToolbar, IDB_BEZIER_EDGE), !view_rendered);
     EnableWindow(GetDlgItem(hWndToolbar, IDB_EXTRUDE), !view_rendered);
@@ -103,7 +104,7 @@ enable_rendered_view_items(void)
     EnableWindow(GetDlgItem(hWndToolbar, IDB_CONST_EDGE), !view_rendered);
     EnableWindow(GetDlgItem(hWndToolbar, IDB_CONST_RECT), !view_rendered);
     EnableWindow(GetDlgItem(hWndToolbar, IDB_CONST_CIRCLE), !view_rendered);
-
+    EnableWindow(GetDlgItem(hWndToolbar, IDB_CONST_HEX), !view_rendered);
 }
 
 // Process WM_COMMAND, INITMENUPOPUP and the like, from TK window proc
@@ -559,6 +560,7 @@ Command(int message, int wParam, int lParam)
                 glEnable(GL_CLIP_PLANE0);
                 CheckMenuItem(hMenu, ID_VIEW_CLIPPED, MF_CHECKED);
             }
+            invalidate_dl();
             break;
 
         case ID_VIEW_CLIPPINGPLANE:
@@ -1146,6 +1148,7 @@ clip_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             clip_plane[3] = atof(buf);
             view_clipped = TRUE;
             glEnable(GL_CLIP_PLANE0);
+            invalidate_dl();
             if (LOWORD(wParam) == IDOK)
                 EndDialog(hWnd, 1);
             break;
@@ -1157,6 +1160,7 @@ clip_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         case ID_REMOVE:
             view_clipped = FALSE;
             glDisable(GL_CLIP_PLANE0);
+            invalidate_dl();
             break;
         }
     }

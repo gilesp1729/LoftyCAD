@@ -232,6 +232,186 @@ draw_triangle(void *arg, int mat, float x[3], float y[3], float z[3])
         glVertex3d(x[i], y[i], z[i]);
 }
 
+// Helpers for all clipping tests: determine if a point is clipped out by any
+// clipping plane that is in effect. Point and coord versions.
+BOOL
+clipped(Point* p)
+{
+    double f;
+
+    if (!view_clipped)
+        return FALSE;
+
+    f = clip_plane[0] * p->x + clip_plane[1] * p->y + clip_plane[2] * p->z + clip_plane[3];
+
+    return f < 0;
+}
+
+BOOL
+clippedv(float x, float y, float z)
+{
+    double f;
+
+    if (!view_clipped)
+        return FALSE;
+
+    f = clip_plane[0] * x + clip_plane[1] * y + clip_plane[2] * z + clip_plane[3];
+
+    return f < 0;
+}
+
+// Determine if a bbox is partially clipped (lies across the clipping plane)
+BOOL
+is_bbox_clipped(Bbox* box)
+{
+    int count = 0;
+
+    if (clippedv(box->xmin, box->ymin, box->zmin))
+        count++;
+    if (clippedv(box->xmax, box->ymin, box->zmin))
+        count++;
+    if (clippedv(box->xmin, box->ymax, box->zmin))
+        count++;
+    if (clippedv(box->xmax, box->ymax, box->zmin))
+        count++;
+    if (clippedv(box->xmin, box->ymin, box->zmax))
+        count++;
+    if (clippedv(box->xmax, box->ymin, box->zmax))
+        count++;
+    if (clippedv(box->xmin, box->ymax, box->zmax))
+        count++;
+    if (clippedv(box->xmax, box->ymax, box->zmax))
+        count++;
+
+    if (count == 0 || count == 8)
+        return FALSE;
+
+    return TRUE;
+}
+
+#if 0 // unused
+// Determine if a face is partially clipped.
+BOOL
+is_face_clipped(Face* f)
+{
+    Edge* e;
+    int i;
+    int in = 0, out = 0;
+
+    for (i = 0; i < f->n_edges; i++)
+    {
+        e = f->edges[i];
+        if (clipped(e->endpoints[0]))
+            out++;
+        else
+            in++;
+        if (clipped(e->endpoints[1]))
+            out++;
+        else
+            in++;
+        if (in * out != 0)
+            return TRUE;
+    }
+    return FALSE;
+}
+#endif // 0
+
+// Determine if a triangle is partially clipped (by its coordinates)b
+BOOL
+is_tri_clipped(float x[3], float y[3], float z[3])
+{
+    int count = 0;
+
+    if (clippedv(x[0], y[0], z[0]))
+        count++;
+    if (clippedv(x[1], y[1], z[1]))
+        count++;
+    if (clippedv(x[2], y[2], z[2]))
+        count++;
+    
+    if (count == 0 || count == 3)
+        return FALSE;
+
+    return TRUE;
+}
+
+// Draw the clip plane intersection with a triangle
+void
+clip_triangle(void* arg, int mat, float x[3], float y[3], float z[3])
+{
+    int rc, count = 0;
+    Point pt, points[6];
+    Plane* plane = (Plane*)arg;
+
+    if (!is_tri_clipped(x, y, z))
+        return;
+    
+    rc = intersect_segment_plane(x[0], y[0], z[0], x[1], y[1], z[1], plane, &pt);
+    if (rc == 1)
+        points[count++] = pt;
+    rc = intersect_segment_plane(x[1], y[1], z[1], x[2], y[2], z[2], plane, &pt);
+    if (rc == 1)
+        points[count++] = pt;
+    rc = intersect_segment_plane(x[2], y[2], z[2], x[0], y[0], z[0], plane, &pt);
+    if (rc == 1)
+        points[count++] = pt;
+
+    if (count == 2)
+    {
+        glVertex3d(points[0].x, points[0].y, points[0].z);
+        glVertex3d(points[1].x, points[1].y, points[1].z);
+    }
+}
+
+// For volumes in the object tree, if triangles in their surface mesh intersect the 
+// clipping plane, draw line segments across them to represent the sliced surface.
+void
+draw_clip_intersection(Group *tree)
+{
+    Object* obj;
+    Volume* vol;
+    Face* f;
+    Plane plane;
+
+    // Make a Plane out of the 4-component clipping plane
+    plane.A = (float)clip_plane[0];
+    plane.B = (float)clip_plane[1];
+    plane.C = (float)clip_plane[2];
+    plane.refpt.x = (float)(-clip_plane[0] * clip_plane[3]);
+    plane.refpt.y = (float)(-clip_plane[1] * clip_plane[3]);
+    plane.refpt.z = (float)(-clip_plane[2] * clip_plane[3]);
+
+    // Go through the volumes in the tree and intersect each one
+    for (obj = tree->obj_list.head; obj != NULL; obj = obj->next)
+    {
+        switch (obj->type)
+        {
+        case OBJ_VOLUME:
+            vol = (Volume*)obj;
+            if (!is_bbox_clipped(&vol->bbox))
+                break;
+
+            // Make sure there's a triangle mesh
+            if (!vol->mesh_valid)
+            {
+                for (f = (Face*)vol->faces.head; f != NULL; f = (Face*)f->hdr.next)
+                    gen_view_list_surface(f);
+                vol->mesh_valid = TRUE;
+            }
+
+            color_as(OBJ_EDGE, 1.0f, TRUE, DRAW_PATH, FALSE);
+            glBegin(GL_LINES);
+            mesh_foreach_face_coords_mat(vol->mesh, clip_triangle, &plane);
+            glEnd();
+            break;
+
+        case OBJ_GROUP:
+            draw_clip_intersection((Group*)obj);
+            break;
+        }
+    }
+}
+
 // Draw any object. Control select/highlight colors per object type, how the parent is locked,
 // and whether to draw components or just the top-level object, among other things.
 void
@@ -1868,7 +2048,13 @@ Draw(void)
     // Clipping if enabled (do this every time as it gets translated to eye coords)
     if (view_clipped)
     {
-        glClipPlane(GL_CLIP_PLANE0, clip_plane);
+        double clip[4];
+
+        clip[0] = clip_plane[0];
+        clip[1] = clip_plane[1];
+        clip[2] = clip_plane[2];
+        clip[3] = clip_plane[3] + tolerance;
+        glClipPlane(GL_CLIP_PLANE0, clip);
     }
 
     // Draw the object tree. 
@@ -1882,6 +2068,7 @@ Draw(void)
 #endif
     if (draw_dl_valid)
     {
+        // Object tree has not changed, just redraw from the display list
         glCallList(DRAW_DL);
     }
     else
@@ -1895,6 +2082,14 @@ Draw(void)
             draw_object((Object*)&gcode_tree, pres, LOCK_NONE);  // locks come from objects
         else
             draw_object((Object*)&object_tree, pres, LOCK_NONE);  // locks come from objects
+
+        // If clipping, and tracing is enabled, draw the intersection path of
+        // any volumes with the clipping plane.
+        if (view_clipped /* && draw_on_clip_plane */)
+        {
+            draw_clip_intersection(&object_tree);
+        }
+
         glEndList();
         draw_dl_valid = TRUE;
     }

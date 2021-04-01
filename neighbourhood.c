@@ -55,21 +55,6 @@ point_in_polygon2D(Point2D P, Point2D* V, int n)
     return wn;
 }
 
-// Helper for all picking tests: determine if a point is clipped out by any
-// clipping plane that is in effect.
-BOOL
-clipped(Point* p)
-{
-    double f;
-
-    if (!view_clipped)
-        return FALSE;
-
-    f = clip_plane[0] * p->x + clip_plane[1] * p->y + clip_plane[2] * p->z + clip_plane[3];
-
-    return f < 0;
-}
-
 
 // Helper for find_in_neighbourhood:
 // Find any snappable component in obj, within snapping distance of point.

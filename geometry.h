@@ -37,6 +37,8 @@
 void ray_from_eye(GLint x, GLint y, Plane *line);
 BOOL intersect_ray_plane(GLint x, GLint y, Plane *picked_plane, Point *new_point);
 int intersect_line_plane(Plane *line, Plane *plane, Point *new_point);
+int intersect_segment_plane(float x0, float y0, float z0, float x1, float y1, float z1, 
+                            Plane* plane, Point* new_point);
 float distance_point_plane(Plane *plane, Point *p);
 BOOL snap_ray_edge(GLint x, GLint y, Edge *edge, Point *new_point);
 float dist_ray_to_edge(Plane* v, Edge* edge, Point* new_point);
