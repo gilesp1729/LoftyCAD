@@ -409,10 +409,8 @@ contextmenu(Object *picked_obj, POINT pt)
 
         // Set up clip plane in GL
         // Solve plane equation for its 4th component 
-        clip_plane[0] = face->normal.A;
-        clip_plane[1] = face->normal.B;
-        clip_plane[2] = face->normal.C;
-        clip_plane[3] = -(
+        clip_plane = face->normal;
+        clip_plane.D = -(
             face->normal.A * face->normal.refpt.x
             +
             face->normal.B * face->normal.refpt.y

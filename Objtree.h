@@ -153,9 +153,10 @@ typedef struct Point3D
 typedef struct Plane
 {
     float           A;              // Vector of plane equation
-    float           B;              // A(x-x1) + B(y-y1) + C(z-z1) = 0
-    float           C;
-    struct Point    refpt;          // Point that lies on the plane
+    float           B;              // A(x-x1) + B(y-y1) + C(z-z1) = 0 or Ax1 + By1 + Cz1 + D = 0
+    float           C;              // D component = -(Ax1 + By1 + Cz1) if used
+    float           D;              // ABCD are passed as array to glClipPlane
+    struct Point    refpt;          // Point (x1,y1,z1) that lies on the plane
 } Plane;
 
 // Like a Plane, but references a Point, rather than containing one.
@@ -163,8 +164,9 @@ typedef struct Plane
 typedef struct PlaneRef
 {
     float           A;              // Vector of plane equation
-    float           B;              // A(x-x1) + B(y-y1) + C(z-z1) = 0
+    float           B;              // A(x-x1) + B(y-y1) + C(z-z1) = 0 or Ax1 + By1 + Cz1 + D = 0
     float           C;
+    float           D;
     struct Point*   refpt;         // Pointer to a point that lies on the plane
 } PlaneRef;
 

@@ -48,7 +48,7 @@ BOOL view_help = TRUE;
 BOOL view_tree = FALSE;
 
 // Clipping
-double clip_plane[4] = { 0, };
+Plane clip_plane = { 0, };
 BOOL view_clipped = FALSE;
 BOOL draw_on_clip_plane = FALSE;
 
@@ -509,8 +509,11 @@ left_down(AUX_EVENTREC *event)
 
         if (picked_obj == NULL)
         {
-            // Drawing on the standard axis.
+            // Drawing on the standard axis. Take account of drawing restricted to
+            // any clipping plane in effect.
             picked_plane = facing_plane;
+            if (view_clipped && draw_on_clip_plane)
+                picked_plane = &clip_plane;
             intersect_ray_plane(left_mouseX, left_mouseY, picked_plane, &picked_point);
             snap_to_grid(picked_plane, &picked_point, FALSE);
         }
@@ -559,7 +562,12 @@ left_down(AUX_EVENTREC *event)
                 picked_point = *(Point *)picked_obj;
                 break;
             }
+
+            // If we're drawing on the clipping plane, then this is the picked plane.
+            if (picked_plane == NULL && view_clipped && draw_on_clip_plane)
+                picked_plane = &clip_plane;
         }
+
         // Don't add the object yet until we have moved the mouse, as a click will
         // need to be handled harmlessly and silently.
         curr_obj = NULL;

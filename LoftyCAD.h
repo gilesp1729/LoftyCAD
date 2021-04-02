@@ -149,7 +149,7 @@ extern float bed_ymax;
 extern float layer_height;
 extern float print_zmin;
 extern float print_zmax;
-extern double clip_plane[4];
+extern Plane clip_plane;
 extern BOOL view_clipped;
 extern BOOL draw_on_clip_plane;
 

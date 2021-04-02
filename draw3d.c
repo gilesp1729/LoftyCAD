@@ -233,7 +233,8 @@ draw_triangle(void *arg, int mat, float x[3], float y[3], float z[3])
 }
 
 // Helpers for all clipping tests: determine if a point is clipped out by any
-// clipping plane that is in effect. Point and coord versions.
+// clipping plane that is in effect. One or two sided test depending on whether
+// we're restricting picking to the clipping plane.
 BOOL
 clipped(Point* p)
 {
@@ -242,11 +243,15 @@ clipped(Point* p)
     if (!view_clipped)
         return FALSE;
 
-    f = clip_plane[0] * p->x + clip_plane[1] * p->y + clip_plane[2] * p->z + clip_plane[3];
+    f = clip_plane.A * p->x + clip_plane.B * p->y + clip_plane.C * p->z + clip_plane.D;
 
-    return f < 0;
+    if (draw_on_clip_plane)
+        return f < -tolerance || f > tolerance;
+    else
+        return f < tolerance;
 }
 
+// Determine if a point is clipped out by its coordinates. One sided test.
 BOOL
 clippedv(float x, float y, float z)
 {
@@ -255,7 +260,7 @@ clippedv(float x, float y, float z)
     if (!view_clipped)
         return FALSE;
 
-    f = clip_plane[0] * x + clip_plane[1] * y + clip_plane[2] * z + clip_plane[3];
+    f = clip_plane.A * x + clip_plane.B * y + clip_plane.C * z + clip_plane.D;
 
     return f < 0;
 }
@@ -289,34 +294,7 @@ is_bbox_clipped(Bbox* box)
     return TRUE;
 }
 
-#if 0 // unused
-// Determine if a face is partially clipped.
-BOOL
-is_face_clipped(Face* f)
-{
-    Edge* e;
-    int i;
-    int in = 0, out = 0;
-
-    for (i = 0; i < f->n_edges; i++)
-    {
-        e = f->edges[i];
-        if (clipped(e->endpoints[0]))
-            out++;
-        else
-            in++;
-        if (clipped(e->endpoints[1]))
-            out++;
-        else
-            in++;
-        if (in * out != 0)
-            return TRUE;
-    }
-    return FALSE;
-}
-#endif // 0
-
-// Determine if a triangle is partially clipped (by its coordinates)b
+// Determine if a triangle is partially clipped (by its coordinates)
 BOOL
 is_tri_clipped(float x[3], float y[3], float z[3])
 {
@@ -371,8 +349,8 @@ draw_clip_intersection(Group *tree)
     Object* obj;
     Volume* vol;
     Face* f;
-    Plane plane;
 
+#if 0
     // Make a Plane out of the 4-component clipping plane
     plane.A = (float)clip_plane[0];
     plane.B = (float)clip_plane[1];
@@ -380,6 +358,7 @@ draw_clip_intersection(Group *tree)
     plane.refpt.x = (float)(-clip_plane[0] * clip_plane[3]);
     plane.refpt.y = (float)(-clip_plane[1] * clip_plane[3]);
     plane.refpt.z = (float)(-clip_plane[2] * clip_plane[3]);
+#endif
 
     // Go through the volumes in the tree and intersect each one
     for (obj = tree->obj_list.head; obj != NULL; obj = obj->next)
@@ -401,7 +380,7 @@ draw_clip_intersection(Group *tree)
 
             color_as(OBJ_EDGE, 1.0f, TRUE, DRAW_PATH, FALSE);
             glBegin(GL_LINES);
-            mesh_foreach_face_coords_mat(vol->mesh, clip_triangle, &plane);
+            mesh_foreach_face_coords_mat(vol->mesh, clip_triangle, &clip_plane);
             glEnd();
             break;
 
@@ -2050,10 +2029,10 @@ Draw(void)
     {
         double clip[4];
 
-        clip[0] = clip_plane[0];
-        clip[1] = clip_plane[1];
-        clip[2] = clip_plane[2];
-        clip[3] = clip_plane[3] + tolerance;
+        clip[0] = clip_plane.A;
+        clip[1] = clip_plane.B;
+        clip[2] = clip_plane.C;
+        clip[3] = clip_plane.D + tolerance;
         glClipPlane(GL_CLIP_PLANE0, clip);
     }
 
@@ -2085,7 +2064,7 @@ Draw(void)
 
         // If clipping, and tracing is enabled, draw the intersection path of
         // any volumes with the clipping plane.
-        if (view_clipped /* && draw_on_clip_plane */)
+        if (view_clipped && draw_on_clip_plane)
         {
             draw_clip_intersection(&object_tree);
         }

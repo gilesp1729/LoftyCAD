@@ -1123,13 +1123,13 @@ clip_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     switch (msg)
     {
     case WM_INITDIALOG:
-        sprintf_s(buf, 16, "%.1f", clip_plane[0]);
+        sprintf_s(buf, 16, "%.1f", clip_plane.A);
         SendDlgItemMessage(hWnd, IDC_CLIP_A, WM_SETTEXT, 0, (LPARAM)buf);
-        sprintf_s(buf, 16, "%.1f", clip_plane[1]);
+        sprintf_s(buf, 16, "%.1f", clip_plane.B);
         SendDlgItemMessage(hWnd, IDC_CLIP_B, WM_SETTEXT, 0, (LPARAM)buf);
-        sprintf_s(buf, 16, "%.1f", clip_plane[2]);
+        sprintf_s(buf, 16, "%.1f", clip_plane.C);
         SendDlgItemMessage(hWnd, IDC_CLIP_C, WM_SETTEXT, 0, (LPARAM)buf);
-        sprintf_s(buf, 16, "%.1f", clip_plane[3]);
+        sprintf_s(buf, 16, "%.1f", clip_plane.D);
         SendDlgItemMessage(hWnd, IDC_CLIP_D, WM_SETTEXT, 0, (LPARAM)buf);
         break;
 
@@ -1139,13 +1139,17 @@ clip_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         case IDOK:
         case IDAPPLY:
             SendDlgItemMessage(hWnd, IDC_CLIP_A, WM_GETTEXT, 16, (LPARAM)buf);
-            clip_plane[0] = atof(buf);
+            clip_plane.A = (float)atof(buf);
             SendDlgItemMessage(hWnd, IDC_CLIP_B, WM_GETTEXT, 16, (LPARAM)buf);
-            clip_plane[1] = atof(buf);
+            clip_plane.B = (float)atof(buf);
             SendDlgItemMessage(hWnd, IDC_CLIP_C, WM_GETTEXT, 16, (LPARAM)buf);
-            clip_plane[2] = atof(buf);
+            clip_plane.C = (float)atof(buf);
             SendDlgItemMessage(hWnd, IDC_CLIP_D, WM_GETTEXT, 16, (LPARAM)buf);
-            clip_plane[3] = atof(buf);
+            clip_plane.D = (float)atof(buf);
+            clip_plane.refpt.x = -clip_plane.A * clip_plane.D;
+            clip_plane.refpt.y = -clip_plane.B * clip_plane.D;
+            clip_plane.refpt.z = -clip_plane.C * clip_plane.D;
+
             view_clipped = TRUE;
             glEnable(GL_CLIP_PLANE0);
             invalidate_dl();
