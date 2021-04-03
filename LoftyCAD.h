@@ -338,7 +338,6 @@ Volume* make_body_of_revolution(Group * group, BOOL negative);
 Object* Pick(GLint x_pick, GLint y_pick, BOOL force_pick);
 void Pick_all_in_rect(GLint x_pick, GLint y_pick, GLint width, GLint height);
 Object* find_in_neighbourhood(Object * match_obj, Group * tree);
-BOOL clipped(Point * p);
 
 // Forwards for window procedures and similar
 int CALLBACK Command(int message, int wParam, int lParam);

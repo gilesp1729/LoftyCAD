@@ -350,16 +350,6 @@ draw_clip_intersection(Group *tree)
     Volume* vol;
     Face* f;
 
-#if 0
-    // Make a Plane out of the 4-component clipping plane
-    plane.A = (float)clip_plane[0];
-    plane.B = (float)clip_plane[1];
-    plane.C = (float)clip_plane[2];
-    plane.refpt.x = (float)(-clip_plane[0] * clip_plane[3]);
-    plane.refpt.y = (float)(-clip_plane[1] * clip_plane[3]);
-    plane.refpt.z = (float)(-clip_plane[2] * clip_plane[3]);
-#endif
-
     // Go through the volumes in the tree and intersect each one
     for (obj = tree->obj_list.head; obj != NULL; obj = obj->next)
     {
@@ -2032,7 +2022,7 @@ Draw(void)
         clip[0] = clip_plane.A;
         clip[1] = clip_plane.B;
         clip[2] = clip_plane.C;
-        clip[3] = clip_plane.D + tolerance;
+        clip[3] = clip_plane.D + tolerance;     // slight tweak to ensure stuff on the plane is visible
         glClipPlane(GL_CLIP_PLANE0, clip);
     }
 
@@ -2062,12 +2052,10 @@ Draw(void)
         else
             draw_object((Object*)&object_tree, pres, LOCK_NONE);  // locks come from objects
 
-        // If clipping, and tracing is enabled, draw the intersection path of
+        // If clipping, draw the intersection path of
         // any volumes with the clipping plane.
-        if (view_clipped && draw_on_clip_plane)
-        {
+        if (view_clipped)
             draw_clip_intersection(&object_tree);
-        }
 
         glEndList();
         draw_dl_valid = TRUE;
