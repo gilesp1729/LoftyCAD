@@ -84,6 +84,7 @@ contextmenu(Object *picked_obj, POINT pt)
         {
         case OBJ_EDGE:
             hMenu = LoadMenu(hInst, MAKEINTRESOURCE(IDR_CONTEXT_EDGE));
+            CheckMenuItem(hMenu, ID_OBJ_MAKEPATH, curr_path == picked_obj ? MF_CHECKED : MF_UNCHECKED);
             hMenu = GetSubMenu(hMenu, 0);
             ModifyMenu(hMenu, 0, MF_BYPOSITION | MF_GRAYED | MF_STRING, 0, buf);
 
@@ -138,6 +139,7 @@ contextmenu(Object *picked_obj, POINT pt)
                 EnableMenuItem(hMenu, ID_OBJ_MAKEFACE, closed ? MF_ENABLED : MF_GRAYED);
                 EnableMenuItem(hMenu, ID_OBJ_MAKEPATH, !closed ? MF_ENABLED : MF_GRAYED);
                 EnableMenuItem(hMenu, ID_OBJ_MAKEBODYREV, curr_path != NULL ? MF_ENABLED : MF_GRAYED);
+                CheckMenuItem(hMenu, ID_OBJ_MAKEPATH, curr_path == picked_obj ? MF_CHECKED : MF_UNCHECKED);
             }
             else
             {
@@ -352,7 +354,10 @@ contextmenu(Object *picked_obj, POINT pt)
         break;
 
     case ID_OBJ_MAKEPATH:
-        curr_path = picked_obj;
+        if (curr_path == picked_obj)
+            curr_path = NULL;
+        else
+            curr_path = picked_obj;
         group_changed = TRUE;
         break;
 

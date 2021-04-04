@@ -948,7 +948,7 @@ Command(int message, int wParam, int lParam)
             // Check that they are in fact top-level before deleting them.
             for (obj = selection.head; obj != NULL; obj = obj->next)
             {
-                if (is_top_level_object(obj->prev, &object_tree))
+                if (is_top_level_object(obj->prev, &object_tree))       // TODO allow deletion from a group
                 {
                     delink_group(obj->prev, &object_tree);
                     purge_obj(obj->prev);
@@ -972,7 +972,6 @@ Command(int message, int wParam, int lParam)
 
         case ID_EDIT_SELECTNONE:
             clear_selection(&selection);
-            curr_path = NULL;
             update_drawing();
             break;
 

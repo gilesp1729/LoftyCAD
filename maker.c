@@ -590,13 +590,13 @@ dist_view_list_to_path(Edge* e, Edge* path)
 
 // Make a body of revolution by revolving the given edge group around the 
 // current path. Open edge groups are completed with circles at the poles.
-// If successful, the edge group is deleted and the volume is returned.
+// If successful, the volume is returned. The edge group is retained.
 // A negative volume (hole) may be generated.
 Volume *
 make_body_of_revolution(Group* group, BOOL negative)
 {
     ListHead plist = { NULL, NULL };
-    Group* clone;
+    Group* clone, *orig;
     Volume* vol;
     Face* f;
     Edge* e, *ne, *na, *o, *path, *prev_ne, *prev_na, *first_ne, *first_na;
@@ -619,8 +619,8 @@ make_body_of_revolution(Group* group, BOOL negative)
         path = (Edge*)(((Group*)curr_path)->obj_list.head);
     else
         path = (Edge*)curr_path;
-    ASSERT(path->hdr.type == OBJ_EDGE, "Path needs to be an edge");
-    if (path->hdr.type != OBJ_EDGE)
+    ASSERT(path->hdr.type == OBJ_EDGE && ((Edge *)path)->type == EDGE_STRAIGHT, "Path must be a straight edge");
+    if (path->hdr.type != OBJ_EDGE || ((Edge*)path)->type != EDGE_STRAIGHT)
         return NULL;
 
     // Find the initial point index. 
@@ -747,10 +747,12 @@ make_body_of_revolution(Group* group, BOOL negative)
     // same, so use the worst case (from the largest radius to the axis gathered above)
     n_steps = (int)(2 * PI / (2.0 * acos(1.0 - tolerance / rad)));
 
-    // Clone the edge list in the same location, and fix any edges' nsteps.
-    clone = (Group *)copy_obj((Object*)group, 0, 0, 0, TRUE);
+    // Clone the edge list (twice) in the same location, and fix any edges' nsteps.
+    orig = (Group*)copy_obj((Object*)group, 0, 0, 0, TRUE);
     clear_move_copy_flags((Object*)group);
-    e = (Edge*)group->obj_list.head;
+    clone = (Group*)copy_obj((Object*)group, 0, 0, 0, TRUE);
+    clear_move_copy_flags((Object*)group);
+    e = (Edge*)orig->obj_list.head;
     o = (Edge *)clone->obj_list.head;
 
     // Add the first pair of edges (a circle and a zero-width straight)
@@ -789,7 +791,7 @@ make_body_of_revolution(Group* group, BOOL negative)
     // Proceed down the edge group adding arc edges and barrel faces to the volume
     for 
     (
-        e = (Edge *)group->obj_list.head, o = (Edge*)clone->obj_list.head;
+        e = (Edge *)orig->obj_list.head, o = (Edge*)clone->obj_list.head;
         e != NULL; 
         e = (Edge*)e->hdr.next, o = (Edge*)o->hdr.next
     )
@@ -873,7 +875,7 @@ make_body_of_revolution(Group* group, BOOL negative)
         if (ftype > vol->max_facetype)
             vol->max_facetype = ftype;
 
-        delink_group((Object*)e, group);
+        delink_group((Object*)e, orig);
         delink_group((Object*)o, clone);
 
         prev_ne = ne;
@@ -946,12 +948,30 @@ make_body_of_revolution(Group* group, BOOL negative)
         link((Object*)circle, &vol->faces);
     }
 
-    // Finally, remove the old edge groups
-    ASSERT(group->obj_list.head == NULL, "Edge group is not empty");
+    // Finally, remove the cloned edge groups
+    ASSERT(orig->obj_list.head == NULL, "Edge group is not empty");
     ASSERT(clone->obj_list.head == NULL, "Edge group is not empty");
-    delink_group((Object*)group, &object_tree);
-    purge_obj((Object*)group);
+    purge_obj((Object*)orig);
     purge_obj((Object*)clone);
 
     return vol;
+}
+
+// Make a lofted volume from a group of sections, represented as edge groups.
+// The group of edge groups is retained to allow editing and re-lofting.
+Volume *
+loft(Group* group)
+{
+
+
+
+    // Some sanity checks.
+    ASSERT(group->hdr.type == OBJ_GROUP, "Must be a group");
+    ASSERT(is_edge_group((Group *)group->obj_list.head), "Group must contain edge groups");
+    if (!is_edge_group((Group *)group->obj_list.head))
+        return NULL;
+
+
+
+    return NULL; // TEMP until we get something in here
 }
