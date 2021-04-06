@@ -151,12 +151,13 @@ display_help_state(STATE state)
     display_help(state_key[app_state]);
 }
 
-// Change app state, displaying any help for the new state
+// Change app state, displaying any help for the new state. Clear any error messages.
 void
 change_state(STATE new_state)
 {
     app_state = new_state;
     display_help_state(app_state);
+    clear_status_and_progress();
 }
 
 // Display the cursor for the new state

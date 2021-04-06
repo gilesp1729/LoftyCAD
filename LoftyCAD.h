@@ -333,6 +333,8 @@ void disconnect_edges_in_group(Group * group);
 Face* make_face(Group * group);
 void insert_chamfer_round(Point * pt, Face * parent, float size, EDGE edge_type, BOOL restricted);
 Volume* make_body_of_revolution(Group * group, BOOL negative);
+Volume* make_lofted_volume(Group * group);
+Volume* make_tubed_volume(Group * group);
 
 // Neighbourhood search and picking (neighbourhood.c)
 Object* Pick(GLint x_pick, GLint y_pick, BOOL force_pick);

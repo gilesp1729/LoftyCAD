@@ -957,19 +957,325 @@ make_body_of_revolution(Group* group, BOOL negative)
     return vol;
 }
 
+// Quick helper to shoot out and error message and return NULL.
+#define ERR_RETURN(str)     { show_status("Error: ", (str)); return NULL; }
+
+// Struct describing an edge group, its normal and centroid, and distance along the
+// path used for sorting.
+typedef struct
+{
+    Group* egrp;
+    Plane norm;
+    BOOL  reverse;
+    float param;
+} LoftedGroup;
+
+// qsort comparo function.
+int
+compare_lofted_groups(const void* elem1, const void* elem2)
+{
+    LoftedGroup* g1 = (LoftedGroup*)elem1;
+    LoftedGroup* g2 = (LoftedGroup*)elem2;
+
+    if (g1->param < g2->param)
+        return -1;
+    else if (g1->param > g2->param)
+        return 1;
+    else
+        return 0;
+}
+
 // Make a lofted volume from a group of sections, represented as edge groups.
-// The group of edge groups is retained to allow editing and re-lofting.
+// There may or may not be a current path. If there is not, the endcaps are truncated.
+// The input group is retained to allow editing and re-lofting.
 Volume *
-loft(Group* group)
+make_lofted_volume(Group* group)
+{
+    Group* clone, * egrp, * first_egrp = NULL;
+    Object* obj;
+    Plane principal;
+    int num_groups, num_edges;
+    Bbox box;
+    int i;
+    LoftedGroup* lg;
+    float path_length;
+
+    // Some sanity checks on the input. Some will be enforced outside.
+    ASSERT(group->hdr.type == OBJ_GROUP, "Must be a group");
+
+    // Ensure the edge groups all have the same number and type of edges.
+    num_groups = group->n_members;
+    num_edges = 0;
+    for (obj = group->obj_list.head; obj != NULL; obj = obj->next)
+    {
+        Edge* e, * e0;
+
+        egrp = (Group*)obj;
+        if (!is_closed_edge_group(egrp))
+            ERR_RETURN("Not a closed edge group");
+
+        if (num_edges == 0)
+        {
+            num_edges = egrp->n_members;
+            first_egrp = egrp;
+        }
+        else
+        {
+            if (egrp->n_members != num_edges)
+                ERR_RETURN("Edge groups do not match");
+
+            for 
+            (
+                e = (Edge *)egrp->obj_list.head, e0 = (Edge *)first_egrp->obj_list.head; 
+                e != NULL; 
+                e = (Edge *)e->hdr.next, e0 = (Edge *)e0->hdr.next
+            )
+            {
+                if (e->type != e0->type)
+                    ERR_RETURN("Edges do not match");
+            }
+        }
+    }
+
+    // Once we have checked everything for errors, clone the main group so it can be retained.
+    clone = (Group *)copy_obj((Object*)group, 0, 0, 0, TRUE);
+    clear_move_copy_flags((Object*)group);
+
+    // Allocate the LoftedGroup array.
+    lg = (LoftedGroup*)malloc(num_groups * sizeof(LoftedGroup));
+    lg[0].reverse = FALSE;
+
+    // Determine where the edge groups' centroids are.
+    // If there is a current path, sort the sections by the centroids' positions along it.
+    // If not, determine the bounding box of the centroids and use the principal direction.
+    clear_bbox(&box);
+    if (curr_path != NULL)
+    {
+        if (curr_path->type == OBJ_EDGE)
+        {
+            Edge* e = (Edge*)curr_path;
+
+            expand_bbox(&box, e->endpoints[0]);
+            expand_bbox(&box, e->endpoints[1]);
+            path_length = length(e->endpoints[0], e->endpoints[1]);
+        }
+        else
+        {
+            // Find the first and last points in the edge group making up the path.
+            // TODO: To come later.
+            ERR_RETURN("Complex path not supported (yet)");
+        }
+    }
+
+    // Determine centroid and normal of points in each edge group. The centroid is not
+    // needed exactly; the midpoint of the edge group's bbox will do.
+    for (i = 0, egrp = (Group*)clone->obj_list.head; egrp != NULL; i++, egrp = (Group*)egrp->hdr.next)
+    {
+        Edge* e, * next_edge;
+        int initial, final;
+        Point* pt;
+        ListHead plist = { NULL, NULL };
+        Bbox ebox;
+
+        clear_bbox(&ebox);
+        lg[i].egrp = egrp;
+
+        // Join endpoints up into a list (the next/prev pointers aren't used for
+        // anything else)
+        e = (Edge*)egrp->obj_list.head;
+        next_edge = (Edge*)egrp->obj_list.head->next;
+        if (e->endpoints[0] == next_edge->endpoints[0])
+        {
+            initial = 1;
+            pt = e->endpoints[0];
+        }
+        else if (e->endpoints[0] == next_edge->endpoints[1])
+        {
+            initial = 1;
+            pt = e->endpoints[0];
+        }
+        else if (e->endpoints[1] == next_edge->endpoints[0])
+        {
+            initial = 0;
+            pt = e->endpoints[1];
+        }
+        else if (e->endpoints[1] == next_edge->endpoints[1])
+        {
+            initial = 0;
+            pt = e->endpoints[1];
+        }
+        else
+        {
+            ASSERT(FALSE, "The edges aren't connected");
+            return NULL;
+        }
+
+        link_tail((Object*)e->endpoints[initial], &plist);
+        expand_bbox(&ebox, e->endpoints[initial]);
+        for (; e->hdr.next != NULL; e = next_edge)
+        {
+            next_edge = (Edge*)e->hdr.next;
+
+            if (e->hdr.next->type != OBJ_EDGE)
+                return NULL;
+
+            // Strip construction edges, as we can't consistently create them
+            e->type &= ~EDGE_CONSTRUCTION;
+
+            if (next_edge->endpoints[0] == pt)
+            {
+                link_tail((Object*)next_edge->endpoints[0], &plist);
+                expand_bbox(&ebox, next_edge->endpoints[0]);
+                final = 1;
+            }
+            else if (next_edge->endpoints[1] == pt)
+            {
+                link_tail((Object*)next_edge->endpoints[1], &plist);
+                expand_bbox(&ebox, next_edge->endpoints[1]);
+                final = 0;
+            }
+            else
+            {
+                return NULL;
+            }
+            pt = next_edge->endpoints[final];
+        }
+
+        // Get the normal and see if we need to reverse. Compare it to the normal for the first section.
+        polygon_normal((Point*)plist.head, &lg[i].norm);
+        if (i > 0)
+            lg[i].reverse = dot(lg[i].norm.A, lg[i].norm.B, lg[i].norm.C, lg[0].norm.A, lg[0].norm.B, lg[0].norm.C) < 0;
+
+        // Put the quasi-centroid into the larger bbox, and store it in the normal refpt.
+        lg[i].norm.refpt.x = (ebox.xmin + ebox.xmax) / 2;
+        lg[i].norm.refpt.y = (ebox.ymin + ebox.ymax) / 2;
+        lg[i].norm.refpt.z = (ebox.zmin + ebox.zmax) / 2;
+        expand_bbox(&box, &lg[i].norm.refpt);
+    }
+
+    // Sort the sections into order. The direction is given by the first section's normal.
+    // Put the path (or the bbox principal direction) into that order first.
+    if (curr_path != NULL)
+    {
+        Edge* e = (Edge*)curr_path;
+
+        principal.A = e->endpoints[1]->x - e->endpoints[0]->x;
+        principal.B = e->endpoints[1]->y - e->endpoints[0]->y;
+        principal.C = e->endpoints[1]->z - e->endpoints[0]->z;
+        if (pldot(&principal, &lg[0].norm) > 0)
+        {
+            principal.refpt = *e->endpoints[0];
+        }
+        else
+        {
+            principal.A = -principal.A;
+            principal.B = -principal.B;
+            principal.C = -principal.C;
+            principal.refpt = *e->endpoints[1];
+        }
+
+        // Sorting distance as fraction of path length
+        for (i = 0; i < num_groups; i++)
+            lg[i].param = length(&principal.refpt, &lg[i].norm.refpt) / path_length;
+    }
+    else    // no path, assume (generally) axis-aligned row of centroids in the box
+    {
+        float dx = box.xmax - box.xmin;
+        float dy = box.ymax - box.ymin;
+        float dz = box.zmax - box.zmin;
+
+        if (dx > dy && dx > dz)
+        {
+            // Principal direction is the x-direction.
+            if (lg[0].norm.A > 0)
+            {
+                principal.A = dx;
+                principal.refpt.x = box.xmin;
+            }
+            else  // it's the negative X direction
+            {
+                principal.A = -dx;
+                principal.refpt.x = box.xmax;
+            }
+            principal.B = 0;
+            principal.C = 0;
+            principal.refpt.y = (box.ymax + box.ymin) / 2;
+            principal.refpt.z = (box.zmax + box.zmin) / 2;
+
+            // Express sorting dist as fraction of dx in order to get sign right
+            for (i = 0; i < num_groups; i++)
+                lg[i].param = (lg[i].norm.refpt.x - principal.refpt.x) / dx;
+        }
+        else if (dy > dx && dy > dz)
+        {
+            // The y-direction
+            if (lg[0].norm.B > 0)
+            {
+                principal.B = dy;
+                principal.refpt.y = box.ymin;
+            }
+            else  // it's the negative X direction
+            {
+                principal.B = -dy;
+                principal.refpt.y = box.ymax;
+            }
+            principal.A = 0;
+            principal.C = 0;
+            principal.refpt.x = (box.xmax + box.xmin) / 2;
+            principal.refpt.z = (box.zmax + box.zmin) / 2;
+
+            for (i = 0; i < num_groups; i++)
+                lg[i].param = (lg[i].norm.refpt.y - principal.refpt.y) / dy;
+        }
+        else
+        {
+            // The z-direction
+            if (lg[0].norm.C > 0)
+            {
+                principal.C = dz;
+                principal.refpt.z = box.zmin;
+            }
+            else  // it's the negative X direction
+            {
+                principal.C = -dz;
+                principal.refpt.z = box.zmax;
+            }
+            principal.A = 0;
+            principal.B = 0;
+            principal.refpt.x = (box.xmax + box.xmin) / 2;
+            principal.refpt.y = (box.ymax + box.ymin) / 2;
+
+            for (i = 0; i < num_groups; i++)
+                lg[i].param = (lg[i].norm.refpt.z - principal.refpt.z) / dz;
+        }
+    }
+
+    // Sort by distance from the principal refpt.
+    qsort(lg, num_groups, sizeof(LoftedGroup), compare_lofted_groups);
+
+
+    // Choose a point in the first section as the principal point. Find the corresponding
+    // point in each section.
+
+    // Starting with the principal points, join corresponding points with bezier edges.
+
+
+    // If the path exists and extends beyond the first/last section, the endcap is curved
+    // to (approximately!) pass through the endpoint of the path. Otherwise it is flat.
+
+
+
+
+
+    return NULL; // TEMP until we get something in here
+}
+
+// Given an input edge group, clone it along the current path (which may be an open edge group
+// containing curved edges) and loft the resulting sections. The input edge group is retained.
+Volume *
+make_tubed_volume(Group* group)
 {
 
-
-
-    // Some sanity checks.
-    ASSERT(group->hdr.type == OBJ_GROUP, "Must be a group");
-    ASSERT(is_edge_group((Group *)group->obj_list.head), "Group must contain edge groups");
-    if (!is_edge_group((Group *)group->obj_list.head))
-        return NULL;
 
 
 

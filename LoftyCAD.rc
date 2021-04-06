@@ -395,6 +395,7 @@ BEGIN
         MENUITEM "Reflect",                     ID_OBJ_REFLECT
         MENUITEM "Rotate 90",                   ID_OBJ_ROTATE90
         MENUITEM SEPARATOR
+        MENUITEM "Loft Group",                  ID_OBJ_LOFTGROUP
         MENUITEM "Ungroup",                     ID_OBJ_UNGROUP
         MENUITEM "Save group as...",            ID_OBJ_SAVEGROUP
     END
@@ -518,6 +519,7 @@ BEGIN
         MENUITEM "Make Face from Edge Group",   ID_OBJ_MAKEFACE
         MENUITEM "Make Path from Edge Group",   ID_OBJ_MAKEPATH
         MENUITEM "Make Body of Revolution",     ID_OBJ_MAKEBODYREV
+        MENUITEM "Tube Edge Group along Path",  ID_OBJ_TUBEGROUP
         MENUITEM "Ungroup",                     ID_OBJ_UNGROUP
     END
 END

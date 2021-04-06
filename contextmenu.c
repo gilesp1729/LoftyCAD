@@ -140,12 +140,18 @@ contextmenu(Object *picked_obj, POINT pt)
                 EnableMenuItem(hMenu, ID_OBJ_MAKEPATH, !closed ? MF_ENABLED : MF_GRAYED);
                 EnableMenuItem(hMenu, ID_OBJ_MAKEBODYREV, curr_path != NULL ? MF_ENABLED : MF_GRAYED);
                 CheckMenuItem(hMenu, ID_OBJ_MAKEPATH, curr_path == picked_obj ? MF_CHECKED : MF_UNCHECKED);
+
+                // The edge group must be closed to allow tubing, and there must be a path.
+                EnableMenuItem(hMenu, ID_OBJ_TUBEGROUP, (closed && curr_path != NULL) ? MF_ENABLED : MF_GRAYED);
             }
             else
             {
                 hMenu = LoadMenu(hInst, MAKEINTRESOURCE(IDR_CONTEXT_GROUP));
                 hMenu = GetSubMenu(hMenu, 0);
                 ModifyMenu(hMenu, 0, MF_BYPOSITION | MF_GRAYED | MF_STRING, 0, buf);
+
+                // A group must contain edge groups for it to be lofted.
+                EnableMenuItem(hMenu, ID_OBJ_LOFTGROUP, is_edge_group((Group *)(((Group *)parent)->obj_list.head)) ? MF_ENABLED : MF_GRAYED);
             }
             break;
         }
@@ -364,6 +370,26 @@ contextmenu(Object *picked_obj, POINT pt)
     case ID_OBJ_MAKEBODYREV:
         // TODO: Some sort of UI to support negative BOR (holes)
         vol = make_body_of_revolution((Group*)picked_obj, FALSE);
+        if (vol != NULL)
+        {
+            link_group((Object*)vol, &object_tree);
+            clear_selection(&selection);
+            group_changed = TRUE;
+        }
+        break;
+
+    case ID_OBJ_LOFTGROUP:
+        vol = make_lofted_volume((Group*)picked_obj);
+        if (vol != NULL)
+        {
+            link_group((Object*)vol, &object_tree);
+            clear_selection(&selection);
+            group_changed = TRUE;
+        }
+        break;
+
+    case ID_OBJ_TUBEGROUP:
+        vol = make_tubed_volume((Group*)picked_obj);
         if (vol != NULL)
         {
             link_group((Object*)vol, &object_tree);
