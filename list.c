@@ -55,6 +55,52 @@ link_tail(Object *new_obj, ListHead *obj_list)
     ASSERT(obj_list->tail->next == NULL, "Last element should not have a next");
 }
 
+// Reverse a list. reverse(ABCD) --> DCBA
+void
+reverse(ListHead* list)
+{
+    Object* e, * enext, * swap;
+
+    for (e = list->head; e != NULL; e = enext)
+    {
+        enext = e->next;
+
+        swap = e->next;
+        e->next = e->prev;
+        e->prev = swap;
+    }
+
+    swap = list->head;
+    list->head = list->tail;
+    list->tail = swap;
+}
+
+// Bring an element of the list to the front by rotating all the elements.
+// rotate(ABCD, C) --> CDBA
+void
+rotate(ListHead* list, void* elt)
+{
+    Object* e, *enext;
+
+    // Ensure elt is actually in the list.
+    for (e = list->head; e != NULL; e = e->next)
+    {
+        if (e == elt)
+            goto rotate_list;
+    }
+    ASSERT(FALSE, "Element not in list");
+    return; // avoid an infinite loop
+
+rotate_list:
+    for (e = list->head; e != elt; e = enext)
+    {
+        enext = e->next;
+
+        delink(e, list);
+        link_tail(e, list);
+    }
+}
+
 // Link and delink objects into a group object list
 void link_group(Object *new_obj, Group *group)
 {

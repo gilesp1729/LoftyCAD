@@ -416,6 +416,9 @@ void link_tail(Object *new_obj, ListHead *obj_list);
 void link_group(Object *new_obj, Group *group);
 void delink_group(Object *obj, Group *group);
 void link_tail_group(Object *new_obj, Group *group);
+void reverse(ListHead* list);
+void rotate(ListHead* list, void* elt);
+
 void free_edge(Object* obj);
 void free_point(Object* obj);
 void free_point_list(ListHead *pt_list);
@@ -426,7 +429,7 @@ void link_single(Object *new_obj, ListHead *obj_list);
 void link_single_checked(Object *new_obj, ListHead *obj_list);
 void free_obj_list(ListHead *obj_list);
 
-// bucket stuff (list.c)
+// Bucket stuff (list.c)
 Point ***init_buckets(void);
 Point **find_bucket(Point *p, Point ***bucket);
 void empty_bucket(Point ***bucket);
