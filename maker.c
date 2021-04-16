@@ -960,10 +960,10 @@ make_body_of_revolution(Group* group, BOOL negative)
 // Quick helper to shoot out an error message and return NULL.
 #define ERR_RETURN(str)     { show_status("Error: ", (str)); return NULL; }
 
-// Helper to find the first point of an edge group (the one not in common with the
+// Helpers to find the first point of an edge group (the one not in common with the
 // next edge)
-Point *
-first_point(Edge* edge)
+int
+first_point_index(Edge* edge)
 {
     Edge* next_edge = (Edge *)edge->hdr.next;
 
@@ -973,30 +973,40 @@ first_point(Edge* edge)
         Edge* prev_edge = (Edge*)edge->hdr.prev;
 
         if (edge->endpoints[0] == prev_edge->endpoints[0])
-            return edge->endpoints[0];
+            return 0;
         else if (edge->endpoints[0] == prev_edge->endpoints[1])
-            return edge->endpoints[0];
+            return 0;
         else if (edge->endpoints[1] == prev_edge->endpoints[0])
-            return edge->endpoints[1];
+            return 1;
         else if (edge->endpoints[1] == prev_edge->endpoints[1])
-            return edge->endpoints[1];
+            return 1;
         else
             ASSERT(FALSE, "Edges do not join up");
     }
     else
     {
         if (edge->endpoints[0] == next_edge->endpoints[0])
-            return edge->endpoints[1];
+            return 1;
         else if (edge->endpoints[0] == next_edge->endpoints[1])
-            return edge->endpoints[1];
+            return 1;
         else if (edge->endpoints[1] == next_edge->endpoints[0])
-            return edge->endpoints[0];
+            return 0;
         else if (edge->endpoints[1] == next_edge->endpoints[1])
-            return edge->endpoints[0];
+            return 0;
         else
             ASSERT(FALSE, "Edges do not join up");
     }
-    return NULL;
+    return -1;
+}
+
+Point *
+first_point(Edge* e)
+{
+    int i = first_point_index(e);
+
+    if (i < 0)
+        return NULL;
+    return e->endpoints[i];
 }
 
 // Struct describing an edge group, its normal and centroid, and distance along the
@@ -1030,11 +1040,11 @@ Volume *
 make_lofted_volume(Group* group)
 {
     Group* clone, * egrp, * first_egrp = NULL;
-    Edge* first_edge;
+    Edge* first_edge, *e;
     Object* obj;
     Plane principal, pl;
     Point endpt;
-    Point* first_pt;
+    Point* first_pt, *pt;
     int num_groups, num_edges;
     Bbox box;
     int i;
@@ -1045,6 +1055,7 @@ make_lofted_volume(Group* group)
     ASSERT(group->hdr.type == OBJ_GROUP, "Must be a group");
 
     // Ensure the edge groups all have the same number and type of edges.
+    // There can only be 4, 6 or 8 of them for now.
     num_groups = group->n_members;
     num_edges = 0;
     for (obj = group->obj_list.head; obj != NULL; obj = obj->next)
@@ -1058,6 +1069,8 @@ make_lofted_volume(Group* group)
         if (num_edges == 0)
         {
             num_edges = egrp->n_members;
+            if (num_edges != 4 && num_edges != 6 && num_edges != 8)
+                ERR_RETURN("Edge groups must have 4, 6 or 8 edges");
             first_egrp = egrp;
         }
         else
@@ -1110,11 +1123,10 @@ make_lofted_volume(Group* group)
     // Determine centroid and normal of points in each edge group. The centroid is not
     // needed exactly; the midpoint of the edge group's bbox will do.
     //for (i = 0, egrp = (Group*)clone->obj_list.head; egrp != NULL; i++, egrp = (Group*)egrp->hdr.next)
-    for (i = 0, egrp = (Group*)group->obj_list.head; egrp != NULL; i++, egrp = (Group*)egrp->hdr.next)
+    for (i = 0, egrp = (Group*)group->obj_list.head; egrp != NULL; i++, egrp = (Group*)egrp->hdr.next)      // TEMP for debugging
     {
-        Edge* e, * next_edge;
+        Edge* next_edge;
         int initial, final;
-        Point* pt;
         ListHead plist = { NULL, NULL };
         Bbox ebox;
 
@@ -1202,10 +1214,10 @@ make_lofted_volume(Group* group)
 
     // Sort the sections into order. The direction is given by the first section's normal.
     // Put the path (or the bbox principal direction) into that order first.
+    // TODO: Cope with complex paths.
     if (curr_path != NULL)
     {
-        Edge* e = (Edge*)curr_path;
-
+        e = (Edge*)curr_path;
         principal.A = e->endpoints[1]->x - e->endpoints[0]->x;
         principal.B = e->endpoints[1]->y - e->endpoints[0]->y;
         principal.C = e->endpoints[1]->z - e->endpoints[0]->z;
@@ -1310,34 +1322,64 @@ make_lofted_volume(Group* group)
 
 
     // Choose a point in the first section as the principal point. Find the corresponding
-    // point in each section by finding the closest point to a plane defined by the path
-    // (or principal axis) and the principal point.
+    // point in each section. Various methods have been tried, robustness is an issue.
     first_edge = (Edge *)lg[0].egrp->obj_list.head;
     first_pt = first_point(first_edge);
     normal3(first_pt, &principal.refpt, &endpt, &pl);
 
     for (i = 1; i < num_groups; i++)
     {
-        Edge* e;
         float min_dist = 999999.0f;
         Edge* min_edge = NULL;  // shhh compiler
+        Point* min_point = NULL;
 
         for (e = (Edge *)lg[i].egrp->obj_list.head; e != NULL; e = (Edge *)e->hdr.next)
         {
-            float dist = fabsf(distance_point_plane(&pl, first_point(e)));
+            // this method doesn't work because points on opposite side may be close to plane. Need an angular test.
+           // float dist = fabsf(distance_point_plane(&pl, first_point(e)));
+           
+            // this method assumes the EG's are close to parallel, largely overlapping, and not too different in size.
+            // Need some measure of the line (first_pt, first_point(e)) being most nearly parallel to the principal axis.
+            pt = first_point(e);
+            float dist = length(first_pt, pt);
 
             if (dist < min_dist)
             {
                 min_dist = dist;
                 min_edge = e;
+                min_point = pt;
             }
         }
         
         // Rotate the edge group into alignment with min_edge up first.
         rotate(&lg[i].egrp->obj_list, min_edge);
+
+        // Update previous first point
+        ASSERT(min_point == first_point((Edge*)lg[i].egrp->obj_list.head), "This point should be at the top");
+        first_pt = min_point;
     }
 
     // Join corresponding points with bezier edges.
+    for (i = 1; i < num_groups; i++)
+    {
+        for 
+        (
+            e = (Edge*)lg[i].egrp->obj_list.head; 
+            e != NULL; 
+            e = (Edge*)e->hdr.next
+        )
+        {
+
+
+
+
+
+        }
+    }
+
+
+
+
 
 
     // If the path exists and extends beyond the first/last section, the endcap is curved
