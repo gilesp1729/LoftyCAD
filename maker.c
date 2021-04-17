@@ -1040,16 +1040,19 @@ Volume *
 make_lofted_volume(Group* group)
 {
     Group* clone, * egrp, * first_egrp = NULL;
-    Edge* first_edge, *e;
+    Edge* first_edge, *e, *prev_e;
+    Face* face;
+    Volume* vol;
     Object* obj;
     Plane principal, pl;
     Point endpt;
     Point* first_pt, *pt;
     int num_groups, num_edges;
     Bbox box;
-    int i;
+    int i, j;
     LoftedGroup* lg;
     float path_length;
+    ListHead contour_lists[8];  // max of 8 points in a section, so 8 lists of contour edges
 
     // Some sanity checks on the input. Some will be enforced outside.
     ASSERT(group->hdr.type == OBJ_GROUP, "Must be a group");
@@ -1278,7 +1281,7 @@ make_lofted_volume(Group* group)
                 principal.refpt.y = box.ymin;
                 endpt.y = box.ymax;
             }
-            else  // it's the negative X direction
+            else  // it's the negative Y direction
             {
                 principal.B = -dy;
                 principal.refpt.y = box.ymax;
@@ -1301,7 +1304,7 @@ make_lofted_volume(Group* group)
                 principal.refpt.z = box.zmin;
                 endpt.z = box.zmax;
             }
-            else  // it's the negative X direction
+            else  // it's the negative Z direction
             {
                 principal.C = -dz;
                 principal.refpt.z = box.zmax;
@@ -1359,21 +1362,38 @@ make_lofted_volume(Group* group)
         first_pt = min_point;
     }
 
-    // Join corresponding points with bezier edges.
+    // Join corresponding points with bezier edges. Gather the edges into contour lists.
     for (i = 1; i < num_groups; i++)
     {
         for 
         (
-            e = (Edge*)lg[i].egrp->obj_list.head; 
+            j = 0, e = (Edge*)lg[i].egrp->obj_list.head, prev_e = (Edge*)lg[i-1].egrp->obj_list.head;
             e != NULL; 
-            e = (Edge*)e->hdr.next
+            j++, e = (Edge*)e->hdr.next, prev_e = (Edge*)prev_e->hdr.next
         )
         {
+            int ei = first_point_index(e);
+            int prev_ei = first_point_index(prev_e);
+            int ftype;
+            Edge* ne;
 
+            switch (e->type)        // TODO move to loop that is doing the faces
+            {
+            case EDGE_STRAIGHT:
+                ftype = FACE_CYLINDRICAL;
+                break;
+            case EDGE_ARC:
+                ftype = FACE_BARREL;
+                break;
+            case EDGE_BEZIER:
+                ftype = FACE_BEZIER;
+                break;
+            }
 
-
-
-
+            ne = edge_new(EDGE_BEZIER);
+            ne->endpoints[0] = prev_e->endpoints[prev_ei];      // control points come later
+            ne->endpoints[1] = e->endpoints[ei];
+            link_tail((Object*)ne, &contour_lists[j]);
         }
     }
 
