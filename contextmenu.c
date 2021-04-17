@@ -386,7 +386,6 @@ contextmenu(Object *picked_obj, POINT pt)
             clear_selection(&selection);
             group_changed = TRUE;
         }
-        group_changed = TRUE; // TEMP for debugging lofting
         break;
 
     case ID_OBJ_TUBEGROUP:

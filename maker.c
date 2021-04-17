@@ -999,7 +999,7 @@ first_point_index(Edge* edge)
     return -1;
 }
 
-Point *
+Point*
 first_point(Edge* e)
 {
     int i = first_point_index(e);
@@ -1007,6 +1007,23 @@ first_point(Edge* e)
     if (i < 0)
         return NULL;
     return e->endpoints[i];
+}
+
+// Helper to find the direction of an edge, in order from first point to the other end.
+// Return it in the (normalised) ABC of a Plane, and return the edge's first point index.
+int
+edge_direction(Edge* e, Plane* pl)
+{
+    int i = first_point_index(e);
+    Point* p0 = e->endpoints[i];
+    Point* p1 = e->endpoints[1-i];
+
+    pl->A = p1->x - p0->x;
+    pl->B = p1->y - p0->y;
+    pl->C = p1->z - p0->z;
+    normalise_plane(pl);
+
+    return i;
 }
 
 // Struct describing an edge group, its normal and centroid, and distance along the
@@ -1033,6 +1050,10 @@ compare_lofted_groups(const void* elem1, const void* elem2)
         return 0;
 }
 
+// Some temporary definitions.
+#define TENSION 0.3f
+#define ANGLE_BREAK_COS 0.8f
+
 // Make a lofted volume from a group of sections, represented as edge groups.
 // There may or may not be a current path. If there is not, the endcaps are truncated.
 // The input group is retained to allow editing and re-lofting.
@@ -1053,6 +1074,7 @@ make_lofted_volume(Group* group)
     LoftedGroup* lg;
     float path_length;
     ListHead contour_lists[8];  // max of 8 points in a section, so 8 lists of contour edges
+    Edge* contour[8];
 
     // Some sanity checks on the input. Some will be enforced outside.
     ASSERT(group->hdr.type == OBJ_GROUP, "Must be a group");
@@ -1125,8 +1147,8 @@ make_lofted_volume(Group* group)
 
     // Determine centroid and normal of points in each edge group. The centroid is not
     // needed exactly; the midpoint of the edge group's bbox will do.
-    //for (i = 0, egrp = (Group*)clone->obj_list.head; egrp != NULL; i++, egrp = (Group*)egrp->hdr.next)
-    for (i = 0, egrp = (Group*)group->obj_list.head; egrp != NULL; i++, egrp = (Group*)egrp->hdr.next)      // TEMP for debugging
+    for (i = 0, egrp = (Group*)clone->obj_list.head; egrp != NULL; i++, egrp = (Group*)egrp->hdr.next)
+    //for (i = 0, egrp = (Group*)group->obj_list.head; egrp != NULL; i++, egrp = (Group*)egrp->hdr.next)      // TEMP for debugging
     {
         Edge* next_edge;
         int initial, final;
@@ -1363,21 +1385,47 @@ make_lofted_volume(Group* group)
     }
 
     // Join corresponding points with bezier edges. Gather the edges into contour lists.
+    vol = vol_new();
     for (i = 1; i < num_groups; i++)
     {
-        for 
+        // Points to head of each contour list
+        for (j = 0; j < num_edges; j++)
+            contour[j] = (Edge*)contour_lists[j].head;
+
+        for
         (
-            j = 0, e = (Edge*)lg[i].egrp->obj_list.head, prev_e = (Edge*)lg[i-1].egrp->obj_list.head;
-            e != NULL; 
+            j = 0, e = (Edge*)lg[i].egrp->obj_list.head, prev_e = (Edge*)lg[i - 1].egrp->obj_list.head;
+            e != NULL;
             j++, e = (Edge*)e->hdr.next, prev_e = (Edge*)prev_e->hdr.next
         )
         {
             int ei = first_point_index(e);
             int prev_ei = first_point_index(prev_e);
-            int ftype;
             Edge* ne;
 
-            switch (e->type)        // TODO move to loop that is doing the faces
+            // Add the edge to its list.
+            ne = edge_new(EDGE_BEZIER);
+            ne->endpoints[0] = prev_e->endpoints[prev_ei];      // control points come later
+            ne->endpoints[1] = e->endpoints[ei];
+            link_tail((Object*)ne, &contour_lists[j]);
+        }
+
+        // Now that all the contour edges have been created, join the edges up into faces.
+        // Since the edge groups are closed, the last face joins back to the head edge.
+        // Also calculate the control points of the contour edges.
+        for
+        (
+            j = 0, e = (Edge*)lg[i].egrp->obj_list.head, prev_e = (Edge*)lg[i - 1].egrp->obj_list.head;
+            e != NULL;
+            j++, e = (Edge*)e->hdr.next, prev_e = (Edge*)prev_e->hdr.next
+        )
+        {
+            int ftype, ci, cp, cn;
+            Plane dummy = { 0, };
+            Plane plprev, plcurr, plnext;
+            float lj;
+
+            switch (e->type)
             {
             case EDGE_STRAIGHT:
                 ftype = FACE_CYLINDRICAL;
@@ -1389,12 +1437,64 @@ make_lofted_volume(Group* group)
                 ftype = FACE_BEZIER;
                 break;
             }
+            face = face_new(ftype, dummy);
+            face->n_edges = 4;
+            face->edges[0] = prev_e;
+            if (j < num_edges - 1)
+                face->edges[1] = contour[j+1];
+            else
+                face->edges[1] = contour[0];
+            face->edges[2] = e;
+            face->edges[3] = contour[j];
+            link_tail((Object *)face, &vol->faces);
 
-            ne = edge_new(EDGE_BEZIER);
-            ne->endpoints[0] = prev_e->endpoints[prev_ei];      // control points come later
-            ne->endpoints[1] = e->endpoints[ei];
-            link_tail((Object*)ne, &contour_lists[j]);
+            // Calculate the positions of the contours' control points.
+            // Take care at the beginning and the end of the list.
+            ci = edge_direction(contour[j], &plcurr);
+            if (contour[j]->hdr.prev != NULL)
+            {
+                cp = edge_direction(contour[j]->hdr.prev, &plprev);
+
+                // See if the angle between the contours exceeds the angle-break criterion.
+                if (pldot(&plprev, &plcurr) < ANGLE_BREAK_COS)
+                {
+                    // problem - need to use plnext and it hasn't been calculated!
+                }
+                else
+                {
+                    // Average them and use that for the edges on both sides.
+                    plprev.A = (plprev.A + plcurr.A) / 2;
+                    plprev.B = (plprev.B + plcurr.B) / 2;
+                    plprev.C = (plprev.C + plcurr.C) / 2;
+                    lj = length(contour[j]->endpoints[0], contour[j]->endpoints[1]);
+                    ((BezierEdge*)contour[j])->ctrlpoints[ci]->x = contour[j]->endpoints[ci]->x + (plprev.A * TENSION * lj);
+                    ((BezierEdge*)contour[j])->ctrlpoints[ci]->y = contour[j]->endpoints[ci]->y + (plprev.B * TENSION * lj);
+                    ((BezierEdge*)contour[j])->ctrlpoints[ci]->z = contour[j]->endpoints[ci]->z + (plprev.C * TENSION * lj);
+
+
+
+
+                }
+            }
+            if (contour[j]->hdr.next != NULL)
+            {
+                cn = edge_direction(contour[j]->hdr.next, &plnext);
+
+
+
+
+            }
+
+
+
+
+
+
         }
+
+        // Advance to next set of contours
+        for (j = 0; j < num_edges; j++)
+            contour[j] = (Edge*)contour[j]->hdr.next;
     }
 
 
@@ -1409,7 +1509,7 @@ make_lofted_volume(Group* group)
 
 
 
-    return NULL; // TEMP until we get something in here
+    return vol;
 }
 
 // Given an input edge group, clone it along the current path (which may be an open edge group
