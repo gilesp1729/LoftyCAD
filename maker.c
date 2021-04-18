@@ -1053,6 +1053,7 @@ compare_lofted_groups(const void* elem1, const void* elem2)
 // Some temporary definitions.
 #define TENSION 0.3f
 #define ANGLE_BREAK_COS 0.8f
+#define CONTOUR_STEPS 10
 
 // Make a lofted volume from a group of sections, represented as edge groups.
 // There may or may not be a current path. If there is not, the endcaps are truncated.
@@ -1080,8 +1081,12 @@ make_lofted_volume(Group* group)
     ASSERT(group->hdr.type == OBJ_GROUP, "Must be a group");
 
     // Ensure the edge groups all have the same number and type of edges.
-    // There can only be 4, 6 or 8 of them for now.
+    // There can only be 4, 6 or 8 of them for now. Also, there must be at 
+    // least 2 edge groups.
+    memset(contour_lists, 0, 8 * sizeof(ListHead));
     num_groups = group->n_members;
+    if (num_groups < 2)
+        ERR_RETURN("There must be at least 2 edge groups");
     num_edges = 0;
     for (obj = group->obj_list.head; obj != NULL; obj = obj->next)
     {
@@ -1112,6 +1117,9 @@ make_lofted_volume(Group* group)
             {
                 if (e->type != e0->type)
                     ERR_RETURN("Edges do not match");
+
+                // TODO:If arc or bezier, ensure they all have the same numbere of steps
+                // But do this in the clone
             }
         }
     }
@@ -1385,13 +1393,8 @@ make_lofted_volume(Group* group)
     }
 
     // Join corresponding points with bezier edges. Gather the edges into contour lists.
-    vol = vol_new();
     for (i = 1; i < num_groups; i++)
     {
-        // Points to head of each contour list
-        for (j = 0; j < num_edges; j++)
-            contour[j] = (Edge*)contour_lists[j].head;
-
         for
         (
             j = 0, e = (Edge*)lg[i].egrp->obj_list.head, prev_e = (Edge*)lg[i - 1].egrp->obj_list.head;
@@ -1405,11 +1408,31 @@ make_lofted_volume(Group* group)
 
             // Add the edge to its list.
             ne = edge_new(EDGE_BEZIER);
-            ne->endpoints[0] = prev_e->endpoints[prev_ei];      // control points come later
+            ne->endpoints[0] = prev_e->endpoints[prev_ei];
             ne->endpoints[1] = e->endpoints[ei];
+            ((BezierEdge*)ne)->ctrlpoints[0] = point_newp(ne->endpoints[0]);
+            ((BezierEdge*)ne)->ctrlpoints[1] = point_newp(ne->endpoints[1]);
+
+            // Setup step counts (TODO a better algorithm!) and zero the step size so it gets
+            // recalculated again with the next view list update.
+            ne->nsteps = CONTOUR_STEPS;
+            ne->stepsize = 0;
+            ne->stepping = TRUE;
+            ne->view_valid = FALSE;
+
             link_tail((Object*)ne, &contour_lists[j]);
         }
+    }
 
+    vol = vol_new();
+    vol->hdr.lock = LOCK_FACES;
+
+    // Points to head of each contour list
+    for (j = 0; j < num_edges; j++)
+        contour[j] = (Edge*)contour_lists[j].head;
+
+    for (i = 1; i < num_groups; i++)
+    {
         // Now that all the contour edges have been created, join the edges up into faces.
         // Since the edge groups are closed, the last face joins back to the head edge.
         // Also calculate the control points of the contour edges.
@@ -1423,7 +1446,9 @@ make_lofted_volume(Group* group)
             int ftype, ci, cp, cn;
             Plane dummy = { 0, };
             Plane plprev, plcurr, plnext;
+            Edge* c;
             float lj;
+            BOOL prev_break, next_break;
 
             switch (e->type)
             {
@@ -1437,6 +1462,7 @@ make_lofted_volume(Group* group)
                 ftype = FACE_BEZIER;
                 break;
             }
+
             face = face_new(ftype, dummy);
             face->n_edges = 4;
             face->edges[0] = prev_e;
@@ -1446,53 +1472,107 @@ make_lofted_volume(Group* group)
                 face->edges[1] = contour[0];
             face->edges[2] = e;
             face->edges[3] = contour[j];
+            face->initial_point = first_point(prev_e);
+            face->vol = vol;
+            if (ftype > vol->max_facetype)
+                vol->max_facetype = ftype;
             link_tail((Object *)face, &vol->faces);
 
             // Calculate the positions of the contours' control points.
             // Take care at the beginning and the end of the list.
             ci = edge_direction(contour[j], &plcurr);
+            prev_break = FALSE;
+            next_break = FALSE;
             if (contour[j]->hdr.prev != NULL)
             {
-                cp = edge_direction(contour[j]->hdr.prev, &plprev);
+                cp = edge_direction((Edge *)contour[j]->hdr.prev, &plprev);
 
                 // See if the angle between the contours exceeds the angle-break criterion.
                 if (pldot(&plprev, &plcurr) < ANGLE_BREAK_COS)
                 {
-                    // problem - need to use plnext and it hasn't been calculated!
+                    // We do not yet know the angles at the next edge transition, so flag it
+                    // for later.
+                    prev_break = TRUE;
                 }
                 else
                 {
                     // Average them and use that for the edges on both sides.
+                    // (i.e. ctrl[ci] of curr, ctrl[1-cp] of prev)
                     plprev.A = (plprev.A + plcurr.A) / 2;
                     plprev.B = (plprev.B + plcurr.B) / 2;
                     plprev.C = (plprev.C + plcurr.C) / 2;
-                    lj = length(contour[j]->endpoints[0], contour[j]->endpoints[1]);
-                    ((BezierEdge*)contour[j])->ctrlpoints[ci]->x = contour[j]->endpoints[ci]->x + (plprev.A * TENSION * lj);
-                    ((BezierEdge*)contour[j])->ctrlpoints[ci]->y = contour[j]->endpoints[ci]->y + (plprev.B * TENSION * lj);
-                    ((BezierEdge*)contour[j])->ctrlpoints[ci]->z = contour[j]->endpoints[ci]->z + (plprev.C * TENSION * lj);
 
+                    c = contour[j];
+                    lj = length(c->endpoints[0], c->endpoints[1]);
+                    ((BezierEdge*)c)->ctrlpoints[ci]->x = c->endpoints[ci]->x + (plprev.A * TENSION * lj);
+                    ((BezierEdge*)c)->ctrlpoints[ci]->y = c->endpoints[ci]->y + (plprev.B * TENSION * lj);
+                    ((BezierEdge*)c)->ctrlpoints[ci]->z = c->endpoints[ci]->z + (plprev.C * TENSION * lj);
 
-
-
+                    c = (Edge *)contour[j]->hdr.prev;
+                    lj = length(c->endpoints[0], c->endpoints[1]);
+                    ((BezierEdge*)c)->ctrlpoints[1-cp]->x = c->endpoints[1-cp]->x - (plprev.A * TENSION * lj);
+                    ((BezierEdge*)c)->ctrlpoints[1-cp]->y = c->endpoints[1-cp]->y - (plprev.B * TENSION * lj);
+                    ((BezierEdge*)c)->ctrlpoints[1-cp]->z = c->endpoints[1-cp]->z - (plprev.C * TENSION * lj);
                 }
             }
+            else  // There is no previous edge. Treat as an angle break (the endcap may alter this later)
+            {
+                prev_break = TRUE;
+            }
+
             if (contour[j]->hdr.next != NULL)
             {
-                cn = edge_direction(contour[j]->hdr.next, &plnext);
+                cn = edge_direction((Edge *)contour[j]->hdr.next, &plnext);
+                if (pldot(&plcurr, &plnext) < ANGLE_BREAK_COS)
+                {
+                    next_break = TRUE;
+                }
+                else
+                {
+                    // Average them and use that for the edges on both sides.
+                    // (i.e. ctrl[1-ci] of curr, ctrl[cn] of next)
+                    plnext.A = (plcurr.A + plnext.A) / 2;
+                    plnext.B = (plcurr.B + plnext.B) / 2;
+                    plnext.C = (plcurr.C + plnext.C) / 2;
 
+                    c = contour[j];
+                    lj = length(c->endpoints[0], c->endpoints[1]);
+                    ((BezierEdge*)c)->ctrlpoints[1-ci]->x = c->endpoints[1-ci]->x - (plnext.A * TENSION * lj);
+                    ((BezierEdge*)c)->ctrlpoints[1-ci]->y = c->endpoints[1-ci]->y - (plnext.B * TENSION * lj);
+                    ((BezierEdge*)c)->ctrlpoints[1-ci]->z = c->endpoints[1-ci]->z - (plnext.C * TENSION * lj);
+
+                    c = (Edge*)contour[j]->hdr.next;
+                    lj = length(c->endpoints[0], c->endpoints[1]);
+                    ((BezierEdge*)c)->ctrlpoints[cn]->x = c->endpoints[cn]->x + (plnext.A * TENSION * lj);
+                    ((BezierEdge*)c)->ctrlpoints[cn]->y = c->endpoints[cn]->y + (plnext.B * TENSION * lj);
+                    ((BezierEdge*)c)->ctrlpoints[cn]->z = c->endpoints[cn]->z + (plnext.C * TENSION * lj);
+                }
+            }
+            else
+            {
+                next_break = TRUE;
+            }
+
+            // Tidy up the conditions at the ends, or where there is an angle break.
+            if (prev_break && !next_break)
+            {
+
+            }
+            else if (next_break && !prev_break)
+            {
 
 
 
             }
+            else if (prev_break && next_break)
+            {
 
 
 
-
-
-
+            }
         }
 
-        // Advance to next set of contours
+        // Advance to next contour
         for (j = 0; j < num_edges; j++)
             contour[j] = (Edge*)contour[j]->hdr.next;
     }
