@@ -250,14 +250,14 @@ disconnect_edges_in_group(Group* group)
 }
 
 // Make a face object out of a closed group of connected edges.
-// The original group is deleted.
+// The original group is cleared and should be deleted by the caller.
+// Reversing can be automatic (test against facing plane) or user controlled.
 Face*
-make_face(Group* group)
+make_face(Group* group, BOOL auto_reverse, BOOL reverse)
 {
     Face* face = NULL;
     Edge* e, * next_edge, * prev_edge;
     Plane norm;
-    BOOL reverse = FALSE;
     int initial, final, n_edges;
     ListHead plist = { NULL, NULL };
     Point* pt;
@@ -334,10 +334,13 @@ make_face(Group* group)
 
     // Get the normal and see if we need to reverse. This depends on the face being generally
     // in one plane (it may be a bit curved, but a full circle cylinder will confuse things..)
+    // Automatic reversing is done by testing against the facing plane.
     polygon_normal((Point*)plist.head, &norm);
-    if (dot(norm.A, norm.B, norm.C, facing_plane->A, facing_plane->B, facing_plane->C) < 0)
+    if (auto_reverse)
+        reverse = dot(norm.A, norm.B, norm.C, facing_plane->A, facing_plane->B, facing_plane->C) < 0;
+
+    if (reverse)
     {
-        reverse = TRUE;
         norm.A = -norm.A;
         norm.B = -norm.B;
         norm.C = -norm.C;
@@ -454,10 +457,8 @@ make_face(Group* group)
         }
     }
 
-    // Delete the group
+    // Group must be cleared out by now (delete will happen later)
     ASSERT(group->obj_list.head == NULL, "Edge group is not empty");
-    delink_group((Object*)group, &object_tree);
-    purge_obj((Object*)group);
 
     // Finally, update the view list for the face
     face->view_valid = FALSE;
@@ -1127,9 +1128,6 @@ make_lofted_volume(Group* group)
             {
                 if (e->type != e0->type)
                     ERR_RETURN("Edges do not match");
-
-                // TODO:If arc or bezier, ensure they all have the same number of steps
-                // But do this in the clone
             }
         }
     }
@@ -1137,6 +1135,35 @@ make_lofted_volume(Group* group)
     // Once we have checked everything for errors, clone the main group so it can be retained.
     clone = (Group *)copy_obj((Object*)group, 0, 0, 0, TRUE);
     clear_move_copy_flags((Object*)group);
+
+    // Ensure corresponding edges have matching step counts. Zero out the
+    // step sizes so they get recalculated.
+    first_egrp = (Group*)clone->obj_list.head;
+    e = (Edge*)first_egrp->obj_list.head;
+    e->stepsize = 0;
+    e->stepping = TRUE;
+    e->view_valid = FALSE;
+    for (obj = clone->obj_list.head->next; obj != NULL; obj = obj->next)
+    {
+        Edge* e0;
+
+        egrp = (Group*)obj;
+        for
+        (
+            e = (Edge*)egrp->obj_list.head, e0 = (Edge*)first_egrp->obj_list.head;
+            e != NULL;
+            e = (Edge*)e->hdr.next, e0 = (Edge*)e0->hdr.next
+        )
+        {
+            if (e0->type >= EDGE_ARC)
+            {
+                e->nsteps = e0->nsteps;
+                e->stepsize = 0;
+                e->stepping = TRUE;
+                e->view_valid = FALSE;
+            }
+        }
+    }
 
     // Allocate the LoftedGroup array.
     lg = (LoftedGroup*)malloc(num_groups * sizeof(LoftedGroup));
@@ -1166,7 +1193,6 @@ make_lofted_volume(Group* group)
     // Determine centroid and normal of points in each edge group. The centroid is not
     // needed exactly; the midpoint of the edge group's bbox will do.
     for (i = 0, egrp = (Group*)clone->obj_list.head; egrp != NULL; i++, egrp = (Group*)egrp->hdr.next)
-    //for (i = 0, egrp = (Group*)group->obj_list.head; egrp != NULL; i++, egrp = (Group*)egrp->hdr.next)      // TEMP for debugging
     {
         Edge* next_edge;
         int initial, final;
@@ -1570,7 +1596,7 @@ make_lofted_volume(Group* group)
         point_direction(&lg[0].norm.refpt, c->endpoints[ci], &plend);
         cosmax = pldot(&plend, &pl);
         
-        // Check the edges incident on the common point (e->endpoints[ci]) and see if
+        // Check the edges incident on the common point (c->endpoints[ci]) and see if
         // they make a smaller angle (greater dot product). If so, use that for the test.
         for (e = (Edge*)lg[0].egrp->obj_list.head; e != NULL; e = (Edge*)e->hdr.next)
         {
@@ -1600,8 +1626,8 @@ make_lofted_volume(Group* group)
         }
     }
 
-    // Make a face out of the first edge group. TODO: Its normal needs to be reversed, and don't delete the group (yet)
-    face = make_face(lg[0].egrp);
+    // Make a face out of the first edge group. Its normal needs to be reversed.
+    face = make_face(lg[0].egrp, FALSE, TRUE);
     face->vol = vol;
     if (face->type > vol->max_facetype)
         vol->max_facetype = face->type;
@@ -1620,7 +1646,7 @@ make_lofted_volume(Group* group)
         point_direction(c->endpoints[1-ci], &lg[num_groups-1].norm.refpt, &plend);
         cosmax = pldot(&plend, &pl);
 
-        // Check the edges incident on the common point (e->endpoints[1-ci]) and see if
+        // Check the edges incident on the common point (c->endpoints[1-ci]) and see if
         // they make a smaller angle (greater dot product). If so, use that for the test.
         for (e = (Edge*)lg[num_groups-1].egrp->obj_list.head; e != NULL; e = (Edge*)e->hdr.next)
         {
@@ -1651,16 +1677,27 @@ make_lofted_volume(Group* group)
     }
 
     // Make a face out of the last edge group.
-    face = make_face(lg[num_groups - 1].egrp);
+    face = make_face(lg[num_groups - 1].egrp, FALSE, FALSE);
     face->vol = vol;
     if (face->type > vol->max_facetype)
         vol->max_facetype = face->type;
     link_tail((Object*)face, &vol->faces);
 
-    // Clean up by deleting the clone and its edge groups.
+    // Clean up by deleting the clone and its edge groups. 
+    // Clear the edges out first. make_face will have cleared out the 
+    // endcap groups.
+    for (obj = clone->obj_list.head; obj != NULL; obj = obj->next)
+    {
+        Object* o, * onext;
 
-
-
+        egrp = (Group*)obj;
+        for (o = egrp->obj_list.head; o != NULL; o = onext)
+        {
+            onext = o->next;
+            delink_group(o, egrp);
+        }
+    }
+    purge_obj((Object *)clone);
 
     return vol;
 }
