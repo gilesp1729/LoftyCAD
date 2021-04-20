@@ -250,7 +250,7 @@ disconnect_edges_in_group(Group* group)
 }
 
 // Make a face object out of a closed group of connected edges.
-// The original group is deleted and the face is put into the object tree.
+// The original group is deleted.
 Face*
 make_face(Group* group)
 {
@@ -1026,6 +1026,16 @@ edge_direction(Edge* e, Plane* pl)
     return i;
 }
 
+// Similarly, given two points.
+void
+point_direction(Point* p0, Point* p1, Plane* pl)
+{
+    pl->A = p1->x - p0->x;
+    pl->B = p1->y - p0->y;
+    pl->C = p1->z - p0->z;
+    normalise_plane(pl);
+}
+
 // Struct describing an edge group, its normal and centroid, and distance along the
 // path used for sorting.
 typedef struct
@@ -1052,11 +1062,11 @@ compare_lofted_groups(const void* elem1, const void* elem2)
 
 // Some temporary definitions.
 #define TENSION 0.3f
-#define ANGLE_BREAK_COS 0.8f
+#define ANGLE_BREAK_COS 0.6f
 #define CONTOUR_STEPS 10
 
 // Make a lofted volume from a group of sections, represented as edge groups.
-// There may or may not be a current path. If there is not, the endcaps are truncated.
+// There may or may not be a current path. 
 // The input group is retained to allow editing and re-lofting.
 Volume *
 make_lofted_volume(Group* group)
@@ -1118,7 +1128,7 @@ make_lofted_volume(Group* group)
                 if (e->type != e0->type)
                     ERR_RETURN("Edges do not match");
 
-                // TODO:If arc or bezier, ensure they all have the same numbere of steps
+                // TODO:If arc or bezier, ensure they all have the same number of steps
                 // But do this in the clone
             }
         }
@@ -1488,13 +1498,7 @@ make_lofted_volume(Group* group)
                 cp = edge_direction((Edge *)contour[j]->hdr.prev, &plprev);
 
                 // See if the angle between the contours exceeds the angle-break criterion.
-                if (pldot(&plprev, &plcurr) < ANGLE_BREAK_COS)
-                {
-                    // We do not yet know the angles at the next edge transition, so flag it
-                    // for later.
-                    prev_break = TRUE;
-                }
-                else
+                if (pldot(&plprev, &plcurr) > ANGLE_BREAK_COS)
                 {
                     // Average them and use that for the edges on both sides.
                     // (i.e. ctrl[ci] of curr, ctrl[1-cp] of prev)
@@ -1515,19 +1519,11 @@ make_lofted_volume(Group* group)
                     ((BezierEdge*)c)->ctrlpoints[1-cp]->z = c->endpoints[1-cp]->z - (plprev.C * TENSION * lj);
                 }
             }
-            else  // There is no previous edge. Treat as an angle break (the endcap may alter this later)
-            {
-                prev_break = TRUE;
-            }
 
             if (contour[j]->hdr.next != NULL)
             {
                 cn = edge_direction((Edge *)contour[j]->hdr.next, &plnext);
-                if (pldot(&plcurr, &plnext) < ANGLE_BREAK_COS)
-                {
-                    next_break = TRUE;
-                }
-                else
+                if (pldot(&plcurr, &plnext) > ANGLE_BREAK_COS)
                 {
                     // Average them and use that for the edges on both sides.
                     // (i.e. ctrl[1-ci] of curr, ctrl[cn] of next)
@@ -1548,28 +1544,6 @@ make_lofted_volume(Group* group)
                     ((BezierEdge*)c)->ctrlpoints[cn]->z = c->endpoints[cn]->z + (plnext.C * TENSION * lj);
                 }
             }
-            else
-            {
-                next_break = TRUE;
-            }
-
-            // Tidy up the conditions at the ends, or where there is an angle break.
-            if (prev_break && !next_break)
-            {
-
-            }
-            else if (next_break && !prev_break)
-            {
-
-
-
-            }
-            else if (prev_break && next_break)
-            {
-
-
-
-            }
         }
 
         // Advance to next contour
@@ -1578,13 +1552,112 @@ make_lofted_volume(Group* group)
     }
 
 
+    // Form the endcaps. User has a choice of angle-break or smooth at the ends of the contours.
+    // The angle used for testing the angle-break criterion at the end the contour is the smallest of:
+    // - the angle to the centroid of the end edge group,
+    // - the angles to the two endcap edges incident on the common point.
 
+    // Nose endcap (at start of group)
+    for (j = 0; j < num_edges; j++)
+    {
+        Plane pl, plend, pltest;
+        Edge* c;
+        int ci;
+        float cosmax, costest, lj;
 
+        c = (Edge *)contour_lists[j].head;
+        ci = edge_direction(c, &pl);         // points into contour
+        point_direction(&lg[0].norm.refpt, c->endpoints[ci], &plend);
+        cosmax = pldot(&plend, &pl);
+        
+        // Check the edges incident on the common point (e->endpoints[ci]) and see if
+        // they make a smaller angle (greater dot product). If so, use that for the test.
+        for (e = (Edge*)lg[0].egrp->obj_list.head; e != NULL; e = (Edge*)e->hdr.next)
+        {
+            // Be careful with the directions
+            if (e->endpoints[0] == c->endpoints[ci])
+                point_direction(e->endpoints[1], e->endpoints[0], &pltest);
+            else if (e->endpoints[1] == c->endpoints[ci])
+                point_direction(e->endpoints[0], e->endpoints[1], &pltest);
+            else
+                continue;
 
+            costest = pldot(&pltest, &pl);
+            if (costest > cosmax)
+            {
+                cosmax = costest;
+                plend = pltest;
+            }
+        }
 
-    // If the path exists and extends beyond the first/last section, the endcap is curved
-    // to (approximately!) pass through the endpoint of the path. Otherwise it is flat.
+        if (cosmax > ANGLE_BREAK_COS)
+        {
+            // make the first ctrl point straight into the end group's plane (don't average them)
+            lj = length(c->endpoints[0], c->endpoints[1]);
+            ((BezierEdge*)c)->ctrlpoints[ci]->x = c->endpoints[ci]->x + (plend.A * TENSION * lj);
+            ((BezierEdge*)c)->ctrlpoints[ci]->y = c->endpoints[ci]->y + (plend.B * TENSION * lj);
+            ((BezierEdge*)c)->ctrlpoints[ci]->z = c->endpoints[ci]->z + (plend.C * TENSION * lj);
+        }
+    }
 
+    // Make a face out of the first edge group. TODO: Its normal needs to be reversed, and don't delete the group (yet)
+    face = make_face(lg[0].egrp);
+    face->vol = vol;
+    if (face->type > vol->max_facetype)
+        vol->max_facetype = face->type;
+    link_tail((Object*)face, &vol->faces);
+
+    // Tail endcap (at end of group)
+    for (j = 0; j < num_edges; j++)
+    {
+        Plane pl, plend, pltest;
+        Edge* c;
+        int ci;
+        float cosmax, costest, lj;
+
+        c = (Edge*)contour_lists[j].tail;
+        ci = edge_direction(c, &pl);         // points out of contour
+        point_direction(c->endpoints[1-ci], &lg[num_groups-1].norm.refpt, &plend);
+        cosmax = pldot(&plend, &pl);
+
+        // Check the edges incident on the common point (e->endpoints[1-ci]) and see if
+        // they make a smaller angle (greater dot product). If so, use that for the test.
+        for (e = (Edge*)lg[num_groups-1].egrp->obj_list.head; e != NULL; e = (Edge*)e->hdr.next)
+        {
+            // Be careful with the directions
+            if (e->endpoints[0] == c->endpoints[1-ci])
+                point_direction(e->endpoints[0], e->endpoints[1], &pltest);
+            else if (e->endpoints[1] == c->endpoints[1-ci])
+                point_direction(e->endpoints[1], e->endpoints[0], &pltest);
+            else
+                continue;
+
+            costest = pldot(&pltest, &pl);
+            if (costest > cosmax)
+            {
+                cosmax = costest;
+                plend = pltest;
+            }
+        }
+
+        if (cosmax > ANGLE_BREAK_COS)
+        {
+            // make the first ctrl point straight into the end group's plane (don't average them)
+            lj = length(c->endpoints[0], c->endpoints[1]);
+            ((BezierEdge*)c)->ctrlpoints[1-ci]->x = c->endpoints[1-ci]->x - (plend.A * TENSION * lj);
+            ((BezierEdge*)c)->ctrlpoints[1-ci]->y = c->endpoints[1-ci]->y - (plend.B * TENSION * lj);
+            ((BezierEdge*)c)->ctrlpoints[1-ci]->z = c->endpoints[1-ci]->z - (plend.C * TENSION * lj);
+        }
+    }
+
+    // Make a face out of the last edge group.
+    face = make_face(lg[num_groups - 1].egrp);
+    face->vol = vol;
+    if (face->type > vol->max_facetype)
+        vol->max_facetype = face->type;
+    link_tail((Object*)face, &vol->faces);
+
+    // Clean up by deleting the clone and its edge groups.
 
 
 
