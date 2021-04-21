@@ -327,6 +327,19 @@ typedef struct Bbox
     float           zc;
 } Bbox;
 
+// Structure containing lofting parameters.
+typedef struct LoftParams
+{
+    float           body_tension;   // Tensioning factor along contours in body (fraction of straight-line length)
+    float           nose_tension;   // And for points adjoining endcap at nose
+    float           tail_tension;   // And for points adjoining endcap at tail
+    float           body_angle_break;   // Angle break in degrees, beyond which smoothing will no longer be attempted
+    float           nose_angle_break;    // And for points adjoining endcap at nose
+    float           tail_angle_break;    // And for points adjoining endcap at tail
+    BOOL            nose_truncate;  // If TRUE, nose endcap will always break (truncate)
+    BOOL            tail_truncate;  // If TRUE, tail endcap will always break (truncate)
+} LoftParams;
+
 // Volume struct. This is the usual top-level 3D object.
 typedef struct Volume
 {
@@ -365,6 +378,7 @@ typedef struct Group
     BOOL            mesh_complete;  // If TRUE, all volumes have been completely merged to this mesh.
                                     // (otherwise, some will need to be added separately to the output)
     struct ListHead obj_list;       // Doubly linked list of objects making up the group
+    struct LoftParams* loft;        // Lofting params, if the group has been lofted
 } Group;
 
 // Externs

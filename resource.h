@@ -103,6 +103,7 @@
 #define IDD_CLIP_PLANE                  164
 #define IDC_FACE                        165
 #define IDR_CONTEXT_VOL                 165
+#define IDD_LOFT                        165
 #define IDC_FACE1                       166
 #define IDR_CONTEXT_FACE                166
 #define IDC_FACE2                       167
@@ -174,8 +175,17 @@
 #define IDC_PREFS_SEND_LINENO           1070
 #define IDC_CLIP_A                      1070
 #define IDC_CLIP_B                      1071
+#define IDC_LOFT_TRUNCATE_NOSE          1071
 #define IDC_CLIP_C                      1072
+#define IDC_LOFT_TRUNCATE_TAIL          1072
 #define IDC_CLIP_D                      1073
+#define IDC_LOFT_BODY_TENSION           1073
+#define IDC_LOFT_NOSE_TENSION           1079
+#define IDC_LOFT_TAIL_TENSION           1080
+#define IDC_LOFT_BODY_ANGLEBREAK        1081
+#define IDC_LOFT_NOSE_ANGLEBREAK        1082
+#define IDC_EDIT6                       1083
+#define IDC_LOFT_TAIL_ANGLEBREAK        1083
 #define IDD_PRINT_PREVIEW               1544
 #define IDD_SLICER                      1545
 #define IDD_PRINTER                     1546
@@ -330,9 +340,9 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
-#define _APS_NEXT_RESOURCE_VALUE        165
+#define _APS_NEXT_RESOURCE_VALUE        166
 #define _APS_NEXT_COMMAND_VALUE         32933
-#define _APS_NEXT_CONTROL_VALUE         1071
+#define _APS_NEXT_CONTROL_VALUE         1074
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif

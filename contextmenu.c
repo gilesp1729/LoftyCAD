@@ -383,7 +383,8 @@ contextmenu(Object *picked_obj, POINT pt)
         break;
 
     case ID_OBJ_LOFTGROUP:
-        vol = make_lofted_volume((Group*)picked_obj);
+        vol = (Volume*)
+            DialogBoxParam(hInst, MAKEINTRESOURCE(IDD_LOFT), auxGetHWND(), lofting_dialog, (LPARAM)picked_obj);
         if (vol != NULL)
         {
             link_group((Object*)vol, &object_tree);
@@ -848,6 +849,57 @@ materials_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             break;
         }
         break;
+    }
+    return 0;
+}
+
+LoftParams default_loft = { 0.3f, 0.6f, 0.6f, 30, 60, 60, FALSE, FALSE };
+
+// Dialog that controls lofting.
+// Input (lParam): a Group of edge groups.
+// Output (returned): a Volume.
+int WINAPI
+lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    char buf[64];
+    static Group* group;
+    static Volume* vol = NULL;
+
+    switch (msg)
+    {
+    case WM_INITDIALOG:
+        group = (Group*)lParam;
+        if (group->loft == NULL)
+        {
+            // Create a LoftParams filled with defaults
+            group->loft = malloc(sizeof(LoftParams));
+            memcpy(group->loft, &default_loft, sizeof(LoftParams));
+        }
+
+        break;
+
+    case WM_COMMAND:
+        switch (LOWORD(wParam))
+        {
+        case IDOK:
+            vol = make_lofted_volume(group);
+            EndDialog(hWnd, (INT_PTR)vol);
+            break;
+
+        case IDAPPLY:
+            vol = make_lofted_volume(group);
+            break;
+
+        case IDCANCEL:
+            if (vol != NULL)
+            {
+                // Remove it from the object tree if it has been created
+
+
+            }
+            EndDialog(hWnd, (INT_PTR)NULL);
+            break;
+        }
     }
     return 0;
 }
