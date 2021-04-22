@@ -889,6 +889,7 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         CheckDlgButton(hWnd, IDC_LOFT_TRUNCATE_NOSE, group->loft->nose_truncate ? BST_CHECKED : BST_UNCHECKED);
         CheckDlgButton(hWnd, IDC_LOFT_TRUNCATE_TAIL, group->loft->tail_truncate ? BST_CHECKED : BST_UNCHECKED);
         changed = FALSE;
+        vol = NULL;
         break;
 
     case WM_COMMAND:
@@ -942,10 +943,62 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 changed = TRUE;
                 break;
             }
+            break;
 
+        case IDC_LOFT_NOSE_TENSION:
+            switch (HIWORD(wParam))
+            {
+            case EN_KILLFOCUS:
+                SendDlgItemMessage(hWnd, IDC_LOFT_NOSE_TENSION, WM_GETTEXT, 16, (LPARAM)buf);
+                group->loft->nose_tension = (float)atof(buf);
+                changed = TRUE;
+                break;
+            }
+            break;
 
+        case IDC_LOFT_TAIL_TENSION:
+            switch (HIWORD(wParam))
+            {
+            case EN_KILLFOCUS:
+                SendDlgItemMessage(hWnd, IDC_LOFT_TAIL_TENSION, WM_GETTEXT, 16, (LPARAM)buf);
+                group->loft->tail_tension = (float)atof(buf);
+                changed = TRUE;
+                break;
+            }
+            break;
 
+        case IDC_LOFT_BODY_ANGLEBREAK:
+            switch (HIWORD(wParam))
+            {
+            case EN_KILLFOCUS:
+                SendDlgItemMessage(hWnd, IDC_LOFT_BODY_ANGLEBREAK, WM_GETTEXT, 16, (LPARAM)buf);
+                group->loft->body_angle_break = atoi(buf);
+                changed = TRUE;
+                break;
+            }
+            break;
 
+        case IDC_LOFT_NOSE_ANGLEBREAK:
+            switch (HIWORD(wParam))
+            {
+            case EN_KILLFOCUS:
+                SendDlgItemMessage(hWnd, IDC_LOFT_NOSE_ANGLEBREAK, WM_GETTEXT, 16, (LPARAM)buf);
+                group->loft->nose_angle_break = atoi(buf);
+                changed = TRUE;
+                break;
+            }
+            break;
+
+        case IDC_LOFT_TAIL_ANGLEBREAK:
+            switch (HIWORD(wParam))
+            {
+            case EN_KILLFOCUS:
+                SendDlgItemMessage(hWnd, IDC_LOFT_TAIL_ANGLEBREAK, WM_GETTEXT, 16, (LPARAM)buf);
+                group->loft->tail_angle_break = atoi(buf);
+                changed = TRUE;
+                break;
+            }
+            break;
         }
     }
     return 0;
