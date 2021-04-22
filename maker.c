@@ -1062,9 +1062,11 @@ compare_lofted_groups(const void* elem1, const void* elem2)
 }
 
 // Some temporary definitions.
-#define TENSION 0.3f
-#define ANGLE_BREAK_COS 0.6f
+//#define TENSION 0.3f
+//#define ANGLE_BREAK_COS 0.6f
 #define CONTOUR_STEPS 10
+
+extern LoftParams default_loft;
 
 // Make a lofted volume from a group of sections, represented as edge groups.
 // There may or may not be a current path. 
@@ -1084,6 +1086,7 @@ make_lofted_volume(Group* group)
     Bbox box;
     int i, j;
     LoftedGroup* lg;
+    LoftParams* loft;
     float path_length;
     ListHead contour_lists[8];  // max of 8 points in a section, so 8 lists of contour edges
     Edge* contour[8];
@@ -1135,6 +1138,15 @@ make_lofted_volume(Group* group)
     // Once we have checked everything for errors, clone the main group so it can be retained.
     clone = (Group *)copy_obj((Object*)group, 0, 0, 0, TRUE);
     clear_move_copy_flags((Object*)group);
+
+    // Ensure there is a valid LoftParams
+    if (group->loft == NULL)
+    {
+        // Set it to defaults
+        group->loft = malloc(sizeof(LoftParams));
+        memcpy(group->loft, &default_loft, sizeof(LoftParams));
+    }
+    loft = group->loft;
 
     // Ensure corresponding edges have matching step counts. Zero out the
     // step sizes so they get recalculated.
@@ -1524,7 +1536,7 @@ make_lofted_volume(Group* group)
                 cp = edge_direction((Edge *)contour[j]->hdr.prev, &plprev);
 
                 // See if the angle between the contours exceeds the angle-break criterion.
-                if (pldot(&plprev, &plcurr) > ANGLE_BREAK_COS)
+                if (pldot(&plprev, &plcurr) > cosf(loft->body_angle_break * RADF))
                 {
                     // Average them and use that for the edges on both sides.
                     // (i.e. ctrl[ci] of curr, ctrl[1-cp] of prev)
@@ -1534,22 +1546,22 @@ make_lofted_volume(Group* group)
 
                     c = contour[j];
                     lj = length(c->endpoints[0], c->endpoints[1]);
-                    ((BezierEdge*)c)->ctrlpoints[ci]->x = c->endpoints[ci]->x + (plprev.A * TENSION * lj);
-                    ((BezierEdge*)c)->ctrlpoints[ci]->y = c->endpoints[ci]->y + (plprev.B * TENSION * lj);
-                    ((BezierEdge*)c)->ctrlpoints[ci]->z = c->endpoints[ci]->z + (plprev.C * TENSION * lj);
+                    ((BezierEdge*)c)->ctrlpoints[ci]->x = c->endpoints[ci]->x + (plprev.A * loft->body_tension * lj);
+                    ((BezierEdge*)c)->ctrlpoints[ci]->y = c->endpoints[ci]->y + (plprev.B * loft->body_tension * lj);
+                    ((BezierEdge*)c)->ctrlpoints[ci]->z = c->endpoints[ci]->z + (plprev.C * loft->body_tension * lj);
 
                     c = (Edge *)contour[j]->hdr.prev;
                     lj = length(c->endpoints[0], c->endpoints[1]);
-                    ((BezierEdge*)c)->ctrlpoints[1-cp]->x = c->endpoints[1-cp]->x - (plprev.A * TENSION * lj);
-                    ((BezierEdge*)c)->ctrlpoints[1-cp]->y = c->endpoints[1-cp]->y - (plprev.B * TENSION * lj);
-                    ((BezierEdge*)c)->ctrlpoints[1-cp]->z = c->endpoints[1-cp]->z - (plprev.C * TENSION * lj);
+                    ((BezierEdge*)c)->ctrlpoints[1-cp]->x = c->endpoints[1-cp]->x - (plprev.A * loft->body_tension * lj);
+                    ((BezierEdge*)c)->ctrlpoints[1-cp]->y = c->endpoints[1-cp]->y - (plprev.B * loft->body_tension * lj);
+                    ((BezierEdge*)c)->ctrlpoints[1-cp]->z = c->endpoints[1-cp]->z - (plprev.C * loft->body_tension * lj);
                 }
             }
 
             if (contour[j]->hdr.next != NULL)
             {
                 cn = edge_direction((Edge *)contour[j]->hdr.next, &plnext);
-                if (pldot(&plcurr, &plnext) > ANGLE_BREAK_COS)
+                if (pldot(&plcurr, &plnext) > cosf(loft->body_angle_break * RADF))
                 {
                     // Average them and use that for the edges on both sides.
                     // (i.e. ctrl[1-ci] of curr, ctrl[cn] of next)
@@ -1559,15 +1571,15 @@ make_lofted_volume(Group* group)
 
                     c = contour[j];
                     lj = length(c->endpoints[0], c->endpoints[1]);
-                    ((BezierEdge*)c)->ctrlpoints[1-ci]->x = c->endpoints[1-ci]->x - (plnext.A * TENSION * lj);
-                    ((BezierEdge*)c)->ctrlpoints[1-ci]->y = c->endpoints[1-ci]->y - (plnext.B * TENSION * lj);
-                    ((BezierEdge*)c)->ctrlpoints[1-ci]->z = c->endpoints[1-ci]->z - (plnext.C * TENSION * lj);
+                    ((BezierEdge*)c)->ctrlpoints[1-ci]->x = c->endpoints[1-ci]->x - (plnext.A * loft->body_tension * lj);
+                    ((BezierEdge*)c)->ctrlpoints[1-ci]->y = c->endpoints[1-ci]->y - (plnext.B * loft->body_tension * lj);
+                    ((BezierEdge*)c)->ctrlpoints[1-ci]->z = c->endpoints[1-ci]->z - (plnext.C * loft->body_tension * lj);
 
                     c = (Edge*)contour[j]->hdr.next;
                     lj = length(c->endpoints[0], c->endpoints[1]);
-                    ((BezierEdge*)c)->ctrlpoints[cn]->x = c->endpoints[cn]->x + (plnext.A * TENSION * lj);
-                    ((BezierEdge*)c)->ctrlpoints[cn]->y = c->endpoints[cn]->y + (plnext.B * TENSION * lj);
-                    ((BezierEdge*)c)->ctrlpoints[cn]->z = c->endpoints[cn]->z + (plnext.C * TENSION * lj);
+                    ((BezierEdge*)c)->ctrlpoints[cn]->x = c->endpoints[cn]->x + (plnext.A * loft->body_tension * lj);
+                    ((BezierEdge*)c)->ctrlpoints[cn]->y = c->endpoints[cn]->y + (plnext.B * loft->body_tension * lj);
+                    ((BezierEdge*)c)->ctrlpoints[cn]->z = c->endpoints[cn]->z + (plnext.C * loft->body_tension * lj);
                 }
             }
         }
@@ -1616,13 +1628,13 @@ make_lofted_volume(Group* group)
             }
         }
 
-        if (cosmax > ANGLE_BREAK_COS)
+        if (cosmax > cosf(loft->nose_angle_break * RADF))
         {
             // make the first ctrl point straight into the end group's plane (don't average them)
             lj = length(c->endpoints[0], c->endpoints[1]);
-            ((BezierEdge*)c)->ctrlpoints[ci]->x = c->endpoints[ci]->x + (plend.A * TENSION * lj);
-            ((BezierEdge*)c)->ctrlpoints[ci]->y = c->endpoints[ci]->y + (plend.B * TENSION * lj);
-            ((BezierEdge*)c)->ctrlpoints[ci]->z = c->endpoints[ci]->z + (plend.C * TENSION * lj);
+            ((BezierEdge*)c)->ctrlpoints[ci]->x = c->endpoints[ci]->x + (plend.A * loft->nose_tension * lj);
+            ((BezierEdge*)c)->ctrlpoints[ci]->y = c->endpoints[ci]->y + (plend.B * loft->nose_tension * lj);
+            ((BezierEdge*)c)->ctrlpoints[ci]->z = c->endpoints[ci]->z + (plend.C * loft->nose_tension * lj);
         }
     }
 
@@ -1666,13 +1678,13 @@ make_lofted_volume(Group* group)
             }
         }
 
-        if (cosmax > ANGLE_BREAK_COS)
+        if (cosmax > cosf(loft->tail_angle_break * RADF))
         {
             // make the first ctrl point straight into the end group's plane (don't average them)
             lj = length(c->endpoints[0], c->endpoints[1]);
-            ((BezierEdge*)c)->ctrlpoints[1-ci]->x = c->endpoints[1-ci]->x - (plend.A * TENSION * lj);
-            ((BezierEdge*)c)->ctrlpoints[1-ci]->y = c->endpoints[1-ci]->y - (plend.B * TENSION * lj);
-            ((BezierEdge*)c)->ctrlpoints[1-ci]->z = c->endpoints[1-ci]->z - (plend.C * TENSION * lj);
+            ((BezierEdge*)c)->ctrlpoints[1-ci]->x = c->endpoints[1-ci]->x - (plend.A * loft->tail_tension * lj);
+            ((BezierEdge*)c)->ctrlpoints[1-ci]->y = c->endpoints[1-ci]->y - (plend.B * loft->tail_tension * lj);
+            ((BezierEdge*)c)->ctrlpoints[1-ci]->z = c->endpoints[1-ci]->z - (plend.C * loft->tail_tension * lj);
         }
     }
 

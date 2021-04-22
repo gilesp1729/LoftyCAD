@@ -385,12 +385,8 @@ contextmenu(Object *picked_obj, POINT pt)
     case ID_OBJ_LOFTGROUP:
         vol = (Volume*)
             DialogBoxParam(hInst, MAKEINTRESOURCE(IDD_LOFT), auxGetHWND(), lofting_dialog, (LPARAM)picked_obj);
-        if (vol != NULL)
-        {
-            link_group((Object*)vol, &object_tree);
-            clear_selection(&selection);
+        if (vol != NULL)        // it's already in the object tree
             group_changed = TRUE;
-        }
         break;
 
     case ID_OBJ_TUBEGROUP:
@@ -857,13 +853,14 @@ LoftParams default_loft = { 0.3f, 0.6f, 0.6f, 30, 60, 60, FALSE, FALSE };
 
 // Dialog that controls lofting.
 // Input (lParam): a Group of edge groups.
-// Output (returned): a Volume.
+// Output (returned): a Volume, that has already been placed in the object tree.
 int WINAPI
 lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     char buf[64];
     static Group* group;
     static Volume* vol = NULL;
+    static BOOL changed = FALSE;
 
     switch (msg)
     {
@@ -876,29 +873,79 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             memcpy(group->loft, &default_loft, sizeof(LoftParams));
         }
 
+        // Fill the fields
+        sprintf_s(buf, 64, "%.2f", group->loft->body_tension);
+        SendDlgItemMessage(hWnd, IDC_LOFT_BODY_TENSION, WM_SETTEXT, 0, (LPARAM)buf);
+        sprintf_s(buf, 64, "%.2f", group->loft->nose_tension);
+        SendDlgItemMessage(hWnd, IDC_LOFT_NOSE_TENSION, WM_SETTEXT, 0, (LPARAM)buf);
+        sprintf_s(buf, 64, "%.2f", group->loft->tail_tension);
+        SendDlgItemMessage(hWnd, IDC_LOFT_TAIL_TENSION, WM_SETTEXT, 0, (LPARAM)buf);
+        sprintf_s(buf, 64, "%d", group->loft->body_angle_break);
+        SendDlgItemMessage(hWnd, IDC_LOFT_BODY_ANGLEBREAK, WM_SETTEXT, 0, (LPARAM)buf);
+        sprintf_s(buf, 64, "%d", group->loft->nose_angle_break);
+        SendDlgItemMessage(hWnd, IDC_LOFT_NOSE_ANGLEBREAK, WM_SETTEXT, 0, (LPARAM)buf);
+        sprintf_s(buf, 64, "%d", group->loft->tail_angle_break);
+        SendDlgItemMessage(hWnd, IDC_LOFT_TAIL_ANGLEBREAK, WM_SETTEXT, 0, (LPARAM)buf);
+        CheckDlgButton(hWnd, IDC_LOFT_TRUNCATE_NOSE, group->loft->nose_truncate ? BST_CHECKED : BST_UNCHECKED);
+        CheckDlgButton(hWnd, IDC_LOFT_TRUNCATE_TAIL, group->loft->tail_truncate ? BST_CHECKED : BST_UNCHECKED);
+        changed = FALSE;
         break;
 
     case WM_COMMAND:
         switch (LOWORD(wParam))
         {
         case IDOK:
+            if (vol != NULL)
+            {
+                // Remove existing volume that we created in this instance of the dialog
+                delink_group((Object*)vol, &object_tree);
+                purge_obj((Object*)vol);
+            }
             vol = make_lofted_volume(group);
+            link_group((Object*)vol, &object_tree);
+            clear_selection(&selection);
             EndDialog(hWnd, (INT_PTR)vol);
             break;
 
         case IDAPPLY:
-            vol = make_lofted_volume(group);
+            if (changed || vol == NULL)
+            {
+                // Do as OK but stay in the dialog
+                if (vol != NULL)
+                {
+                    delink_group((Object*)vol, &object_tree);
+                    purge_obj((Object*)vol);
+                }
+                vol = make_lofted_volume(group);
+                link_group((Object*)vol, &object_tree);
+                clear_selection(&selection);
+
+                // Update the drawing but don't write a checkpoint yet
+                drawing_changed = TRUE;
+                invalidate_dl();
+                invalidate_all_view_lists((Object*)&object_tree, (Object*)&object_tree, 0, 0, 0);
+                changed = FALSE;
+            }
             break;
 
         case IDCANCEL:
-            if (vol != NULL)
-            {
-                // Remove it from the object tree if it has been created
-
-
-            }
-            EndDialog(hWnd, (INT_PTR)NULL);
+            // If we have a volume, return it anyway
+            EndDialog(hWnd, (INT_PTR)vol);
             break;
+
+        case IDC_LOFT_BODY_TENSION:
+            switch (HIWORD(wParam))
+            {
+            case EN_KILLFOCUS:
+                SendDlgItemMessage(hWnd, IDC_LOFT_BODY_TENSION, WM_GETTEXT, 16, (LPARAM)buf);
+                group->loft->body_tension = (float)atof(buf);
+                changed = TRUE;
+                break;
+            }
+
+
+
+
         }
     }
     return 0;

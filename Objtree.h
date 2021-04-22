@@ -333,9 +333,9 @@ typedef struct LoftParams
     float           body_tension;   // Tensioning factor along contours in body (fraction of straight-line length)
     float           nose_tension;   // And for points adjoining endcap at nose
     float           tail_tension;   // And for points adjoining endcap at tail
-    float           body_angle_break;   // Angle break in degrees, beyond which smoothing will no longer be attempted
-    float           nose_angle_break;    // And for points adjoining endcap at nose
-    float           tail_angle_break;    // And for points adjoining endcap at tail
+    int             body_angle_break;   // Angle break in degrees, beyond which smoothing will no longer be attempted
+    int             nose_angle_break;    // And for points adjoining endcap at nose
+    int             tail_angle_break;    // And for points adjoining endcap at tail
     BOOL            nose_truncate;  // If TRUE, nose endcap will always break (truncate)
     BOOL            tail_truncate;  // If TRUE, tail endcap will always break (truncate)
 } LoftParams;
