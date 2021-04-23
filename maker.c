@@ -1099,10 +1099,18 @@ make_lofted_volume(Group* group)
     // least 2 edge groups.
     memset(contour_lists, 0, 8 * sizeof(ListHead));
     num_groups = group->n_members;
+    vol = NULL;
+    if (group->obj_list.tail->type == OBJ_VOLUME)
+    {
+        vol = (Volume*)group->obj_list.tail;
+        num_groups--;
+    }
     if (num_groups < 2)
         ERR_RETURN("There must be at least 2 edge groups");
+
+    // Count and check all the edge groups. Stop when any attached volume is reached.
     num_edges = 0;
-    for (obj = group->obj_list.head; obj != NULL; obj = obj->next)
+    for (obj = group->obj_list.head; obj != NULL && obj != (Object *)vol; obj = obj->next)
     {
         Edge* e, * e0;
 
@@ -1135,7 +1143,14 @@ make_lofted_volume(Group* group)
         }
     }
 
-    // Once we have checked everything for errors, clone the main group so it can be retained.
+    // Once we have checked everything for errors:
+    // - remove any existing lofted volume from the group, and
+    // - clone the main group so it can be retained. The new volume gets separate edges.
+    if (vol != NULL)
+    {
+        delink_group((Object*)vol, group);
+        purge_obj((Object*)vol);
+    }
     clone = (Group *)copy_obj((Object*)group, 0, 0, 0, TRUE);
     clear_move_copy_flags((Object*)group);
 

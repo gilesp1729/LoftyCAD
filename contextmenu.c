@@ -113,6 +113,7 @@ contextmenu(Object *picked_obj, POINT pt)
             EnableMenuItem(hMenu, ID_OPERATION_DIFFERENCE, hole ? MF_GRAYED : MF_ENABLED);
 
             // Don't allow unlocking of some components to keep view lists integrity.
+            // TODO: This can stop user editing, e.g. control points on lofted volumes. Needs a better solution.
             switch (((Volume*)parent)->max_facetype)
             {
             case FACE_BARREL:
@@ -385,7 +386,7 @@ contextmenu(Object *picked_obj, POINT pt)
     case ID_OBJ_LOFTGROUP:
         vol = (Volume*)
             DialogBoxParam(hInst, MAKEINTRESOURCE(IDD_LOFT), auxGetHWND(), lofting_dialog, (LPARAM)picked_obj);
-        if (vol != NULL)        // it's already in the object tree
+        if (vol != NULL)        // it's already in the group
             group_changed = TRUE;
         break;
 
@@ -865,6 +866,7 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     switch (msg)
     {
     case WM_INITDIALOG:
+        // See if the group alreday has a LoftParams and/or a lofted volume
         group = (Group*)lParam;
         if (group->loft == NULL)
         {
@@ -872,6 +874,9 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             group->loft = malloc(sizeof(LoftParams));
             memcpy(group->loft, &default_loft, sizeof(LoftParams));
         }
+        vol = NULL;
+        if (group->obj_list.tail->type == OBJ_VOLUME)
+            vol = (Volume*)group->obj_list.tail;
 
         // Fill the fields
         sprintf_s(buf, 64, "%.2f", group->loft->body_tension);
@@ -889,21 +894,15 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         CheckDlgButton(hWnd, IDC_LOFT_TRUNCATE_NOSE, group->loft->nose_truncate ? BST_CHECKED : BST_UNCHECKED);
         CheckDlgButton(hWnd, IDC_LOFT_TRUNCATE_TAIL, group->loft->tail_truncate ? BST_CHECKED : BST_UNCHECKED);
         changed = FALSE;
-        vol = NULL;
         break;
 
     case WM_COMMAND:
         switch (LOWORD(wParam))
         {
         case IDOK:
-            if (vol != NULL)
-            {
-                // Remove existing volume that we created in this instance of the dialog
-                delink_group((Object*)vol, &object_tree);
-                purge_obj((Object*)vol);
-            }
+            // Make a new lofted volume and tack it on the end of the group
             vol = make_lofted_volume(group);
-            link_group((Object*)vol, &object_tree);
+            link_tail_group((Object*)vol, group);
             clear_selection(&selection);
             EndDialog(hWnd, (INT_PTR)vol);
             break;
@@ -912,19 +911,14 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             if (changed || vol == NULL)
             {
                 // Do as OK but stay in the dialog
-                if (vol != NULL)
-                {
-                    delink_group((Object*)vol, &object_tree);
-                    purge_obj((Object*)vol);
-                }
                 vol = make_lofted_volume(group);
-                link_group((Object*)vol, &object_tree);
+                link_tail_group((Object*)vol, group);
                 clear_selection(&selection);
 
                 // Update the drawing but don't write a checkpoint yet
                 drawing_changed = TRUE;
                 invalidate_dl();
-                invalidate_all_view_lists((Object*)&object_tree, (Object*)&object_tree, 0, 0, 0);
+                invalidate_all_view_lists((Object*)&group, (Object*)&group, 0, 0, 0);
                 changed = FALSE;
             }
             break;

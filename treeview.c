@@ -121,6 +121,24 @@ char *obj_description(Object *obj, char *descr, int descr_len, BOOL verbose)
                 strcpy_s(descr, descr_len, tmpbuf);
             }
         }
+        else if (grp->loft != NULL)       // It's a lofted group
+        {
+            if (grp->title[0] == '\0' || !verbose)
+                sprintf_s(descr, descr_len, "%s Lofted group %d",
+                    op_string[grp->op],
+                    obj->ID
+                );
+            else
+            {
+                sprintf_s(tmpbuf, 256, "%s Lofted group %d: %s",
+                    op_string[grp->op],
+                    obj->ID,
+                    grp->title
+                );
+                tmpbuf[descr_len - 1] = '\0';
+                strcpy_s(descr, descr_len, tmpbuf);
+            }
+        }
         else                        // A normal group
         {
             if (grp->title[0] == '\0' || !verbose)
@@ -195,6 +213,20 @@ char* brief_description(Object* obj, char* descr, int descr_len)
             else
             {
                 sprintf_s(tmpbuf, 256, "EG%d: %s",
+                    obj->ID,
+                    grp->title
+                );
+                tmpbuf[descr_len - 1] = '\0';
+                strcpy_s(descr, descr_len, tmpbuf);
+            }
+        }
+        else if (grp->loft != NULL)       // It's a lofted group
+        {
+            if (grp->title[0] == '\0')
+                sprintf_s(descr, descr_len, "Lofted group %d", obj->ID);
+            else
+            {
+                sprintf_s(tmpbuf, 256, "LG%d: %s",
                     obj->ID,
                     grp->title
                 );
