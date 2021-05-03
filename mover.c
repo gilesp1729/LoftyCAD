@@ -86,7 +86,7 @@ clear_move_copy_flags(Object* obj)
 }
 
 // Copy any object, with an offset on all its point coordinates. Optionally if cloning,
-// fix any arc/bez stepsize and number of steps on both source and dest edges
+// fix any arc/bez step counts on both source and dest edges
 // (like clone_face_reverse does).
 // Make sure to call clear_move_copy_flags afterwards.
 Object*
@@ -148,12 +148,8 @@ copy_obj(Object* obj, float xoffset, float yoffset, float zoffset, BOOL cloning)
                 nae->normal = ae->normal;
                 move_obj((Object *)&nae->normal.refpt, xoffset, yoffset, zoffset);
                 new_edge->nsteps = edge->nsteps;
-                new_edge->stepsize = edge->stepsize;
-                new_edge->stepping = edge->stepping;
                 if (cloning)
                 {
-                    edge->stepping = 1;
-                    new_edge->stepping = 1;
                     edge->view_valid = FALSE;
                 }
                 new_edge->view_valid = FALSE;
@@ -165,12 +161,8 @@ copy_obj(Object* obj, float xoffset, float yoffset, float zoffset, BOOL cloning)
                 nbe->ctrlpoints[0] = (Point*)copy_obj((Object*)be->ctrlpoints[0], xoffset, yoffset, zoffset, cloning);
                 nbe->ctrlpoints[1] = (Point*)copy_obj((Object*)be->ctrlpoints[1], xoffset, yoffset, zoffset, cloning);
                 new_edge->nsteps = edge->nsteps;
-                new_edge->stepsize = edge->stepsize;
-                new_edge->stepping = edge->stepping;
                 if (cloning)
                 {
-                    edge->stepping = 1;
-                    new_edge->stepping = 1;
                     edge->view_valid = FALSE;
                 }
                 new_edge->view_valid = FALSE;

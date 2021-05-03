@@ -233,8 +233,8 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 chamfer_rad = 3.5f * tolerance;
                 tol_log = (int)ceilf(log10f(1.0f / tolerance));
 
-                // Fix up all the flattened curves.
-                adjust_stepsizes((Object*)&object_tree, new_val);
+                // Fix up all the flattened curves. TODO: Get this working properly.
+                // adjust_stepsizes((Object*)&object_tree, new_val);
                 clear_move_copy_flags((Object*)&object_tree);
                 invalidate_all_view_lists((Object*)&object_tree, (Object*)&object_tree, 0, 0, 0);
 

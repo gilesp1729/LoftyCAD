@@ -32,7 +32,6 @@
 #define IDB_HEX                         25
 #define IDB_CONST_HEX                   26
 #define IDB_BEZ_RECT                    27
-#define IDB_CIRCLE2                     28
 #define IDB_BEZ_CIRCLE                  28
 #define IDD_LOFTYCAD_DIALOG             102
 #define IDS_APP_TITLE                   103
@@ -135,6 +134,8 @@
 #define IDC_PREFS_SLICER_EXE            1011
 #define IDC_PREFS_SLICER_CONFIG         1012
 #define IDC_TREEVIEW                    1013
+#define IDC_PREFS_ROUNDRAD2             1013
+#define IDC_PREFS_STEPSIZE              1013
 #define IDC_STATIC_BUILD                1014
 #define IDC_FONT_STRING                 1030
 #define IDC_COMBO_MATERIAL              1031

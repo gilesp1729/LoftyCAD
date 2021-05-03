@@ -159,7 +159,7 @@ serialise_obj(Object *obj, FILE *f, int level)
                       ae->clockwise ? "C" : "AC",
                       ae->centre->hdr.ID,
                       ae->normal.A, ae->normal.B, ae->normal.C,
-                      e->stepping, e->stepsize, e->nsteps,
+                      1, 0.0, e->nsteps,   // skip the stepping flag and stepsize (no longer used)
                       ae->ecc);
             break;
 
@@ -167,7 +167,7 @@ serialise_obj(Object *obj, FILE *f, int level)
             be = (BezierEdge *)obj;
             fprintf_s(f, "%d %d %d %f %d\n", 
                       be->ctrlpoints[0]->hdr.ID, be->ctrlpoints[1]->hdr.ID,
-                      e->stepping, e->stepsize, e->nsteps);
+                      1, 0.0, e->nsteps);   // skip the stepping flag and stepsize (no longer used)
             break;
         }
         if (e->corner)
@@ -692,10 +692,8 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
 
                 if (version >= 0.2)
                 {
+                    tok = strtok_s(NULL, " \t\n", &nexttok);  // skip the stepping flag and stepsize (no longer used)
                     tok = strtok_s(NULL, " \t\n", &nexttok);
-                    edge->stepping = atoi(tok);
-                    tok = strtok_s(NULL, " \t\n", &nexttok);
-                    edge->stepsize = (float)atof(tok);
                     tok = strtok_s(NULL, " \t\n", &nexttok);
                     edge->nsteps = atoi(tok);
                     tok = strtok_s(NULL, " \t\n", &nexttok);
@@ -729,10 +727,8 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
 
                 if (version >= 0.2)
                 {
+                    tok = strtok_s(NULL, " \t\n", &nexttok);  // skip the stepping flag and stepsize (no longer used)
                     tok = strtok_s(NULL, " \t\n", &nexttok);
-                    edge->stepping = atoi(tok);
-                    tok = strtok_s(NULL, " \t\n", &nexttok);
-                    edge->stepsize = (float)atof(tok);
                     tok = strtok_s(NULL, " \t\n", &nexttok);
                     edge->nsteps = atoi(tok);
                 }

@@ -872,7 +872,6 @@ left_up(AUX_EVENTREC *event)
         {
             Point* p00, * p01, * p02, * p03;
             BezierEdge* be;
-            EDGE type;
 
             // Create the edges for the rect here as a special case, as the order
             // is not known till the mouse is released.
@@ -883,37 +882,45 @@ left_up(AUX_EVENTREC *event)
             p02 = (Point*)p01->hdr.next;
             p03 = (Point*)p02->hdr.next;
 
-            type = EDGE_BEZIER;
-            e = (Edge*)edge_new(type);
+#define CONTOUR_STEPS 10  // TODO a better algorithm for setting these
+            e = (Edge*)edge_new(EDGE_BEZIER);
             e->endpoints[0] = p00;
             e->endpoints[1] = p01;
             be = (BezierEdge*)e;
             be->ctrlpoints[0] = point_newr(e->endpoints[0], e->endpoints[1], BEZ_RECT_TENSION);
             be->ctrlpoints[1] = point_newr(e->endpoints[1], e->endpoints[0], BEZ_RECT_TENSION);
+            e->nsteps = CONTOUR_STEPS;
+            e->view_valid = FALSE;
             rf->edges[0] = e;
 
-            e = (Edge*)edge_new(type);
+            e = (Edge*)edge_new(EDGE_BEZIER);
             e->endpoints[0] = p01;
             e->endpoints[1] = p02;
             be = (BezierEdge*)e;
             be->ctrlpoints[0] = point_newr(e->endpoints[0], e->endpoints[1], BEZ_RECT_TENSION);
             be->ctrlpoints[1] = point_newr(e->endpoints[1], e->endpoints[0], BEZ_RECT_TENSION);
+            e->nsteps = CONTOUR_STEPS;
+            e->view_valid = FALSE;
             rf->edges[1] = e;
 
-            e = (Edge*)edge_new(type);
+            e = (Edge*)edge_new(EDGE_BEZIER);
             e->endpoints[0] = p02;
             e->endpoints[1] = p03;
             be = (BezierEdge*)e;
             be->ctrlpoints[0] = point_newr(e->endpoints[0], e->endpoints[1], BEZ_RECT_TENSION);
             be->ctrlpoints[1] = point_newr(e->endpoints[1], e->endpoints[0], BEZ_RECT_TENSION);
+            e->nsteps = CONTOUR_STEPS;
+            e->view_valid = FALSE;
             rf->edges[2] = e;
 
-            e = (Edge*)edge_new(type);
+            e = (Edge*)edge_new(EDGE_BEZIER);
             e->endpoints[0] = p03;
             e->endpoints[1] = p00;
             be = (BezierEdge*)e;
             be->ctrlpoints[0] = point_newr(e->endpoints[0], e->endpoints[1], BEZ_RECT_TENSION);
             be->ctrlpoints[1] = point_newr(e->endpoints[1], e->endpoints[0], BEZ_RECT_TENSION);
+            e->nsteps = CONTOUR_STEPS;
+            e->view_valid = FALSE;
             rf->edges[3] = e;
 
             // Take the points out of the face's view list, as they are about

@@ -217,8 +217,8 @@ BEGIN
     PUSHBUTTON      "Apply",IDAPPLY,142,161,50,14
     LTEXT           "Body tension",IDC_STATIC,33,26,42,8
     GROUPBOX        "Tension factors for control points (as fraction of end-to-end length)",IDC_STATIC,7,7,295,70
-    LTEXT           "Nose tension",IDC_STATIC,33,43,42,8
-    LTEXT           "Tail tension",IDC_STATIC,37,58,37,8
+    LTEXT           "Nose tension",IDC_STATIC,33,42,42,8
+    LTEXT           "Tail tension",IDC_STATIC,37,59,37,8
     GROUPBOX        "Angle breaks (degrees) (deviations greater than this will not be smoothed)",IDC_STATIC,7,80,295,72
     LTEXT           "Body angle break",IDC_STATIC,22,99,56,8
     LTEXT           "Nose angle break",IDC_STATIC,21,116,56,8
@@ -626,8 +626,9 @@ BEGIN
     EDITTEXT        IDC_PREFS_HALFSIZE,88,38,40,14,ES_AUTOHSCROLL
     EDITTEXT        IDC_PREFS_GRID,88,58,40,14,ES_AUTOHSCROLL
     EDITTEXT        IDC_PREFS_TOL,88,77,40,14,ES_AUTOHSCROLL
-    EDITTEXT        IDC_PREFS_ANGLE,88,96,40,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_PREFS_STEPSIZE,88,96,40,14,ES_AUTOHSCROLL
     EDITTEXT        IDC_PREFS_ROUNDRAD,88,115,40,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_PREFS_ANGLE,187,58,40,14,ES_AUTOHSCROLL
     COMBOBOX        IDC_PREFS_SLICER_EXE,87,158,265,52,CBS_DROPDOWN | CBS_SORT | WS_VSCROLL | WS_TABSTOP
     COMBOBOX        IDC_PREFS_SLICER_CONFIG,87,177,265,52,CBS_DROPDOWN | CBS_SORT | WS_VSCROLL | WS_TABSTOP
     CONTROL         "User specifies G-code filename",IDC_PREFS_EXPLICIT_GCODE,
@@ -651,8 +652,8 @@ BEGIN
     LTEXT           "(drawing region is approximately twice this)",IDC_STATIC,135,41,144,8
     LTEXT           "",IDC_STATIC,135,60,8,8
     LTEXT           "(must be <= grid snap)",IDC_STATIC,134,79,78,8
-    LTEXT           "Angle snap",IDC_STATIC,49,98,37,8
-    LTEXT           "(in degrees)",IDC_STATIC,134,98,41,8
+    LTEXT           "Angle snap",IDC_STATIC,148,60,37,8
+    LTEXT           "(in degrees)",IDC_STATIC,233,60,41,8
     LTEXT           "Rounded corner radius",IDC_STATIC,9,117,75,8
     LTEXT           "Slic3r executable",IDC_STATIC,27,159,57,8
     LTEXT           "Slic3r config dir",IDC_STATIC,31,178,53,8
@@ -662,6 +663,8 @@ BEGIN
     LTEXT           "API Key:",IDC_STATIC,59,321,29,9
     LTEXT           "Static",IDC_STATIC_TEST_RESULT,92,346,147,11
     LTEXT           "Baud rate",IDC_STATIC,54,266,36,9
+    LTEXT           "Step size (mm)",IDC_STATIC,36,98,48,8
+    LTEXT           "(where flatness tolerance cannot be used)",IDC_STATIC,134,98,137,8
 END
 
 IDD_HELP DIALOGEX 0, 0, 311, 274

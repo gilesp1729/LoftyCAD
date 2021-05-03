@@ -415,10 +415,6 @@ make_face(Group* group, BOOL auto_reverse, BOOL reverse)
                     n_steps = o->nsteps;
                 e->nsteps = n_steps;
                 o->nsteps = n_steps;
-                e->stepsize = 0;
-                o->stepsize = 0;
-                e->stepping = TRUE;
-                o->stepping = TRUE;
                 e->view_valid = FALSE;
                 o->view_valid = FALSE;
             }
@@ -767,7 +763,6 @@ make_body_of_revolution(Group* group, BOOL negative)
     prev_na->endpoints[0] = oip;
     prev_na->endpoints[1] = eip;
     prev_na->nsteps = n_steps;
-    prev_na->stepping = TRUE;
     nae = (ArcEdge*)prev_na;
     nae->centre = point_new(0, 0, 0);
     dist_point_to_perp_line(oip, path, nae->centre);
@@ -820,7 +815,6 @@ make_body_of_revolution(Group* group, BOOL negative)
             na->endpoints[0] = oip;
             na->endpoints[1] = eip;
             na->nsteps = n_steps;
-            na->stepping = TRUE;
             nae = (ArcEdge*)na;
             nae->centre = point_new(0, 0, 0);
             dist_point_to_perp_line(oip, path, nae->centre);
@@ -1167,8 +1161,6 @@ make_lofted_volume(Group* group)
     // step sizes so they get recalculated.
     first_egrp = (Group*)clone->obj_list.head;
     e = (Edge*)first_egrp->obj_list.head;
-    e->stepsize = 0;
-    e->stepping = TRUE;
     e->view_valid = FALSE;
     for (obj = clone->obj_list.head->next; obj != NULL; obj = obj->next)
     {
@@ -1185,8 +1177,6 @@ make_lofted_volume(Group* group)
             if (e0->type >= EDGE_ARC)
             {
                 e->nsteps = e0->nsteps;
-                e->stepsize = 0;
-                e->stepping = TRUE;
                 e->view_valid = FALSE;
             }
         }
@@ -1479,8 +1469,6 @@ make_lofted_volume(Group* group)
             // Setup step counts (TODO a better algorithm!) and zero the step size so it gets
             // recalculated again with the next view list update.
             ne->nsteps = CONTOUR_STEPS;
-            ne->stepsize = 0;
-            ne->stepping = TRUE;
             ne->view_valid = FALSE;
 
             link_tail((Object*)ne, &contour_lists[j]);

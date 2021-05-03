@@ -1163,9 +1163,7 @@ gen_view_list_face(Face* face)
             ae->normal.refpt = *ae->centre;
 
             // Make sure it has the same number of steps as the first_arc
-            e->stepsize = 0;
             e->nsteps = e0->nsteps;
-            e->stepping = TRUE;
 
             // Save the view list, and the edge itself, for later freeing
             gen_view_list_arc(ae);
@@ -1686,6 +1684,7 @@ update_view_list_2D(Face *face)
     face->n_view2D = i;
 }
 
+#if 0
 // Adjust all the step sizes in curved edges in the tree at top level,
 // to reflect a new tolerance setting. Stuff in groups is not changed.
 void
@@ -1705,8 +1704,6 @@ adjust_stepsizes(Object *obj, float new_tol)
     {
     case OBJ_EDGE:
         e = (Edge*)obj;
-        if (!e->stepping)
-            break;
         switch (e->type)
         {
         case EDGE_ARC:
@@ -1750,6 +1747,7 @@ adjust_stepsizes(Object *obj, float new_tol)
         break;
     }
 }
+#endif // 0
 
 void
 free_view_list_face(Face *face)
@@ -1796,11 +1794,8 @@ gen_view_list_arc(ArcEdge *ae)
     else
         theta = angle3(edge->endpoints[0], ae->centre, edge->endpoints[1], &n);
 
-    // TODO_BARREL Make nsteps the independent variable, and calculate stepsize from that.
-    // (for both arcs and beziers)
-
     // Calculate step for angle. The number of steps may be fixed in advance.
-    if (edge->stepping && edge->nsteps > 0)
+    if (edge->nsteps > 0)
     {
         step = (fabs(theta) + 0.001) / edge->nsteps;
     }
@@ -1808,7 +1803,6 @@ gen_view_list_arc(ArcEdge *ae)
     {
         step = 2.0 * acos(1.0 - tolerance / rad);
     }
-    edge->stepsize = (float)step;
     i = 0;
 
     if (ae->clockwise)  // Clockwise angles go negative
@@ -1865,7 +1859,9 @@ gen_view_list_arc(ArcEdge *ae)
         }
     }
 
-    edge->nsteps = i;
+    if (edge->nsteps == 0)
+        edge->nsteps = i;
+    ASSERT(edge->nsteps == i, "Bad step size calculated");
 
     // Make sure the last point is in the view list
     p = point_newpv(edge->endpoints[1]);
@@ -1897,12 +1893,13 @@ iterate_bez
     Edge *e = (Edge *)be;
     double t;
     int i;
+    float stepsize;
 
     // Number of steps has been given in advance, so work out the stepsize
-    e->stepsize = 1.0f / e->nsteps;
+    stepsize = 1.0f / e->nsteps;
 
     // the first point has already been output, so start at stepsize
-    for (i = 0, t = e->stepsize; t < 1.0001f; i++, t += e->stepsize)
+    for (i = 0, t = stepsize; t < 1.0001f; i++, t += stepsize)
     {
         double mt = 1.0f - t;
         double c0 = mt * mt * mt;
@@ -2003,7 +2000,7 @@ gen_view_list_bez(BezierEdge *be)
     link_tail((Object *)p, &e->view_list);
 
     // Perform fixed step division if number of steps given in advance
-    if (e->stepping && e->nsteps > 0)
+    if (e->nsteps > 0)
     {
         iterate_bez
             (
@@ -2026,7 +2023,6 @@ gen_view_list_bez(BezierEdge *be)
             be->ctrlpoints[1]->x, be->ctrlpoints[1]->y, be->ctrlpoints[1]->z,
             e->endpoints[1]->x, e->endpoints[1]->y, e->endpoints[1]->z
             );
-        e->stepsize = 1.0f / e->nsteps;
     }
 
     e->view_valid = TRUE;

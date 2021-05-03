@@ -828,8 +828,7 @@ Draw(void)
                 );
                 if (app_state == STATE_STARTING_EXTRUDE || app_state == STATE_STARTING_EXTRUDE_LOCAL)
                 {
-                    if (!extrudible(highlight_obj))
-                        highlight_obj = NULL;
+                    highlight_obj = NULL;
                 }
                 else if (app_state == STATE_STARTING_SCALE || app_state == STATE_STARTING_ROTATE)
                 {
@@ -1121,6 +1120,7 @@ Draw(void)
                         ae->centre->z = centre.z;
                         ae->clockwise = clockwise;
                         e->view_valid = FALSE;
+                        e->nsteps = 0;      // while drawing, keep recalculating the step size
                     }
                 }
                 break;
@@ -1194,6 +1194,7 @@ Draw(void)
                     be->ctrlpoints[1]->z = e->endpoints[1]->z + grad1.C * dist;
 
                     e->view_valid = FALSE;
+                    e->nsteps = 0;      // while drawing, keep recalculating the step size
                 }
                 break;
 
@@ -1351,7 +1352,7 @@ Draw(void)
                 if (curr_obj == NULL)
                 {
                     if (app_state == STATE_DRAWING_BEZ_RECT)
-                        rf = face_new(FACE_FLAT, *picked_plane);
+                        rf = face_new(FACE_BEZIER, *picked_plane);
                     else
                         rf = face_new(FACE_RECT | (construction ? FACE_CONSTRUCTION : 0), *picked_plane);
 
@@ -1582,6 +1583,7 @@ Draw(void)
                     p01->z = new_point.z;
                     ((Edge *)ae)->view_valid = FALSE;
                     rf->view_valid = FALSE;
+                    rf->edges[0]->nsteps = 0;      // while drawing, keep recalculating the step size
                 }
 
                 break;
