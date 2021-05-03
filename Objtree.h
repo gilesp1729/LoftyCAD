@@ -418,6 +418,8 @@ Point* point_new(float x, float y, float z);
 Point* point_newp(Point* p);
 Point* point_newv(float x, float y, float z);
 Point* point_newpv(Point* p);
+Point* point_newr(Point* p0, Point* p1, float ratio);
+
 Edge *edge_new(EDGE edge_type);
 Face *face_new(FACE face_type, Plane norm);
 Volume *vol_new(void);

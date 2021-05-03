@@ -112,6 +112,7 @@ contextmenu(Object *picked_obj, POINT pt)
             EnableMenuItem(hMenu, ID_OPERATION_UNION, hole ? MF_GRAYED : MF_ENABLED);
             EnableMenuItem(hMenu, ID_OPERATION_DIFFERENCE, hole ? MF_GRAYED : MF_ENABLED);
 
+#if 0
             // Don't allow unlocking of some components to keep view lists integrity.
             // TODO: This can stop user editing, e.g. control points on lofted volumes. Needs a better solution.
             switch (((Volume*)parent)->max_facetype)
@@ -124,6 +125,7 @@ contextmenu(Object *picked_obj, POINT pt)
                 EnableMenuItem(hMenu, ID_LOCKING_POINTS, MF_GRAYED);
                 EnableMenuItem(hMenu, ID_LOCKING_UNLOCKED, MF_GRAYED);
             }
+#endif // 0
             break;
 
         case OBJ_GROUP:

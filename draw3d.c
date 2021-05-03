@@ -1198,6 +1198,7 @@ Draw(void)
                 break;
 
             case STATE_DRAWING_RECT:
+            case STATE_DRAWING_BEZ_RECT:
                 if (picked_plane == NULL)
                     assign_picked_plane(pt);
                 if (picked_plane == NULL)
@@ -1349,7 +1350,10 @@ Draw(void)
                 // order of the points no matter how the mouse is dragged around.
                 if (curr_obj == NULL)
                 {
-                    rf = face_new(FACE_RECT | (construction ? FACE_CONSTRUCTION : 0), *picked_plane);
+                    if (app_state == STATE_DRAWING_BEZ_RECT)
+                        rf = face_new(FACE_FLAT, *picked_plane);
+                    else
+                        rf = face_new(FACE_RECT | (construction ? FACE_CONSTRUCTION : 0), *picked_plane);
 
                     // generate four points for the view list
                     p00 = point_newp(&picked_point);
@@ -1579,6 +1583,12 @@ Draw(void)
                     ((Edge *)ae)->view_valid = FALSE;
                     rf->view_valid = FALSE;
                 }
+
+                break;
+
+            case STATE_DRAWING_BEZ_CIRCLE:
+
+
 
                 break;
 

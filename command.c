@@ -96,6 +96,8 @@ enable_rendered_view_items(void)
     EnableWindow(GetDlgItem(hWndToolbar, IDB_HEX), !view_rendered);
     EnableWindow(GetDlgItem(hWndToolbar, IDB_ARC_EDGE), !view_rendered);
     EnableWindow(GetDlgItem(hWndToolbar, IDB_BEZIER_EDGE), !view_rendered);
+    EnableWindow(GetDlgItem(hWndToolbar, IDB_BEZ_RECT), !view_rendered);
+    EnableWindow(GetDlgItem(hWndToolbar, IDB_BEZ_CIRCLE), !view_rendered);
     EnableWindow(GetDlgItem(hWndToolbar, IDB_EXTRUDE), !view_rendered);
     EnableWindow(GetDlgItem(hWndToolbar, IDB_EXTRUDE_LOCAL), !view_rendered);
     EnableWindow(GetDlgItem(hWndToolbar, IDB_TEXT), !view_rendered);

@@ -119,6 +119,19 @@ Point* point_newpv(Point* p)
     return pt;
 }
 
+// Divide the line between p0 and p1 in a given ratio (usually 0-1), and put a new point there.
+Point* point_newr(Point* p0, Point* p1, float ratio)
+{
+    Point* pt = point_new_raw();
+
+    pt->hdr.type = OBJ_POINT;
+    pt->hdr.ID = objid++;
+    pt->x = (1 - ratio) * p0->x + ratio * p1->x;
+    pt->y = (1 - ratio) * p0->y + ratio * p1->y;
+    pt->z = (1 - ratio) * p0->z + ratio * p1->z;
+    return pt;
+}
+
 // Edges. 
 Edge *edge_new(EDGE edge_type)
 {

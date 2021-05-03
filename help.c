@@ -8,7 +8,7 @@
 // Directory containing help pages
 char help_dir[256];
 
-// These are indexed by the app state (LoftyCAD.h)
+// These are indexed by the app state (LoftyCAD.h) and must agree.
 char *state_key[STATE_MAX] =
 {
     "Exploring",
@@ -21,6 +21,8 @@ char *state_key[STATE_MAX] =
     "Drawing_Face",
     "Drawing_Edge",
     "Drawing_Edge",
+    "Drawing_Face",
+    "Drawing_Face",
     "Drawing_Extrude",
     "Drawing_Text",
     "Drawing_Extrude",
@@ -33,6 +35,8 @@ char *state_key[STATE_MAX] =
     "Drawing_Face",
     "Drawing_Edge",
     "Drawing_Edge",
+    "Drawing_Face",
+    "Drawing_Face",
     "Drawing_Extrude",
     "Drawing_Text",
     "Drawing_Extrude",
@@ -40,6 +44,7 @@ char *state_key[STATE_MAX] =
     "Drawing_Rotate"
 };
 
+// These are indexed by the app state (LoftyCAD.h) and must agree.
 struct
 {
     HINSTANCE   instance;
@@ -57,6 +62,8 @@ struct
     { (HINSTANCE)1, MAKEINTRESOURCE(IDC_FACE2), NULL }, 
     { (HINSTANCE)1, MAKEINTRESOURCE(IDC_EDGE3), NULL },
     { (HINSTANCE)1, MAKEINTRESOURCE(IDC_EDGE2), NULL },
+    { (HINSTANCE)1, MAKEINTRESOURCE(IDC_FACE1), NULL },
+    { (HINSTANCE)1, MAKEINTRESOURCE(IDC_FACE2), NULL },
     { (HINSTANCE)1, MAKEINTRESOURCE(IDC_FACE3), NULL },
     { (HINSTANCE)1, MAKEINTRESOURCE(IDC_FACE4), NULL },
     { (HINSTANCE)1, MAKEINTRESOURCE(IDC_FACE5), NULL },
@@ -69,6 +76,8 @@ struct
     { (HINSTANCE)1, MAKEINTRESOURCE(IDC_FACE2), NULL },  
     { (HINSTANCE)1, MAKEINTRESOURCE(IDC_EDGE3), NULL },
     { (HINSTANCE)1, MAKEINTRESOURCE(IDC_EDGE2), NULL },
+    { (HINSTANCE)1, MAKEINTRESOURCE(IDC_FACE1), NULL },
+    { (HINSTANCE)1, MAKEINTRESOURCE(IDC_FACE2), NULL },
     { (HINSTANCE)1, MAKEINTRESOURCE(IDC_FACE3), NULL },
     { (HINSTANCE)1, MAKEINTRESOURCE(IDC_FACE4), NULL }, 
     { (HINSTANCE)1, MAKEINTRESOURCE(IDC_FACE5), NULL },
@@ -82,6 +91,7 @@ HWND init_help_window(void)
     int i;
     char *slosh;
 
+    // Initialise OLE and help dialog.
     OleInitialize(NULL);
     hWnd = CreateDialog
         (
@@ -94,6 +104,12 @@ HWND init_help_window(void)
     SetWindowPos(hWnd, HWND_NOTOPMOST, wWidth, toolbar_bottom, 0, 0, SWP_NOSIZE);
     if (view_help)
         ShowWindow(hWnd, SW_SHOW);
+
+    // Some checks that really should be done at compile time, but C doesn't let us.
+    // Do after the help window comes up.
+    ASSERT(sizeof(state_key) / sizeof(state_key[0]) == STATE_MAX, "Key array doesn't line up with states");
+    ASSERT(sizeof(cursors) / sizeof(cursors[0]) == STATE_MAX, "Cursor array doesn't line up with states");
+    ASSERT(STATE_DRAWING_OFFSET == STATE_DRAWING_OFFSET2, "Drawing states don't match starting states");
 
     // Load the cursors (both homemade and system-supplied ones)
     for (i = 0; i < STATE_MAX; i++)

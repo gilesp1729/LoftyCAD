@@ -34,6 +34,11 @@
         fabsf((p1)->z - (z1)) < tol  \
     )
 
+// Tensions for bezier control points used in bez rect and circle faces.
+#define BEZ_RECT_TENSION 0.3f
+#define BEZ_CIRCLE_TENSION 0.3f
+
+// prototypes.
 void ray_from_eye(GLint x, GLint y, Plane *line);
 BOOL intersect_ray_plane(GLint x, GLint y, Plane *picked_plane, Point *new_point);
 int intersect_line_plane(Plane *line, Plane *plane, Point *new_point);

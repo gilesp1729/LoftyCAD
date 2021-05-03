@@ -31,6 +31,9 @@
 #define IDB_EXTRUDE_LOCAL               24
 #define IDB_HEX                         25
 #define IDB_CONST_HEX                   26
+#define IDB_BEZ_RECT                    27
+#define IDB_CIRCLE2                     28
+#define IDB_BEZ_CIRCLE                  28
 #define IDD_LOFTYCAD_DIALOG             102
 #define IDS_APP_TITLE                   103
 #define IDD_ABOUTBOX                    103
@@ -62,7 +65,9 @@
 #define IDS_HEX                         126
 #define IDS_CONST_HEX                   127
 #define IDR_MAINFRAME                   128
+#define IDS_BEZ_RECT                    128
 #define IDD_TOOLBAR                     129
+#define IDS_BEZ_CIRCLE                  129
 #define IDI_RECT                        131
 #define IDI_EDGE                        132
 #define IDI_CIRCLE                      133
@@ -184,7 +189,6 @@
 #define IDC_LOFT_TAIL_TENSION           1080
 #define IDC_LOFT_BODY_ANGLEBREAK        1081
 #define IDC_LOFT_NOSE_ANGLEBREAK        1082
-#define IDC_EDIT6                       1083
 #define IDC_LOFT_TAIL_ANGLEBREAK        1083
 #define IDD_PRINT_PREVIEW               1544
 #define IDD_SLICER                      1545
@@ -342,7 +346,7 @@
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        166
 #define _APS_NEXT_COMMAND_VALUE         32933
-#define _APS_NEXT_CONTROL_VALUE         1074
+#define _APS_NEXT_CONTROL_VALUE         1075
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif

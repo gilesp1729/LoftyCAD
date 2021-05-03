@@ -35,6 +35,8 @@ typedef enum STATE
     STATE_STARTING_CIRCLE,
     STATE_STARTING_BEZIER,
     STATE_STARTING_ARC,
+    STATE_STARTING_BEZ_RECT,
+    STATE_STARTING_BEZ_CIRCLE,
     STATE_STARTING_EXTRUDE,
     STATE_STARTING_TEXT,
     STATE_STARTING_EXTRUDE_LOCAL,
@@ -47,6 +49,8 @@ typedef enum STATE
     STATE_DRAWING_CIRCLE,
     STATE_DRAWING_BEZIER,
     STATE_DRAWING_ARC,
+    STATE_DRAWING_BEZ_RECT,
+    STATE_DRAWING_BEZ_CIRCLE,
     STATE_DRAWING_EXTRUDE,
     STATE_DRAWING_TEXT,
     STATE_DRAWING_EXTRUDE_LOCAL,
@@ -56,7 +60,9 @@ typedef enum STATE
     STATE_MAX,                  // Must be the highest numbered
 
     // The offset between members of the above two sets of possible states.
-    STATE_DRAWING_OFFSET = STATE_DRAWING_EDGE - STATE_STARTING_EDGE
+    // Calculate this twice (at compile time) and check (at run time) to catch mismatches.
+    STATE_DRAWING_OFFSET = STATE_DRAWING_EDGE - STATE_STARTING_EDGE,
+    STATE_DRAWING_OFFSET2 = STATE_DRAWING_ROTATE - STATE_STARTING_ROTATE,
 } STATE;
 
 typedef enum
@@ -248,6 +254,7 @@ extern Material materials[MAX_MATERIAL];
 #define LogShow(msg)        \
 {                       \
     ShowWindow(hWndDebug, SW_SHOW);                                                     \
+    SetWindowPos(hWndDebug, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);             \
     CheckMenuItem(GetSubMenu(GetMenu(auxGetHWND()), 2), ID_VIEW_DEBUGLOG, MF_CHECKED);  \
     view_debug = TRUE;                                                                  \
     SendDlgItemMessage(hWndDebug, IDC_DEBUG, EM_REPLACESEL, 0, (LPARAM)(msg));          \
