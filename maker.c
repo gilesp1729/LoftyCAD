@@ -1153,8 +1153,8 @@ make_lofted_volume(Group* group)
     }
     loft = group->loft;
 
-    // Ensure corresponding edges have matching step counts. Zero out the
-    // step sizes so they get recalculated.
+    // Ensure corresponding edges have matching step counts. 
+    // Set everything to the first step count (TODO: this may not be the best way. Maybe use the max?)
     first_egrp = (Group*)clone->obj_list.head;
     e = (Edge*)first_egrp->obj_list.head;
     e->view_valid = FALSE;

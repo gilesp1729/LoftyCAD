@@ -6,7 +6,7 @@
 #define MAXLINE 1024
 
 // Version of output file
-double file_version = 0.5;
+double file_version = 0.6;
 
 // A constantly incrementing ID. 
 // Should not need to worry about it overflowing 32-bits (4G objects!)
@@ -297,10 +297,7 @@ serialise_tree(Group *tree, char *filename)
     fopen_s(&f, filename, "wt");
     fprintf_s(f, "LOFTYCAD %.1f\n", file_version);
     fprintf_s(f, "TITLE %s\n", tree->title);
-    fprintf_s(f, "SCALE %f %f %f %d %f\n", half_size, grid_snap, tolerance, angle_snap, round_rad);
-#if 0 // See below in reading code
-    fprintf_s(f, "VIEW %d %f %f %f\n", view_ortho, xTrans, yTrans, zTrans);
-#endif
+    fprintf_s(f, "SCALE %f %f %f %d %f %f\n", half_size, grid_snap, tolerance, angle_snap, round_rad, default_stepsize);
 
     // Write materials here, in case some are not used by any volumes. Mark them as written.
     for (i = 0; i < MAX_MATERIAL; i++)
@@ -545,32 +542,10 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
             tok = strtok_s(NULL, " \t\n", &nexttok);
             if (tok != NULL)
                 round_rad = (float)atof(tok);
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            if (tok != NULL)
+                default_stepsize = (float)atof(tok);
         }
-#if 0 // Don't do this. It requires a checkpoint every time the view changes.
-        else if (strcmp(tok, "VIEW") == 0)
-        {
-            HMENU hMenu;
-
-            if (importing)      // Don't overwrite settings when importing to group
-                continue;
-
-            tok = strtok_s(NULL, " \t\n", &nexttok);
-            view_ortho = atoi(tok);
-
-            // TODO: Find out what else needs writing out here (rotation matrix, etc)
-            tok = strtok_s(NULL, " \t\n", &nexttok);
-            xTrans = (float)atof(tok);
-            tok = strtok_s(NULL, " \t\n", &nexttok);
-            yTrans = (float)atof(tok);
-            tok = strtok_s(NULL, " \t\n", &nexttok);
-            zTrans = (float)atof(tok);
-
-            hMenu = GetSubMenu(GetMenu(auxGetHWND()), 2);
-            CheckMenuItem(hMenu, ID_VIEW_ORTHO, view_ortho ? MF_CHECKED : MF_UNCHECKED);
-            CheckMenuItem(hMenu, ID_VIEW_PERSPECTIVE, !view_ortho ? MF_CHECKED : MF_UNCHECKED);
-
-        }
-#endif // 0
         else if (strcmp(tok, "{") == 0 || strcmp(tok, "BEGIN") == 0)
         {
             // Push the stack

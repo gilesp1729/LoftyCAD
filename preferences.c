@@ -161,6 +161,8 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         SendDlgItemMessage(hWnd, IDC_PREFS_TOL, WM_SETTEXT, 0, (LPARAM)buf);
         sprintf_s(buf, 16, "%d", angle_snap);
         SendDlgItemMessage(hWnd, IDC_PREFS_ANGLE, WM_SETTEXT, 0, (LPARAM)buf);
+        sprintf_s(buf, 16, "%.1f", default_stepsize);
+        SendDlgItemMessage(hWnd, IDC_PREFS_STEPSIZE, WM_SETTEXT, 0, (LPARAM)buf);
         sprintf_s(buf, 16, "%.2f", round_rad);
         SendDlgItemMessage(hWnd, IDC_PREFS_ROUNDRAD, WM_SETTEXT, 0, (LPARAM)buf);
         SetFocus(GetDlgItem(hWnd, IDC_PREFS_TITLE));
@@ -258,6 +260,8 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             grid_snap = (float)atof(buf);
             SendDlgItemMessage(hWnd, IDC_PREFS_ANGLE, WM_GETTEXT, 16, (LPARAM)buf);
             angle_snap = atoi(buf);
+            SendDlgItemMessage(hWnd, IDC_PREFS_STEPSIZE, WM_GETTEXT, 16, (LPARAM)buf);
+            default_stepsize = (float)atof(buf);
             SendDlgItemMessage(hWnd, IDC_PREFS_ROUNDRAD, WM_GETTEXT, 16, (LPARAM)buf);
             round_rad = (float)atof(buf);
 
