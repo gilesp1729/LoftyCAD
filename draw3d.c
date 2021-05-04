@@ -1954,11 +1954,11 @@ Draw(void)
                         alpha = cleanup_angle_and_snap(total_angle, key_status & AUX_SHIFT);
                         break;
                     case PLANE_XZ:
-                        total_angle += da;
+                        total_angle -= da;  // negations due to LH coords
                         alpha = cleanup_angle_and_snap(total_angle, key_status & AUX_SHIFT);
                         break;
                     case PLANE_MINUS_XZ:
-                        total_angle -= da;
+                        total_angle += da;
                         alpha = cleanup_angle_and_snap(total_angle, key_status & AUX_SHIFT);
                         break;
                     case PLANE_YZ:
@@ -2079,10 +2079,10 @@ Draw(void)
     {
         double clip[4];
 
-        clip[0] = clip_plane.A;
-        clip[1] = clip_plane.B;
-        clip[2] = clip_plane.C;
-        clip[3] = clip_plane.D + tolerance;     // slight tweak to ensure stuff on the plane is visible
+        clip[0] = -clip_plane.A;                    // negations so that stuff below plane is clipped in
+        clip[1] = -clip_plane.B;
+        clip[2] = -clip_plane.C;
+        clip[3] = -clip_plane.D + tolerance;     // slight tweak to ensure stuff on the plane is visible
         glClipPlane(GL_CLIP_PLANE0, clip);
     }
 
