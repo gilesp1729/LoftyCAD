@@ -215,6 +215,10 @@ float round_rad = 2 * INITIAL_GRID;
 // Half-size of drawing volume, nominally in mm (although units are arbitrary)
 float half_size = INITIAL_HALFSIZE;
 
+// Default stepsize (in mm) to be applied to arcs and beziers when flatness tolerance
+// can't be used (such as when many edges have to match)
+float default_stepsize = 2.0f;
+
 // Initial values of translation components
 float xTrans = 0;
 float yTrans = 0;
@@ -872,6 +876,7 @@ left_up(AUX_EVENTREC *event)
         {
             Point* p00, * p01, * p02, * p03;
             BezierEdge* be;
+            int steps1, steps2;
 
             // Create the edges for the rect here as a special case, as the order
             // is not known till the mouse is released.
@@ -882,14 +887,17 @@ left_up(AUX_EVENTREC *event)
             p02 = (Point*)p01->hdr.next;
             p03 = (Point*)p02->hdr.next;
 
-#define CONTOUR_STEPS 10  // TODO a better algorithm for setting these
+            // Calculate the step counts, which must match across the face.
+            steps1 = (int)(length(p00, p01) / default_stepsize + 1);
+            steps2 = (int)(length(p01, p02) / default_stepsize + 1);
+
             e = (Edge*)edge_new(EDGE_BEZIER);
             e->endpoints[0] = p00;
             e->endpoints[1] = p01;
             be = (BezierEdge*)e;
             be->ctrlpoints[0] = point_newr(e->endpoints[0], e->endpoints[1], BEZ_RECT_TENSION);
             be->ctrlpoints[1] = point_newr(e->endpoints[1], e->endpoints[0], BEZ_RECT_TENSION);
-            e->nsteps = CONTOUR_STEPS;
+            e->nsteps = steps1;
             e->view_valid = FALSE;
             rf->edges[0] = e;
 
@@ -899,7 +907,7 @@ left_up(AUX_EVENTREC *event)
             be = (BezierEdge*)e;
             be->ctrlpoints[0] = point_newr(e->endpoints[0], e->endpoints[1], BEZ_RECT_TENSION);
             be->ctrlpoints[1] = point_newr(e->endpoints[1], e->endpoints[0], BEZ_RECT_TENSION);
-            e->nsteps = CONTOUR_STEPS;
+            e->nsteps = steps2;
             e->view_valid = FALSE;
             rf->edges[1] = e;
 
@@ -909,7 +917,7 @@ left_up(AUX_EVENTREC *event)
             be = (BezierEdge*)e;
             be->ctrlpoints[0] = point_newr(e->endpoints[0], e->endpoints[1], BEZ_RECT_TENSION);
             be->ctrlpoints[1] = point_newr(e->endpoints[1], e->endpoints[0], BEZ_RECT_TENSION);
-            e->nsteps = CONTOUR_STEPS;
+            e->nsteps = steps1;
             e->view_valid = FALSE;
             rf->edges[2] = e;
 
@@ -919,7 +927,7 @@ left_up(AUX_EVENTREC *event)
             be = (BezierEdge*)e;
             be->ctrlpoints[0] = point_newr(e->endpoints[0], e->endpoints[1], BEZ_RECT_TENSION);
             be->ctrlpoints[1] = point_newr(e->endpoints[1], e->endpoints[0], BEZ_RECT_TENSION);
-            e->nsteps = CONTOUR_STEPS;
+            e->nsteps = steps2;
             e->view_valid = FALSE;
             rf->edges[3] = e;
 

@@ -1055,10 +1055,6 @@ compare_lofted_groups(const void* elem1, const void* elem2)
         return 0;
 }
 
-// Some temporary definitions.
-//#define TENSION 0.3f
-//#define ANGLE_BREAK_COS 0.6f
-#define CONTOUR_STEPS 10
 
 extern LoftParams default_loft;
 
@@ -1081,7 +1077,7 @@ make_lofted_volume(Group* group)
     int i, j;
     LoftedGroup* lg;
     LoftParams* loft;
-    float path_length;
+    float path_length, total_length;
     ListHead contour_lists[8];  // max of 8 points in a section, so 8 lists of contour edges
     Edge* contour[8];
 
@@ -1446,8 +1442,11 @@ make_lofted_volume(Group* group)
     }
 
     // Join corresponding points with bezier edges. Gather the edges into contour lists.
+    total_length = length(&lg[0].norm.refpt, &lg[num_groups - 1].norm.refpt);
     for (i = 1; i < num_groups; i++)
     {
+        int steps = (int)((lg[i].param - lg[i - 1].param) * total_length / default_stepsize + 1);
+
         for
         (
             j = 0, e = (Edge*)lg[i].egrp->obj_list.head, prev_e = (Edge*)lg[i - 1].egrp->obj_list.head;
@@ -1466,9 +1465,8 @@ make_lofted_volume(Group* group)
             ((BezierEdge*)ne)->ctrlpoints[0] = point_newp(ne->endpoints[0]);
             ((BezierEdge*)ne)->ctrlpoints[1] = point_newp(ne->endpoints[1]);
 
-            // Setup step counts (TODO a better algorithm!) and zero the step size so it gets
-            // recalculated again with the next view list update.
-            ne->nsteps = CONTOUR_STEPS;
+            // Setup step count
+            ne->nsteps = steps;
             ne->view_valid = FALSE;
 
             link_tail((Object*)ne, &contour_lists[j]);

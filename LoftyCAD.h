@@ -170,6 +170,7 @@ extern BOOL snapping_to_angle;
 extern float chamfer_rad;
 extern float round_rad;
 extern float half_size;
+extern float default_stepsize;
 extern float clip_xoffset, clip_yoffset, clip_zoffset;
 extern int generation;
 extern int latest_generation;
