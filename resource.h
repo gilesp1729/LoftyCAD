@@ -134,7 +134,6 @@
 #define IDC_PREFS_SLICER_EXE            1011
 #define IDC_PREFS_SLICER_CONFIG         1012
 #define IDC_TREEVIEW                    1013
-#define IDC_PREFS_ROUNDRAD2             1013
 #define IDC_PREFS_STEPSIZE              1013
 #define IDC_STATIC_BUILD                1014
 #define IDC_FONT_STRING                 1030
@@ -186,6 +185,8 @@
 #define IDC_LOFT_TRUNCATE_TAIL          1072
 #define IDC_CLIP_D                      1073
 #define IDC_LOFT_BODY_TENSION           1073
+#define IDC_CHECK1                      1075
+#define IDC_CLIP_DRAWONPLANE            1075
 #define IDC_LOFT_NOSE_TENSION           1079
 #define IDC_LOFT_TAIL_TENSION           1080
 #define IDC_LOFT_BODY_ANGLEBREAK        1081
@@ -347,7 +348,7 @@
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        166
 #define _APS_NEXT_COMMAND_VALUE         32933
-#define _APS_NEXT_CONTROL_VALUE         1075
+#define _APS_NEXT_CONTROL_VALUE         1076
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif

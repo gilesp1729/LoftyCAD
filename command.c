@@ -498,7 +498,7 @@ Command(int message, int wParam, int lParam)
 #ifdef DEBUG_COMMAND_FACING
             Log("Facing plane XZ\r\n");
 #endif
-            trackball_InitQuat(quat_XZ);
+            trackball_InitQuat(quat_mXZ);
             break;
 
         case ID_VIEW_BOTTOM:
@@ -525,7 +525,7 @@ Command(int message, int wParam, int lParam)
 #ifdef DEBUG_COMMAND_FACING
             Log("Facing plane -XZ\r\n");
 #endif
-            trackball_InitQuat(quat_mXZ);
+            trackball_InitQuat(quat_XZ);
             break;
 
         case ID_VIEW_ORTHO:
@@ -1132,6 +1132,7 @@ clip_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         SendDlgItemMessage(hWnd, IDC_CLIP_C, WM_SETTEXT, 0, (LPARAM)buf);
         sprintf_s(buf, 16, "%.1f", clip_plane.D);
         SendDlgItemMessage(hWnd, IDC_CLIP_D, WM_SETTEXT, 0, (LPARAM)buf);
+        CheckDlgButton(hWnd, IDC_CLIP_DRAWONPLANE, draw_on_clip_plane ? BST_CHECKED : BST_UNCHECKED);
         break;
 
     case WM_COMMAND:
@@ -1150,6 +1151,7 @@ clip_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             clip_plane.refpt.x = -clip_plane.A * clip_plane.D;
             clip_plane.refpt.y = -clip_plane.B * clip_plane.D;
             clip_plane.refpt.z = -clip_plane.C * clip_plane.D;
+            draw_on_clip_plane = IsDlgButtonChecked(hWnd, IDC_CLIP_DRAWONPLANE);
 
             view_clipped = TRUE;
             glEnable(GL_CLIP_PLANE0);

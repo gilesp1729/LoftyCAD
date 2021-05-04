@@ -313,9 +313,9 @@ is_tri_clipped(float x[3], float y[3], float z[3])
     return TRUE;
 }
 
-// Draw the clip plane intersection with a triangle
+// Draw the clip plane intersection with a triangle (given either by point coords or by edges)
 void
-clip_triangle(void* arg, int mat, float x[3], float y[3], float z[3])
+clip_triangle_by_coords(void* arg, int mat, float x[3], float y[3], float z[3])
 {
     int rc, count = 0;
     Point pt, points[6];
@@ -331,6 +331,42 @@ clip_triangle(void* arg, int mat, float x[3], float y[3], float z[3])
     if (rc == 1)
         points[count++] = pt;
     rc = intersect_segment_plane(x[2], y[2], z[2], x[0], y[0], z[0], plane, &pt);
+    if (rc == 1)
+        points[count++] = pt;
+
+    if (count == 2)
+    {
+        glVertex3d(points[0].x, points[0].y, points[0].z);
+        glVertex3d(points[1].x, points[1].y, points[1].z);
+    }
+}
+
+void
+clip_triangle_by_edges(Face* f, Plane* plane)
+{
+    int rc, count = 0;
+    Point pt, points[6];
+    Edge *e;
+    Point* p0, * p1;
+
+    e = f->edges[0];
+    p0 = e->endpoints[0];
+    p1 = e->endpoints[1];
+    rc = intersect_segment_plane(p0->x, p0->y, p0->z, p1->x, p1->y, p1->z, plane, &pt);
+    if (rc == 1)
+        points[count++] = pt;
+
+    e = f->edges[1];
+    p0 = e->endpoints[0];
+    p1 = e->endpoints[1];
+    rc = intersect_segment_plane(p0->x, p0->y, p0->z, p1->x, p1->y, p1->z, plane, &pt);
+    if (rc == 1)
+        points[count++] = pt;
+
+    e = f->edges[2];
+    p0 = e->endpoints[0];
+    p1 = e->endpoints[1];
+    rc = intersect_segment_plane(p0->x, p0->y, p0->z, p1->x, p1->y, p1->z, plane, &pt);
     if (rc == 1)
         points[count++] = pt;
 
@@ -360,18 +396,30 @@ draw_clip_intersection(Group *tree)
             if (!is_bbox_clipped(&vol->bbox))
                 break;
 
-            // Make sure there's a triangle mesh
-            if (!vol->mesh_valid)
+            // Make sure there's a triangle mesh. Only render if we can't get it any other
+            // way, to save time. Large triangle meshes do not need rendering.
+            if (vol->max_facetype == FACE_TRI)
             {
+                color_as(OBJ_EDGE, 1.0f, TRUE, DRAW_PATH, FALSE);
+                glBegin(GL_LINES);
                 for (f = (Face*)vol->faces.head; f != NULL; f = (Face*)f->hdr.next)
-                    gen_view_list_surface(f);
-                vol->mesh_valid = TRUE;
+                    clip_triangle_by_edges(f, &clip_plane);
+                glEnd();
             }
+            else
+            {
+                if (!vol->mesh_valid)
+                {
+                    for (f = (Face*)vol->faces.head; f != NULL; f = (Face*)f->hdr.next)
+                        gen_view_list_surface(f);
+                    vol->mesh_valid = TRUE;
+                }
 
-            color_as(OBJ_EDGE, 1.0f, TRUE, DRAW_PATH, FALSE);
-            glBegin(GL_LINES);
-            mesh_foreach_face_coords_mat(vol->mesh, clip_triangle, &clip_plane);
-            glEnd();
+                color_as(OBJ_EDGE, 1.0f, TRUE, DRAW_PATH, FALSE);
+                glBegin(GL_LINES);
+                mesh_foreach_face_coords_mat(vol->mesh, clip_triangle_by_coords, &clip_plane);
+                glEnd();
+            }
             break;
 
         case OBJ_GROUP:
@@ -1218,7 +1266,7 @@ Draw(void)
                 if (picked_obj == NULL || picked_obj->type != OBJ_FACE)  
                     //TODO: when starting on a volume locked at face level, the picked plane
                     // must agree with the d1/d3 calculated below (i.e. it must be the facing plane)
-                    // Otherwise things get wierd.
+                    // Otherwise things get weird.
                 {
                     // Drawing on a facing plane derived from standard axes
                     switch (facing_index)

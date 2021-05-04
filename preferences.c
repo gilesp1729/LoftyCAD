@@ -143,7 +143,7 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     char buf[16], version[128], print_button[128];
     char location[MAX_PATH], filename[MAX_PATH];
     HANDLE f;
-    float new_val;
+//    float new_val;
     int i;
     static BOOL slicer_changed, index_changed, config_changed;
     char printer[64];
@@ -226,6 +226,7 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             zTrans = -2.0f * half_size;
             Position();
 
+#if 0 // Not used, too dodgy
             SendDlgItemMessage(hWnd, IDC_PREFS_TOL, WM_GETTEXT, 16, (LPARAM)buf);
             new_val = (float)atof(buf);
             if (!nz(new_val - tolerance))
@@ -236,7 +237,7 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 tol_log = (int)ceilf(log10f(1.0f / tolerance));
 
                 // Fix up all the flattened curves. TODO: Get this working properly.
-                // adjust_stepsizes((Object*)&object_tree, new_val);
+                adjust_stepsizes((Object*)&object_tree, new_val);
                 clear_move_copy_flags((Object*)&object_tree);
                 invalidate_all_view_lists((Object*)&object_tree, (Object*)&object_tree, 0, 0, 0);
 
@@ -254,8 +255,16 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                     gen_view_list_tree_surfaces(&object_tree, &object_tree);
                 }
             }
-
+#else
             // These don't change the drawing until something else is added.
+            SendDlgItemMessage(hWnd, IDC_PREFS_TOL, WM_GETTEXT, 16, (LPARAM)buf);
+            tolerance = (float)atof(buf);
+            // The snapping tol and chamfer rad are fixed fractions of the tolerance. Don't change them.
+            snap_tol = 3 * tolerance;
+            chamfer_rad = 3.5f * tolerance;
+            tol_log = (int)ceilf(log10f(1.0f / tolerance));
+#endif
+
             SendDlgItemMessage(hWnd, IDC_PREFS_GRID, WM_GETTEXT, 16, (LPARAM)buf);
             grid_snap = (float)atof(buf);
             SendDlgItemMessage(hWnd, IDC_PREFS_ANGLE, WM_GETTEXT, 16, (LPARAM)buf);
