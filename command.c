@@ -493,12 +493,12 @@ Command(int message, int wParam, int lParam)
             break;
 
         case ID_VIEW_LEFT:
-            facing_plane = &plane_mXZ;   // note this negation is deliberate
+            facing_plane = &plane_XZ; 
             facing_index = PLANE_XZ;
 #ifdef DEBUG_COMMAND_FACING
             Log("Facing plane XZ\r\n");
 #endif
-            trackball_InitQuat(quat_mXZ);
+            trackball_InitQuat(quat_mXZ);       // negation deliberate
             break;
 
         case ID_VIEW_BOTTOM:
@@ -520,12 +520,12 @@ Command(int message, int wParam, int lParam)
             break;
 
         case ID_VIEW_RIGHT:
-            facing_plane = &plane_XZ;   // note this negation is deliberate
+            facing_plane = &plane_mXZ;
             facing_index = PLANE_MINUS_XZ;
 #ifdef DEBUG_COMMAND_FACING
             Log("Facing plane -XZ\r\n");
 #endif
-            trackball_InitQuat(quat_XZ);
+            trackball_InitQuat(quat_XZ);    // negation deliberate
             break;
 
         case ID_VIEW_ORTHO:

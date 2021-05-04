@@ -123,7 +123,7 @@ float eff_sx, eff_sy, eff_sz;
 
 
 // Standard planes.
-// Note that when indices for XZ and -XZ are chosen, the actual plane is negated.
+// Note that when indices for XZ and -XZ are chosen, the opposite quat is used.
 // This is because the other axis (the Y) is negated relative to a RH coordiate system.
 Plane plane_XY = { 0, };
 Plane plane_XZ = { 0, };
@@ -771,7 +771,7 @@ left_up(AUX_EVENTREC *event)
         {
             if (nvec[1] > 0)
             {
-                facing_plane = &plane_mXZ;   // note this negation is deliberate
+                facing_plane = &plane_XZ; 
                 facing_index = PLANE_XZ;
 #ifdef DEBUG_LEFT_UP_FACING
                 Log("Facing plane XZ\r\n");
@@ -779,7 +779,7 @@ left_up(AUX_EVENTREC *event)
             }
             else
             {
-                facing_plane = &plane_XZ;   // note this negation is deliberate
+                facing_plane = &plane_mXZ;  
                 facing_index = PLANE_MINUS_XZ;
 #ifdef DEBUG_LEFT_UP_FACING
                 Log("Facing plane -XZ\r\n");
