@@ -248,7 +248,7 @@ clipped(Point* p)
     if (draw_on_clip_plane)
         return f < -tolerance || f > tolerance;
     else
-        return f < tolerance;
+        return f > tolerance;
 }
 
 // Determine if a point is clipped out by its coordinates. One sided test.
@@ -262,7 +262,7 @@ clippedv(float x, float y, float z)
 
     f = clip_plane.A * x + clip_plane.B * y + clip_plane.C * z + clip_plane.D;
 
-    return f < 0;
+    return f > 0;
 }
 
 // Determine if a bbox is partially clipped (lies across the clipping plane)

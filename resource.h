@@ -185,8 +185,9 @@
 #define IDC_LOFT_TRUNCATE_TAIL          1072
 #define IDC_CLIP_D                      1073
 #define IDC_LOFT_BODY_TENSION           1073
-#define IDC_CHECK1                      1075
 #define IDC_CLIP_DRAWONPLANE            1075
+#define IDC_CLIP_DRAWONPLANE2           1076
+#define IDC_CLIP_CLIPPED                1076
 #define IDC_LOFT_NOSE_TENSION           1079
 #define IDC_LOFT_TAIL_TENSION           1080
 #define IDC_LOFT_BODY_ANGLEBREAK        1081

@@ -354,6 +354,18 @@ serialise_tree(Group *tree, char *filename)
         fprintf_s(f, "PATH %d\n", curr_path->ID);
     }
 
+    // Write any clip, whether in effect or not.
+    if (clip_plane.A != 0 || clip_plane.B != 0 || clip_plane.C != 0)
+    {
+        fprintf_s(f, "CLIP %d %d %f %f %f %f\n",
+            view_clipped,
+            draw_on_clip_plane,
+            clip_plane.A,
+            clip_plane.B,
+            clip_plane.C,
+            clip_plane.D);
+    }
+
     clear_status_and_progress();
     fclose(f);
 }
@@ -1056,6 +1068,8 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
         }
         else if (strcmp(tok, "SELECTION") == 0)
         {
+            if (importing)      // Don't overwrite selection when importing to group
+                continue;
             clear_selection(&selection);
             while (TRUE)
             {
@@ -1077,12 +1091,33 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
         }
         else if (strcmp(tok, "PATH") == 0)
         {
+            if (importing)      // Don't overwrite path when importing to group
+                continue;
             tok = strtok_s(NULL, " \t\n", &nexttok);
             if (tok == NULL)
                 break;
             id = atoi(tok) + id_offset;
             ASSERT(id > 0 && object[id] != NULL, "Bad path group ID");
             curr_path = object[id];
+        }
+        else if (strcmp(tok, "CLIP") == 0)
+        {
+            if (importing)      // Don't overwrite clip plane when importing to group
+                continue;
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            view_clipped = atoi(tok);
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            draw_on_clip_plane = atoi(tok);
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            clip_plane.A = (float)atof(tok);
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            clip_plane.B = (float)atof(tok);
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            clip_plane.C = (float)atof(tok);
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            clip_plane.D = (float)atof(tok);
+            if (view_clipped)
+                glEnable(GL_CLIP_PLANE0);
         }
     }
 

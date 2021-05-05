@@ -1132,6 +1132,7 @@ clip_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         SendDlgItemMessage(hWnd, IDC_CLIP_C, WM_SETTEXT, 0, (LPARAM)buf);
         sprintf_s(buf, 16, "%.1f", clip_plane.D);
         SendDlgItemMessage(hWnd, IDC_CLIP_D, WM_SETTEXT, 0, (LPARAM)buf);
+        CheckDlgButton(hWnd, IDC_CLIP_CLIPPED, view_clipped ? BST_CHECKED : BST_UNCHECKED);
         CheckDlgButton(hWnd, IDC_CLIP_DRAWONPLANE, draw_on_clip_plane ? BST_CHECKED : BST_UNCHECKED);
         break;
 
@@ -1151,10 +1152,14 @@ clip_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             clip_plane.refpt.x = -clip_plane.A * clip_plane.D;
             clip_plane.refpt.y = -clip_plane.B * clip_plane.D;
             clip_plane.refpt.z = -clip_plane.C * clip_plane.D;
+            view_clipped = IsDlgButtonChecked(hWnd, IDC_CLIP_CLIPPED);
             draw_on_clip_plane = IsDlgButtonChecked(hWnd, IDC_CLIP_DRAWONPLANE);
 
-            view_clipped = TRUE;
-            glEnable(GL_CLIP_PLANE0);
+            if (view_clipped)
+                glEnable(GL_CLIP_PLANE0);
+            else
+                glDisable(GL_CLIP_PLANE0);
+
             invalidate_dl();
             if (LOWORD(wParam) == IDOK)
                 EndDialog(hWnd, 1);
@@ -1162,12 +1167,6 @@ clip_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
         case IDCANCEL:
             EndDialog(hWnd, 0);
-            break;
-
-        case ID_REMOVE:
-            view_clipped = FALSE;
-            glDisable(GL_CLIP_PLANE0);
-            invalidate_dl();
             break;
         }
     }
