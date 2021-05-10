@@ -160,7 +160,8 @@ is_edge_group(Group* group)
     return TRUE;
 }
 
-// Check if an edge group is closed.
+// Check if an edge group is closed. Do this by matching up endpoints.
+// Take special care with groups having only one or two elements.
 BOOL
 is_closed_edge_group(Group* group)
 {
@@ -171,15 +172,28 @@ is_closed_edge_group(Group* group)
 
     first = (Edge*)group->obj_list.head;
     last = (Edge*)group->obj_list.tail;
-    if (first->endpoints[0] == last->endpoints[0])
-        return TRUE;
-    if (first->endpoints[0] == last->endpoints[1])
-        return TRUE;
-    if (first->endpoints[1] == last->endpoints[0])
-        return TRUE;
-    if (first->endpoints[1] == last->endpoints[1])
-        return TRUE;
-
+    if (first == last)              // one element, it's always open
+        return FALSE;
+    else if ((Edge *)first->hdr.next == last)   // two elements
+    {
+        if (first->endpoints[0] == last->endpoints[0] && first->endpoints[1] == last->endpoints[1])
+            return TRUE;
+        if (first->endpoints[0] == last->endpoints[1] && first->endpoints[1] == last->endpoints[0])
+            return TRUE;
+    }
+    else
+    {
+        // Otherwise, just check that there's a match between any endpoints
+        // of the head and tail edges.
+        if (first->endpoints[0] == last->endpoints[0])
+            return TRUE;
+        if (first->endpoints[0] == last->endpoints[1])
+            return TRUE;
+        if (first->endpoints[1] == last->endpoints[0])
+            return TRUE;
+        if (first->endpoints[1] == last->endpoints[1])
+            return TRUE;
+    }
     return FALSE;
 }
 
