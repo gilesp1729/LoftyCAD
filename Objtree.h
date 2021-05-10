@@ -187,6 +187,7 @@ typedef struct ListHead
 {
     struct Object *head;
     struct Object *tail;
+    int count;                      // Count of elements. It is not maintained for free lists.
 } ListHead;
 
 // Edges of various kinds. Edges are shared when used in faces, or they can start on their own

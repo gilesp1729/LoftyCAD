@@ -935,7 +935,7 @@ Draw(void)
             BezierEdge *be;
             Plane grad0, grad1;
             float dist;
-            Face *rf;
+            Face *rf, *bf;
             Plane norm;
             Object *parent, *dummy;
 
@@ -1637,8 +1637,82 @@ Draw(void)
                 break;
 
             case STATE_DRAWING_BEZ_CIRCLE:
+                if (picked_plane == NULL)
+                    assign_picked_plane(pt);
+                if (picked_plane == NULL)
+                    break;
+
+                // Move the circumference point. Allow angle snapping so user can 
+                // select sensible radius value if desired.
+                intersect_ray_plane(pt.x, pt.y, picked_plane, &new_point);
+                if (key_status & AUX_SHIFT)
+                    snap_to_angle(picked_plane, &picked_point, &new_point, 45);
+                else if (snapping_to_angle)
+                    snap_to_angle(picked_plane, &picked_point, &new_point, angle_snap);
+                snap_to_grid(picked_plane, &new_point, key_status & AUX_CONTROL);
+
+                // Determine the other 3 points (the first is always the new_point)
+                grad0.A = new_point.x - picked_point.x;
+                grad0.B = new_point.y - picked_point.y;
+                grad0.C = new_point.z - picked_point.z;
+                dist = length(&picked_point, &new_point);
+                normalise_plane(&grad0);
+                plcross(&grad0, picked_plane, &grad1);
+
+                p1.x = picked_point.x + grad1.A * dist;     // TODO also control points. Need a routine for this!
+                p1.y = picked_point.y + grad1.B * dist;
+                p1.z = picked_point.z + grad1.C * dist;
+                p2.x = picked_point.x - grad0.A * dist;
+                p2.y = picked_point.y - grad0.B * dist;
+                p2.z = picked_point.z - grad0.C * dist;
+                p3.x = picked_point.x - grad1.A * dist;
+                p3.y = picked_point.y - grad1.B * dist;
+                p3.z = picked_point.z - grad1.C * dist;
+
+                // First move create 4 bezier edges and a bezier face
+                if (curr_obj == NULL)
+                {
+                    bf = face_new(FACE_BEZIER, *picked_plane);
+                    p00 = point_newp(&new_point);
+                    p01 = point_newp(&p1);
+                    e = edge_new(EDGE_BEZIER);
+                    e->endpoints[0] = p00;
+                    e->endpoints[1] = p01;
+                    bf->edges[0] = e;
+
+                    p02 = point_newp(&p2);
+                    e = edge_new(EDGE_BEZIER);
+                    e->endpoints[0] = p01;
+                    e->endpoints[1] = p02;
+                    bf->edges[1] = e;
+
+                    p03 = point_newp(&p3);
+                    e = edge_new(EDGE_BEZIER);
+                    e->endpoints[0] = p02;
+                    e->endpoints[1] = p03;
+                    bf->edges[2] = e;
+
+                    e = edge_new(EDGE_BEZIER);
+                    e->endpoints[0] = p03;
+                    e->endpoints[1] = p00;
+                    bf->edges[3] = e;
+
+                    bf->n_edges = 4;
+                    bf->initial_point = p00;
+                }
+                else
+                {
+                    bf = (Face*)curr_obj;
 
 
+
+
+                    bf->view_valid = FALSE;
+                    bf->edges[0]->nsteps = 0;      // while drawing, keep recalculating the step sizes
+                    bf->edges[1]->nsteps = 0;
+                    bf->edges[2]->nsteps = 0;
+                    bf->edges[3]->nsteps = 0;
+                }
 
                 break;
 

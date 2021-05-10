@@ -35,8 +35,11 @@
     )
 
 // Tensions for bezier control points used in bez rect and circle faces.
+// The rect tension is arbirary for convenience.
+// The circle tension is for a quarter-circle bezier approximation,
+// = (4/3) * tan(pi/8)
 #define BEZ_RECT_TENSION 0.3f
-#define BEZ_CIRCLE_TENSION 0.3f
+#define BEZ_CIRCLE_TENSION 0.55228475f
 
 // prototypes.
 void ray_from_eye(GLint x, GLint y, Plane *line);

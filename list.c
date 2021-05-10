@@ -14,6 +14,7 @@ void link(Object *new_obj, ListHead *obj_list)
         obj_list->head->prev = new_obj;
 
     obj_list->head = new_obj;
+    obj_list->count++;
 
     ASSERT(obj_list->head->prev == NULL, "First element should not have a prev");
     ASSERT(obj_list->tail->next == NULL, "Last element should not have a next");
@@ -31,6 +32,7 @@ void delink(Object *obj, ListHead *obj_list)
     else
         obj_list->tail = obj->prev;
 
+    obj_list->count--;
     ASSERT(obj_list->head == NULL || obj_list->head->prev == NULL, "First element should not have a prev");
     ASSERT(obj_list->tail == NULL || obj_list->tail->next == NULL, "Last element should not have a next");
 }
@@ -50,6 +52,7 @@ link_tail(Object *new_obj, ListHead *obj_list)
         new_obj->prev = obj_list->tail;
     }
     obj_list->tail = new_obj;
+    obj_list->count++;
 
     ASSERT(obj_list->head->prev == NULL, "First element should not have a prev");
     ASSERT(obj_list->tail->next == NULL, "Last element should not have a next");
@@ -203,6 +206,7 @@ free_point_list(ListHead *pt_list)
 
     pt_list->head = NULL;
     pt_list->tail = NULL;
+    pt_list->count = 0;
 }
 
 // Free all elements in a singly linked list of Objects, similarly to the above.
@@ -226,6 +230,7 @@ void free_obj_list(ListHead *obj_list)
 
     obj_list->head = NULL;
     obj_list->tail = NULL;
+    obj_list->count = 0;
 }
 
 // Allocate the point bucket list structure.

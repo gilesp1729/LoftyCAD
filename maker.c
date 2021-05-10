@@ -1167,31 +1167,6 @@ make_lofted_volume(Group* group)
     }
     loft = group->loft;
 
-    // Ensure corresponding edges have matching step counts. 
-    // Set everything to the first step count (TODO: this may not be the best way. Maybe use the max?)
-    first_egrp = (Group*)clone->obj_list.head;
-    e = (Edge*)first_egrp->obj_list.head;
-    e->view_valid = FALSE;
-    for (obj = clone->obj_list.head->next; obj != NULL; obj = obj->next)
-    {
-        Edge* e0;
-
-        egrp = (Group*)obj;
-        for
-        (
-            e = (Edge*)egrp->obj_list.head, e0 = (Edge*)first_egrp->obj_list.head;
-            e != NULL;
-            e = (Edge*)e->hdr.next, e0 = (Edge*)e0->hdr.next
-        )
-        {
-            if (e0->type >= EDGE_ARC)
-            {
-                e->nsteps = e0->nsteps;
-                e->view_valid = FALSE;
-            }
-        }
-    }
-
     // Allocate the LoftedGroup array.
     lg = (LoftedGroup*)malloc(num_groups * sizeof(LoftedGroup));
 
@@ -1416,7 +1391,6 @@ make_lofted_volume(Group* group)
     // Sort by distance from the principal refpt.
     qsort(lg, num_groups, sizeof(LoftedGroup), compare_lofted_groups);
 
-
     // Choose a point in the first section as the principal point. Find the corresponding
     // point in each section. Various methods have been tried, robustness is an issue.
     first_edge = (Edge *)lg[0].egrp->obj_list.head;
@@ -1453,6 +1427,31 @@ make_lofted_volume(Group* group)
         // Update previous first point
         ASSERT(min_point == first_point((Edge*)lg[i].egrp->obj_list.head), "This point should be at the top");
         first_pt = min_point;
+    }
+
+    // Ensure corresponding edges have matching step counts. 
+    // Set everything to the first step count (TODO: this may not be the best way. Maybe use the max?)
+    first_egrp = (Group*)clone->obj_list.head;
+    e = (Edge*)first_egrp->obj_list.head;
+    e->view_valid = FALSE;
+    for (obj = clone->obj_list.head->next; obj != NULL; obj = obj->next)
+    {
+        Edge* e0;
+
+        egrp = (Group*)obj;
+        for
+            (
+                e = (Edge*)egrp->obj_list.head, e0 = (Edge*)first_egrp->obj_list.head;
+                e != NULL;
+                e = (Edge*)e->hdr.next, e0 = (Edge*)e0->hdr.next
+                )
+        {
+            if (e0->type >= EDGE_ARC)
+            {
+                e->nsteps = e0->nsteps;
+                e->view_valid = FALSE;
+            }
+        }
     }
 
     // Join corresponding points with bezier edges. Gather the edges into contour lists.
