@@ -852,7 +852,7 @@ materials_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     return 0;
 }
 
-LoftParams default_loft = { 0.3f, 0.6f, 0.6f, 30, 60, 60, FALSE, FALSE };
+LoftParams default_loft = { 0.3f, 0.6f, 0.6f, 30, 80, 80, FALSE, FALSE };
 
 // Dialog that controls lofting.
 // Input (lParam): a Group of edge groups.

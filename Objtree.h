@@ -207,6 +207,8 @@ typedef struct Edge
     int             nsteps;         // The number of steps actually generated (arcs and beziers)
                                     // If zero, the curve is stepped out dynamically based on 
                                     // a flatness tolerance. The step count found is retained.
+    struct PlaneRef dirn;           // Direction cosines of the segment between the endpoints
+                                    // when it is part of an edge group. Only used in lofting.
 } Edge;
 
 typedef struct StraightEdge

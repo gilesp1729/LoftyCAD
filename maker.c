@@ -1079,13 +1079,13 @@ Volume *
 make_lofted_volume(Group* group)
 {
     Group* clone, * egrp, * first_egrp = NULL;
-    Edge* first_edge, *e, *prev_e;
+    Edge *e, *prev_e;
     Face* face;
     Volume* vol;
     Object* obj;
-    Plane principal, pl;
+    Plane principal;
     Point endpt;
-    Point* first_pt, *pt;
+    Point *pt;
     int num_groups, num_edges;
     Bbox box;
     int i, j;
@@ -1391,42 +1391,69 @@ make_lofted_volume(Group* group)
     // Sort by distance from the principal refpt.
     qsort(lg, num_groups, sizeof(LoftedGroup), compare_lofted_groups);
 
-    // Choose a point in the first section as the principal point. Find the corresponding
-    // point in each section. Various methods have been tried, robustness is an issue.
-    first_edge = (Edge *)lg[0].egrp->obj_list.head;
-    first_pt = first_point(first_edge);
-    normal3(first_pt, &principal.refpt, &endpt, &pl);
+    // Choose an edge in the first section as the principal edge. Find the corresponding
+    // edge in each section. Various methods have been tried, robustness is an issue.
+    // Use an angular test summed across all the edges.
 
+    // Accumulate the direction cosines of the first edge group.
+    for (e = (Edge*)lg[0].egrp->obj_list.head; e != NULL; e = (Edge*)e->hdr.next)
+    {
+        int c = first_point_index(e);
+
+        e->dirn.A = e->endpoints[1 - c]->x - e->endpoints[c]->x;
+        e->dirn.B = e->endpoints[1 - c]->y - e->endpoints[c]->y;
+        e->dirn.C = e->endpoints[1 - c]->z - e->endpoints[c]->z;
+        normalise_plane((Plane*)&e->dirn);
+    }
+
+    // Compare directions of edges in each edge group with the previous.
     for (i = 1; i < num_groups; i++)
     {
-        float min_dist = 999999.0f;
+        float angle = 0;
+        float min_angle = 999999.0f;
         Edge* min_edge = NULL;  // shhh compiler
-        Point* min_point = NULL;
 
-        for (e = (Edge *)lg[i].egrp->obj_list.head; e != NULL; e = (Edge *)e->hdr.next)
+        // Accumulate the direction cosines of the current edge group.
+        for (e = (Edge*)lg[i].egrp->obj_list.head; e != NULL; e = (Edge*)e->hdr.next)
         {
-            // this method doesn't work because points on opposite side may be close to plane. Need an angular test.
-           // float dist = fabsf(distance_point_plane(&pl, first_point(e)));
-           
-            // this method assumes the EG's are close to parallel, largely overlapping, and not too different in size.
-            // Need some measure of the line (first_pt, first_point(e)) being most nearly parallel to the principal axis.
-            pt = first_point(e);
-            float dist = length(first_pt, pt);
+            int c = first_point_index(e);
 
-            if (dist < min_dist)
+            e->dirn.A = e->endpoints[1 - c]->x - e->endpoints[c]->x;
+            e->dirn.B = e->endpoints[1 - c]->y - e->endpoints[c]->y;
+            e->dirn.C = e->endpoints[1 - c]->z - e->endpoints[c]->z;
+            normalise_plane((Plane*)&e->dirn);
+        }
+
+        // Try all the rotations of the current edge group.
+        for (j = 0; j < num_edges; j++)
+        {
+            Edge* e0, * e1;
+            float angle = 0;
+
+            // Walk down the current and previous EG's summing the angles between the
+            // coresponding edges.
+            for
+            (
+                e0 = (Edge*)lg[i - 1].egrp->obj_list.head, e1 = (Edge*)lg[i].egrp->obj_list.head;
+                e1 != NULL;
+                e0 = (Edge*)e0->hdr.next, e1 = (Edge*)e1->hdr.next
+            )
             {
-                min_dist = dist;
-                min_edge = e;
-                min_point = pt;
+                angle += acosf(pldot((Plane *)&e1->dirn, (Plane *)&e0->dirn));
             }
+
+            if (angle < min_angle)
+            {
+                min_angle = angle;
+                min_edge = (Edge*)lg[i].egrp->obj_list.head;
+            }
+
+            // Go to the next rotation.
+            rotate(&lg[i].egrp->obj_list, lg[i].egrp->obj_list.head->next);
         }
         
         // Rotate the edge group into alignment with min_edge up first.
         rotate(&lg[i].egrp->obj_list, min_edge);
-
-        // Update previous first point
-        ASSERT(min_point == first_point((Edge*)lg[i].egrp->obj_list.head), "This point should be at the top");
-        first_pt = min_point;
     }
 
     // Ensure corresponding edges have matching step counts. 
