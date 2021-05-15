@@ -866,6 +866,7 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     static BOOL changed = FALSE;
     static int n_bays;
     int i;
+    static LoftParams* loft;
 
     switch (msg)
     {
@@ -885,39 +886,42 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             for (i = 0; i < n_bays; i++)
                 group->loft->bay_tensions[i] = group->loft->body_tension;
         }
+        loft = group->loft;
 
         // Fill the fields
-        sprintf_s(buf, 64, "%.2f", group->loft->body_tension);
+        sprintf_s(buf, 64, "%.2f", loft->body_tension);
         SendDlgItemMessage(hWnd, IDC_LOFT_BODY_TENSION, WM_SETTEXT, 0, (LPARAM)buf);
-        sprintf_s(buf, 64, "%.2f", group->loft->nose_tension);
+        sprintf_s(buf, 64, "%.2f", loft->nose_tension);
         SendDlgItemMessage(hWnd, IDC_LOFT_NOSE_TENSION, WM_SETTEXT, 0, (LPARAM)buf);
-        sprintf_s(buf, 64, "%.2f", group->loft->tail_tension);
+        sprintf_s(buf, 64, "%.2f", loft->tail_tension);
         SendDlgItemMessage(hWnd, IDC_LOFT_TAIL_TENSION, WM_SETTEXT, 0, (LPARAM)buf);
-        sprintf_s(buf, 64, "%d", group->loft->body_angle_break);
+        sprintf_s(buf, 64, "%d", loft->body_angle_break);
         SendDlgItemMessage(hWnd, IDC_LOFT_BODY_ANGLEBREAK, WM_SETTEXT, 0, (LPARAM)buf);
-        sprintf_s(buf, 64, "%d", group->loft->nose_angle_break);
+        sprintf_s(buf, 64, "%d", loft->nose_angle_break);
         SendDlgItemMessage(hWnd, IDC_LOFT_NOSE_ANGLEBREAK, WM_SETTEXT, 0, (LPARAM)buf);
-        sprintf_s(buf, 64, "%d", group->loft->tail_angle_break);
+        sprintf_s(buf, 64, "%d", loft->tail_angle_break);
         SendDlgItemMessage(hWnd, IDC_LOFT_TAIL_ANGLEBREAK, WM_SETTEXT, 0, (LPARAM)buf);
 
         // Agree in order with LoftJoinMode enum
-        // TODO: Get these strings out into the string table
+        // TODO: Get these strings out into the string table, and do tool tips for everything
         SendDlgItemMessage(hWnd, IDC_LOFT_NOSE_JOIN, CB_RESETCONTENT, 0, 0);
         SendDlgItemMessage(hWnd, IDC_LOFT_NOSE_JOIN, CB_ADDSTRING, 0, (LPARAM)"Bow");
         SendDlgItemMessage(hWnd, IDC_LOFT_NOSE_JOIN, CB_ADDSTRING, 0, (LPARAM)"Stern");
         SendDlgItemMessage(hWnd, IDC_LOFT_NOSE_JOIN, CB_ADDSTRING, 0, (LPARAM)"Nosecone");
-        SendDlgItemMessage(hWnd, IDC_LOFT_NOSE_JOIN, CB_SETCURSEL, group->loft->nose_join_mode, 0);
+        SendDlgItemMessage(hWnd, IDC_LOFT_NOSE_JOIN, CB_SETCURSEL, loft->nose_join_mode, 0);
+        EnableWindow(GetDlgItem(hWnd, IDC_LOFT_NOSE_ANGLEBREAK), loft->nose_join_mode == JOIN_BOW);
 
         SendDlgItemMessage(hWnd, IDC_LOFT_TAIL_JOIN, CB_RESETCONTENT, 0, 0);
         SendDlgItemMessage(hWnd, IDC_LOFT_TAIL_JOIN, CB_ADDSTRING, 0, (LPARAM)"Bow");
         SendDlgItemMessage(hWnd, IDC_LOFT_TAIL_JOIN, CB_ADDSTRING, 0, (LPARAM)"Stern");
         SendDlgItemMessage(hWnd, IDC_LOFT_TAIL_JOIN, CB_ADDSTRING, 0, (LPARAM)"Nosecone");
-        SendDlgItemMessage(hWnd, IDC_LOFT_TAIL_JOIN, CB_SETCURSEL, group->loft->tail_join_mode, 0);
+        SendDlgItemMessage(hWnd, IDC_LOFT_TAIL_JOIN, CB_SETCURSEL, loft->tail_join_mode, 0);
+        EnableWindow(GetDlgItem(hWnd, IDC_LOFT_NOSE_ANGLEBREAK), loft->tail_join_mode == JOIN_BOW);
 
         SendDlgItemMessage(hWnd, IDC_LOFT_BAY_TENSIONS, CB_RESETCONTENT, 0, 0);
-        for (i = 0; i < group->loft->n_bays; i++)
+        for (i = 0; i < loft->n_bays; i++)
         {
-            sprintf_s(buf, 64, "%.2f", group->loft->bay_tensions[i]);
+            sprintf_s(buf, 64, "%.2f", loft->bay_tensions[i]);
             SendDlgItemMessage(hWnd, IDC_LOFT_BAY_TENSIONS, CB_ADDSTRING, 0, (LPARAM)buf);
         }
 
@@ -952,6 +956,7 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             break;
 
         case IDCANCEL:
+            // TODO: Revert loft to old contents
             // If we have a volume, return it anyway
             EndDialog(hWnd, (INT_PTR)vol);
             break;
@@ -961,7 +966,7 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             {
             case EN_KILLFOCUS:
                 SendDlgItemMessage(hWnd, IDC_LOFT_BODY_TENSION, WM_GETTEXT, 16, (LPARAM)buf);
-                group->loft->body_tension = (float)atof(buf);
+                loft->body_tension = (float)atof(buf);
                 changed = TRUE;
                 break;
             }
@@ -972,7 +977,7 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             {
             case EN_KILLFOCUS:
                 SendDlgItemMessage(hWnd, IDC_LOFT_NOSE_TENSION, WM_GETTEXT, 16, (LPARAM)buf);
-                group->loft->nose_tension = (float)atof(buf);
+                loft->nose_tension = (float)atof(buf);
                 changed = TRUE;
                 break;
             }
@@ -983,7 +988,7 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             {
             case EN_KILLFOCUS:
                 SendDlgItemMessage(hWnd, IDC_LOFT_TAIL_TENSION, WM_GETTEXT, 16, (LPARAM)buf);
-                group->loft->tail_tension = (float)atof(buf);
+                loft->tail_tension = (float)atof(buf);
                 changed = TRUE;
                 break;
             }
@@ -994,7 +999,7 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             {
             case EN_KILLFOCUS:
                 SendDlgItemMessage(hWnd, IDC_LOFT_BODY_ANGLEBREAK, WM_GETTEXT, 16, (LPARAM)buf);
-                group->loft->body_angle_break = atoi(buf);
+                loft->body_angle_break = atoi(buf);
                 changed = TRUE;
                 break;
             }
@@ -1005,7 +1010,7 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             {
             case EN_KILLFOCUS:
                 SendDlgItemMessage(hWnd, IDC_LOFT_NOSE_ANGLEBREAK, WM_GETTEXT, 16, (LPARAM)buf);
-                group->loft->nose_angle_break = atoi(buf);
+                loft->nose_angle_break = atoi(buf);
                 changed = TRUE;
                 break;
             }
@@ -1016,8 +1021,50 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             {
             case EN_KILLFOCUS:
                 SendDlgItemMessage(hWnd, IDC_LOFT_TAIL_ANGLEBREAK, WM_GETTEXT, 16, (LPARAM)buf);
-                group->loft->tail_angle_break = atoi(buf);
+                loft->tail_angle_break = atoi(buf);
                 changed = TRUE;
+                break;
+            }
+            break;
+
+        case IDC_LOFT_NOSE_JOIN:
+            switch (HIWORD(wParam))
+            {
+            case CBN_SELCHANGE:
+                loft->nose_join_mode = SendDlgItemMessage(hWnd, IDC_LOFT_NOSE_JOIN, CB_GETCURSEL, 0, 0);
+                EnableWindow(GetDlgItem(hWnd, IDC_LOFT_NOSE_ANGLEBREAK), loft->nose_join_mode == JOIN_BOW);
+                changed = TRUE;
+                break;
+            }
+            break;
+
+        case IDC_LOFT_TAIL_JOIN:
+            switch (HIWORD(wParam))
+            {
+            case CBN_SELCHANGE:
+                loft->tail_join_mode = SendDlgItemMessage(hWnd, IDC_LOFT_TAIL_JOIN, CB_GETCURSEL, 0, 0);
+                EnableWindow(GetDlgItem(hWnd, IDC_LOFT_TAIL_ANGLEBREAK), loft->tail_join_mode == JOIN_BOW);
+                changed = TRUE;
+                break;
+            }
+            break;
+
+        case IDC_LOFT_BAY_TENSIONS:
+            switch (HIWORD(wParam))
+            {
+            case CBN_EDITCHANGE:
+                bay = SendDlgItemMessage(hWnd, IDC_LOFT_BAY_TENSIONS, CB_GETCURSEL, 0, 0);
+
+
+
+                changed = TRUE;
+                break;
+
+            case CBN_KILLFOCUS:
+
+
+
+
                 break;
             }
             break;
