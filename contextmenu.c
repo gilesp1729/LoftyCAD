@@ -852,7 +852,7 @@ materials_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     return 0;
 }
 
-LoftParams default_loft = { 0.3f, 0.6f, 0.6f, 30, 80, 80, FALSE, FALSE };
+LoftParams default_loft = { 0.3f, 0.6f, 0.6f, 30, 80, 80, 0, JOIN_BOW, JOIN_BOW, 0,};
 
 // Dialog that controls lofting.
 // Input (lParam): a Group of edge groups.
@@ -864,21 +864,27 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     static Group* group;
     static Volume* vol = NULL;
     static BOOL changed = FALSE;
+    static int n_bays;
+    int i;
 
     switch (msg)
     {
     case WM_INITDIALOG:
-        // See if the group alreday has a LoftParams and/or a lofted volume
+        // See if the group already has a LoftParams and/or a lofted volume
         group = (Group*)lParam;
-        if (group->loft == NULL)
-        {
-            // Create a LoftParams filled with defaults
-            group->loft = malloc(sizeof(LoftParams));
-            memcpy(group->loft, &default_loft, sizeof(LoftParams));
-        }
         vol = NULL;
         if (group->obj_list.tail->type == OBJ_VOLUME)
             vol = (Volume*)group->obj_list.tail;
+        if (group->loft == NULL)
+        {
+            // Create a LoftParams filled with defaults, and enough bay tension elements
+            n_bays = group->n_members - ((vol != NULL) ? 2 : 1);
+            group->loft = malloc(sizeof(LoftParams) + n_bays * sizeof(float));
+            memcpy(group->loft, &default_loft, sizeof(LoftParams));
+            group->loft->n_bays = n_bays;
+            for (i = 0; i < n_bays; i++)
+                group->loft->bay_tensions[i] = group->loft->body_tension;
+        }
 
         // Fill the fields
         sprintf_s(buf, 64, "%.2f", group->loft->body_tension);
@@ -893,8 +899,28 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         SendDlgItemMessage(hWnd, IDC_LOFT_NOSE_ANGLEBREAK, WM_SETTEXT, 0, (LPARAM)buf);
         sprintf_s(buf, 64, "%d", group->loft->tail_angle_break);
         SendDlgItemMessage(hWnd, IDC_LOFT_TAIL_ANGLEBREAK, WM_SETTEXT, 0, (LPARAM)buf);
-        CheckDlgButton(hWnd, IDC_LOFT_TRUNCATE_NOSE, group->loft->nose_truncate ? BST_CHECKED : BST_UNCHECKED);
-        CheckDlgButton(hWnd, IDC_LOFT_TRUNCATE_TAIL, group->loft->tail_truncate ? BST_CHECKED : BST_UNCHECKED);
+
+        // Agree in order with LoftJoinMode enum
+        // TODO: Get these strings out into the string table
+        SendDlgItemMessage(hWnd, IDC_LOFT_NOSE_JOIN, CB_RESETCONTENT, 0, 0);
+        SendDlgItemMessage(hWnd, IDC_LOFT_NOSE_JOIN, CB_ADDSTRING, 0, (LPARAM)"Bow");
+        SendDlgItemMessage(hWnd, IDC_LOFT_NOSE_JOIN, CB_ADDSTRING, 0, (LPARAM)"Stern");
+        SendDlgItemMessage(hWnd, IDC_LOFT_NOSE_JOIN, CB_ADDSTRING, 0, (LPARAM)"Nosecone");
+        SendDlgItemMessage(hWnd, IDC_LOFT_NOSE_JOIN, CB_SETCURSEL, group->loft->nose_join_mode, 0);
+
+        SendDlgItemMessage(hWnd, IDC_LOFT_TAIL_JOIN, CB_RESETCONTENT, 0, 0);
+        SendDlgItemMessage(hWnd, IDC_LOFT_TAIL_JOIN, CB_ADDSTRING, 0, (LPARAM)"Bow");
+        SendDlgItemMessage(hWnd, IDC_LOFT_TAIL_JOIN, CB_ADDSTRING, 0, (LPARAM)"Stern");
+        SendDlgItemMessage(hWnd, IDC_LOFT_TAIL_JOIN, CB_ADDSTRING, 0, (LPARAM)"Nosecone");
+        SendDlgItemMessage(hWnd, IDC_LOFT_TAIL_JOIN, CB_SETCURSEL, group->loft->tail_join_mode, 0);
+
+        SendDlgItemMessage(hWnd, IDC_LOFT_BAY_TENSIONS, CB_RESETCONTENT, 0, 0);
+        for (i = 0; i < group->loft->n_bays; i++)
+        {
+            sprintf_s(buf, 64, "%.2f", group->loft->bay_tensions[i]);
+            SendDlgItemMessage(hWnd, IDC_LOFT_BAY_TENSIONS, CB_ADDSTRING, 0, (LPARAM)buf);
+        }
+
         changed = FALSE;
         break;
 

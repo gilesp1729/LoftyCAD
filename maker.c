@@ -1187,8 +1187,13 @@ make_lofted_volume(Group* group)
     if (group->loft == NULL)
     {
         // Set it to defaults
-        group->loft = malloc(sizeof(LoftParams));
+        int n_bays = group->n_members - 1;
+
+        group->loft = malloc(sizeof(LoftParams) + n_bays * sizeof(float));
         memcpy(group->loft, &default_loft, sizeof(LoftParams));
+        group->loft->n_bays = n_bays;
+        for (i = 0; i < group->loft->n_bays; i++)
+            group->loft->bay_tensions[i] = group->loft->body_tension;
     }
     loft = group->loft;
 

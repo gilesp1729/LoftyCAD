@@ -180,19 +180,20 @@
 #define IDC_PREFS_SEND_LINENO           1070
 #define IDC_CLIP_A                      1070
 #define IDC_CLIP_B                      1071
-#define IDC_LOFT_TRUNCATE_NOSE          1071
 #define IDC_CLIP_C                      1072
-#define IDC_LOFT_TRUNCATE_TAIL          1072
 #define IDC_CLIP_D                      1073
 #define IDC_LOFT_BODY_TENSION           1073
 #define IDC_CLIP_DRAWONPLANE            1075
-#define IDC_CLIP_DRAWONPLANE2           1076
 #define IDC_CLIP_CLIPPED                1076
+#define IDC_LOFT_BAY_TENSIONS           1078
 #define IDC_LOFT_NOSE_TENSION           1079
 #define IDC_LOFT_TAIL_TENSION           1080
 #define IDC_LOFT_BODY_ANGLEBREAK        1081
 #define IDC_LOFT_NOSE_ANGLEBREAK        1082
 #define IDC_LOFT_TAIL_ANGLEBREAK        1083
+#define IDC_LOFT_NOSE_JOIN              1084
+#define IDC_COMBO2                      1085
+#define IDC_LOFT_TAIL_JOIN              1085
 #define IDD_PRINT_PREVIEW               1544
 #define IDD_SLICER                      1545
 #define IDD_PRINTER                     1546
@@ -349,7 +350,7 @@
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        166
 #define _APS_NEXT_COMMAND_VALUE         32933
-#define _APS_NEXT_CONTROL_VALUE         1076
+#define _APS_NEXT_CONTROL_VALUE         1085
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif

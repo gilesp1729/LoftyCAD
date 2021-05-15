@@ -328,6 +328,14 @@ typedef struct Bbox
     float           zc;
 } Bbox;
 
+// Joining mode for lofted volumes' end caps.
+typedef enum
+{
+    JOIN_BOW,                       // Contours join to endcap edges, or break. Angle break threshold is honoured.
+    JOIN_STERN,                     // Contours always break at endcap edges.
+    JOIN_NOSECONE                   // Contours always join to endcap centroid.
+} LoftJoinMode;
+
 // Structure containing lofting parameters.
 typedef struct LoftParams
 {
@@ -337,8 +345,10 @@ typedef struct LoftParams
     int             body_angle_break;   // Angle break in degrees, beyond which smoothing will no longer be attempted
     int             nose_angle_break;    // And for points adjoining endcap at nose
     int             tail_angle_break;    // And for points adjoining endcap at tail
-    BOOL            nose_truncate;  // If TRUE, nose endcap will always break (truncate)
-    BOOL            tail_truncate;  // If TRUE, tail endcap will always break (truncate)
+    LoftJoinMode    nose_join_mode; // Joining mode for nose
+    LoftJoinMode    tail_join_mode; // And for the tail
+    int             n_bays;         // Number of bays (number of sections - 1)
+    float           bay_tensions[1];    // Array of tensions per bay (space between consecutive sections)
 } LoftParams;
 
 // Volume struct. This is the usual top-level 3D object.
