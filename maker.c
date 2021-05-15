@@ -1020,6 +1020,7 @@ first_point(Edge* e)
 
 // Helper to find the direction of an edge, in order from first point to the other end.
 // Return it in the (normalised) ABC of a Plane, and return the edge's first point index.
+// The refpt of the Plane is set to the first point.
 int
 edge_direction(Edge* e, Plane* pl)
 {
@@ -1030,6 +1031,7 @@ edge_direction(Edge* e, Plane* pl)
     pl->A = p1->x - p0->x;
     pl->B = p1->y - p0->y;
     pl->C = p1->z - p0->z;
+    pl->refpt = *p0;
     normalise_plane(pl);
 
     return i;
@@ -1042,7 +1044,30 @@ point_direction(Point* p0, Point* p1, Plane* pl)
     pl->A = p1->x - p0->x;
     pl->B = p1->y - p0->y;
     pl->C = p1->z - p0->z;
+    pl->refpt = *p0;
     normalise_plane(pl);
+}
+
+// Helper to project a vector AP onto a plane through A parallel to the
+// principal plane.
+// 
+// AP is expressed as a Plane whose refpt is A (as returned from edge_direction
+// or point_direction)
+// 
+// Return a normalised vector of its projection with refpt A.
+void
+project(Plane* ap, Plane* princ, Plane* proj)
+{
+    float perp_factor =
+        (princ->A * ap->A + princ->B * ap->B + princ->C * ap->C)
+        /
+        (princ->A * princ->A + princ->B * princ->B + princ->C * princ->C);
+
+    proj->A = ap->A - princ->A * perp_factor;
+    proj->B = ap->B - princ->B * perp_factor;
+    proj->C = ap->C - princ->C * perp_factor;
+    proj->refpt = ap->refpt;
+    normalise_plane(proj);
 }
 
 // Struct describing an edge group, its normal and centroid, and distance along the
@@ -1632,22 +1657,26 @@ make_lofted_volume(Group* group)
 
 
     // Form the endcaps. User has a choice of angle-break or smooth at the ends of the contours.
-    // The angle used for testing the angle-break criterion at the end the contour is the smallest of:
+    // The angle used for testing the angle-break criterion at the end of the contour is the smallest of:
     // - the angle to the centroid of the end edge group,
-    // - the angles to the two endcap edges incident on the common point.
+    // - the angles to the two endcap edges incident on the common point,
+    // projected onto a plane perpendicular to the principal direction (to be robust when the endcap
+    // is not perpendicular). Decide which encap edge, if any, the contour blends into.
 
     // Nose endcap (at start of group)
     for (j = 0; j < num_edges; j++)
     {
-        Plane pl, plend, pltest;
+        Plane pl, plend, pltest, pl_proj, plend_proj, pltest_proj;
         Edge* c;
         int ci;
         float cosmax, costest, lj;
 
         c = (Edge *)contour_lists[j].head;
-        ci = edge_direction(c, &pl);         // points into contour
+        ci = edge_direction(c, &pl);                // points into contour
+        project(&pl, &principal, &pl_proj);         // project onto principal plane
         point_direction(&lg[0].norm.refpt, c->endpoints[ci], &plend);
-        cosmax = pldot(&plend, &pl);
+        project(&plend, &principal, &plend_proj);
+        cosmax = pldot(&plend_proj, &pl_proj);
         
         // Check the edges incident on the common point (c->endpoints[ci]) and see if
         // they make a smaller angle (greater dot product). If so, use that for the test.
@@ -1661,7 +1690,8 @@ make_lofted_volume(Group* group)
             else
                 continue;
 
-            costest = pldot(&pltest, &pl);
+            project(&pltest, &principal, &pltest_proj);
+            costest = pldot(&pltest_proj, &pl_proj);
             if (costest > cosmax)
             {
                 cosmax = costest;
@@ -1689,15 +1719,17 @@ make_lofted_volume(Group* group)
     // Tail endcap (at end of group)
     for (j = 0; j < num_edges; j++)
     {
-        Plane pl, plend, pltest;
+        Plane pl, plend, pltest, pl_proj, plend_proj, pltest_proj;
         Edge* c;
         int ci;
         float cosmax, costest, lj;
 
         c = (Edge*)contour_lists[j].tail;
-        ci = edge_direction(c, &pl);         // points out of contour
+        ci = edge_direction(c, &pl);                // points out of contour
+        project(&pl, &principal, &pl_proj);         // project onto principal plane
         point_direction(c->endpoints[1-ci], &lg[num_groups-1].norm.refpt, &plend);
-        cosmax = pldot(&plend, &pl);
+        project(&plend, &principal, &plend_proj);
+        cosmax = pldot(&plend_proj, &pl_proj);
 
         // Check the edges incident on the common point (c->endpoints[1-ci]) and see if
         // they make a smaller angle (greater dot product). If so, use that for the test.
@@ -1711,7 +1743,8 @@ make_lofted_volume(Group* group)
             else
                 continue;
 
-            costest = pldot(&pltest, &pl);
+            project(&pltest, &principal, &pltest_proj);
+            costest = pldot(&pltest_proj, &pl_proj);
             if (costest > cosmax)
             {
                 cosmax = costest;
