@@ -24,6 +24,47 @@
 LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 #pragma code_page(1252)
 
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#ifndef APSTUDIO_INVOKED\r\n"
+    "#include ""targetver.h""\r\n"
+    "#endif\r\n"
+    "#define APSTUDIO_HIDDEN_SYMBOLS\r\n"
+    "#include ""windows.h""\r\n"
+    "#undef APSTUDIO_HIDDEN_SYMBOLS\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+#endif    // English (United States) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////
+// English (Australia) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENA)
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_AUS
+#pragma code_page(1252)
+
 /////////////////////////////////////////////////////////////////////////////
 //
 // Icon
@@ -32,6 +73,50 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
 IDI_LOFTYCAD            ICON                    "LoftyCAD.ico"
+
+IDI_RECT                ICON                    "icon-rect.ico"
+
+IDI_EDGE                ICON                    "icon-edge.ico"
+
+IDI_CIRCLE              ICON                    "icon-circle.ico"
+
+IDI_CONST_RECT          ICON                    "icon-const-rect.ico"
+
+IDI_CONST_EDGE          ICON                    "icon-const-edge.ico"
+
+IDI_CONST_CIRCLE        ICON                    "icon-const-circle.ico"
+
+IDI_EXTRUDE             ICON                    "icon-extrude.ico"
+
+IDI_ARC_EDGE            ICON                    "icon-arc.ico"
+
+IDI_BEZIER_EDGE         ICON                    "icon-bezier.ico"
+
+IDI_RIGHT               ICON                    "cube-right32.ico"
+
+IDI_BACK                ICON                    "cube-back32.ico"
+
+IDI_BOTTOM              ICON                    "cube-bottom32.ico"
+
+IDI_FRONT               ICON                    "cube-front32.ico"
+
+IDI_LEFT                ICON                    "cube-left32.ico"
+
+IDI_RENDERED            ICON                    "cube-rendered32.ico"
+
+IDI_TOP                 ICON                    "cube-top32.ico"
+
+IDI_SCALE               ICON                    "icon-scale.ico"
+
+IDI_ROTATE              ICON                    "icon-rotate.ico"
+
+IDI_TEXT                ICON                    "icon-text.ico"
+
+IDI_EXTRUDE_LOCAL       ICON                    "icon-extrudelocal.ico"
+
+IDI_HEX                 ICON                    "icon-hex.ico"
+
+IDI_CONST_HEX           ICON                    "icon-const-hex.ico"
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -136,279 +221,6 @@ BEGIN
         MENUITEM "&About LoftyCAD...",          IDM_ABOUT
     END
 END
-
-
-/////////////////////////////////////////////////////////////////////////////
-//
-// Accelerator
-//
-
-IDC_LOFTYCAD ACCELERATORS
-BEGIN
-    "N",            ID_FILE_NEW,            VIRTKEY, CONTROL, NOINVERT
-    "O",            ID_FILE_OPEN,           VIRTKEY, CONTROL, NOINVERT
-    "S",            ID_FILE_SAVE,           VIRTKEY, CONTROL, NOINVERT
-    VK_ESCAPE,      IDCANCEL,               VIRTKEY, NOINVERT
-    "/",            IDM_ABOUT,              ASCII,  ALT, NOINVERT
-    "?",            IDM_ABOUT,              ASCII,  ALT, NOINVERT
-    "Z",            ID_EDIT_UNDO,           VIRTKEY, CONTROL, NOINVERT
-    "Y",            ID_EDIT_REDO,           VIRTKEY, CONTROL, NOINVERT
-    "A",            ID_EDIT_SELECTALL,      VIRTKEY, CONTROL, NOINVERT
-    "D",            ID_EDIT_SELECTNONE,     VIRTKEY, CONTROL, NOINVERT
-    "X",            ID_EDIT_CUT,            VIRTKEY, CONTROL, NOINVERT
-    "C",            ID_EDIT_COPY,           VIRTKEY, CONTROL, NOINVERT
-    "V",            ID_EDIT_PASTE,          VIRTKEY, CONTROL, NOINVERT
-    VK_DELETE,      ID_EDIT_DELETE,         VIRTKEY, NOINVERT
-END
-
-
-/////////////////////////////////////////////////////////////////////////////
-//
-// Dialog
-//
-
-IDD_ABOUTBOX DIALOGEX 0, 0, 291, 103
-STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
-CAPTION "About LoftyCAD"
-FONT 8, "MS Shell Dlg", 0, 0, 0x1
-BEGIN
-    ICON            IDI_LOFTYCAD,IDC_STATIC,14,14,20,20
-    LTEXT           "LoftyCAD",IDC_STATIC,47,14,212,8,SS_NOPREFIX
-    LTEXT           "Copyright (C) 2018-2021, under GPL\ngilesp1729\n\nCGAL, Computational Geometry Algorithms Library, https://www.cgal.org",IDC_STATIC,47,36,223,41
-    DEFPUSHBUTTON   "OK",IDOK,234,82,50,14,WS_GROUP
-    LTEXT           "Build",IDC_STATIC_BUILD,47,25,203,8
-END
-
-IDD_CLIP_PLANE DIALOGEX 0, 0, 271, 115
-STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
-CAPTION "Clipping Plane"
-FONT 8, "MS Shell Dlg", 400, 0, 0x1
-BEGIN
-    EDITTEXT        IDC_CLIP_A,32,35,40,14,ES_AUTOHSCROLL
-    EDITTEXT        IDC_CLIP_B,89,35,40,14,ES_AUTOHSCROLL
-    EDITTEXT        IDC_CLIP_C,145,35,40,14,ES_AUTOHSCROLL
-    EDITTEXT        IDC_CLIP_D,201,35,40,14,ES_AUTOHSCROLL
-    CONTROL         "Clip view to this plane",IDC_CLIP_CLIPPED,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,31,56,170,12
-    CONTROL         "Draw objects onto this plane",IDC_CLIP_DRAWONPLANE,
-                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,31,70,170,12
-    PUSHBUTTON      "Apply",IDAPPLY,104,94,50,14
-    DEFPUSHBUTTON   "OK",IDOK,159,94,50,14
-    PUSHBUTTON      "Cancel",IDCANCEL,214,94,50,14
-    LTEXT           "Clipping plane Ax + By + Cz + D = 0:",IDC_STATIC,17,14,120,8
-    LTEXT           "A",IDC_STATIC,24,38,8,8
-    LTEXT           "B",IDC_STATIC,81,38,8,8
-    LTEXT           "C",IDC_STATIC,137,38,8,8
-    LTEXT           "D",IDC_STATIC,192,38,8,8
-END
-
-IDD_LOFT DIALOGEX 0, 0, 293, 184
-STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
-CAPTION "Lofting"
-FONT 8, "MS Shell Dlg", 400, 0, 0x1
-BEGIN
-    EDITTEXT        IDC_LOFT_BODY_TENSION,78,23,45,13,ES_AUTOHSCROLL
-    EDITTEXT        IDC_LOFT_NOSE_TENSION,78,40,45,13,ES_AUTOHSCROLL
-    EDITTEXT        IDC_LOFT_TAIL_TENSION,78,57,45,13,ES_AUTOHSCROLL
-    COMBOBOX        IDC_LOFT_BAY_TENSIONS,205,23,51,65,CBS_DROPDOWN | CBS_SORT | WS_VSCROLL | WS_TABSTOP
-    EDITTEXT        IDC_LOFT_BODY_ANGLEBREAK,79,96,45,13,ES_AUTOHSCROLL
-    EDITTEXT        IDC_LOFT_NOSE_ANGLEBREAK,204,115,45,13,ES_AUTOHSCROLL
-    EDITTEXT        IDC_LOFT_TAIL_ANGLEBREAK,204,133,45,13,ES_AUTOHSCROLL
-    DEFPUSHBUTTON   "OK",IDOK,179,163,50,14
-    PUSHBUTTON      "Cancel",IDCANCEL,236,163,50,14
-    PUSHBUTTON      "Apply",IDAPPLY,123,163,50,14
-    LTEXT           "Body tension",IDC_STATIC,33,26,42,8
-    GROUPBOX        "Tension factors for control points (as fraction of end-to-end length)",IDC_STATIC,7,7,279,70
-    LTEXT           "Nose tension",IDC_STATIC,33,42,42,8
-    LTEXT           "Tail tension",IDC_STATIC,37,59,37,8
-    GROUPBOX        "Angle breaks (degrees) and joining modes at ends",IDC_STATIC,7,81,279,81
-    LTEXT           "Body angle break",IDC_STATIC,22,99,56,8
-    LTEXT           "Nose angle break",IDC_STATIC,146,117,56,8
-    LTEXT           "Tail angle break",IDC_STATIC,151,135,51,8
-    LTEXT           "Nose join mode",IDC_STATIC,28,117,50,11
-    LTEXT           "Tail join mode",IDC_STATIC,33,135,45,9
-    LTEXT           "Bay tensions",IDC_STATIC,157,25,42,8
-    COMBOBOX        IDC_LOFT_NOSE_JOIN,80,115,46,46,CBS_DROPDOWNLIST | CBS_SORT | WS_VSCROLL | WS_TABSTOP
-    COMBOBOX        IDC_LOFT_TAIL_JOIN,80,133,46,44,CBS_DROPDOWNLIST | CBS_SORT | WS_VSCROLL | WS_TABSTOP
-END
-
-
-/////////////////////////////////////////////////////////////////////////////
-//
-// DESIGNINFO
-//
-
-#ifdef APSTUDIO_INVOKED
-GUIDELINES DESIGNINFO
-BEGIN
-    IDD_ABOUTBOX, DIALOG
-    BEGIN
-        LEFTMARGIN, 7
-        RIGHTMARGIN, 284
-        TOPMARGIN, 7
-        BOTTOMMARGIN, 96
-    END
-
-    IDD_CLIP_PLANE, DIALOG
-    BEGIN
-        LEFTMARGIN, 7
-        RIGHTMARGIN, 264
-        TOPMARGIN, 6
-        BOTTOMMARGIN, 108
-    END
-
-    IDD_LOFT, DIALOG
-    BEGIN
-        LEFTMARGIN, 7
-        RIGHTMARGIN, 286
-        TOPMARGIN, 7
-        BOTTOMMARGIN, 177
-    END
-END
-#endif    // APSTUDIO_INVOKED
-
-
-#ifdef APSTUDIO_INVOKED
-/////////////////////////////////////////////////////////////////////////////
-//
-// TEXTINCLUDE
-//
-
-1 TEXTINCLUDE 
-BEGIN
-    "resource.h\0"
-END
-
-2 TEXTINCLUDE 
-BEGIN
-    "#ifndef APSTUDIO_INVOKED\r\n"
-    "#include ""targetver.h""\r\n"
-    "#endif\r\n"
-    "#define APSTUDIO_HIDDEN_SYMBOLS\r\n"
-    "#include ""windows.h""\r\n"
-    "#undef APSTUDIO_HIDDEN_SYMBOLS\r\n"
-    "\0"
-END
-
-3 TEXTINCLUDE 
-BEGIN
-    "\r\n"
-    "\0"
-END
-
-#endif    // APSTUDIO_INVOKED
-
-
-/////////////////////////////////////////////////////////////////////////////
-//
-// String Table
-//
-
-STRINGTABLE
-BEGIN
-    IDS_APP_TITLE           "LoftyCAD"
-    IDS_RECT                "Drag a rectangle.\r\n\r\nThe rectangle is drawn on the current face, or on the default plane."
-    IDS_CONST_RECT          "Drag a construction rectangle.\r\n\r\nThe rectangle is drawn on the current face, or on the default plane."
-    IDS_EDGE                "Drag an edge.\r\n\r\nThe edge is drawn on the current face, or on the default plane."
-    IDS_CONST_EDGE          "Drag a construction edge.\r\n\r\nThe edge is drawn on the current face, or on the default plane."
-    IDS_CIRCLE              "Drag a circle (centre to circumference)\r\n\r\nThe circle is drawn on the current face, or on the default plane."
-    IDC_LOFTYCAD            "LOFTYCAD"
-    IDS_CONST_CIRCLE        "Drag a construction circle.\r\n\r\nThe circle is drawn on the current face, or on the default plane."
-    IDS_POINT               "Click to place a point.\r\n\r\nThe point is placed on the current face or edge, or on the default plane."
-END
-
-STRINGTABLE
-BEGIN
-    IDS_EXTRUDE             "Drag a face to extrude it or move it along its normal."
-    IDS_XY                  "View from top (facing XY plane from +Z direction)"
-    IDS_YZ                  "View from front (facing YZ plane from +X direction)"
-    IDS_XZ                  "View from left (facing XZ plane from -Y direction)"
-    IDS_MINUS_XY            "View from bottom (facing -XY plane from -Z direction)"
-    IDS_MINUS_YZ            "View from back (facing -YZ plane from -X direction)"
-    IDS_MINUS_XZ            "View from right (facing -XZ plane from +Y direction)"
-    IDS_ARC_EDGE            "Drag an arc edge.\r\nThe direction of dragging determines the direction of the arc.\r\n\r\nThe edge is drawn on the current face, or on the default plane."
-    IDS_BEZIER_EDGE         "Drag a Bezier edge. The control points can be moved later.\r\n\r\nThe edge is drawn on the current face, or on the default plane."
-    IDS_RENDERED            "Toggle the rendered view on and off."
-    IDS_SCALE               "Drag a point on an object to scale it about its centre in the dominant direction."
-    IDS_ROTATE              "Drag a point on an object to rotate it about its centre in the facing plane."
-    IDS_TEXT                "Click and drag to place text.\r\n\r\nThe text is placed on the current face, or on the default plane."
-    IDS_EXTRUDE_LOCAL       "Drag a curved face to move its points along their local normals."
-    IDS_HEX                 "Drag a hexagon (corner to corner)\r\n\r\nThe hexagon is drawn on the current face, or on the default plane."
-    IDS_CONST_HEX           "Drag a construction hexagon.\r\n\r\nThe hexagon is drawn on the current face, or on the default plane."
-END
-
-STRINGTABLE
-BEGIN
-    IDS_BEZ_RECT            "Drag a rectangle with Bezier edges.\r\n\r\nThe rectangle is drawn on the current face, or on the default plane."
-    IDS_BEZ_CIRCLE          "Drag a circle approximated by 4 Bezier edges.\r\n\r\nThe circle is drawn on the current face, or on the default plane."
-END
-
-#endif    // English (United States) resources
-/////////////////////////////////////////////////////////////////////////////
-
-
-/////////////////////////////////////////////////////////////////////////////
-// English (Australia) resources
-
-#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENA)
-LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_AUS
-#pragma code_page(1252)
-
-/////////////////////////////////////////////////////////////////////////////
-//
-// Icon
-//
-
-// Icon with lowest ID value placed first to ensure application icon
-// remains consistent on all systems.
-IDI_RECT                ICON                    "icon-rect.ico"
-
-IDI_EDGE                ICON                    "icon-edge.ico"
-
-IDI_CIRCLE              ICON                    "icon-circle.ico"
-
-IDI_CONST_RECT          ICON                    "icon-const-rect.ico"
-
-IDI_CONST_EDGE          ICON                    "icon-const-edge.ico"
-
-IDI_CONST_CIRCLE        ICON                    "icon-const-circle.ico"
-
-IDI_EXTRUDE             ICON                    "icon-extrude.ico"
-
-IDI_ARC_EDGE            ICON                    "icon-arc.ico"
-
-IDI_BEZIER_EDGE         ICON                    "icon-bezier.ico"
-
-IDI_RIGHT               ICON                    "cube-right32.ico"
-
-IDI_BACK                ICON                    "cube-back32.ico"
-
-IDI_BOTTOM              ICON                    "cube-bottom32.ico"
-
-IDI_FRONT               ICON                    "cube-front32.ico"
-
-IDI_LEFT                ICON                    "cube-left32.ico"
-
-IDI_RENDERED            ICON                    "cube-rendered32.ico"
-
-IDI_TOP                 ICON                    "cube-top32.ico"
-
-IDI_SCALE               ICON                    "icon-scale.ico"
-
-IDI_ROTATE              ICON                    "icon-rotate.ico"
-
-IDI_TEXT                ICON                    "icon-text.ico"
-
-IDI_EXTRUDE_LOCAL       ICON                    "icon-extrudelocal.ico"
-
-IDI_HEX                 ICON                    "icon-hex.ico"
-
-IDI_CONST_HEX           ICON                    "icon-const-hex.ico"
-
-
-/////////////////////////////////////////////////////////////////////////////
-//
-// Menu
-//
 
 IDR_OPENORIMPORT MENU
 BEGIN
@@ -573,8 +385,66 @@ END
 
 /////////////////////////////////////////////////////////////////////////////
 //
+// Accelerator
+//
+
+IDC_LOFTYCAD ACCELERATORS
+BEGIN
+    "N",            ID_FILE_NEW,            VIRTKEY, CONTROL, NOINVERT
+    "O",            ID_FILE_OPEN,           VIRTKEY, CONTROL, NOINVERT
+    "S",            ID_FILE_SAVE,           VIRTKEY, CONTROL, NOINVERT
+    VK_ESCAPE,      IDCANCEL,               VIRTKEY, NOINVERT
+    "/",            IDM_ABOUT,              ASCII,  ALT, NOINVERT
+    "?",            IDM_ABOUT,              ASCII,  ALT, NOINVERT
+    "Z",            ID_EDIT_UNDO,           VIRTKEY, CONTROL, NOINVERT
+    "Y",            ID_EDIT_REDO,           VIRTKEY, CONTROL, NOINVERT
+    "A",            ID_EDIT_SELECTALL,      VIRTKEY, CONTROL, NOINVERT
+    "D",            ID_EDIT_SELECTNONE,     VIRTKEY, CONTROL, NOINVERT
+    "X",            ID_EDIT_CUT,            VIRTKEY, CONTROL, NOINVERT
+    "C",            ID_EDIT_COPY,           VIRTKEY, CONTROL, NOINVERT
+    "V",            ID_EDIT_PASTE,          VIRTKEY, CONTROL, NOINVERT
+    VK_DELETE,      ID_EDIT_DELETE,         VIRTKEY, NOINVERT
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
 // Dialog
 //
+
+IDD_ABOUTBOX DIALOGEX 0, 0, 291, 103
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "About LoftyCAD"
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    ICON            IDI_LOFTYCAD,IDC_STATIC,14,14,20,20
+    LTEXT           "LoftyCAD",IDC_STATIC,47,14,212,8,SS_NOPREFIX
+    LTEXT           "Copyright (C) 2018-2021, under GPL\ngilesp1729\n\nCGAL, Computational Geometry Algorithms Library, https://www.cgal.org",IDC_STATIC,47,36,223,41
+    DEFPUSHBUTTON   "OK",IDOK,234,82,50,14,WS_GROUP
+    LTEXT           "Build",IDC_STATIC_BUILD,47,25,203,8
+END
+
+IDD_CLIP_PLANE DIALOGEX 0, 0, 271, 115
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Clipping Plane"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    EDITTEXT        IDC_CLIP_A,32,35,40,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_CLIP_B,89,35,40,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_CLIP_C,145,35,40,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_CLIP_D,201,35,40,14,ES_AUTOHSCROLL
+    CONTROL         "Clip view to this plane",IDC_CLIP_CLIPPED,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,31,56,170,12
+    CONTROL         "Draw objects onto this plane",IDC_CLIP_DRAWONPLANE,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,31,70,170,12
+    PUSHBUTTON      "Apply",IDAPPLY,104,94,50,14
+    DEFPUSHBUTTON   "OK",IDOK,159,94,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,214,94,50,14
+    LTEXT           "Clipping plane Ax + By + Cz + D = 0:",IDC_STATIC,17,14,120,8
+    LTEXT           "A",IDC_STATIC,24,38,8,8
+    LTEXT           "B",IDC_STATIC,81,38,8,8
+    LTEXT           "C",IDC_STATIC,137,38,8,8
+    LTEXT           "D",IDC_STATIC,192,38,8,8
+END
 
 IDD_TOOLBAR DIALOGEX 0, 0, 252, 193
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
@@ -826,6 +696,34 @@ BEGIN
     PUSHBUTTON      "RIGHT",IDB_MINUS_XZ,216,133,27,25,BS_ICON | BS_CENTER | BS_VCENTER | BS_FLAT
 END
 
+IDD_LOFT DIALOGEX 0, 0, 293, 184
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Lofting"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    EDITTEXT        IDC_LOFT_NOSE_TENSION,78,40,45,13,ES_AUTOHSCROLL
+    EDITTEXT        IDC_LOFT_TAIL_TENSION,78,57,45,13,ES_AUTOHSCROLL
+    COMBOBOX        IDC_LOFT_BAY_TENSIONS,77,21,51,65,CBS_DROPDOWN | CBS_SORT | WS_VSCROLL | WS_TABSTOP
+    EDITTEXT        IDC_LOFT_BODY_ANGLEBREAK,79,96,45,13,ES_AUTOHSCROLL
+    EDITTEXT        IDC_LOFT_NOSE_ANGLEBREAK,204,115,45,13,ES_AUTOHSCROLL
+    EDITTEXT        IDC_LOFT_TAIL_ANGLEBREAK,204,133,45,13,ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK",IDOK,179,163,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,236,163,50,14
+    PUSHBUTTON      "Apply",IDAPPLY,123,163,50,14
+    GROUPBOX        "Tension factors for control points (as fraction of end-to-end length)",IDC_STATIC,7,7,279,70
+    LTEXT           "Nose tension",IDC_STATIC,33,42,42,8
+    LTEXT           "Tail tension",IDC_STATIC,37,59,37,8
+    GROUPBOX        "Angle breaks (degrees) and joining modes at ends",IDC_STATIC,7,81,279,81
+    LTEXT           "Body angle break",IDC_STATIC,22,99,56,8
+    LTEXT           "Nose angle break",IDC_STATIC,146,117,56,8
+    LTEXT           "Tail angle break",IDC_STATIC,151,135,51,8
+    LTEXT           "Nose join mode",IDC_STATIC,28,117,50,11
+    LTEXT           "Tail join mode",IDC_STATIC,33,135,45,9
+    LTEXT           "Bay tensions",IDC_STATIC,33,23,42,8
+    COMBOBOX        IDC_LOFT_NOSE_JOIN,80,115,46,46,CBS_DROPDOWNLIST | CBS_SORT | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        IDC_LOFT_TAIL_JOIN,80,133,46,44,CBS_DROPDOWNLIST | CBS_SORT | WS_VSCROLL | WS_TABSTOP
+END
+
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -835,6 +733,22 @@ END
 #ifdef APSTUDIO_INVOKED
 GUIDELINES DESIGNINFO
 BEGIN
+    IDD_ABOUTBOX, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 284
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 96
+    END
+
+    IDD_CLIP_PLANE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 264
+        TOPMARGIN, 6
+        BOTTOMMARGIN, 108
+    END
+
     IDD_TOOLBAR, DIALOG
     BEGIN
         LEFTMARGIN, 6
@@ -918,6 +832,14 @@ BEGIN
         TOPMARGIN, 8
         BOTTOMMARGIN, 190
     END
+
+    IDD_LOFT, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 286
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 177
+    END
 END
 #endif    // APSTUDIO_INVOKED
 
@@ -988,6 +910,51 @@ BEGIN
     BEGIN
         VALUE "Translation", 0xc09, 1200
     END
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE
+BEGIN
+    IDS_APP_TITLE           "LoftyCAD"
+    IDS_RECT                "Drag a rectangle.\r\n\r\nThe rectangle is drawn on the current face, or on the default plane."
+    IDS_CONST_RECT          "Drag a construction rectangle.\r\n\r\nThe rectangle is drawn on the current face, or on the default plane."
+    IDS_EDGE                "Drag an edge.\r\n\r\nThe edge is drawn on the current face, or on the default plane."
+    IDS_CONST_EDGE          "Drag a construction edge.\r\n\r\nThe edge is drawn on the current face, or on the default plane."
+    IDS_CIRCLE              "Drag a circle (centre to circumference)\r\n\r\nThe circle is drawn on the current face, or on the default plane."
+    IDC_LOFTYCAD            "LOFTYCAD"
+    IDS_CONST_CIRCLE        "Drag a construction circle.\r\n\r\nThe circle is drawn on the current face, or on the default plane."
+    IDS_POINT               "Click to place a point.\r\n\r\nThe point is placed on the current face or edge, or on the default plane."
+END
+
+STRINGTABLE
+BEGIN
+    IDS_EXTRUDE             "Drag a face to extrude it or move it along its normal."
+    IDS_XY                  "View from top (facing XY plane from +Z direction)"
+    IDS_YZ                  "View from front (facing YZ plane from +X direction)"
+    IDS_XZ                  "View from left (facing XZ plane from -Y direction)"
+    IDS_MINUS_XY            "View from bottom (facing -XY plane from -Z direction)"
+    IDS_MINUS_YZ            "View from back (facing -YZ plane from -X direction)"
+    IDS_MINUS_XZ            "View from right (facing -XZ plane from +Y direction)"
+    IDS_ARC_EDGE            "Drag an arc edge.\r\nThe direction of dragging determines the direction of the arc.\r\n\r\nThe edge is drawn on the current face, or on the default plane."
+    IDS_BEZIER_EDGE         "Drag a Bezier edge. The control points can be moved later.\r\n\r\nThe edge is drawn on the current face, or on the default plane."
+    IDS_RENDERED            "Toggle the rendered view on and off."
+    IDS_SCALE               "Drag a point on an object to scale it about its centre in the dominant direction."
+    IDS_ROTATE              "Drag a point on an object to rotate it about its centre in the facing plane."
+    IDS_TEXT                "Click and drag to place text.\r\n\r\nThe text is placed on the current face, or on the default plane."
+    IDS_EXTRUDE_LOCAL       "Drag a curved face to move its points along their local normals."
+    IDS_HEX                 "Drag a hexagon (corner to corner)\r\n\r\nThe hexagon is drawn on the current face, or on the default plane."
+    IDS_CONST_HEX           "Drag a construction hexagon.\r\n\r\nThe hexagon is drawn on the current face, or on the default plane."
+END
+
+STRINGTABLE
+BEGIN
+    IDS_BEZ_RECT            "Drag a rectangle with Bezier edges.\r\n\r\nThe rectangle is drawn on the current face, or on the default plane."
+    IDS_BEZ_CIRCLE          "Drag a circle approximated by 4 Bezier edges.\r\n\r\nThe circle is drawn on the current face, or on the default plane."
 END
 
 #endif    // English (Australia) resources

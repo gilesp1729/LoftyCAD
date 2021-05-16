@@ -889,8 +889,6 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         loft = group->loft;
 
         // Fill the fields
-        sprintf_s(buf, 64, "%.2f", loft->body_tension);
-        SendDlgItemMessage(hWnd, IDC_LOFT_BODY_TENSION, WM_SETTEXT, 0, (LPARAM)buf);
         sprintf_s(buf, 64, "%.2f", loft->nose_tension);
         SendDlgItemMessage(hWnd, IDC_LOFT_NOSE_TENSION, WM_SETTEXT, 0, (LPARAM)buf);
         sprintf_s(buf, 64, "%.2f", loft->tail_tension);
@@ -959,17 +957,6 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             // TODO: Revert loft to old contents
             // If we have a volume, return it anyway
             EndDialog(hWnd, (INT_PTR)vol);
-            break;
-
-        case IDC_LOFT_BODY_TENSION:
-            switch (HIWORD(wParam))
-            {
-            case EN_KILLFOCUS:
-                SendDlgItemMessage(hWnd, IDC_LOFT_BODY_TENSION, WM_GETTEXT, 16, (LPARAM)buf);
-                loft->body_tension = (float)atof(buf);
-                changed = TRUE;
-                break;
-            }
             break;
 
         case IDC_LOFT_NOSE_TENSION:
