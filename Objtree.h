@@ -358,9 +358,7 @@ typedef enum
 // Structure containing lofting parameters for a lofted group.
 typedef struct LoftParams
 {
-    float           body_tension;   // Tensioning factor along contours in body (fraction of straight-line length)
-                                    // Only used to copy into the bay tensions; not settable directly.
-    float           nose_tension;   // And for points adjoining endcap at nose
+    float           nose_tension;   // Tension for points adjoining endcap at nose
     float           tail_tension;   // And for points adjoining endcap at tail
     int             body_angle_break;   // Angle break in degrees, beyond which smoothing will no longer be attempted
     int             nose_angle_break;    // And for points adjoining endcap at nose

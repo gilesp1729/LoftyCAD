@@ -852,7 +852,7 @@ materials_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     return 0;
 }
 
-LoftParams default_loft = { 0.3f, 0.6f, 0.6f, 30, 80, 80, 0, JOIN_BOW, JOIN_BOW, 0,};
+LoftParams default_loft = { 0.6f, 0.6f, 30, 80, 80, JOIN_BOW, JOIN_BOW, 0, 0.3f};
 
 // Dialog that controls lofting.
 // Input (lParam): a Group of edge groups.
@@ -864,7 +864,7 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     static Group* group;
     static Volume* vol = NULL;
     static BOOL changed = FALSE;
-    static int n_bays;
+    static int bay, n_bays;
     int i;
     static LoftParams* loft;
 
@@ -884,7 +884,7 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             memcpy(group->loft, &default_loft, sizeof(LoftParams));
             group->loft->n_bays = n_bays;
             for (i = 0; i < n_bays; i++)
-                group->loft->bay_tensions[i] = group->loft->body_tension;
+                group->loft->bay_tensions[i] = group->loft->bay_tensions[0];
         }
         loft = group->loft;
 
@@ -922,7 +922,7 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             sprintf_s(buf, 64, "%.2f", loft->bay_tensions[i]);
             SendDlgItemMessage(hWnd, IDC_LOFT_BAY_TENSIONS, CB_ADDSTRING, 0, (LPARAM)buf);
         }
-
+        SendDlgItemMessage(hWnd, IDC_LOFT_BAY_TENSIONS, CB_SETCURSEL, 0, 0);
         changed = FALSE;
         break;
 
@@ -1039,19 +1039,29 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         case IDC_LOFT_BAY_TENSIONS:
             switch (HIWORD(wParam))
             {
-            case CBN_EDITCHANGE:
+            case CBN_SELCHANGE:
                 bay = SendDlgItemMessage(hWnd, IDC_LOFT_BAY_TENSIONS, CB_GETCURSEL, 0, 0);
+                break;
 
-
-
+            case CBN_EDITCHANGE:
                 changed = TRUE;
                 break;
 
             case CBN_KILLFOCUS:
+                if (changed)
+                {
+                    SendDlgItemMessage(hWnd, IDC_LOFT_BAY_TENSIONS, WM_GETTEXT, 16, (LPARAM)buf);
+                    loft->bay_tensions[bay] = (float)atof(buf);
 
+                    SendDlgItemMessage(hWnd, IDC_LOFT_BAY_TENSIONS, CB_RESETCONTENT, 0, 0);
+                    for (i = 0; i < loft->n_bays; i++)
+                    {
+                        sprintf_s(buf, 64, "%.2f", loft->bay_tensions[i]);
+                        SendDlgItemMessage(hWnd, IDC_LOFT_BAY_TENSIONS, CB_ADDSTRING, 0, (LPARAM)buf);
+                    }
+                    SendDlgItemMessage(hWnd, IDC_LOFT_BAY_TENSIONS, CB_SETCURSEL, bay, 0);
 
-
-
+                }
                 break;
             }
             break;

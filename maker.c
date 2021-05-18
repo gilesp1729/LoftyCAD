@@ -1192,8 +1192,8 @@ make_lofted_volume(Group* group)
         group->loft = malloc(sizeof(LoftParams) + n_bays * sizeof(float));
         memcpy(group->loft, &default_loft, sizeof(LoftParams));
         group->loft->n_bays = n_bays;
-        for (i = 0; i < group->loft->n_bays; i++)
-            group->loft->bay_tensions[i] = group->loft->body_tension;
+        for (i = 1; i < group->loft->n_bays; i++)
+            group->loft->bay_tensions[i] = group->loft->bay_tensions[0];
     }
     loft = group->loft;
 
@@ -1617,15 +1617,15 @@ make_lofted_volume(Group* group)
 
                     c = contour[j];
                     lj = length(c->endpoints[0], c->endpoints[1]);
-                    ((BezierEdge*)c)->ctrlpoints[ci]->x = c->endpoints[ci]->x + (plprev.A * loft->body_tension * lj);
-                    ((BezierEdge*)c)->ctrlpoints[ci]->y = c->endpoints[ci]->y + (plprev.B * loft->body_tension * lj);
-                    ((BezierEdge*)c)->ctrlpoints[ci]->z = c->endpoints[ci]->z + (plprev.C * loft->body_tension * lj);
+                    ((BezierEdge*)c)->ctrlpoints[ci]->x = c->endpoints[ci]->x + (plprev.A * loft->bay_tensions[i - 1] * lj);
+                    ((BezierEdge*)c)->ctrlpoints[ci]->y = c->endpoints[ci]->y + (plprev.B * loft->bay_tensions[i - 1] * lj);
+                    ((BezierEdge*)c)->ctrlpoints[ci]->z = c->endpoints[ci]->z + (plprev.C * loft->bay_tensions[i - 1] * lj);
 
                     c = (Edge *)contour[j]->hdr.prev;
                     lj = length(c->endpoints[0], c->endpoints[1]);
-                    ((BezierEdge*)c)->ctrlpoints[1-cp]->x = c->endpoints[1-cp]->x - (plprev.A * loft->body_tension * lj);
-                    ((BezierEdge*)c)->ctrlpoints[1-cp]->y = c->endpoints[1-cp]->y - (plprev.B * loft->body_tension * lj);
-                    ((BezierEdge*)c)->ctrlpoints[1-cp]->z = c->endpoints[1-cp]->z - (plprev.C * loft->body_tension * lj);
+                    ((BezierEdge*)c)->ctrlpoints[1-cp]->x = c->endpoints[1-cp]->x - (plprev.A * loft->bay_tensions[i - 2] * lj);
+                    ((BezierEdge*)c)->ctrlpoints[1-cp]->y = c->endpoints[1-cp]->y - (plprev.B * loft->bay_tensions[i - 2] * lj);
+                    ((BezierEdge*)c)->ctrlpoints[1-cp]->z = c->endpoints[1-cp]->z - (plprev.C * loft->bay_tensions[i - 2] * lj);
                 }
             }
 
@@ -1642,15 +1642,15 @@ make_lofted_volume(Group* group)
 
                     c = contour[j];
                     lj = length(c->endpoints[0], c->endpoints[1]);
-                    ((BezierEdge*)c)->ctrlpoints[1-ci]->x = c->endpoints[1-ci]->x - (plnext.A * loft->body_tension * lj);
-                    ((BezierEdge*)c)->ctrlpoints[1-ci]->y = c->endpoints[1-ci]->y - (plnext.B * loft->body_tension * lj);
-                    ((BezierEdge*)c)->ctrlpoints[1-ci]->z = c->endpoints[1-ci]->z - (plnext.C * loft->body_tension * lj);
+                    ((BezierEdge*)c)->ctrlpoints[1-ci]->x = c->endpoints[1-ci]->x - (plnext.A * loft->bay_tensions[i - 1] * lj);
+                    ((BezierEdge*)c)->ctrlpoints[1-ci]->y = c->endpoints[1-ci]->y - (plnext.B * loft->bay_tensions[i - 1] * lj);
+                    ((BezierEdge*)c)->ctrlpoints[1-ci]->z = c->endpoints[1-ci]->z - (plnext.C * loft->bay_tensions[i - 1] * lj);
 
                     c = (Edge*)contour[j]->hdr.next;
                     lj = length(c->endpoints[0], c->endpoints[1]);
-                    ((BezierEdge*)c)->ctrlpoints[cn]->x = c->endpoints[cn]->x + (plnext.A * loft->body_tension * lj);
-                    ((BezierEdge*)c)->ctrlpoints[cn]->y = c->endpoints[cn]->y + (plnext.B * loft->body_tension * lj);
-                    ((BezierEdge*)c)->ctrlpoints[cn]->z = c->endpoints[cn]->z + (plnext.C * loft->body_tension * lj);
+                    ((BezierEdge*)c)->ctrlpoints[cn]->x = c->endpoints[cn]->x + (plnext.A * loft->bay_tensions[i] * lj);
+                    ((BezierEdge*)c)->ctrlpoints[cn]->y = c->endpoints[cn]->y + (plnext.B * loft->bay_tensions[i] * lj);
+                    ((BezierEdge*)c)->ctrlpoints[cn]->z = c->endpoints[cn]->z + (plnext.C * loft->bay_tensions[i] * lj);
                 }
             }
         }
