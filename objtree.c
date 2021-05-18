@@ -481,6 +481,8 @@ purge_obj_top(Object *obj, OBJECT top_type)
         }
         if (group->mesh != NULL)
             mesh_destroy(group->mesh);
+        if (group->loft != NULL)
+            free(group->loft);
         free(obj);
         break;
     }

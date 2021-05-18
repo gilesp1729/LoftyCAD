@@ -245,6 +245,13 @@ copy_obj(Object* obj, float xoffset, float yoffset, float zoffset, BOOL cloning)
         new_obj = (Object*)new_grp;
         new_obj->lock = obj->lock;
         new_grp->op = grp->op;
+        if (grp->loft != NULL)
+        {
+            size_t loft_size = sizeof(LoftParams) + grp->loft->n_bays * sizeof(float);
+
+            new_grp->loft = malloc(loft_size);
+            memcpy_s(new_grp->loft, loft_size, grp->loft, loft_size);
+        }
         break;
     }
 
