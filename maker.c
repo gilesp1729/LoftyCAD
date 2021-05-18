@@ -1683,28 +1683,31 @@ make_lofted_volume(Group* group)
         project(&plend, &principal, &plend_proj);
         cosmax = pldot(&plend_proj, &pl_proj);
         
-        // Check the edges incident on the common point (c->endpoints[ci]) and see if
-        // they make a smaller angle (greater dot product). If so, use that for the test.
-        for (e = (Edge*)lg[0].egrp->obj_list.head; e != NULL; e = (Edge*)e->hdr.next)
+        if (loft->nose_join_mode != JOIN_NOSECONE)
         {
-            // Be careful with the directions
-            if (e->endpoints[0] == c->endpoints[ci])
-                point_direction(e->endpoints[1], e->endpoints[0], &pltest);
-            else if (e->endpoints[1] == c->endpoints[ci])
-                point_direction(e->endpoints[0], e->endpoints[1], &pltest);
-            else
-                continue;
-
-            project(&pltest, &principal, &pltest_proj);
-            costest = pldot(&pltest_proj, &pl_proj);
-            if (costest > cosmax)
+            // Check the edges incident on the common point (c->endpoints[ci]) and see if
+            // they make a smaller angle (greater dot product). If so, use that for the test.
+            for (e = (Edge*)lg[0].egrp->obj_list.head; e != NULL; e = (Edge*)e->hdr.next)
             {
-                cosmax = costest;
-                plend = pltest;
+                // Be careful with the directions
+                if (e->endpoints[0] == c->endpoints[ci])
+                    point_direction(e->endpoints[1], e->endpoints[0], &pltest);
+                else if (e->endpoints[1] == c->endpoints[ci])
+                    point_direction(e->endpoints[0], e->endpoints[1], &pltest);
+                else
+                    continue;
+
+                project(&pltest, &principal, &pltest_proj);
+                costest = pldot(&pltest_proj, &pl_proj);
+                if (costest > cosmax)
+                {
+                    cosmax = costest;
+                    plend = pltest;
+                }
             }
         }
 
-        if (cosmax > cosf(loft->nose_angle_break * RADF))
+        if (cosmax > cosf(loft->nose_angle_break * RADF) && loft->nose_join_mode != JOIN_STERN)
         {
             // make the first ctrl point straight into the end group's plane (don't average them)
             lj = length(c->endpoints[0], c->endpoints[1]);
@@ -1736,28 +1739,31 @@ make_lofted_volume(Group* group)
         project(&plend, &principal, &plend_proj);
         cosmax = pldot(&plend_proj, &pl_proj);
 
-        // Check the edges incident on the common point (c->endpoints[1-ci]) and see if
-        // they make a smaller angle (greater dot product). If so, use that for the test.
-        for (e = (Edge*)lg[num_groups-1].egrp->obj_list.head; e != NULL; e = (Edge*)e->hdr.next)
+        if (loft->tail_join_mode != JOIN_NOSECONE)
         {
-            // Be careful with the directions
-            if (e->endpoints[0] == c->endpoints[1-ci])
-                point_direction(e->endpoints[0], e->endpoints[1], &pltest);
-            else if (e->endpoints[1] == c->endpoints[1-ci])
-                point_direction(e->endpoints[1], e->endpoints[0], &pltest);
-            else
-                continue;
-
-            project(&pltest, &principal, &pltest_proj);
-            costest = pldot(&pltest_proj, &pl_proj);
-            if (costest > cosmax)
+            // Check the edges incident on the common point (c->endpoints[1-ci]) and see if
+            // they make a smaller angle (greater dot product). If so, use that for the test.
+            for (e = (Edge*)lg[num_groups - 1].egrp->obj_list.head; e != NULL; e = (Edge*)e->hdr.next)
             {
-                cosmax = costest;
-                plend = pltest;
+                // Be careful with the directions
+                if (e->endpoints[0] == c->endpoints[1 - ci])
+                    point_direction(e->endpoints[0], e->endpoints[1], &pltest);
+                else if (e->endpoints[1] == c->endpoints[1 - ci])
+                    point_direction(e->endpoints[1], e->endpoints[0], &pltest);
+                else
+                    continue;
+
+                project(&pltest, &principal, &pltest_proj);
+                costest = pldot(&pltest_proj, &pl_proj);
+                if (costest > cosmax)
+                {
+                    cosmax = costest;
+                    plend = pltest;
+                }
             }
         }
 
-        if (cosmax > cosf(loft->tail_angle_break * RADF))
+        if (cosmax > cosf(loft->tail_angle_break * RADF) && loft->tail_join_mode != JOIN_STERN)
         {
             // make the first ctrl point straight into the end group's plane (don't average them)
             lj = length(c->endpoints[0], c->endpoints[1]);
