@@ -158,6 +158,8 @@
     <Image Include="cube-right32.ico" />
     <Image Include="cube-top32.ico" />
     <Image Include="icon-arc.ico" />
+    <Image Include="icon-bez-circle.ico" />
+    <Image Include="icon-bez-rect.ico" />
     <Image Include="icon-bezier.ico" />
     <Image Include="icon-circle.ico" />
     <Image Include="icon-const-circle.ico" />

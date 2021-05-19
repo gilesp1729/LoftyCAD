@@ -118,6 +118,10 @@ IDI_HEX                 ICON                    "icon-hex.ico"
 
 IDI_CONST_HEX           ICON                    "icon-const-hex.ico"
 
+IDI_BEZ_RECT            ICON                    "icon-bez-rect.ico"
+
+IDI_BEZ_CIRCLE          ICON                    "icon-bez-circle.ico"
+
 
 /////////////////////////////////////////////////////////////////////////////
 //

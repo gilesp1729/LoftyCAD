@@ -76,7 +76,7 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     HMENU hMenu;
     CHOOSEFONT cf;
     LOGFONT lf;
-    PSHNOTIFY *notify;
+    PSHNOTIFY* notify;
 
     switch (msg)
     {
@@ -92,8 +92,8 @@ toolbar_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         LoadAndDisplayIcon(hWnd, IDI_CONST_CIRCLE, IDB_CONST_CIRCLE, IDS_CONST_CIRCLE);
         LoadAndDisplayIcon(hWnd, IDI_BEZIER_EDGE, IDB_BEZIER_EDGE, IDS_BEZIER_EDGE);
         LoadAndDisplayIcon(hWnd, IDI_ARC_EDGE, IDB_ARC_EDGE, IDS_ARC_EDGE);
-        LoadAndDisplayIcon(hWnd, 0, IDB_BEZ_RECT, IDS_BEZ_RECT);
-        LoadAndDisplayIcon(hWnd, 0, IDB_BEZ_CIRCLE, IDS_BEZ_CIRCLE);
+        LoadAndDisplayIcon(hWnd, IDI_BEZ_RECT, IDB_BEZ_RECT, IDS_BEZ_RECT);
+        LoadAndDisplayIcon(hWnd, IDI_BEZ_CIRCLE, IDB_BEZ_CIRCLE, IDS_BEZ_CIRCLE);
         LoadAndDisplayIcon(hWnd, IDI_EXTRUDE, IDB_EXTRUDE, IDS_EXTRUDE);
         LoadAndDisplayIcon(hWnd, IDI_EXTRUDE_LOCAL, IDB_EXTRUDE_LOCAL, IDS_EXTRUDE_LOCAL);
         LoadAndDisplayIcon(hWnd, IDI_TEXT, IDB_TEXT, IDS_TEXT);

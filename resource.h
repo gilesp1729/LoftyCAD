@@ -106,9 +106,12 @@
 #define IDC_EDGE3                       164
 #define IDR_CONTEXT_GROUP               164
 #define IDD_CLIP_PLANE                  164
+#define IDI_BEZ_RECT                    164
 #define IDC_FACE                        165
 #define IDR_CONTEXT_VOL                 165
 #define IDD_LOFT                        165
+#define IDI_CIRCLE1                     165
+#define IDI_BEZ_CIRCLE                  165
 #define IDC_FACE1                       166
 #define IDR_CONTEXT_FACE                166
 #define IDC_FACE2                       167
