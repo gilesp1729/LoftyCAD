@@ -1340,20 +1340,6 @@ gen_view_list_face(Face* face)
             ) / (l30 * l30);
         }
 
-        // Create on-curve intermediate points for the side edges, to help calculation
-        // of the 4 internal control points later on.
-        be = (BezierEdge*)face->edges[1];
-        be->bezcurve[0] = bez_interp(be, be->t1);
-        link_tail((Object*)be->bezcurve[0], &internal);
-        be->bezcurve[1] = bez_interp(be, be->t2);
-        link_tail((Object*)be->bezcurve[1], &internal);
-
-        be = (BezierEdge*)face->edges[3];
-        be->bezcurve[0] = bez_interp(be, be->t1);
-        link_tail((Object*)be->bezcurve[0], &internal);
-        be->bezcurve[1] = bez_interp(be, be->t2);
-        link_tail((Object*)be->bezcurve[1], &internal);
-
         // Get together the 16 control points for the bezier surface. Each one has the (u,v) of the
         // point on the surface, as well as the underlying control point, to help calculation of
         // their local normals later on. (a NULL point means we don't need the normal)
@@ -1396,15 +1382,27 @@ gen_view_list_face(Face* face)
         cp[0][1].v = be0->t1;
         cp[0][1].p = be0->bezctl[1];
 
-        cp[1][1].x = be->bezcurve[0]->x + (be0->bezctl[1]->x - be0->bezctl[0]->x);
-        cp[1][1].y = be->bezcurve[0]->y + (be0->bezctl[1]->y - be0->bezctl[0]->y);
-        cp[1][1].z = be->bezcurve[0]->z + (be0->bezctl[1]->z - be0->bezctl[0]->z);
+        cp[1][1].x = be->bezctl[1]->x + (be0->bezctl[1]->x - be0->bezctl[0]->x);
+        cp[1][1].y = be->bezctl[1]->y + (be0->bezctl[1]->y - be0->bezctl[0]->y);
+        cp[1][1].z = be->bezctl[1]->z + (be0->bezctl[1]->z - be0->bezctl[0]->z);
         cp[1][1].p = NULL; 
+#ifdef VISUALISE_INTERNAL_CP
+        {
+            Point* p = point_new(cp[1][1].x, cp[1][1].y, cp[1][1].z);
+            link_group((Object*)p, &object_tree);
+        }
+#endif
 
-        cp[2][1].x = be->bezcurve[1]->x + (be2->bezctl[1]->x - be2->bezctl[0]->x);
-        cp[2][1].y = be->bezcurve[1]->y + (be2->bezctl[1]->y - be2->bezctl[0]->y);
-        cp[2][1].z = be->bezcurve[1]->z + (be2->bezctl[1]->z - be2->bezctl[0]->z);
+        cp[2][1].x = be->bezctl[2]->x + (be2->bezctl[1]->x - be2->bezctl[0]->x);
+        cp[2][1].y = be->bezctl[2]->y + (be2->bezctl[1]->y - be2->bezctl[0]->y);
+        cp[2][1].z = be->bezctl[2]->z + (be2->bezctl[1]->z - be2->bezctl[0]->z);
         cp[2][1].p = NULL;
+#ifdef VISUALISE_INTERNAL_CP
+        {
+            Point* p = point_new(cp[2][1].x, cp[2][1].y, cp[2][1].z);
+            link_group((Object*)p, &object_tree);
+        }
+#endif
 
         cp[3][1].x = be2->bezctl[1]->x;
         cp[3][1].y = be2->bezctl[1]->y;
@@ -1421,15 +1419,27 @@ gen_view_list_face(Face* face)
         cp[0][2].v = be0->t2;
         cp[0][2].p = be0->bezctl[2];
 
-        cp[1][2].x = be->bezcurve[0]->x + (be0->bezctl[2]->x - be0->bezctl[3]->x);
-        cp[1][2].y = be->bezcurve[0]->y + (be0->bezctl[2]->y - be0->bezctl[3]->y);
-        cp[1][2].z = be->bezcurve[0]->z + (be0->bezctl[2]->z - be0->bezctl[3]->z);
+        cp[1][2].x = be->bezctl[1]->x + (be0->bezctl[2]->x - be0->bezctl[3]->x);
+        cp[1][2].y = be->bezctl[1]->y + (be0->bezctl[2]->y - be0->bezctl[3]->y);
+        cp[1][2].z = be->bezctl[1]->z + (be0->bezctl[2]->z - be0->bezctl[3]->z);
         cp[1][2].p = NULL;
+#ifdef VISUALISE_INTERNAL_CP
+        {
+            Point* p = point_new(cp[1][2].x, cp[1][2].y, cp[1][2].z);
+            link_group((Object*)p, &object_tree);
+        }
+#endif
 
-        cp[2][2].x = be->bezcurve[1]->x + (be2->bezctl[2]->x - be2->bezctl[3]->x);
-        cp[2][2].y = be->bezcurve[1]->y + (be2->bezctl[2]->y - be2->bezctl[3]->y);
-        cp[2][2].z = be->bezcurve[1]->z + (be2->bezctl[2]->z - be2->bezctl[3]->z);
+        cp[2][2].x = be->bezctl[2]->x + (be2->bezctl[2]->x - be2->bezctl[3]->x);
+        cp[2][2].y = be->bezctl[2]->y + (be2->bezctl[2]->y - be2->bezctl[3]->y);
+        cp[2][2].z = be->bezctl[2]->z + (be2->bezctl[2]->z - be2->bezctl[3]->z);
         cp[2][2].p = NULL;
+#ifdef VISUALISE_INTERNAL_CP
+        {
+            Point* p = point_new(cp[2][2].x, cp[2][2].y, cp[2][2].z);
+            link_group((Object*)p, &object_tree);
+        }
+#endif
 
         cp[3][2].x = be2->bezctl[2]->x;
         cp[3][2].y = be2->bezctl[2]->y;
@@ -1623,8 +1633,7 @@ gen_view_list_face(Face* face)
             }
         }
 
-        // Free the oncurve points now we no longer need them, and the point lists
-        free_point_list(&internal);
+        // Free the point lists
         for (i = 0; i < side_nsteps + 1; i++)
             free_point_list(elists[i]);
         free(elists);

@@ -235,8 +235,6 @@ typedef struct BezierEdge
                                     // the face view list, to help with Bezier surface interpolation
     float           t1;             // Approximate t-value for the first control point at bezctl[1]
     float           t2;             // Approximate t-value for the second control point at bezctl[2]
-    struct Point    *bezcurve[2];   // On-curve intermediate points used to calculate internal control
-                                    // points, to help with Bezier surface interpolation
 } BezierEdge;
 
 typedef struct ZPolyEdge
