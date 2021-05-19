@@ -386,20 +386,12 @@ contextmenu(Object *picked_obj, POINT pt)
         break;
 
     case ID_OBJ_LOFTGROUP:
-        vol = (Volume*)
+        group_changed =
             DialogBoxParam(hInst, MAKEINTRESOURCE(IDD_LOFT), auxGetHWND(), lofting_dialog, (LPARAM)picked_obj);
-        if (vol != NULL)        // it's already in the group
-            group_changed = TRUE;
         break;
 
     case ID_OBJ_TUBEGROUP:
-        vol = make_tubed_volume((Group*)picked_obj);
-        if (vol != NULL)
-        {
-            link_group((Object*)vol, &object_tree);
-            clear_selection(&selection);
-            group_changed = TRUE;
-        }
+        group_changed = make_tubed_volume((Group*)picked_obj);
         break;
 
     case ID_OBJ_MAKEEDGEGROUP:
@@ -856,7 +848,8 @@ LoftParams default_loft = { 0.6f, 0.6f, 30, 80, 80, JOIN_BOW, JOIN_BOW, 0, 0.3f}
 
 // Dialog that controls lofting.
 // Input (lParam): a Group of edge groups.
-// Output (returned): a Volume, that has already been placed in the object tree.
+// Output (returned): whether changed.
+// If lofted, a Volume has already been placed in the group.
 int WINAPI
 lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -934,7 +927,7 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             vol = make_lofted_volume(group);
             link_tail_group((Object*)vol, group);
             clear_selection(&selection);
-            EndDialog(hWnd, (INT_PTR)vol);
+            EndDialog(hWnd, (INT_PTR)changed);
             break;
 
         case IDAPPLY:
@@ -946,17 +939,30 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 clear_selection(&selection);
 
                 // Update the drawing but don't write a checkpoint yet
-                drawing_changed = TRUE;
                 invalidate_dl();
                 invalidate_all_view_lists((Object*)&group, (Object*)&group, 0, 0, 0);
-                changed = FALSE;
             }
+            break;
+
+        case IDC_REMOVE:
+            // Remove any lofted volume and go out
+            if (vol != NULL)
+            {
+                delink_group((Object*)vol, group);
+                purge_obj((Object*)vol);
+                vol = NULL;
+                changed = TRUE;
+            }
+            clear_selection(&selection);
+            invalidate_dl();
+            invalidate_all_view_lists((Object*)&group, (Object*)&group, 0, 0, 0);
+            EndDialog(hWnd, (INT_PTR)changed);
             break;
 
         case IDCANCEL:
             // TODO: Revert loft to old contents
             // If we have a volume, return it anyway
-            EndDialog(hWnd, (INT_PTR)vol);
+            EndDialog(hWnd, (INT_PTR)FALSE);
             break;
 
         case IDC_LOFT_NOSE_TENSION:

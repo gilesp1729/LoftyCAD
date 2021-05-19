@@ -7,6 +7,7 @@
 #define IDB_RECT                        5
 #define IDAPPLY2                        5
 #define ID_REMOVE                       5
+#define IDC_REMOVE                      5
 #define IDB_EDGE                        6
 #define IDB_CIRCLE                      7
 #define IDB_CONST_RECT                  8

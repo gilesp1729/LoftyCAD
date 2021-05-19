@@ -722,6 +722,7 @@ BEGIN
     LTEXT           "Nose join mode",IDC_STATIC,28,117,50,11
     LTEXT           "Tail join mode",IDC_STATIC,33,135,45,9
     LTEXT           "Bay tensions",IDC_STATIC,33,23,42,8
+    PUSHBUTTON      "Remove",IDC_REMOVE,65,163,50,14
 END
 
 
