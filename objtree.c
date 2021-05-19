@@ -445,6 +445,8 @@ purge_obj_top(Object *obj, OBJECT top_type)
             break;
         obj->ID = 0;
         free_edge(obj);
+        if (curr_path == obj)
+            curr_path = NULL;
         break;
 
     case OBJ_FACE:
@@ -484,6 +486,8 @@ purge_obj_top(Object *obj, OBJECT top_type)
         if (group->loft != NULL)
             free(group->loft);
         free(obj);
+        if (curr_path == obj)
+            curr_path = NULL;
         break;
     }
 }
