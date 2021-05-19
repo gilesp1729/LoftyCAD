@@ -279,6 +279,26 @@ serialise_obj(Object *obj, FILE *f, int level)
         if (group->op != OP_NONE)
             fprintf_s(f, "%s ", optypes[group->op]);
         fprintf_s(f, "\n");
+        if (group->loft != NULL)
+        {
+            LoftParams* loft = group->loft;
+
+            INDENT(level, f);
+            fprintf_s(f, "LOFT %d ", obj->ID);
+            fprintf_s(f, "%f %f %d %d %d %d %d %d ",
+                loft->nose_tension,
+                loft->tail_tension,
+                loft->body_angle_break,
+                loft->nose_angle_break,
+                loft->tail_angle_break,
+                loft->nose_join_mode,
+                loft->tail_join_mode,
+                loft->n_bays
+            );
+            for (i = 0; i < loft->n_bays; i++)
+                fprintf_s(f, "%f ", loft->bay_tensions[i]);
+            fprintf_s(f, "\n");
+        }
         break;
     }
 
@@ -1031,6 +1051,41 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
                 link_tail_group(object[id], tree);
             else if (IS_GROUP(object[stack[stkptr - 1]]))
                 link_tail_group(object[id], (Group *)object[stack[stkptr - 1]]);
+        }
+        else if (strcmp(tok, "LOFT") == 0)
+        {
+            int i;
+            LoftParams* loft;
+
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            id = atoi(tok) + id_offset;
+            ASSERT(object[id]->type == OBJ_GROUP, "Lofted object is not a group");
+            grp = (Group*)object[id];
+
+            // At least large enough for the bays
+            grp->loft = malloc(sizeof(LoftParams) + (grp->n_members - 1) * sizeof(float));
+            loft = grp->loft;
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            loft->nose_tension = (float)atof(tok);
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            loft->tail_tension = (float)atof(tok);
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            loft->body_angle_break = atoi(tok);
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            loft->nose_angle_break = atoi(tok);
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            loft->tail_angle_break = atoi(tok);
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            loft->nose_join_mode = atoi(tok);
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            loft->tail_join_mode = atoi(tok);
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            loft->n_bays = atoi(tok);
+            for (i = 0; i < loft->n_bays; i++)
+            {
+                tok = strtok_s(NULL, " \t\n", &nexttok);
+                loft->bay_tensions[i] = (float)atof(tok);
+            }
         }
         else if (strcmp(tok, "MATERIAL") == 0)
         {
