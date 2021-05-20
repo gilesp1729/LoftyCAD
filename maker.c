@@ -1116,7 +1116,7 @@ make_lofted_volume(Group* group)
     int i, j;
     LoftedGroup* lg;
     LoftParams* loft;
-    float path_length, total_length;
+    float total_length;
     ListHead contour_lists[8];  // max of 8 points in a section, so 8 lists of contour edges
     Edge* contour[8];
     int sect_nsteps[8] = { 0, };
@@ -1201,30 +1201,9 @@ make_lofted_volume(Group* group)
     // Allocate the LoftedGroup array.
     lg = (LoftedGroup*)malloc(num_groups * sizeof(LoftedGroup));
 
-    // Determine where the edge groups' centroids are.
-    // If there is a current path, sort the sections by the centroids' positions along it.
-    // If not, determine the bounding box of the centroids and use the principal direction.
-    clear_bbox(&box);
-    if (curr_path != NULL)
-    {
-        if (curr_path->type == OBJ_EDGE)
-        {
-            Edge* e = (Edge*)curr_path;
-
-            expand_bbox(&box, e->endpoints[0]);
-            expand_bbox(&box, e->endpoints[1]);
-            path_length = length(e->endpoints[0], e->endpoints[1]);
-        }
-        else
-        {
-            // Find the first and last points in the edge group making up the path.
-            // TODO: To come later.
-            ERR_RETURN("Complex path not supported (yet)");
-        }
-    }
-
     // Determine centroid and normal of points in each edge group. The centroid is not
     // needed exactly; the midpoint of the edge group's bbox will do.
+    clear_bbox(&box);
     for (i = 0, egrp = (Group*)clone->obj_list.head; egrp != NULL; i++, egrp = (Group*)egrp->hdr.next)
     {
         Edge* next_edge;
@@ -1310,16 +1289,12 @@ make_lofted_volume(Group* group)
     // TODO: Cope with complex paths.
     if (curr_path != NULL)
     {
-        e = (Edge*)curr_path;
-        principal.A = e->endpoints[1]->x - e->endpoints[0]->x;
-        principal.B = e->endpoints[1]->y - e->endpoints[0]->y;
-        principal.C = e->endpoints[1]->z - e->endpoints[0]->z;
-        principal.refpt = *e->endpoints[0];
-
-        // Sorting distance as fraction of path length
+        total_length = path_total_length(curr_path);
         for (i = 0; i < num_groups; i++)
         {
-            if (pldot(&lg[i].norm, &principal) < 0)
+            // Detemine direction of path where it passes through lg[i]
+            path_tangent_to_intersect(curr_path, &lg[i].norm, &lg[i].principal);
+            if (pldot(&lg[i].norm, &lg[i].principal) < 0)
             {
                 // Reverse the edge group in-place if it goes the opposite
                 // way to the principal direction.
@@ -1328,8 +1303,8 @@ make_lofted_volume(Group* group)
                 lg[i].norm.C = -lg[i].norm.C;
                 reverse(&lg[i].egrp->obj_list);
             }
-            lg[i].param = length(&principal.refpt, &lg[i].norm.refpt) / path_length;
-            lg[i].principal = principal;
+            // Sorting distance as fraction of path length
+            lg[i].param = path_length_to_intersect(curr_path, &lg[i].norm) / total_length;
         }
     }
     else    // no path, assume (generally) axis-aligned row of centroids in the box
@@ -1343,7 +1318,6 @@ make_lofted_volume(Group* group)
             // Principal direction is the x-direction.
             // Use the negative so the nose points up the +ve x axis.
             principal.A = -dx;
-            principal.refpt.x = box.xmax;
             principal.B = 0;
             principal.C = 0;
 
@@ -1358,7 +1332,7 @@ make_lofted_volume(Group* group)
                     lg[i].norm.C = -lg[i].norm.C;
                     reverse(&lg[i].egrp->obj_list);
                 }
-                lg[i].param = (principal.refpt.x - lg[i].norm.refpt.x) / dx;
+                lg[i].param = (box.xmax - lg[i].norm.refpt.x) / dx;
                 lg[i].principal = principal;
             }
         }
@@ -1366,7 +1340,6 @@ make_lofted_volume(Group* group)
         {
             // The y-direction
             principal.B = -dy;
-            principal.refpt.y = box.ymax;
             principal.A = 0;
             principal.C = 0;
 
@@ -1380,7 +1353,7 @@ make_lofted_volume(Group* group)
                     lg[i].norm.C = -lg[i].norm.C;
                     reverse(&lg[i].egrp->obj_list);
                 }
-                lg[i].param = (principal.refpt.y - lg[i].norm.refpt.y) / dy;
+                lg[i].param = (box.ymax - lg[i].norm.refpt.y) / dy;
                 lg[i].principal = principal;
             }
         }
@@ -1388,7 +1361,6 @@ make_lofted_volume(Group* group)
         {
             // The z-direction
             principal.C = -dz;
-            principal.refpt.z = box.zmax;
             principal.A = 0;
             principal.B = 0;
 
@@ -1402,7 +1374,7 @@ make_lofted_volume(Group* group)
                     lg[i].norm.C = -lg[i].norm.C;
                     reverse(&lg[i].egrp->obj_list);
                 }
-                lg[i].param = (principal.refpt.z - lg[i].norm.refpt.z) / dz;
+                lg[i].param = (box.zmax - lg[i].norm.refpt.z) / dz;
                 lg[i].principal = principal;
             }
         }

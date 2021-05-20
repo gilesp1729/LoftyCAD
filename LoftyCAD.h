@@ -344,6 +344,11 @@ Volume* make_body_of_revolution(Group * group, BOOL negative);
 Volume* make_lofted_volume(Group * group);
 Volume* make_tubed_volume(Group * group);
 
+// Path related stuff (path.c)
+float path_total_length(Object * obj);
+void path_tangent_to_intersect(Object * obj, Plane * pl, Plane * tangent);
+float path_length_to_intersect(Object * obj, Plane * pl);
+
 // Neighbourhood search and picking (neighbourhood.c)
 Object* Pick(GLint x_pick, GLint y_pick, BOOL force_pick);
 void Pick_all_in_rect(GLint x_pick, GLint y_pick, GLint width, GLint height);

@@ -191,6 +191,9 @@
     <ClCompile Include="printer.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="path.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="LoftyCAD.rc">

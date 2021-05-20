@@ -130,6 +130,7 @@
     <ClCompile Include="neighbourhood.c" />
     <ClCompile Include="objtree.c" />
     <ClCompile Include="LoftyCAD.c" />
+    <ClCompile Include="path.c" />
     <ClCompile Include="preferences.c" />
     <ClCompile Include="printer.c" />
     <ClCompile Include="progress.c" />
