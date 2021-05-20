@@ -1119,6 +1119,7 @@ make_lofted_volume(Group* group)
     float path_length, total_length;
     ListHead contour_lists[8];  // max of 8 points in a section, so 8 lists of contour edges
     Edge* contour[8];
+    int sect_nsteps[8] = { 0, };
 
     // Some sanity checks on the input. Some will be enforced outside.
     ASSERT(group->hdr.type == OBJ_GROUP, "Must be a group");
@@ -1486,28 +1487,26 @@ make_lofted_volume(Group* group)
         rotate(&lg[i].egrp->obj_list, min_edge);
     }
 
-    // Ensure corresponding edges have matching step counts. 
-    // Set everything to the first step count (TODO: this may not be the best way. Maybe use the max?)
-    first_egrp = (Group*)clone->obj_list.head;
-    e = (Edge*)first_egrp->obj_list.head;
-    e->view_valid = FALSE;
-    for (obj = clone->obj_list.head->next; obj != NULL; obj = obj->next)
+    // Ensure corresponding edges in the sections have matching step counts. 
+    // Accumulate the max step count for each edge in each section.
+    for (obj = clone->obj_list.head; obj != NULL; obj = obj->next)
     {
-        Edge* e0;
-
         egrp = (Group*)obj;
-        for
-            (
-                e = (Edge*)egrp->obj_list.head, e0 = (Edge*)first_egrp->obj_list.head;
-                e != NULL;
-                e = (Edge*)e->hdr.next, e0 = (Edge*)e0->hdr.next
-                )
+        for (i = 0, e = (Edge*)egrp->obj_list.head; e != NULL; i++, e = (Edge*)e->hdr.next)
         {
-            if (e0->type >= EDGE_ARC)
-            {
-                e->nsteps = e0->nsteps;
-                e->view_valid = FALSE;
-            }
+            if (e->nsteps > sect_nsteps[i])
+                sect_nsteps[i] = e->nsteps;
+        }
+    }
+
+    // Set edges to have the max step count accumulated above.
+    for (obj = clone->obj_list.head; obj != NULL; obj = obj->next)
+    {
+        egrp = (Group*)obj;
+        for (i = 0, e = (Edge*)egrp->obj_list.head; e != NULL; i++, e = (Edge*)e->hdr.next)
+        {
+            e->nsteps = sect_nsteps[i];
+            e->view_valid = FALSE;
         }
     }
 
@@ -1515,6 +1514,7 @@ make_lofted_volume(Group* group)
     total_length = length(&lg[0].norm.refpt, &lg[num_groups - 1].norm.refpt);
     for (i = 1; i < num_groups; i++)
     {
+        // TODO: Do this with flatness tolerance.
         int steps = (int)((lg[i].param - lg[i - 1].param) * total_length / default_stepsize + 1);
 
         for

@@ -391,7 +391,7 @@ contextmenu(Object *picked_obj, POINT pt)
         break;
 
     case ID_OBJ_TUBEGROUP:
-        group_changed = make_tubed_volume((Group*)picked_obj);
+        //group_changed = make_tubed_volume((Group*)picked_obj);
         break;
 
     case ID_OBJ_MAKEEDGEGROUP:
@@ -844,7 +844,7 @@ materials_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     return 0;
 }
 
-LoftParams default_loft = { 0.6f, 0.6f, 30, 80, 80, JOIN_BOW, JOIN_BOW, 0, 0.3f};
+LoftParams default_loft = { 0.3f, 0.3f, 30, 80, 80, JOIN_BOW, JOIN_BOW, 0, 0.3f};
 
 // Dialog that controls lofting.
 // Input (lParam): a Group of edge groups.
