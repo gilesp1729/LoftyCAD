@@ -925,8 +925,12 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         case IDOK:
             // Make a new lofted volume and tack it on the end of the group
             vol = make_lofted_volume(group);
-            link_tail_group((Object*)vol, group);
-            clear_selection(&selection);
+            if (vol != NULL)
+            {
+                link_tail_group((Object*)vol, group);
+                clear_selection(&selection);
+                changed = TRUE;
+            }
             EndDialog(hWnd, (INT_PTR)changed);
             break;
 
@@ -935,8 +939,12 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             {
                 // Do as OK but stay in the dialog
                 vol = make_lofted_volume(group);
-                link_tail_group((Object*)vol, group);
-                clear_selection(&selection);
+                if (vol != NULL)
+                {
+                    link_tail_group((Object*)vol, group);
+                    clear_selection(&selection);
+                    changed = TRUE;
+                }
 
                 // Update the drawing but don't write a checkpoint yet
                 invalidate_dl();
