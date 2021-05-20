@@ -1289,11 +1289,13 @@ make_lofted_volume(Group* group)
     // TODO: Cope with complex paths.
     if (curr_path != NULL)
     {
+        float len;
+
         total_length = path_total_length(curr_path);
         for (i = 0; i < num_groups; i++)
         {
-            // Detemine direction of path where it passes through lg[i]
-            path_tangent_to_intersect(curr_path, &lg[i].norm, &lg[i].principal);
+            // Determine direction of path where it passes through lg[i]
+            len = path_tangent_to_intersect(curr_path, &lg[i].norm, &lg[i].principal);
             if (pldot(&lg[i].norm, &lg[i].principal) < 0)
             {
                 // Reverse the edge group in-place if it goes the opposite
@@ -1304,7 +1306,7 @@ make_lofted_volume(Group* group)
                 reverse(&lg[i].egrp->obj_list);
             }
             // Sorting distance as fraction of path length
-            lg[i].param = path_length_to_intersect(curr_path, &lg[i].norm) / total_length;
+            lg[i].param = len / total_length;
         }
     }
     else    // no path, assume (generally) axis-aligned row of centroids in the box
@@ -1459,6 +1461,11 @@ make_lofted_volume(Group* group)
                 sect_nsteps[i] = e->nsteps;
         }
     }
+
+    // Check that opposing edges have the same step count, as they will meet up in the endcap.
+#define MAX(a, b)   ((a) > (b) ? (a) : (b))
+    sect_nsteps[0] = sect_nsteps[2] = MAX(sect_nsteps[0], sect_nsteps[2]);
+    sect_nsteps[1] = sect_nsteps[3] = MAX(sect_nsteps[1], sect_nsteps[3]);
 
     // Set edges to have the max step count accumulated above.
     for (obj = clone->obj_list.head; obj != NULL; obj = obj->next)
