@@ -1074,9 +1074,10 @@ project(Plane* ap, Plane* princ, Plane* proj)
 // path used for sorting.
 typedef struct
 {
-    Group* egrp;
-    Plane norm;
-    float param;
+    Group* egrp;        // Edge group at this section
+    Plane norm;         // Normal of the edge group
+    float param;        // How far (as a fraction) along the path or principal direction it is
+    Plane principal;    // The plane normal to the path at this section
 } LoftedGroup;
 
 // qsort comparo function.
@@ -1109,7 +1110,6 @@ make_lofted_volume(Group* group)
     Volume* vol;
     Object* obj;
     Plane principal;
-    Point endpt;
     Point *pt;
     int num_groups, num_edges;
     Bbox box;
@@ -1296,16 +1296,7 @@ make_lofted_volume(Group* group)
             pt = next_edge->endpoints[final];
         }
 
-        // Get the normal and see if we need to reverse. Compare it to the normal for the first section.
         polygon_normal((Point*)plist.head, &lg[i].norm);
-        if (i > 0 && pldot(&lg[i].norm, &lg[0].norm) < 0)
-        {
-            // Reverse the edge group in-place.
-            lg[i].norm.A = -lg[i].norm.A;
-            lg[i].norm.B = -lg[i].norm.B;
-            lg[i].norm.C = -lg[i].norm.C;
-            reverse(&lg[i].egrp->obj_list);
-        }
 
         // Put the quasi-centroid into the larger bbox, and store it in the normal refpt.
         lg[i].norm.refpt.x = (ebox.xmin + ebox.xmax) / 2;
@@ -1314,8 +1305,8 @@ make_lofted_volume(Group* group)
         expand_bbox(&box, &lg[i].norm.refpt);
     }
 
-    // Sort the sections into order. The direction is given by the first section's normal.
-    // Put the path (or the bbox principal direction) into that order first.
+    // Sort the sections into order and reverse if needed. 
+    // The direction is given by the principal direction.
     // TODO: Cope with complex paths.
     if (curr_path != NULL)
     {
@@ -1323,23 +1314,23 @@ make_lofted_volume(Group* group)
         principal.A = e->endpoints[1]->x - e->endpoints[0]->x;
         principal.B = e->endpoints[1]->y - e->endpoints[0]->y;
         principal.C = e->endpoints[1]->z - e->endpoints[0]->z;
-        if (pldot(&principal, &lg[0].norm) > 0)
-        {
-            principal.refpt = *e->endpoints[0];
-            endpt = *e->endpoints[1];
-        }
-        else
-        {
-            principal.A = -principal.A;
-            principal.B = -principal.B;
-            principal.C = -principal.C;
-            principal.refpt = *e->endpoints[1];
-            endpt = *e->endpoints[0];
-        }
+        principal.refpt = *e->endpoints[0];
 
         // Sorting distance as fraction of path length
         for (i = 0; i < num_groups; i++)
+        {
+            if (pldot(&lg[i].norm, &principal) < 0)
+            {
+                // Reverse the edge group in-place if it goes the opposite
+                // way to the principal direction.
+                lg[i].norm.A = -lg[i].norm.A;
+                lg[i].norm.B = -lg[i].norm.B;
+                lg[i].norm.C = -lg[i].norm.C;
+                reverse(&lg[i].egrp->obj_list);
+            }
             lg[i].param = length(&principal.refpt, &lg[i].norm.refpt) / path_length;
+            lg[i].principal = principal;
+        }
     }
     else    // no path, assume (generally) axis-aligned row of centroids in the box
     {
@@ -1350,72 +1341,70 @@ make_lofted_volume(Group* group)
         if (dx > dy && dx > dz)
         {
             // Principal direction is the x-direction.
-            if (lg[0].norm.A > 0)
-            {
-                principal.A = dx;
-                principal.refpt.x = box.xmin;
-                endpt.x = box.xmax;
-            }
-            else  // it's the negative X direction
-            {
-                principal.A = -dx;
-                principal.refpt.x = box.xmax;
-                endpt.x = box.xmin;
-            }
+            // Use the negative so the nose points up the +ve x axis.
+            principal.A = -dx;
+            principal.refpt.x = box.xmax;
             principal.B = 0;
             principal.C = 0;
-            endpt.y = principal.refpt.y = (box.ymax + box.ymin) / 2;
-            endpt.z = principal.refpt.z = (box.zmax + box.zmin) / 2;
 
             // Express sorting dist as fraction of dx in order to get sign right
             for (i = 0; i < num_groups; i++)
-                lg[i].param = (lg[i].norm.refpt.x - principal.refpt.x) / dx;
+            {
+                if (pldot(&lg[i].norm, &principal) < 0)
+                {
+                    // Reverse the edge group in-place.
+                    lg[i].norm.A = -lg[i].norm.A;
+                    lg[i].norm.B = -lg[i].norm.B;
+                    lg[i].norm.C = -lg[i].norm.C;
+                    reverse(&lg[i].egrp->obj_list);
+                }
+                lg[i].param = (principal.refpt.x - lg[i].norm.refpt.x) / dx;
+                lg[i].principal = principal;
+            }
         }
         else if (dy > dx && dy > dz)
         {
             // The y-direction
-            if (lg[0].norm.B > 0)
-            {
-                principal.B = dy;
-                principal.refpt.y = box.ymin;
-                endpt.y = box.ymax;
-            }
-            else  // it's the negative Y direction
-            {
-                principal.B = -dy;
-                principal.refpt.y = box.ymax;
-                endpt.y = box.ymin;
-            }
+            principal.B = -dy;
+            principal.refpt.y = box.ymax;
             principal.A = 0;
             principal.C = 0;
-            endpt.x = principal.refpt.x = (box.xmax + box.xmin) / 2;
-            endpt.z = principal.refpt.z = (box.zmax + box.zmin) / 2;
 
             for (i = 0; i < num_groups; i++)
-                lg[i].param = (lg[i].norm.refpt.y - principal.refpt.y) / dy;
+            {
+                if (pldot(&lg[i].norm, &principal) < 0)
+                {
+                    // Reverse the edge group in-place.
+                    lg[i].norm.A = -lg[i].norm.A;
+                    lg[i].norm.B = -lg[i].norm.B;
+                    lg[i].norm.C = -lg[i].norm.C;
+                    reverse(&lg[i].egrp->obj_list);
+                }
+                lg[i].param = (principal.refpt.y - lg[i].norm.refpt.y) / dy;
+                lg[i].principal = principal;
+            }
         }
         else
         {
             // The z-direction
-            if (lg[0].norm.C > 0)
-            {
-                principal.C = dz;
-                principal.refpt.z = box.zmin;
-                endpt.z = box.zmax;
-            }
-            else  // it's the negative Z direction
-            {
-                principal.C = -dz;
-                principal.refpt.z = box.zmax;
-                endpt.z = box.zmin;
-            }
+            principal.C = -dz;
+            principal.refpt.z = box.zmax;
             principal.A = 0;
             principal.B = 0;
-            endpt.x = principal.refpt.x = (box.xmax + box.xmin) / 2;
-            endpt.y = principal.refpt.y = (box.ymax + box.ymin) / 2;
 
             for (i = 0; i < num_groups; i++)
-                lg[i].param = (lg[i].norm.refpt.z - principal.refpt.z) / dz;
+            {
+                if (pldot(&lg[i].norm, &principal) < 0)
+                {
+                    // Reverse the edge group in-place.
+                    lg[i].norm.A = -lg[i].norm.A;
+                    lg[i].norm.B = -lg[i].norm.B;
+                    lg[i].norm.C = -lg[i].norm.C;
+                    reverse(&lg[i].egrp->obj_list);
+                }
+                lg[i].param = (principal.refpt.z - lg[i].norm.refpt.z) / dz;
+                lg[i].principal = principal;
+            }
         }
     }
 
@@ -1514,7 +1503,6 @@ make_lofted_volume(Group* group)
     total_length = length(&lg[0].norm.refpt, &lg[num_groups - 1].norm.refpt);
     for (i = 1; i < num_groups; i++)
     {
-        // TODO: Do this with flatness tolerance.
         int steps = (int)((lg[i].param - lg[i - 1].param) * total_length / default_stepsize + 1);
 
         for
@@ -1665,7 +1653,7 @@ make_lofted_volume(Group* group)
     // The angle used for testing the angle-break criterion at the end of the contour is the smallest of:
     // - the angle to the centroid of the end edge group,
     // - the angles to the two endcap edges incident on the common point,
-    // projected onto a plane perpendicular to the principal direction (to be robust when the endcap
+    // projected onto a plane perpendicular to its principal direction (to be robust when the endcap
     // is not perpendicular). Decide which encap edge, if any, the contour blends into.
 
     // Nose endcap (at start of group)
@@ -1678,9 +1666,9 @@ make_lofted_volume(Group* group)
 
         c = (Edge *)contour_lists[j].head;
         ci = edge_direction(c, &pl);                // points into contour
-        project(&pl, &principal, &pl_proj);         // project onto principal plane
+        project(&pl, &lg[0].principal, &pl_proj);         // project onto principal plane
         point_direction(&lg[0].norm.refpt, c->endpoints[ci], &plend);
-        project(&plend, &principal, &plend_proj);
+        project(&plend, &lg[0].principal, &plend_proj);
         cosmax = pldot(&plend_proj, &pl_proj);
         
         if (loft->nose_join_mode != JOIN_NOSECONE)
@@ -1697,7 +1685,7 @@ make_lofted_volume(Group* group)
                 else
                     continue;
 
-                project(&pltest, &principal, &pltest_proj);
+                project(&pltest, &lg[0].principal, &pltest_proj);
                 costest = pldot(&pltest_proj, &pl_proj);
                 if (costest > cosmax)
                 {
@@ -1734,9 +1722,9 @@ make_lofted_volume(Group* group)
 
         c = (Edge*)contour_lists[j].tail;
         ci = edge_direction(c, &pl);                // points out of contour
-        project(&pl, &principal, &pl_proj);         // project onto principal plane
+        project(&pl, &lg[num_groups - 1].principal, &pl_proj);         // project onto principal plane
         point_direction(c->endpoints[1-ci], &lg[num_groups-1].norm.refpt, &plend);
-        project(&plend, &principal, &plend_proj);
+        project(&plend, &lg[num_groups - 1].principal, &plend_proj);
         cosmax = pldot(&plend_proj, &pl_proj);
 
         if (loft->tail_join_mode != JOIN_NOSECONE)
@@ -1753,7 +1741,7 @@ make_lofted_volume(Group* group)
                 else
                     continue;
 
-                project(&pltest, &principal, &pltest_proj);
+                project(&pltest, &lg[num_groups - 1].principal, &pltest_proj);
                 costest = pldot(&pltest_proj, &pl_proj);
                 if (costest > cosmax)
                 {
