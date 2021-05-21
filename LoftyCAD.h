@@ -219,10 +219,10 @@ extern Material materials[MAX_MATERIAL];
 #undef DEBUG_DRAW_RECT_NORMAL
 #undef DEBUG_POSITION_ZOOM
 #undef DEBUG_PICK
-#define DEBUG_LEFT_UP_FACING
+#undef DEBUG_LEFT_UP_FACING
 #undef DEBUG_LEFT_UP_MODELVIEW
-#define DEBUG_COMMAND_FACING
-#define DEBUG_TOOLBAR_FACING
+#undef DEBUG_COMMAND_FACING
+#undef DEBUG_TOOLBAR_FACING
 #undef DEBUG_REVERSE_RECT_FACE
 #undef DEBUG_VIEW_LIST_ARC
 #define DEBUG_HIGHLIGHTING_ENABLED
@@ -233,7 +233,7 @@ extern Material materials[MAX_MATERIAL];
 #undef TIME_DRAWING
 
 
-
+#undef BREAK_ON_ASSERT
 #ifdef BREAK_ON_ASSERT
 #ifdef _DEBUG
 #define ASSERT_BREAK  DebugBreak()
@@ -264,8 +264,11 @@ extern Material materials[MAX_MATERIAL];
 }
 #endif
 
-#define ASSERT(exp, msg)    do { if (!(exp)) LogShow(msg) } while(0)
+static char assert_buf[32];
+#define ASSERT(exp, msg)    do { if (!(exp)) { _itoa_s(__LINE__, assert_buf, 32, 10); Log(__FILE__); Log(":"); Log(assert_buf); Log(" "); LogShow(msg) } } while(0)
 
+// Quick helper to shoot out an error message and return NULL.
+#define ERR_RETURN(str)     { Log(str); Log ("\r\n"); MessageBox(auxGetHWND(), (str), "Error: ", MB_ICONEXCLAMATION); return NULL; }
 
 // Debug externs
 extern BOOL debug_view_bbox;
@@ -345,6 +348,11 @@ Volume* make_lofted_volume(Group * group);
 Volume* make_tubed_volume(Group * group);
 
 // Path related stuff (path.c)
+int first_point_index(Edge * edge);
+Point* first_point(Edge * e);
+int edge_direction(Edge * e, Plane * pl);
+void point_direction(Point * p0, Point * p1, Plane * pl);
+void project(Plane * ap, Plane * princ, Plane * proj);
 float path_total_length(Object * obj);
 BOOL path_tangent_to_intersect(Object * obj, Plane * pl, Bbox *ebox, Plane * tangent, float *ret_len);
 

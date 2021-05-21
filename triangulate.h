@@ -13,6 +13,7 @@ void expand_bbox(Bbox *box, Point *p);
 void expand_bbox_coords(Bbox* box, float x, float y, float z);
 void union_bbox(Bbox *box1, Bbox *box2, Bbox *u);
 BOOL intersects_bbox(Bbox *box1, Bbox *box2);
+BOOL in_bbox(Point* pt, Bbox* box, float tol);
 
 // Regenerate a view list
 void invalidate_all_view_lists(Object *parent, Object *obj, float dx, float dy, float dz);
