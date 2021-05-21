@@ -938,21 +938,20 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             break;
 
         case IDAPPLY:
-            if (changed || vol == NULL)
+            // Do as OK but stay in the dialog
+            prev_vol = vol;
+            vol = make_lofted_volume(group);
+            if (vol != prev_vol)
+                changed = TRUE;
+            if (vol != NULL)
             {
-                // Do as OK but stay in the dialog
-                vol = make_lofted_volume(group);
-                if (vol != NULL)
-                {
-                    link_tail_group((Object*)vol, group);
-                    clear_selection(&selection);
-                    changed = TRUE;
-                }
-
-                // Update the drawing but don't write a checkpoint yet
-                invalidate_dl();
-                invalidate_all_view_lists((Object*)&group, (Object*)&group, 0, 0, 0);
+                link_tail_group((Object*)vol, group);
+                clear_selection(&selection);
             }
+
+            // Update the drawing but don't write a checkpoint yet
+            invalidate_dl();
+            invalidate_all_view_lists((Object*)&group, (Object*)&group, 0, 0, 0);
             break;
 
         case IDC_REMOVE:
@@ -971,9 +970,8 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             break;
 
         case IDCANCEL:
-            // TODO: Revert loft to old contents
-            // If we have a volume, return it anyway
-            EndDialog(hWnd, (INT_PTR)FALSE);
+            // If we have a change, return it anyway
+            EndDialog(hWnd, (INT_PTR)changed);
             break;
 
         case IDC_LOFT_NOSE_TENSION:

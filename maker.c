@@ -967,7 +967,7 @@ make_body_of_revolution(Group* group, BOOL negative)
 }
 
 // Quick helper to shoot out an error message and return NULL.
-#define ERR_RETURN(str)     { show_status("Error: ", (str)); return NULL; }
+#define ERR_RETURN(str)     { MessageBox(auxGetHWND(), (str), "Error: ", MB_ICONEXCLAMATION); return NULL; }
 
 // Helpers to find the first point of an edge group (the one not in common with the
 // next edge)
