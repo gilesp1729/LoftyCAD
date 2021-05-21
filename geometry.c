@@ -301,8 +301,9 @@ dist_point_to_ray(Point* P, Plane* v, Point* Pb)
 
 // Intersect a line with a plane (the line is represented as a Plane struct)
 // (ref: Wikipedia, Line-plane intersection, vector form, and/or Sunday)
-// No test is made for endpoints of the line.
 // Returns: 1 - intersects, 0 - no intersection, -1 - line lies in the plane
+// Return 2 if the intersection point is off the end of the segment
+// (define by the length of the ABC of line)
 int
 intersect_line_plane(Plane *line, Plane *plane, Point *new_point)
 {
@@ -328,11 +329,14 @@ intersect_line_plane(Plane *line, Plane *plane, Point *new_point)
     new_point->y = d * line->B + line->refpt.y;
     new_point->z = d * line->C + line->refpt.z;
 
+    if (d < -SMALL_COORD || d > 1 + SMALL_COORD)
+        return 2;                           // off end of segment
     return 1;
 }
 
 // Intersect a line segment with a plane using the same algorithm as above.
-// Return 0 if the intersection point is off the end of the segment.
+// Returns: 1 - intersects, 0 - no intersection, -1 - line lies in the plane
+// Return 2 if the intersection point is off the end of the segment.
 int
 intersect_segment_plane(float x0, float y0, float z0, float x1, float y1, float z1, 
                         Plane* plane, Point* new_point)
@@ -358,13 +362,12 @@ intersect_segment_plane(float x0, float y0, float z0, float x1, float y1, float 
     }
 
     d = dpdotn / Ldotn;
-    if (d < -SMALL_COORD || d > 1 + SMALL_COORD)
-        return 0;                           // off end of segment
-
     new_point->x = d * A + x0;
     new_point->y = d * B + y0;
     new_point->z = d * C + z0;
 
+    if (d < -SMALL_COORD || d > 1 + SMALL_COORD)
+        return 2;                           // off end of segment
     return 1;
 }
 

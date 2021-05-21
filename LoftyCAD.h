@@ -346,7 +346,7 @@ Volume* make_tubed_volume(Group * group);
 
 // Path related stuff (path.c)
 float path_total_length(Object * obj);
-float path_tangent_to_intersect(Object * obj, Plane * pl, Plane * tangent);
+BOOL path_tangent_to_intersect(Object * obj, Plane * pl, Bbox *ebox, Plane * tangent, float *ret_len);
 
 // Neighbourhood search and picking (neighbourhood.c)
 Object* Pick(GLint x_pick, GLint y_pick, BOOL force_pick);

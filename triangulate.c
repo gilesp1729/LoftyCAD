@@ -75,6 +75,20 @@ union_bbox(Bbox *box1, Bbox *box2, Bbox *u)
     u->zmax = max(box1->zmax, box2->zmax);
 }
 
+// Return TRUE if pt is inside bbox, within a tolerance.
+BOOL
+in_bbox(Point* pt, Bbox* box, float tol)
+{
+    if (pt->x < box->xmin - tol || pt->x > box->xmax + tol)
+        return FALSE;
+    if (pt->y < box->ymin - tol || pt->y > box->ymax + tol)
+        return FALSE;
+    if (pt->z < box->zmin - tol || pt->z > box->zmax + tol)
+        return FALSE;
+
+    return TRUE;
+}
+
 // Return TRUE if two bboxes intersect. Make sure to allow touching bboxes.
 BOOL 
 intersects_bbox(Bbox *box1, Bbox *box2)

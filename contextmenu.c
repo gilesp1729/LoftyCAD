@@ -860,6 +860,7 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     static int bay, n_bays;
     int i;
     static LoftParams* loft;
+    Volume* prev_vol;
 
     switch (msg)
     {
@@ -924,12 +925,14 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         {
         case IDOK:
             // Make a new lofted volume and tack it on the end of the group
+            prev_vol = vol;
             vol = make_lofted_volume(group);
+            if (vol != prev_vol)
+                changed = TRUE;
             if (vol != NULL)
             {
                 link_tail_group((Object*)vol, group);
                 clear_selection(&selection);
-                changed = TRUE;
             }
             EndDialog(hWnd, (INT_PTR)changed);
             break;

@@ -1078,6 +1078,7 @@ typedef struct
     Plane norm;         // Normal of the edge group
     float param;        // How far (as a fraction) along the path or principal direction it is
     Plane principal;    // The plane normal to the path at this section
+    Bbox  ebox;         // BBox for the edge group
 } LoftedGroup;
 
 // qsort comparo function.
@@ -1209,9 +1210,8 @@ make_lofted_volume(Group* group)
         Edge* next_edge;
         int initial, final;
         ListHead plist = { NULL, NULL };
-        Bbox ebox;
 
-        clear_bbox(&ebox);
+        clear_bbox(&lg[i].ebox);
         lg[i].egrp = egrp;
 
         // Join endpoints up into a list (the next/prev pointers aren't used for
@@ -1245,7 +1245,7 @@ make_lofted_volume(Group* group)
         }
 
         link_tail((Object*)e->endpoints[initial], &plist);
-        expand_bbox(&ebox, e->endpoints[initial]);
+        expand_bbox(&lg[i].ebox, e->endpoints[initial]);
         for (; e->hdr.next != NULL; e = next_edge)
         {
             next_edge = (Edge*)e->hdr.next;
@@ -1259,13 +1259,13 @@ make_lofted_volume(Group* group)
             if (next_edge->endpoints[0] == pt)
             {
                 link_tail((Object*)next_edge->endpoints[0], &plist);
-                expand_bbox(&ebox, next_edge->endpoints[0]);
+                expand_bbox(&lg[i].ebox, next_edge->endpoints[0]);
                 final = 1;
             }
             else if (next_edge->endpoints[1] == pt)
             {
                 link_tail((Object*)next_edge->endpoints[1], &plist);
-                expand_bbox(&ebox, next_edge->endpoints[1]);
+                expand_bbox(&lg[i].ebox, next_edge->endpoints[1]);
                 final = 0;
             }
             else
@@ -1278,9 +1278,9 @@ make_lofted_volume(Group* group)
         polygon_normal((Point*)plist.head, &lg[i].norm);
 
         // Put the quasi-centroid into the larger bbox, and store it in the normal refpt.
-        lg[i].norm.refpt.x = (ebox.xmin + ebox.xmax) / 2;
-        lg[i].norm.refpt.y = (ebox.ymin + ebox.ymax) / 2;
-        lg[i].norm.refpt.z = (ebox.zmin + ebox.zmax) / 2;
+        lg[i].norm.refpt.x = (lg[i].ebox.xmin + lg[i].ebox.xmax) / 2;
+        lg[i].norm.refpt.y = (lg[i].ebox.ymin + lg[i].ebox.ymax) / 2;
+        lg[i].norm.refpt.z = (lg[i].ebox.zmin + lg[i].ebox.zmax) / 2;
         expand_bbox(&box, &lg[i].norm.refpt);
     }
 
@@ -1295,18 +1295,28 @@ make_lofted_volume(Group* group)
         for (i = 0; i < num_groups; i++)
         {
             // Determine direction of path where it passes through lg[i]
-            len = path_tangent_to_intersect(curr_path, &lg[i].norm, &lg[i].principal);
-            if (pldot(&lg[i].norm, &lg[i].principal) < 0)
+            if (path_tangent_to_intersect(curr_path, &lg[i].norm, &lg[i].ebox, &lg[i].principal, &len))
             {
-                // Reverse the edge group in-place if it goes the opposite
-                // way to the principal direction.
-                lg[i].norm.A = -lg[i].norm.A;
-                lg[i].norm.B = -lg[i].norm.B;
-                lg[i].norm.C = -lg[i].norm.C;
-                reverse(&lg[i].egrp->obj_list);
+                if (pldot(&lg[i].norm, &lg[i].principal) < 0)
+                {
+                    // Reverse the edge group in-place if it goes the opposite
+                    // way to the principal direction.
+                    lg[i].norm.A = -lg[i].norm.A;
+                    lg[i].norm.B = -lg[i].norm.B;
+                    lg[i].norm.C = -lg[i].norm.C;
+                    reverse(&lg[i].egrp->obj_list);
+                }
+                // Sorting distance as fraction of path length
+                lg[i].param = len / total_length;
             }
-            // Sorting distance as fraction of path length
-            lg[i].param = len / total_length;
+            else
+            {
+                // No intersection was found. This is not what the user intended,
+                // so we error out.
+                purge_obj((Object*)clone);
+                free(lg);
+                ERR_RETURN("Not all edge groups intersect the path");
+            }
         }
     }
     else    // no path, assume (generally) axis-aligned row of centroids in the box
@@ -1762,6 +1772,7 @@ make_lofted_volume(Group* group)
         }
     }
     purge_obj((Object *)clone);
+    free(lg);
 
     return vol;
 }
