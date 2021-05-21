@@ -116,14 +116,19 @@ project(Plane* ap, Plane* princ, Plane* proj)
 float
 edge_total_length(Edge* e)
 {
-    switch (e->type)
+    Point* p;
+    float total_length = 0;
+
+    switch (e->type & ~EDGE_CONSTRUCTION)
     {
     case EDGE_STRAIGHT:
         return length(e->endpoints[0], e->endpoints[1]);
 
-
-
-
+    case EDGE_ARC:
+    case EDGE_BEZIER:
+        for (p = (Point *)e->view_list.head; p->hdr.next != NULL; p = (Point*)p->hdr.next)
+            total_length += length(p, (Point *)p->hdr.next);
+        return total_length;
     }
 
     return 0;  // catch-all
@@ -137,10 +142,13 @@ int
 edge_tangent_to_intersect(Edge *e, int first_index, Plane* pl, Bbox *ebox, Plane* tangent, float* ret_len)
 {
     Point pt;
+    Point* p;
     int rc = 0;
     int last_index = 1 - first_index;
+    float accum_length = 0;
+    int i;
 
-    switch (e->type)
+    switch (e->type & ~EDGE_CONSTRUCTION)
     {
     case EDGE_STRAIGHT:
         tangent->A = e->endpoints[last_index]->x - e->endpoints[first_index]->x;
@@ -149,17 +157,47 @@ edge_tangent_to_intersect(Edge *e, int first_index, Plane* pl, Bbox *ebox, Plane
         tangent->refpt = *e->endpoints[first_index];
 
         rc = intersect_line_plane(tangent, pl, &pt);
-        *ret_len = length(e->endpoints[0], &pt);
+        *ret_len = length(e->endpoints[first_index], &pt);
         
         // Check that pt is within ebox, and return 0 if it isn't.
         if (!in_bbox(&pt, ebox, (float)SMALL_COORD))
             rc = 0;
-
         break;
 
+    case EDGE_ARC:
+    case EDGE_BEZIER:
+        for (i = 0, p = (Point*)e->view_list.head; p->hdr.next != NULL; i++, p = (Point*)p->hdr.next)
+        {
+            Point* next_p = (Point *)p->hdr.next;
+
+            accum_length += length(p, next_p);
+            tangent->A = next_p->x - p->x;
+            tangent->B = next_p->y - p->y;
+            tangent->C = next_p->z - p->z;
+            tangent->refpt = *p;
+            rc = intersect_line_plane(tangent, pl, &pt);
+            if (!in_bbox(&pt, ebox, (float)SMALL_COORD))
+                rc = 0;
+            if (rc == 1)
+            {
+                // We have an intersection within the ebox.
+                // Accumulate the length from first_index. Don't worry about the little bit
+                // of intersected line in the VL.
+                // TODO Take care: the VL is ordered from endpoint[0] to [1], which may not be
+                // the same order as first_index to last_index.
 
 
 
+
+
+
+
+
+                *ret_len = accum_length;
+                break;
+            }
+        }
+        break;
     }
 
     return rc;
