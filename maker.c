@@ -260,7 +260,7 @@ disconnect_edges_in_group(Group* group)
 
     e = (Edge*)group->obj_list.head;
     if (pt == e->endpoints[initial])
-        e->endpoints[initial] = point_newpv(pt);
+        e->endpoints[initial] = point_newp(pt);
 }
 
 // Make a face object out of a closed group of connected edges.
