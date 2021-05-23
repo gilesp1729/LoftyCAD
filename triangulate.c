@@ -2025,6 +2025,13 @@ gen_view_list_bez(BezierEdge *be)
     // Perform fixed step division if number of steps given in advance
     if (e->nsteps > 0)
     {
+        // Make sure nsteps is always big enough to meet the default step size.
+        // (occasionally it goes to 1 when draeing a bezier edge when starting straight)
+        int min_steps = length(e->endpoints[0], e->endpoints[1]) / default_stepsize + 1;
+
+        if (e->nsteps < min_steps)
+            e->nsteps = min_steps;
+
         iterate_bez
             (
             be,
@@ -2048,8 +2055,6 @@ gen_view_list_bez(BezierEdge *be)
             );
     }
 
-    // TODO: make sure nsteps is always big enough to meet the default step size.
-    // (occasionally it fgoes to 1 when draeing a bezier edge, not sure why)
     e->view_valid = TRUE;
 }
 
