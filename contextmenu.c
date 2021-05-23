@@ -844,7 +844,7 @@ materials_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     return 0;
 }
 
-LoftParams default_loft = { 0.3f, 0.3f, 30, 80, 80, JOIN_BOW, JOIN_BOW, 0, 0.3f};
+LoftParams default_loft = { 0.3f, 0.3f, 60, 80, 80, JOIN_BOW, JOIN_BOW, FALSE, 0, 0.3f};
 
 // Dialog that controls lofting.
 // Input (lParam): a Group of edge groups.
@@ -887,8 +887,12 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         SendDlgItemMessage(hWnd, IDC_LOFT_NOSE_TENSION, WM_SETTEXT, 0, (LPARAM)buf);
         sprintf_s(buf, 64, "%.2f", loft->tail_tension);
         SendDlgItemMessage(hWnd, IDC_LOFT_TAIL_TENSION, WM_SETTEXT, 0, (LPARAM)buf);
+        
         sprintf_s(buf, 64, "%d", loft->body_angle_break);
         SendDlgItemMessage(hWnd, IDC_LOFT_BODY_ANGLEBREAK, WM_SETTEXT, 0, (LPARAM)buf);
+        CheckDlgButton(hWnd, IDC_LOFT_FOLLOW_PATH, loft->follow_path ? BST_CHECKED : BST_UNCHECKED);
+        EnableWindow(GetDlgItem(hWnd, IDC_LOFT_FOLLOW_PATH), is_edge_group(curr_path));
+
         sprintf_s(buf, 64, "%d", loft->nose_angle_break);
         SendDlgItemMessage(hWnd, IDC_LOFT_NOSE_ANGLEBREAK, WM_SETTEXT, 0, (LPARAM)buf);
         sprintf_s(buf, 64, "%d", loft->tail_angle_break);
@@ -1006,6 +1010,15 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 break;
             }
             break;
+
+        case IDC_LOFT_FOLLOW_PATH:
+            switch (HIWORD(wParam))
+            {
+            case BN_CLICKED:
+                loft->follow_path = IsDlgButtonChecked(hWnd, IDC_LOFT_FOLLOW_PATH);
+                changed = TRUE;
+                break;
+            }
 
         case IDC_LOFT_NOSE_ANGLEBREAK:
             switch (HIWORD(wParam))

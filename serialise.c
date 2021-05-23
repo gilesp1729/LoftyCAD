@@ -285,7 +285,7 @@ serialise_obj(Object *obj, FILE *f, int level)
 
             INDENT(level, f);
             fprintf_s(f, "LOFT %d ", obj->ID);
-            fprintf_s(f, "%f %f %d %d %d %d %d %d ",
+            fprintf_s(f, "%f %f %d %d %d %d %d %d %d ",
                 loft->nose_tension,
                 loft->tail_tension,
                 loft->body_angle_break,
@@ -293,6 +293,7 @@ serialise_obj(Object *obj, FILE *f, int level)
                 loft->tail_angle_break,
                 loft->nose_join_mode,
                 loft->tail_join_mode,
+                loft->follow_path,
                 loft->n_bays
             );
             for (i = 0; i < loft->n_bays; i++)
@@ -1079,6 +1080,8 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
             loft->nose_join_mode = atoi(tok);
             tok = strtok_s(NULL, " \t\n", &nexttok);
             loft->tail_join_mode = atoi(tok);
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            loft->follow_path = atoi(tok);
             tok = strtok_s(NULL, " \t\n", &nexttok);
             loft->n_bays = atoi(tok);
             for (i = 0; i < loft->n_bays; i++)

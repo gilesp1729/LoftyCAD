@@ -1005,7 +1005,7 @@ make_lofted_volume(Group* group)
     Group* clone, * egrp, * first_egrp = NULL;
     Edge *e, *prev_e;
     Face* face;
-    Volume* vol;
+    Volume* vol, *new_vol;
     Object* obj;
     Plane principal;
     Point *pt;
@@ -1070,6 +1070,9 @@ make_lofted_volume(Group* group)
             }
         }
     }
+
+    // Allocate this first so we can be sure its pointer has changed from the old one
+    new_vol = vol_new();
 
     // Once we have checked everything for errors:
     // - remove any existing lofted volume from the group, and
@@ -1419,7 +1422,8 @@ make_lofted_volume(Group* group)
         }
     }
 
-    vol = vol_new();
+    // Start loading up the new volume
+    vol = new_vol;
     vol->hdr.lock = LOCK_FACES;
 
     // Points to head of each contour list
@@ -1438,9 +1442,9 @@ make_lofted_volume(Group* group)
             j++, e = (Edge*)e->hdr.next, prev_e = (Edge*)prev_e->hdr.next
         )
         {
-            int ftype, ci, cp, cn;
+            int ftype, ci, cn;
             Plane dummy = { 0, };
-            Plane plprev, plcurr, plnext;
+            Plane plprev, plnext;
             Edge* c;
             float lj;
             BOOL angle_break, join_smooth;
@@ -1474,62 +1478,25 @@ make_lofted_volume(Group* group)
             link_tail((Object *)face, &vol->faces);
 
             // Calculate the positions of the contours' control points.
-            // Take care at the beginning and the end of the list.
-            ci = edge_direction(contour[j], &plcurr);
-            if (contour[j]->hdr.prev != NULL)
-            {
-                cp = edge_direction((Edge *)contour[j]->hdr.prev, &plprev);
-
-                // See if the angle between the contours exceeds the angle-break criterion.
-                angle_break = pldot(&plprev, &plcurr) < cosf(loft->body_angle_break / RADF);
-                join_smooth = FALSE;
-                if (!angle_break)
-                {
-                    // Average them and use that for the edges on both sides.
-                    // (i.e. ctrl[ci] of curr, ctrl[1-cp] of prev)
-                    plprev.A = (plprev.A + plcurr.A) / 2;
-                    plprev.B = (plprev.B + plcurr.B) / 2;
-                    plprev.C = (plprev.C + plcurr.C) / 2;
-                    join_smooth = TRUE;
-                }
-                else if (0) // TODO: flag to follow curve instead of angle break
-                {
-                    plprev = lg[i].principal;
-                    normalise_plane(&plprev);
-                    join_smooth = TRUE;
-                }
-                if (join_smooth)
-                {
-                    c = contour[j];
-                    lj = length(c->endpoints[0], c->endpoints[1]);
-                    ((BezierEdge*)c)->ctrlpoints[ci]->x = c->endpoints[ci]->x + (plprev.A * loft->bay_tensions[i - 1] * lj);
-                    ((BezierEdge*)c)->ctrlpoints[ci]->y = c->endpoints[ci]->y + (plprev.B * loft->bay_tensions[i - 1] * lj);
-                    ((BezierEdge*)c)->ctrlpoints[ci]->z = c->endpoints[ci]->z + (plprev.C * loft->bay_tensions[i - 1] * lj);
-
-                    c = (Edge *)contour[j]->hdr.prev;
-                    lj = length(c->endpoints[0], c->endpoints[1]);
-                    ((BezierEdge*)c)->ctrlpoints[1-cp]->x = c->endpoints[1-cp]->x - (plprev.A * loft->bay_tensions[i - 2] * lj);
-                    ((BezierEdge*)c)->ctrlpoints[1-cp]->y = c->endpoints[1-cp]->y - (plprev.B * loft->bay_tensions[i - 2] * lj);
-                    ((BezierEdge*)c)->ctrlpoints[1-cp]->z = c->endpoints[1-cp]->z - (plprev.C * loft->bay_tensions[i - 2] * lj);
-                }
-            }
-
+            // Take care at the end of the list.
             if (contour[j]->hdr.next != NULL)
             {
+                ci = edge_direction(contour[j], &plprev);
                 cn = edge_direction((Edge *)contour[j]->hdr.next, &plnext);
-                angle_break = pldot(&plcurr, &plnext) < cosf(loft->body_angle_break / RADF);
+                angle_break = pldot(&plprev, &plnext) < cosf(loft->body_angle_break / RADF);
                 join_smooth = FALSE;
                 if (!angle_break)
                 {
                     // Average them and use that for the edges on both sides.
                     // (i.e. ctrl[1-ci] of curr, ctrl[cn] of next)
-                    plnext.A = (plcurr.A + plnext.A) / 2;
-                    plnext.B = (plcurr.B + plnext.B) / 2;
-                    plnext.C = (plcurr.C + plnext.C) / 2;
+                    plnext.A = (plprev.A + plnext.A) / 2;
+                    plnext.B = (plprev.B + plnext.B) / 2;
+                    plnext.C = (plprev.C + plnext.C) / 2;
                     join_smooth = TRUE;
                 }
-                else if (0) // TODO: flag to follow curve instead of angle break
+                else if (loft->follow_path) 
                 {
+                    // Follow curve instead of angle breaking
                     plnext = lg[i].principal;
                     normalise_plane(&plnext);
                     join_smooth = TRUE;
@@ -1556,13 +1523,12 @@ make_lofted_volume(Group* group)
             contour[j] = (Edge*)contour[j]->hdr.next;
     }
 
-
     // Form the endcaps. User has a choice of angle-break or smooth at the ends of the contours.
     // The angle used for testing the angle-break criterion at the end of the contour is the smallest of:
     // - the angle to the centroid of the end edge group,
     // - the angles to the two endcap edges incident on the common point,
     // projected onto a plane perpendicular to its principal direction (to be robust when the endcap
-    // is not perpendicular). Decide which encap edge, if any, the contour blends into.
+    // is not perpendicular). Decide which endcap edge, if any, the contour blends into.
 
     // Nose endcap (at start of group)
     for (j = 0; j < num_edges; j++)

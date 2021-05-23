@@ -110,7 +110,6 @@
 #define IDC_FACE                        165
 #define IDR_CONTEXT_VOL                 165
 #define IDD_LOFT                        165
-#define IDI_CIRCLE1                     165
 #define IDI_BEZ_CIRCLE                  165
 #define IDC_FACE1                       166
 #define IDR_CONTEXT_FACE                166
@@ -198,6 +197,8 @@
 #define IDC_LOFT_NOSE_JOIN              1084
 #define IDC_COMBO2                      1085
 #define IDC_LOFT_TAIL_JOIN              1085
+#define IDC_CHECK1                      1086
+#define IDC_LOFT_FOLLOW_PATH            1086
 #define IDD_PRINT_PREVIEW               1544
 #define IDD_SLICER                      1545
 #define IDD_PRINTER                     1546
@@ -354,7 +355,7 @@
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        166
 #define _APS_NEXT_COMMAND_VALUE         32933
-#define _APS_NEXT_CONTROL_VALUE         1085
+#define _APS_NEXT_CONTROL_VALUE         1087
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif

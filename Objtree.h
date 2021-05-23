@@ -365,6 +365,7 @@ typedef struct LoftParams
     int             tail_angle_break;    // And for points adjoining endcap at tail
     LoftJoinMode    nose_join_mode; // Joining mode for nose
     LoftJoinMode    tail_join_mode; // And for the tail
+    BOOL            follow_path;    // If TRUE, angle breaks will not break, but will follow path direction
     int             n_bays;         // Number of bays (number of sections - 1)
     float           bay_tensions[1];    // Array of tensions per bay (space between consecutive sections)
 } LoftParams;
