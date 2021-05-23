@@ -2048,6 +2048,8 @@ gen_view_list_bez(BezierEdge *be)
             );
     }
 
+    // TODO: make sure nsteps is always big enough to meet the default step size.
+    // (occasionally it fgoes to 1 when draeing a bezier edge, not sure why)
     e->view_valid = TRUE;
 }
 

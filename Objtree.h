@@ -209,8 +209,8 @@ typedef struct Edge
                                     // a flatness tolerance. The step count found is retained.
     struct PlaneRef dirn;           // Direction cosines of the segment between the endpoints
                                     // when it is part of an edge group. Only used in lofting.
-    float           prev_total_length;  // When in an edge group, this stores the total length of
-                                        // the previous edges in the group. Only used when in a path.
+    float           edge_length;    // When in an edge group, this stores the length of this edge.
+                                    // Only used when in a path.
 } Edge;
 
 typedef struct StraightEdge

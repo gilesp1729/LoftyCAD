@@ -185,14 +185,14 @@ edge_tangent_to_intersect(Edge *e, int first_index, Plane* pl, Bbox *ebox, Plane
                 // of intersected line in the VL.
                 // TODO Take care: the VL is ordered from endpoint[0] to [1], which may not be
                 // the same order as first_index to last_index.
-
-
-
-
-
-
-
-
+                if (first_index == 1)
+                {
+                    accum_length = e->edge_length - accum_length;
+                    tangent->A = -tangent->A;
+                    tangent->B = -tangent->B;
+                    tangent->C = -tangent->C;
+                    tangent->refpt = *next_p;
+                }
                 *ret_len = accum_length;
                 break;
             }
@@ -224,9 +224,9 @@ path_total_length(Object* obj)
         ASSERT(is_edge_group(group), "Path is not an edge group");
         for (e = (Edge*)group->obj_list.head; e != NULL; e = (Edge*)e->hdr.next)
         {
-            // Accumulate the total length of edges so far, and store in this edge.
-            e->prev_total_length = total_length;
-            total_length += edge_total_length(e);
+            // Accumulate the current length and total length of edges so far, and store in this edge.
+            e->edge_length = edge_total_length(e);
+            total_length += e->edge_length;
         }
         return total_length;
     }
@@ -248,6 +248,8 @@ path_tangent_to_intersect(Object* obj, Plane* pl, Bbox *ebox, Plane* tangent, fl
     {
         Group* group = (Group*)obj;
         Edge* e;
+        float total_length = 0;
+
         ASSERT(is_edge_group(group), "Path is not an edge group");
 
         // If the path is not straight, there's a chance it will intersect pl twice.
@@ -256,9 +258,11 @@ path_tangent_to_intersect(Object* obj, Plane* pl, Bbox *ebox, Plane* tangent, fl
         {
             if (edge_tangent_to_intersect(e, first_point_index(e), pl, ebox, tangent, ret_len) == 1)
             {
-                *ret_len += e->prev_total_length;
+                // Add in the lengths of the non-intersecting edges found so far.
+                *ret_len += total_length;
                 return TRUE;
             }
+            total_length += e->edge_length;
         }
     }
     return FALSE;
