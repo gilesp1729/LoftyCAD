@@ -355,6 +355,7 @@ void point_direction(Point * p0, Point * p1, Plane * pl);
 void project(Plane * ap, Plane * princ, Plane * proj);
 float path_total_length(Object * obj);
 BOOL path_tangent_to_intersect(Object * obj, Plane * pl, Bbox *ebox, Plane * tangent, float *ret_len);
+BOOL path_is_closed(Object* obj);
 
 // Neighbourhood search and picking (neighbourhood.c)
 Object* Pick(GLint x_pick, GLint y_pick, BOOL force_pick);

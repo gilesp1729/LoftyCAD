@@ -891,7 +891,7 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         sprintf_s(buf, 64, "%d", loft->body_angle_break);
         SendDlgItemMessage(hWnd, IDC_LOFT_BODY_ANGLEBREAK, WM_SETTEXT, 0, (LPARAM)buf);
         CheckDlgButton(hWnd, IDC_LOFT_FOLLOW_PATH, loft->follow_path ? BST_CHECKED : BST_UNCHECKED);
-        EnableWindow(GetDlgItem(hWnd, IDC_LOFT_FOLLOW_PATH), is_edge_group(curr_path));
+        EnableWindow(GetDlgItem(hWnd, IDC_LOFT_FOLLOW_PATH), is_edge_group((Group*)curr_path));
 
         sprintf_s(buf, 64, "%d", loft->nose_angle_break);
         SendDlgItemMessage(hWnd, IDC_LOFT_NOSE_ANGLEBREAK, WM_SETTEXT, 0, (LPARAM)buf);

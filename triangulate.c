@@ -2027,7 +2027,7 @@ gen_view_list_bez(BezierEdge *be)
     {
         // Make sure nsteps is always big enough to meet the default step size.
         // (occasionally it goes to 1 when draeing a bezier edge when starting straight)
-        int min_steps = length(e->endpoints[0], e->endpoints[1]) / default_stepsize + 1;
+        int min_steps = (int)(length(e->endpoints[0], e->endpoints[1]) / default_stepsize + 1);
 
         if (e->nsteps < min_steps)
             e->nsteps = min_steps;

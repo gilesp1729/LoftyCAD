@@ -206,6 +206,21 @@ edge_tangent_to_intersect(Edge *e, int first_index, Plane* pl, Bbox *ebox, Plane
 
 // Path routines.
 
+// Determine if a path is closed. For a single edge, return TRUE if the
+// edge endpoints are coincident.
+// NOTE: At present, you cannot create closed paths. 
+BOOL
+path_is_closed(Object* obj)
+{
+    if (obj->type == OBJ_EDGE)
+    {
+        Edge* e = (Edge*)obj;
+
+        return near_pt(e->endpoints[0], e->endpoints[1], snap_tol);
+    }
+    return is_closed_edge_group((Group*)obj);
+}
+
 // Return the total length of the path. Call this first before calling
 // any others.
 float
