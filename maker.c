@@ -1186,7 +1186,6 @@ make_lofted_volume(Group* group)
 
     // Sort the sections into order and reverse if needed. 
     // The direction is given by the principal direction.
-    // TODO: Cope with complex paths.
     if (curr_path != NULL)
     {
         float len;
@@ -1208,6 +1207,20 @@ make_lofted_volume(Group* group)
                 }
                 // Sorting distance as fraction of path length
                 lg[i].param = len / total_length;
+
+                // If follow_path is TRUE, calculate the bay tensions for each bay
+                if (i > 0 && loft->follow_path)
+                {
+                    Plane pl0 = lg[i - 1].principal;
+                    Plane pl1 = lg[i].principal;
+                    float theta;
+                    
+                    normalise_plane(&pl0);
+                    normalise_plane(&pl1);
+                    theta = acosf(pldot(&pl0, &pl1));
+
+                    loft->bay_tensions[i - 1] = (4.0f / 3.0f) * tanf(theta / 4.0f);
+                }
             }
             else
             {
@@ -1485,20 +1498,20 @@ make_lofted_volume(Group* group)
                 cn = edge_direction((Edge *)contour[j]->hdr.next, &plnext);
                 angle_break = pldot(&plprev, &plnext) < cosf(loft->body_angle_break / RADF);
                 join_smooth = FALSE;
-                if (!angle_break)
+                if (loft->follow_path)
                 {
-                    // Average them and use that for the edges on both sides.
+                    // Follow curve of path. The bay tensions have been calculated in advance. (TODO!)
+                    plnext = lg[i].principal;
+                    normalise_plane(&plnext);
+                    join_smooth = TRUE;
+                }
+                else if (!angle_break)
+                {
+                    // Average the directions to prev and next endpoints, and use that for the edges on both sides.
                     // (i.e. ctrl[1-ci] of curr, ctrl[cn] of next)
                     plnext.A = (plprev.A + plnext.A) / 2;
                     plnext.B = (plprev.B + plnext.B) / 2;
                     plnext.C = (plprev.C + plnext.C) / 2;
-                    join_smooth = TRUE;
-                }
-                else if (loft->follow_path) 
-                {
-                    // Follow curve instead of angle breaking
-                    plnext = lg[i].principal;
-                    normalise_plane(&plnext);
                     join_smooth = TRUE;
                 }
                 if (join_smooth)

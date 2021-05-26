@@ -37,7 +37,9 @@
 // Tensions for bezier control points used in bez rect and circle faces.
 // The rect tension is arbirary for convenience.
 // The circle tension is for a quarter-circle bezier approximation,
-// = (4/3) * tan(pi/8)
+// = for an included angle a, (4/3) * tan(a/4)
+// = for a circle divied into n equal parts, (4/3) * tan(pi/2n) 
+// = for n=4, (4/3) * tan(pi/8)
 #define BEZ_RECT_TENSION 0.3f
 #define BEZ_CIRCLE_TENSION 0.55228475f
 

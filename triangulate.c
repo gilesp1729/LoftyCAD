@@ -2025,20 +2025,13 @@ gen_view_list_bez(BezierEdge *be)
     // Perform fixed step division if number of steps given in advance
     if (e->nsteps > 0)
     {
-        // Make sure nsteps is always big enough to meet the default step size.
-        // (occasionally it goes to 1 when draeing a bezier edge when starting straight)
-        int min_steps = (int)(length(e->endpoints[0], e->endpoints[1]) / default_stepsize + 1);
-
-        if (e->nsteps < min_steps)
-            e->nsteps = min_steps;
-
         iterate_bez
             (
-            be,
-            e->endpoints[0]->x, e->endpoints[0]->y, e->endpoints[0]->z,
-            be->ctrlpoints[0]->x, be->ctrlpoints[0]->y, be->ctrlpoints[0]->z,
-            be->ctrlpoints[1]->x, be->ctrlpoints[1]->y, be->ctrlpoints[1]->z,
-            e->endpoints[1]->x, e->endpoints[1]->y, e->endpoints[1]->z
+                be,
+                e->endpoints[0]->x, e->endpoints[0]->y, e->endpoints[0]->z,
+                be->ctrlpoints[0]->x, be->ctrlpoints[0]->y, be->ctrlpoints[0]->z,
+                be->ctrlpoints[1]->x, be->ctrlpoints[1]->y, be->ctrlpoints[1]->z,
+                e->endpoints[1]->x, e->endpoints[1]->y, e->endpoints[1]->z
             );
     }
     else
@@ -2047,18 +2040,40 @@ gen_view_list_bez(BezierEdge *be)
         e->nsteps = 0;
         recurse_bez
             (
-            be,
-            e->endpoints[0]->x, e->endpoints[0]->y, e->endpoints[0]->z,
-            be->ctrlpoints[0]->x, be->ctrlpoints[0]->y, be->ctrlpoints[0]->z,
-            be->ctrlpoints[1]->x, be->ctrlpoints[1]->y, be->ctrlpoints[1]->z,
-            e->endpoints[1]->x, e->endpoints[1]->y, e->endpoints[1]->z
+                be,
+                e->endpoints[0]->x, e->endpoints[0]->y, e->endpoints[0]->z,
+                be->ctrlpoints[0]->x, be->ctrlpoints[0]->y, be->ctrlpoints[0]->z,
+                be->ctrlpoints[1]->x, be->ctrlpoints[1]->y, be->ctrlpoints[1]->z,
+                e->endpoints[1]->x, e->endpoints[1]->y, e->endpoints[1]->z
             );
+
+#if 0 // Find a way to do this just after drawing the bezier edge, but not at any other time
+            // Make sure nsteps is always big enough to meet the default step size.
+            // (occasionally it goes to 1 when draeing a bezier edge when starting straight)
+            int min_steps = (int)(length(e->endpoints[0], e->endpoints[1]) / default_stepsize + 1);
+
+            if (e->nsteps < min_steps)
+            {
+                e->nsteps = min_steps;
+
+                // Perform it again with the new step size
+                iterate_bez
+                (
+                    be,
+                    e->endpoints[0]->x, e->endpoints[0]->y, e->endpoints[0]->z,
+                    be->ctrlpoints[0]->x, be->ctrlpoints[0]->y, be->ctrlpoints[0]->z,
+                    be->ctrlpoints[1]->x, be->ctrlpoints[1]->y, be->ctrlpoints[1]->z,
+                    e->endpoints[1]->x, e->endpoints[1]->y, e->endpoints[1]->z
+                );
+            }
+#endif
     }
 
     e->view_valid = TRUE;
 }
 
-// callbacks for rendering tessellated stuff to GL
+
+    // callbacks for rendering tessellated stuff to GL
 void 
 render_beginData(GLenum type, void * polygon_data)
 {

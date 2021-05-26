@@ -239,7 +239,7 @@ path_total_length(Object* obj)
         ASSERT(is_edge_group(group), "Path is not an edge group");
         for (e = (Edge*)group->obj_list.head; e != NULL; e = (Edge*)e->hdr.next)
         {
-            // Accumulate the current length and total length of edges so far, and store in this edge.
+            // Find the current edge length, and store in this edge.
             e->edge_length = edge_total_length(e);
             total_length += e->edge_length;
         }

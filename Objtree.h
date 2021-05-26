@@ -355,7 +355,7 @@ typedef enum
     JOIN_NOSECONE                   // Contours always join to endcap centroid.
 } LoftJoinMode;
 
-// Structure containing lofting parameters for a lofted group.
+// Structure containing lofting parameters for a lofted or tubed group.
 typedef struct LoftParams
 {
     float           nose_tension;   // Tension for points adjoining endcap at nose
@@ -365,7 +365,8 @@ typedef struct LoftParams
     int             tail_angle_break;    // And for points adjoining endcap at tail
     LoftJoinMode    nose_join_mode; // Joining mode for nose
     LoftJoinMode    tail_join_mode; // And for the tail
-    BOOL            follow_path;    // If TRUE, angle breaks will not break, but will follow path direction
+    BOOL            follow_path;    // If TRUE, contours will follow path direction at each section
+                                    // rather than being determined by adjacent sections (useful for tubing)
     int             n_bays;         // Number of bays (number of sections - 1)
     float           bay_tensions[1];    // Array of tensions per bay (space between consecutive sections)
 } LoftParams;
