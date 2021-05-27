@@ -221,6 +221,8 @@ BEGIN
         MENUITEM "Locking and Grouping",        ID_HELP_LOCKINGANDGROUPING
         MENUITEM "CSG Operations",              ID_HELP_CSGOPERATIONS
         MENUITEM "Import and Export",           ID_HELP_IMPORTANDEXPORT
+        MENUITEM "Bodies of Revolution",        ID_HELP_BODIESOFREVOLUTION
+        MENUITEM "Lofting and Tubing",          ID_HELP_LOFTINGANDTUBING
         MENUITEM SEPARATOR
         MENUITEM "&About LoftyCAD...",          IDM_ABOUT
     END

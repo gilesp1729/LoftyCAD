@@ -1026,6 +1026,16 @@ Command(int message, int wParam, int lParam)
             display_help("Import_Export");
             break;
 
+        case ID_HELP_BODIESOFREVOLUTION:
+            display_help_window();
+            display_help("Revolution");
+            break;
+
+        case ID_HELP_LOFTINGANDTUBING:
+            display_help_window();
+            display_help("Lofting_Tubing");
+            break;
+
         case ID_HELP_SCALING:
             display_help_window();
             display_help("Drawing_Scale");

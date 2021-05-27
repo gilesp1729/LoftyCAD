@@ -354,6 +354,8 @@
 #define ID_OBJ_LOFTGROUP                32930
 #define ID_OBJ_TUBEGROUP                32931
 #define ID_EGROUP_TUBEEDGEGROUPALONGPATH 32932
+#define ID_HELP_LOFTINGANDTUBING        32933
+#define ID_HELP_BODIESOFREVOLUTION      32934
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -362,7 +364,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        166
-#define _APS_NEXT_COMMAND_VALUE         32933
+#define _APS_NEXT_COMMAND_VALUE         32935
 #define _APS_NEXT_CONTROL_VALUE         1087
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
