@@ -1207,20 +1207,6 @@ make_lofted_volume(Group* group)
                 }
                 // Sorting distance as fraction of path length
                 lg[i].param = len / total_length;
-
-                // If follow_path is TRUE, calculate the bay tensions for each bay
-                if (i > 0 && loft->follow_path)
-                {
-                    Plane pl0 = lg[i - 1].principal;
-                    Plane pl1 = lg[i].principal;
-                    float theta;
-                    
-                    normalise_plane(&pl0);
-                    normalise_plane(&pl1);
-                    theta = acosf(pldot(&pl0, &pl1));
-
-                    loft->bay_tensions[i - 1] = (4.0f / 3.0f) * tanf(theta / 4.0f);
-                }
             }
             else
             {
@@ -1374,6 +1360,29 @@ make_lofted_volume(Group* group)
         
         // Rotate the edge group into alignment with min_edge up first.
         rotate(&lg[i].egrp->obj_list, min_edge);
+
+        // While here, if follow_path is TRUE, calculate the bay tensions for each bay.
+        if (loft->follow_path)
+        {
+            Plane pl0 = lg[i - 1].principal;
+            Plane pl1 = lg[i].principal;
+            float theta, chord;
+
+            normalise_plane(&pl0);
+            normalise_plane(&pl1);
+            theta = acosf(pldot(&pl0, &pl1));
+
+            // The usual (4/3) tan (theta/4) formula for tension is as a fraction
+            // of the radius, but our tensions are as multiples of the chord
+            // length (distance between endpoints). Correct this to get
+            // a better approximation. Watch out for near-zero divides, though.
+            // As theta -> 0, the tension -> 0.33333
+            chord = 2.0f * sinf(theta / 2.0f);
+            if (fabsf(theta) < 0.05)
+                loft->bay_tensions[i - 1] = BEZ_DEFAULT_TENSION;
+            else
+                loft->bay_tensions[i - 1] = (4.0f / 3.0f) * tanf(theta / 4.0f) / chord;
+        }
     }
 
     // Ensure corresponding edges in the sections have matching step counts. 

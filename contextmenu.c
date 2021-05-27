@@ -921,6 +921,8 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             SendDlgItemMessage(hWnd, IDC_LOFT_BAY_TENSIONS, CB_ADDSTRING, 0, (LPARAM)buf);
         }
         SendDlgItemMessage(hWnd, IDC_LOFT_BAY_TENSIONS, CB_SETCURSEL, 0, 0);
+        EnableWindow(GetDlgItem(hWnd, IDC_LOFT_BAY_TENSIONS), !loft->follow_path);
+
         changed = FALSE;
         break;
 
@@ -1016,6 +1018,7 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             {
             case BN_CLICKED:
                 loft->follow_path = IsDlgButtonChecked(hWnd, IDC_LOFT_FOLLOW_PATH);
+                EnableWindow(GetDlgItem(hWnd, IDC_LOFT_BAY_TENSIONS), !loft->follow_path);
                 changed = TRUE;
                 break;
             }
