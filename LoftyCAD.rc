@@ -962,6 +962,18 @@ STRINGTABLE
 BEGIN
     IDS_BEZ_RECT            "Drag a rectangle with Bezier edges.\r\n\r\nThe rectangle is drawn on the current face, or on the default plane."
     IDS_BEZ_CIRCLE          "Drag a circle approximated by 4 Bezier edges.\r\n\r\nThe circle is drawn on the current face, or on the default plane."
+    IDS_LOFT_FOLLOW_PATH    "Check this for lofts around curved or multi-segment paths, to make the contours follow the path more closely. The Bezier control point tensions will be automatically calculated."
+    IDS_LOFT_BAY_TENSIONS   "The control point tensions for each bay between cross-sections can be entered here. They are a fraction of the end-to-end length of the contour."
+    IDS_LOFT_NOSE_TENSION   "The tension for the control points adjacent to the nose (the first cross section)"
+    IDS_LOFT_TAIL_TENSION   "The tension for the control points adjacent to the tail (the last cross section)"
+    IDS_LOFT_BODY_ANGLEBREAK 
+                            "The threshold, in degrees, for angle breaking instead of smooth joining of contours. The deviation of the contour from one bay to the next is tested against this."
+    IDS_LOFT_NOSE_ANGLEBREAK 
+                            "The angle breaking threshold, in degrees, at the nose. The angle between the first contour (end-to-end) and the plane of the nose section is tested."
+    IDS_LOFT_TAIL_ANGLEBREAK 
+                            "The angle breaking threshold, in degrees, at the tail. The angle between the last contour (end-to-end) and the plane of the tail section is tested."
+    IDS_LOFT_NOSE_JOIN      "How contours join to the nose: smoothly towards centre (nosecone), smoothly towards edges (bow), or truncated (stern) "
+    IDS_LOFT_TAIL_JOIN      "How contours join to the tail: smoothly towards centre (nosecone), smoothly towards edges (bow), or truncated (stern) "
 END
 
 #endif    // English (Australia) resources

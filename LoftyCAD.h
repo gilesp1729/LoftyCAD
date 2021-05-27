@@ -362,7 +362,11 @@ Object* Pick(GLint x_pick, GLint y_pick, BOOL force_pick);
 void Pick_all_in_rect(GLint x_pick, GLint y_pick, GLint width, GLint height);
 Object* find_in_neighbourhood(Object * match_obj, Group * tree);
 
-// Forwards for window procedures and similar
+// UI helpers (toolbars.c)
+void load_tooltip(HWND hWnd, int button, int toolstring);
+void LoadAndDisplayIcon(HWND hWnd, int icon, int button, int toolstring);
+
+// Forwards for window procedures and similar (many in toolbars.c)
 int CALLBACK Command(int message, int wParam, int lParam);
 int WINAPI help_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 int WINAPI debug_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);

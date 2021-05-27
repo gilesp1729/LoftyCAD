@@ -4,31 +4,24 @@
 #include <CommDlg.h>
 #include <shellapi.h>
 
-// Put the icon in the button (if not zero) and set up a tooltip for the button.
+// Set up a tooltip for a button or other dialog item.
 void
-LoadAndDisplayIcon(HWND hWnd, int icon, int button, int toolstring)
+load_tooltip(HWND hWnd, int button, int toolstring)
 {
     char buffer[256];
     HWND hWndButton = GetDlgItem(hWnd, button);
-    HICON hIcon;
-
-    if (icon != 0)
-    {
-        hIcon = LoadIcon(hInst, MAKEINTRESOURCE(icon));
-        SendDlgItemMessage(hWnd, button, BM_SETIMAGE, (WPARAM)IMAGE_ICON, (LPARAM)hIcon);
-    }
+    TOOLINFO ti = { 0 };
 
     // Create a tooltip.
     HWND hwndTT = CreateWindowEx(WS_EX_TOPMOST, TOOLTIPS_CLASS, NULL,
-                                 WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP,
-                                 CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
-                                 hWndButton, NULL, hInst, NULL);
+        WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP,
+        CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
+        hWndButton, NULL, hInst, NULL);
 
     SetWindowPos(hwndTT, HWND_TOPMOST, 0, 0, 0, 0,
-                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+        SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
     SendMessage(hwndTT, TTM_SETMAXTIPWIDTH, 0, 200);
 
-    TOOLINFO ti = { 0 };
     ti.cbSize = sizeof(TOOLINFO);
     ti.uFlags = TTF_SUBCLASS;
     ti.hwnd = hWndButton;
@@ -40,6 +33,21 @@ LoadAndDisplayIcon(HWND hWnd, int icon, int button, int toolstring)
 
     // Associate the tooltip with the "tool" window.
     SendMessage(hwndTT, TTM_ADDTOOL, 0, (LPARAM)(LPTOOLINFO)&ti);
+}
+
+// Put the icon in the button (if not zero) and set up a tooltip for the button.
+void
+LoadAndDisplayIcon(HWND hWnd, int icon, int button, int toolstring)
+{
+    HICON hIcon;
+
+    if (icon != 0)
+    {
+        hIcon = LoadIcon(hInst, MAKEINTRESOURCE(icon));
+        SendDlgItemMessage(hWnd, button, BM_SETIMAGE, (WPARAM)IMAGE_ICON, (LPARAM)hIcon);
+    }
+
+    load_tooltip(hWnd, button, toolstring);
 }
 
 // Hook proc for the ChooseFont dialog.

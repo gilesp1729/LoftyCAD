@@ -922,8 +922,20 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         }
         SendDlgItemMessage(hWnd, IDC_LOFT_BAY_TENSIONS, CB_SETCURSEL, 0, 0);
         EnableWindow(GetDlgItem(hWnd, IDC_LOFT_BAY_TENSIONS), !loft->follow_path);
-
         changed = FALSE;
+
+        // Load up tooltips.
+        load_tooltip(hWnd, IDC_LOFT_FOLLOW_PATH, IDS_LOFT_FOLLOW_PATH);
+        load_tooltip(hWnd, IDC_LOFT_BAY_TENSIONS, IDS_LOFT_BAY_TENSIONS);
+        load_tooltip(hWnd, IDC_LOFT_NOSE_TENSION, IDS_LOFT_NOSE_TENSION);
+        load_tooltip(hWnd, IDC_LOFT_TAIL_TENSION, IDS_LOFT_TAIL_TENSION);
+        load_tooltip(hWnd, IDC_LOFT_BODY_ANGLEBREAK, IDS_LOFT_BODY_ANGLEBREAK);
+        load_tooltip(hWnd, IDC_LOFT_NOSE_ANGLEBREAK, IDS_LOFT_NOSE_ANGLEBREAK);
+        load_tooltip(hWnd, IDC_LOFT_TAIL_ANGLEBREAK, IDS_LOFT_TAIL_ANGLEBREAK);
+        load_tooltip(hWnd, IDC_LOFT_NOSE_JOIN, IDS_LOFT_NOSE_JOIN);
+        load_tooltip(hWnd, IDC_LOFT_TAIL_JOIN, IDS_LOFT_TAIL_JOIN);
+
+        // TODO: Apply, Remove buttons. Also, how do you get tooltips on the list part of a combo?
         break;
 
     case WM_COMMAND:
