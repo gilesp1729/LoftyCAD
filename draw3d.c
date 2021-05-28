@@ -1217,7 +1217,7 @@ Draw(void)
 
                 if (num_moves > 3)
                 {
-                    dist = length(&picked_point, &new_point) / 3;
+                    dist = length(&picked_point, &new_point) * BEZ_DEFAULT_TENSION;
 
                     // These normalising operations might try to divide by zero. Break if so.
                     grad0.A = move_points[2].x - move_points[0].x;
