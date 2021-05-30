@@ -20,6 +20,7 @@ In particular, it will:
 - Allows extrusion of curved surfaces, either parallel or along local normals
 - Allows extrusion of text and fonts
 - Allows axially symmetric objects (bodies of revolution)
+- Allows building volumes from cross-sections (lofting)
 - Copy and paste objects
 - Reflect and rotate objects
 - Group objects and transform (scale and rotate)
@@ -47,7 +48,7 @@ In particular, it will:
 - Directly control and print to a USB, serial or Octoprint connected printer
 - Repairing imported triangle meshes
 - Allow manipulation of triangle meshes: smooth extrusion, refinement, surface fitting, and more
-- Tubing and lofting (a nod to the original Lofty, LoftyCAD's spiritual ancestor)
+- Tubing (copying sections and lofting)
 
 # Installing LoftyCAD from the prebuilt installer
 Unzip the zip in the Installer directory, to any directory on the Windows system (c:\Program Files (x86) is the standard place for 32-bit programs). The install.bat file will do this (run as administrator!), register the file associations, and create a desktop link.
