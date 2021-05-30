@@ -1015,9 +1015,9 @@ make_lofted_volume(Group* group)
     LoftedGroup* lg;
     LoftParams* loft;
     float total_length;
-    ListHead contour_lists[8];  // max of 8 points in a section, so 8 lists of contour edges
-    Edge* contour[8];
-    int sect_nsteps[8] = { 0, };
+    ListHead* contour_lists;
+    Edge** contour;
+    int *sect_nsteps;
 
     // Some sanity checks on the input. Some will be enforced outside.
     ASSERT(group->hdr.type == OBJ_GROUP, "Must be a group");
@@ -1025,7 +1025,6 @@ make_lofted_volume(Group* group)
     // Ensure the edge groups all have the same number and type of edges.
     // There can only be 4, 6 or 8 of them for now. Also, there must be at 
     // least 2 edge groups.
-    memset(contour_lists, 0, 8 * sizeof(ListHead));
     num_groups = group->n_members;
     vol = NULL;
     if (group->obj_list.tail->type == OBJ_VOLUME)
@@ -1040,8 +1039,6 @@ make_lofted_volume(Group* group)
     num_edges = 0;
     for (obj = group->obj_list.head; obj != NULL && obj != (Object *)vol; obj = obj->next)
     {
-        Edge* e, * e0;
-
         egrp = (Group*)obj;
         if (!is_closed_edge_group(egrp))
             ERR_RETURN("Not a closed edge group");
@@ -1049,25 +1046,16 @@ make_lofted_volume(Group* group)
         if (num_edges == 0)
         {
             num_edges = egrp->n_members;
-            if (num_edges != 4 && num_edges != 6 && num_edges != 8)
-                ERR_RETURN("Edge groups must have 4, 6 or 8 edges");
+            if (num_edges < 4)
+                ERR_RETURN("Edge groups must have at least 4 edges");
             first_egrp = egrp;
         }
         else
         {
+            // Only check the count here. Check edge types match after groups are 
+            // (potentially) reversed and rotated into alignment.
             if (egrp->n_members != num_edges)
                 ERR_RETURN("Edge groups do not match");
-
-            for 
-            (
-                e = (Edge *)egrp->obj_list.head, e0 = (Edge *)first_egrp->obj_list.head; 
-                e != NULL; 
-                e = (Edge *)e->hdr.next, e0 = (Edge *)e0->hdr.next
-            )
-            {
-                if (e->type != e0->type)
-                    ERR_RETURN("Edges do not match");
-            }
         }
     }
 
@@ -1099,8 +1087,11 @@ make_lofted_volume(Group* group)
     }
     loft = group->loft;
 
-    // Allocate the LoftedGroup array.
+    // Allocate the LoftedGroup array, and other variable length arrays.
     lg = (LoftedGroup*)malloc(num_groups * sizeof(LoftedGroup));
+    contour_lists = (ListHead*)calloc(num_edges, sizeof(ListHead));
+    contour = (Edge**)malloc(num_edges * sizeof(Edge*));
+    sect_nsteps = (int*)calloc(num_edges, sizeof(int*));
 
     // Determine centroid and normal of points in each edge group. The centroid is not
     // needed exactly; the midpoint of the edge group's bbox will do.
@@ -1214,6 +1205,9 @@ make_lofted_volume(Group* group)
                 // so we error out.
                 purge_obj((Object*)clone);
                 free(lg);
+                free(contour_lists);
+                free(contour);
+                free(sect_nsteps);
                 ERR_RETURN("Not all edge groups intersect the path");
             }
         }
@@ -1335,9 +1329,11 @@ make_lofted_volume(Group* group)
         {
             Edge* e0, * e1;
             float angle = 0;
+            float cosa;
 
             // Walk down the current and previous EG's summing the angles between the
-            // coresponding edges.
+            // corresponding edges. But do not consider rotations where the
+            // edge types do not match.
             for
             (
                 e0 = (Edge*)lg[i - 1].egrp->obj_list.head, e1 = (Edge*)lg[i].egrp->obj_list.head;
@@ -1345,7 +1341,12 @@ make_lofted_volume(Group* group)
                 e0 = (Edge*)e0->hdr.next, e1 = (Edge*)e1->hdr.next
             )
             {
-                angle += acosf(pldot((Plane *)&e1->dirn, (Plane *)&e0->dirn));
+                if (e0->type != e1->type)
+                    goto next_rotation;
+                cosa = pldot((Plane*)&e1->dirn, (Plane*)&e0->dirn);
+                if (cosa > 1)   // protect against domain error in acosf
+                    cosa = 1;
+                angle += acosf(cosa);
             }
 
             if (angle < min_angle)
@@ -1354,11 +1355,22 @@ make_lofted_volume(Group* group)
                 min_edge = (Edge*)lg[i].egrp->obj_list.head;
             }
 
+        next_rotation:
             // Go to the next rotation.
             rotate(&lg[i].egrp->obj_list, lg[i].egrp->obj_list.head->next);
         }
         
         // Rotate the edge group into alignment with min_edge up first.
+        // If there were no valid rotations, bail out. Edge types cannot be made to match.
+        if (min_edge == NULL)
+        {
+            purge_obj((Object*)clone);
+            free(lg);
+            free(contour_lists);
+            free(contour);
+            free(sect_nsteps);
+            ERR_RETURN("Edge types in groups don't match");
+        }
         rotate(&lg[i].egrp->obj_list, min_edge);
 
         // While here, if follow_path is TRUE, calculate the bay tensions for each bay.
@@ -1397,10 +1409,14 @@ make_lofted_volume(Group* group)
         }
     }
 
+    // If the endcap is going to be a bezier face:
     // Check that opposing edges have the same step count, as they will meet up in the endcap.
 #define MAX(a, b)   ((a) > (b) ? (a) : (b))
-    sect_nsteps[0] = sect_nsteps[2] = MAX(sect_nsteps[0], sect_nsteps[2]);
-    sect_nsteps[1] = sect_nsteps[3] = MAX(sect_nsteps[1], sect_nsteps[3]);
+    if (num_edges == 4)
+    {
+        sect_nsteps[0] = sect_nsteps[2] = MAX(sect_nsteps[0], sect_nsteps[2]);
+        sect_nsteps[1] = sect_nsteps[3] = MAX(sect_nsteps[1], sect_nsteps[3]);
+    }
 
     // Set edges to have the max step count accumulated above.
     for (obj = clone->obj_list.head; obj != NULL; obj = obj->next)
@@ -1680,6 +1696,9 @@ make_lofted_volume(Group* group)
     }
     purge_obj((Object *)clone);
     free(lg);
+    free(contour_lists);
+    free(contour);
+    free(sect_nsteps);
 
     return vol;
 }

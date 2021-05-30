@@ -429,7 +429,9 @@ angle3(Point *b, Point *a, Point *c, Plane *n)
     Plane cp;
 
     cosa /= length(a, b);
-    cosa /= length(a, c);       // TODO make this all double? cosa is coming out slightly > 1.
+    cosa /= length(a, c);
+    if (cosa > 1)
+        cosa = 1;
     angle = acosf(cosa);
     cross(b->x - a->x, b->y - a->y, b->z - a->z, c->x - a->x, c->y - a->y, c->z - a->z, &cp.A, &cp.B, &cp.C);
     if (pldot(n, &cp) < 0)

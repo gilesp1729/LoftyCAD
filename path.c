@@ -14,6 +14,10 @@ first_point_index(Edge* edge)
     {
         Edge* prev_edge = (Edge*)edge->hdr.prev;
 
+        // If there's only one edge, arbirarily return endpoint 0.
+        if (prev_edge == NULL)
+            return 0;
+
         if (edge->endpoints[0] == prev_edge->endpoints[0])
             return 0;
         else if (edge->endpoints[0] == prev_edge->endpoints[1])
