@@ -341,7 +341,7 @@ Group* group_connected_edges(Edge * edge);
 BOOL is_edge_group(Group * group);
 BOOL is_closed_edge_group(Group * group);
 void disconnect_edges_in_group(Group * group);
-Face* make_face(Group * group, BOOL auto_reverse, BOOL reverse);
+Face* make_face(Group * group, BOOL clear_group, BOOL auto_reverse, BOOL reverse);
 void insert_chamfer_round(Point * pt, Face * parent, float size, EDGE edge_type, BOOL restricted);
 Volume* make_body_of_revolution(Group * group, BOOL negative);
 Volume* make_lofted_volume(Group * group);

@@ -353,7 +353,7 @@ contextmenu(Object *picked_obj, POINT pt)
         break;
 
     case ID_OBJ_MAKEFACE:
-        face = make_face((Group*)picked_obj, TRUE, FALSE);
+        face = make_face((Group*)picked_obj, TRUE, TRUE, FALSE);
         if (face != NULL)
         {
             // Delete the original edge group before putting face into the object tree

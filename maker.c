@@ -264,10 +264,10 @@ disconnect_edges_in_group(Group* group)
 }
 
 // Make a face object out of a closed group of connected edges.
-// The original group is cleared and should be deleted by the caller.
+// If requested, the original group is cleared and should be deleted by the caller.
 // Reversing can be automatic (test against facing plane) or user controlled.
 Face*
-make_face(Group* group, BOOL auto_reverse, BOOL reverse)
+make_face(Group* group, BOOL clear_group, BOOL auto_reverse, BOOL reverse)
 {
     Face* face = NULL;
     Edge* e, * next_edge, * prev_edge;
@@ -422,8 +422,7 @@ make_face(Group* group, BOOL auto_reverse, BOOL reverse)
             ASSERT(e->type == o->type, "Already tested this");
             if (e->type >= EDGE_ARC)
             {
-                // Set step counts to the maximum of the two, and zero the step size so it gets
-                // recalculated again with the next view list update.
+                // Set step counts to the maximum of the two.
                 n_steps = e->nsteps;
                 if (o->nsteps > n_steps)
                     n_steps = o->nsteps;
@@ -453,7 +452,8 @@ make_face(Group* group, BOOL auto_reverse, BOOL reverse)
         {
             prev_edge = (Edge*)e->hdr.prev;
             face->edges[i] = e;
-            delink_group((Object*)e, group);
+            if (clear_group)
+                delink_group((Object*)e, group);
         }
     }
     else
@@ -463,16 +463,23 @@ make_face(Group* group, BOOL auto_reverse, BOOL reverse)
         {
             next_edge = (Edge*)e->hdr.next;
             face->edges[i] = e;
-            delink_group((Object*)e, group);
+            if (clear_group)
+                delink_group((Object*)e, group);
         }
     }
 
-    // Group must be cleared out by now (delete will happen later)
-    ASSERT(group->obj_list.head == NULL, "Edge group is not empty");
-
-    // Finally, update the view list for the face
     face->view_valid = FALSE;
-    gen_view_list_face(face);
+
+    // Group must be cleared out by now (delete will happen later)
+    // Update the view list. But if retaining the group, don't do
+    // anything else (it will be done later)
+    if (clear_group)
+    {
+        ASSERT(group->obj_list.head == NULL, "Edge group is not empty");
+
+        // Finally, update the view list for the face
+        gen_view_list_face(face);
+    }
 
     return face;
 }
@@ -976,6 +983,7 @@ typedef struct
     float param;        // How far (as a fraction) along the path or principal direction it is
     Plane principal;    // The plane normal to the path at this section
     Bbox  ebox;         // BBox for the edge group
+    ListHead face_list; // List of faces making up the endcap (for nose and tail edge groups only)
 } LoftedGroup;
 
 // qsort comparo function.
@@ -1088,9 +1096,9 @@ make_lofted_volume(Group* group)
     loft = group->loft;
 
     // Allocate the LoftedGroup array, and other variable length arrays.
-    lg = (LoftedGroup*)malloc(num_groups * sizeof(LoftedGroup));
+    lg = (LoftedGroup*)calloc(num_groups, sizeof(LoftedGroup));
     contour_lists = (ListHead*)calloc(num_edges, sizeof(ListHead));
-    contour = (Edge**)malloc(num_edges * sizeof(Edge*));
+    contour = (Edge**)calloc(num_edges, sizeof(Edge*));
     sect_nsteps = (int*)calloc(num_edges, sizeof(int*));
 
     // Determine centroid and normal of points in each edge group. The centroid is not
@@ -1397,34 +1405,67 @@ make_lofted_volume(Group* group)
         }
     }
 
+    // Start loading up the new volume
+    vol = new_vol;
+    vol->hdr.lock = LOCK_FACES;
+
     // Ensure corresponding edges in the sections have matching step counts. 
     // Accumulate the max step count for each edge in each section.
-    for (obj = clone->obj_list.head; obj != NULL; obj = obj->next)
+    for (i = 0; i < num_groups; i++)
     {
-        egrp = (Group*)obj;
-        for (i = 0, e = (Edge*)egrp->obj_list.head; e != NULL; i++, e = (Edge*)e->hdr.next)
+        egrp = lg[i].egrp;
+        for (j = 0, e = (Edge*)egrp->obj_list.head; e != NULL; j++, e = (Edge*)e->hdr.next)
         {
-            if (e->nsteps > sect_nsteps[i])
-                sect_nsteps[i] = e->nsteps;
+            if (e->nsteps > sect_nsteps[j])
+                sect_nsteps[j] = e->nsteps;
         }
     }
 
-    // If the endcap is going to be a bezier face:
-    // Check that opposing edges have the same step count, as they will meet up in the endcap.
 #define MAX(a, b)   ((a) > (b) ? (a) : (b))
     if (num_edges == 4)
     {
+        // If the endcap is going to be a single bezier face:
+        // Check that opposing edges have the same step count, as they will meet up in the endcap.
+        // We don't care about the plane of symmetry in this case.
         sect_nsteps[0] = sect_nsteps[2] = MAX(sect_nsteps[0], sect_nsteps[2]);
         sect_nsteps[1] = sect_nsteps[3] = MAX(sect_nsteps[1], sect_nsteps[3]);
+
+        // Create the faces for the endcaps. Just use the standard make_face call.
+        // The nose face gets reversed. Don't link them into the volume yet,
+        // as we need themn to be linked into the lg entry's list now.
+        face = make_face(lg[0].egrp, FALSE, FALSE, TRUE);
+        face->vol = vol;
+        if (face->type > vol->max_facetype)
+            vol->max_facetype = face->type;
+        link_tail((Object*)face, &lg[0].face_list);
+
+        face = make_face(lg[num_groups - 1].egrp, FALSE, FALSE, FALSE);
+        face->vol = vol;
+        if (face->type > vol->max_facetype)
+            vol->max_facetype = face->type;
+        link_tail((Object*)face, &lg[num_groups - 1].face_list);
+    }
+    else
+    {
+        // TODO: Decide based on plane of symmetry, which points are on each side
+        // Join up points and make faces in each endcap (if num_edges > 4 and is even)
+        // Make sure all step counts are tickety-boo.
+        // Accumulate faces in list attached to lg[0] and lg[num_groups-1], reverse normals
+        // for those in lg[0]
+
+
+
+
     }
 
-    // Set edges to have the max step count accumulated above.
-    for (obj = clone->obj_list.head; obj != NULL; obj = obj->next)
+    // Set edges to have the correct max step counts accumulated above.
+    // TODO: take care of internal edges when n < 4
+    for (i = 0; i < num_groups; i++)
     {
-        egrp = (Group*)obj;
-        for (i = 0, e = (Edge*)egrp->obj_list.head; e != NULL; i++, e = (Edge*)e->hdr.next)
+        egrp = lg[i].egrp;
+        for (j = 0, e = (Edge*)egrp->obj_list.head; e != NULL; j++, e = (Edge*)e->hdr.next)
         {
-            e->nsteps = sect_nsteps[i];
+            e->nsteps = sect_nsteps[j];
             e->view_valid = FALSE;
         }
     }
@@ -1459,10 +1500,6 @@ make_lofted_volume(Group* group)
             link_tail((Object*)ne, &contour_lists[j]);
         }
     }
-
-    // Start loading up the new volume
-    vol = new_vol;
-    vol->hdr.lock = LOCK_FACES;
 
     // Points to head of each contour list
     for (j = 0; j < num_edges; j++)
@@ -1587,22 +1624,27 @@ make_lofted_volume(Group* group)
         {
             // Check the edges incident on the common point (c->endpoints[ci]) and see if
             // they make a smaller angle (greater dot product). If so, use that for the test.
-            for (e = (Edge*)lg[0].egrp->obj_list.head; e != NULL; e = (Edge*)e->hdr.next)
+            // Go through generated faces here not just edge group points.
+            for (face = (Face *)lg[0].face_list.head; face != NULL; face = (Face *)face->hdr.next)
             {
-                // Be careful with the directions
-                if (e->endpoints[0] == c->endpoints[ci])
-                    point_direction(e->endpoints[1], e->endpoints[0], &pltest);
-                else if (e->endpoints[1] == c->endpoints[ci])
-                    point_direction(e->endpoints[0], e->endpoints[1], &pltest);
-                else
-                    continue;
-
-                project(&pltest, &lg[0].principal, &pltest_proj);
-                costest = pldot(&pltest_proj, &pl_proj);
-                if (costest > cosmax)
+                for (i = 0; i < face->n_edges; i++)
                 {
-                    cosmax = costest;
-                    plend = pltest;
+                    e = face->edges[i];
+                    // Be careful with the directions
+                    if (e->endpoints[0] == c->endpoints[ci])
+                        point_direction(e->endpoints[1], e->endpoints[0], &pltest);
+                    else if (e->endpoints[1] == c->endpoints[ci])
+                        point_direction(e->endpoints[0], e->endpoints[1], &pltest);
+                    else
+                        continue;
+
+                    project(&pltest, &lg[0].principal, &pltest_proj);
+                    costest = pldot(&pltest_proj, &pl_proj);
+                    if (costest > cosmax)
+                    {
+                        cosmax = costest;
+                        plend = pltest;
+                    }
                 }
             }
         }
@@ -1617,12 +1659,10 @@ make_lofted_volume(Group* group)
         }
     }
 
-    // Make a face out of the first edge group. Its normal needs to be reversed.
-    face = make_face(lg[0].egrp, FALSE, TRUE);
-    face->vol = vol;
-    if (face->type > vol->max_facetype)
-        vol->max_facetype = face->type;
-    link_tail((Object*)face, &vol->faces);
+    // Link the face(s) into the volume now that they have been joined up in the nose.
+    // The volume's face list will not be empty, so just append the face list to it.
+    vol->faces.tail->next = lg[0].face_list.head;
+    vol->faces.tail = lg[0].face_list.tail;
 
     // Tail endcap (at end of group)
     for (j = 0; j < num_edges; j++)
@@ -1643,22 +1683,25 @@ make_lofted_volume(Group* group)
         {
             // Check the edges incident on the common point (c->endpoints[1-ci]) and see if
             // they make a smaller angle (greater dot product). If so, use that for the test.
-            for (e = (Edge*)lg[num_groups - 1].egrp->obj_list.head; e != NULL; e = (Edge*)e->hdr.next)
+            for (face = (Face *)lg[num_groups - 1].face_list.head; face != NULL; face = (Face *)face->hdr.next)
             {
-                // Be careful with the directions
-                if (e->endpoints[0] == c->endpoints[1 - ci])
-                    point_direction(e->endpoints[0], e->endpoints[1], &pltest);
-                else if (e->endpoints[1] == c->endpoints[1 - ci])
-                    point_direction(e->endpoints[1], e->endpoints[0], &pltest);
-                else
-                    continue;
-
-                project(&pltest, &lg[num_groups - 1].principal, &pltest_proj);
-                costest = pldot(&pltest_proj, &pl_proj);
-                if (costest > cosmax)
+                for (i = 0; i < face->n_edges; i++)
                 {
-                    cosmax = costest;
-                    plend = pltest;
+                    // Be careful with the directions
+                    if (e->endpoints[0] == c->endpoints[1 - ci])
+                        point_direction(e->endpoints[0], e->endpoints[1], &pltest);
+                    else if (e->endpoints[1] == c->endpoints[1 - ci])
+                        point_direction(e->endpoints[1], e->endpoints[0], &pltest);
+                    else
+                        continue;
+
+                    project(&pltest, &lg[num_groups - 1].principal, &pltest_proj);
+                    costest = pldot(&pltest_proj, &pl_proj);
+                    if (costest > cosmax)
+                    {
+                        cosmax = costest;
+                        plend = pltest;
+                    }
                 }
             }
         }
@@ -1673,16 +1716,12 @@ make_lofted_volume(Group* group)
         }
     }
 
-    // Make a face out of the last edge group.
-    face = make_face(lg[num_groups - 1].egrp, FALSE, FALSE);
-    face->vol = vol;
-    if (face->type > vol->max_facetype)
-        vol->max_facetype = face->type;
-    link_tail((Object*)face, &vol->faces);
+    // Link the face(s) into the volume now that they have been joined up in the tail.
+    vol->faces.tail->next = lg[num_groups - 1].face_list.head;
+    vol->faces.tail = lg[num_groups - 1].face_list.tail;
 
     // Clean up by deleting the clone and its edge groups. 
-    // Clear the edges out first. make_face will have cleared out the 
-    // endcap groups.
+    // Clear the edges out first. 
     for (obj = clone->obj_list.head; obj != NULL; obj = obj->next)
     {
         Object* o, * onext;
