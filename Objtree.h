@@ -211,6 +211,7 @@ typedef struct Edge
                                     // when it is part of an edge group. Only used in lofting.
     float           edge_length;    // When in an edge group, this stores the length of this edge.
                                     // Only used when in a path.
+    int             band;           // Which band number in a lofted volume this edge belongs to.
 } Edge;
 
 typedef struct StraightEdge

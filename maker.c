@@ -1001,6 +1001,34 @@ compare_lofted_groups(const void* elem1, const void* elem2)
         return 0;
 }
 
+// Helper to make faces for an endcap edge group and attach them to a volume.
+// Allows reversing for the nose. Return FALSE if there is a problem,
+// such as mismatching point counts.
+BOOL
+make_endcap_faces(LoftedGroup* lg, Volume* vol, BOOL reverse)
+{
+    Plane symmetry;
+
+    // Compute the plane of symmetry, tangent to the egrp's principal direction,
+    // and going through its quasi-centroid.
+    plcross(&lg->principal, up_direction, &symmetry);
+    symmetry.refpt = lg->norm.refpt;
+
+    // Run around the egrp looking for points on either side of the plane of symmetry.
+    // Make sure there are an equal number of them on each side.
+
+
+
+    // Find an edge in the group that crosses the plane of symmetry
+    dist = distance_point_plane(&symmetry, the_point);
+
+
+
+
+
+}
+
+
 
 extern LoftParams default_loft;
 
@@ -1025,7 +1053,7 @@ make_lofted_volume(Group* group)
     float total_length;
     ListHead* contour_lists;
     Edge** contour;
-    int *sect_nsteps;
+    int *band_nsteps;
 
     // Some sanity checks on the input. Some will be enforced outside.
     ASSERT(group->hdr.type == OBJ_GROUP, "Must be a group");
@@ -1078,6 +1106,8 @@ make_lofted_volume(Group* group)
         delink_group((Object*)vol, group);
         purge_obj((Object*)vol);
     }
+    vol = new_vol;
+    vol->hdr.lock = LOCK_FACES;
     clone = (Group *)copy_obj((Object*)group, 0, 0, 0, TRUE);
     clear_move_copy_flags((Object*)group);
 
@@ -1099,7 +1129,7 @@ make_lofted_volume(Group* group)
     lg = (LoftedGroup*)calloc(num_groups, sizeof(LoftedGroup));
     contour_lists = (ListHead*)calloc(num_edges, sizeof(ListHead));
     contour = (Edge**)calloc(num_edges, sizeof(Edge*));
-    sect_nsteps = (int*)calloc(num_edges, sizeof(int*));
+    band_nsteps = (int*)calloc(num_edges, sizeof(int*));
 
     // Determine centroid and normal of points in each edge group. The centroid is not
     // needed exactly; the midpoint of the edge group's bbox will do.
@@ -1211,11 +1241,12 @@ make_lofted_volume(Group* group)
             {
                 // No intersection was found. This is not what the user intended,
                 // so we error out.
+                purge_obj((Object*)vol);
                 purge_obj((Object*)clone);
                 free(lg);
                 free(contour_lists);
                 free(contour);
-                free(sect_nsteps);
+                free(band_nsteps);
                 ERR_RETURN("Not all edge groups intersect the path");
             }
         }
@@ -1296,12 +1327,23 @@ make_lofted_volume(Group* group)
         }
     }
 
-    // Sort by distance from the principal refpt.
+    // Sort by distance (lg.param) along the axis or the path.
     qsort(lg, num_groups, sizeof(LoftedGroup), compare_lofted_groups);
 
-    // Choose an edge in the first section as the principal edge. Find the corresponding
-    // edge in each section. Various methods have been tried, robustness is an issue.
-    // Use an angular test summed across all the edges.
+    // Choose an edge in the first section as the key edge. If there is a plane of symmetry,
+    // find the uppermost edge (in the defined up-direction) that crosses the plane. Rotate the
+    // first section so the key edge is at the head of the edge group.
+
+
+
+
+
+
+
+
+ 
+    // Find the corresponding edge in each section. Various methods have been tried, and 
+    // robustness is an issue. Use an angular test summed across all the edges.
 
     // Accumulate the direction cosines of the first edge group.
     for (e = (Edge*)lg[0].egrp->obj_list.head; e != NULL; e = (Edge*)e->hdr.next)
@@ -1372,11 +1414,12 @@ make_lofted_volume(Group* group)
         // If there were no valid rotations, bail out. Edge types cannot be made to match.
         if (min_edge == NULL)
         {
+            purge_obj((Object*)vol);
             purge_obj((Object*)clone);
             free(lg);
             free(contour_lists);
             free(contour);
-            free(sect_nsteps);
+            free(band_nsteps);
             ERR_RETURN("Edge types in groups don't match");
         }
         rotate(&lg[i].egrp->obj_list, min_edge);
@@ -1405,12 +1448,47 @@ make_lofted_volume(Group* group)
         }
     }
 
-    // Start loading up the new volume
-    vol = new_vol;
-    vol->hdr.lock = LOCK_FACES;
+    // Assign section edges to bands (a generally horizontal strip of faces on both sides
+    // of the volume that must have matching step counts). The key edge, its opposite number,
+    // and any internal edges created later in the endcap faces, all have band 0.
 
+    // Accumulate the max step count for each edge in each band.
+    for (i = 0; i < num_groups; i++)
+    {
+        Edge* ne, * pe;
+
+        egrp = lg[i].egrp;
+        e = (Edge*)egrp->obj_list.head;
+        e->band = 0;
+        ne = e->hdr.next;
+        pe = (Edge*)egrp->obj_list.tail;
+        for (j = 1; j < num_edges; j++)  // this loop will terminate early
+        {
+            ne->band = pe->band = j;
+            if (ne->nsteps > band_nsteps[j])
+                band_nsteps[j] = ne->nsteps;
+            if (pe->nsteps > band_nsteps[j])
+                band_nsteps[j] = pe->nsteps;
+
+            // Move to next band. We should meet at the bottom.
+            ne = ne->hdr.next;
+            pe = pe->hdr.prev;
+            ASSERT(ne != NULL && pe != NULL, "Edge group must have an even number of points");
+            if (ne == pe)
+            {
+                ne->band = 0;
+                break;
+            }
+        }
+    }
+
+
+
+
+
+
+#if 0
     // Ensure corresponding edges in the sections have matching step counts. 
-    // Accumulate the max step count for each edge in each section.
     for (i = 0; i < num_groups; i++)
     {
         egrp = lg[i].egrp;
@@ -1422,14 +1500,18 @@ make_lofted_volume(Group* group)
     }
 
 #define MAX(a, b)   ((a) > (b) ? (a) : (b))
-    if (num_edges == 4)
+    if (num_edges == 4 || (num_edges & 1))
     {
-        // If the endcap is going to be a single bezier face:
-        // Check that opposing edges have the same step count, as they will meet up in the endcap.
-        // We don't care about the plane of symmetry in this case.
-        sect_nsteps[0] = sect_nsteps[2] = MAX(sect_nsteps[0], sect_nsteps[2]);
-        sect_nsteps[1] = sect_nsteps[3] = MAX(sect_nsteps[1], sect_nsteps[3]);
+        if (num_edges == 4)
+        {
+            // If the endcap is going to be a single bezier face:
+            // Check that opposing edges have the same step count, as they will meet up in the endcap.
+            // We don't care about the plane of symmetry in this case.
+            sect_nsteps[0] = sect_nsteps[2] = MAX(sect_nsteps[0], sect_nsteps[2]);
+            sect_nsteps[1] = sect_nsteps[3] = MAX(sect_nsteps[1], sect_nsteps[3]);
+        }
 
+        // If a single bezier face or an odd-numbered (flat) face:
         // Create the faces for the endcaps. Just use the standard make_face call.
         // The nose face gets reversed. Don't link them into the volume yet,
         // as we need themn to be linked into the lg entry's list now.
@@ -1448,14 +1530,11 @@ make_lofted_volume(Group* group)
     else
     {
         // TODO: Decide based on plane of symmetry, which points are on each side
-        // Join up points and make faces in each endcap (if num_edges > 4 and is even)
-        // Make sure all step counts are tickety-boo.
+        // Join up points and make faces in each endcap, and make sure all step counts are tickety-boo.
         // Accumulate faces in list attached to lg[0] and lg[num_groups-1], reverse normals
         // for those in lg[0]
-
-
-
-
+        make_endcap_faces(&lg[0], vol, sect_nsteps, TRUE);
+        make_endcap_faces(&lg[num_groups - 1], vol, sect_nsteps, FALSE);
     }
 
     // Set edges to have the correct max step counts accumulated above.
@@ -1469,6 +1548,7 @@ make_lofted_volume(Group* group)
             e->view_valid = FALSE;
         }
     }
+#endif
 
     // Join corresponding points with bezier edges. Gather the edges into contour lists.
     for (i = 1; i < num_groups; i++)
@@ -1687,6 +1767,7 @@ make_lofted_volume(Group* group)
             {
                 for (i = 0; i < face->n_edges; i++)
                 {
+                    e = face->edges[i];
                     // Be careful with the directions
                     if (e->endpoints[0] == c->endpoints[1 - ci])
                         point_direction(e->endpoints[0], e->endpoints[1], &pltest);
@@ -1737,7 +1818,7 @@ make_lofted_volume(Group* group)
     free(lg);
     free(contour_lists);
     free(contour);
-    free(sect_nsteps);
+    free(band_nsteps);
 
     return vol;
 }
