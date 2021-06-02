@@ -1060,7 +1060,7 @@ make_lofted_volume(Group* group)
     ASSERT(group->hdr.type == OBJ_GROUP, "Must be a group");
 
     // Ensure the edge groups all have the same number and type of edges.
-    // There can only be 4, 6 or 8 of them for now. Also, there must be at 
+    // There can only be an even number, at least 4. Also, there must be at 
     // least 2 edge groups.
     num_groups = group->n_members;
     vol = NULL;
@@ -1083,6 +1083,8 @@ make_lofted_volume(Group* group)
         if (num_edges == 0)
         {
             num_edges = egrp->n_members;
+            if (num_edges & 1)
+                ERR_RETURN("Edge groups must have an even number of edges");
             if (num_edges < 4)
                 ERR_RETURN("Edge groups must have at least 4 edges");
             first_egrp = egrp;
@@ -1461,7 +1463,10 @@ make_lofted_volume(Group* group)
         egrp = lg[i].egrp;
         e = (Edge*)egrp->obj_list.head;
         e->band = 0;
-        ne = e->hdr.next;
+        if (e->nsteps > band_nsteps[0])
+            band_nsteps[0] = e->nsteps;
+
+        ne = (Edge *)e->hdr.next;
         pe = (Edge*)egrp->obj_list.tail;
         for (j = 1; j < num_edges; j++)  // this loop will terminate early
         {
@@ -1472,21 +1477,52 @@ make_lofted_volume(Group* group)
                 band_nsteps[j] = pe->nsteps;
 
             // Move to next band. We should meet at the bottom.
-            ne = ne->hdr.next;
-            pe = pe->hdr.prev;
+            ne = (Edge *)ne->hdr.next;
+            pe = (Edge *)pe->hdr.prev;
             ASSERT(ne != NULL && pe != NULL, "Edge group must have an even number of points");
             if (ne == pe)
             {
                 ne->band = 0;
+                if (ne->nsteps > band_nsteps[0])
+                    band_nsteps[0] = ne->nsteps;
                 break;
             }
         }
     }
 
+    // Accumulate faces in list attached to lg[0] and lg[num_groups-1], reverse normals
+    // for those in lg[0]
+    make_endcap_faces(&lg[0], vol, band_nsteps, TRUE);
+    make_endcap_faces(&lg[num_groups - 1], vol, band_nsteps, FALSE);
 
-
-
-
+    // Set edges to have the correct max step counts accumulated above.
+    for (i = 0; i < num_groups; i++)
+    {
+        egrp = lg[i].egrp;
+        if (lg[i].face_list.head != NULL)
+        {
+            // This egrp has faces. Set step counts for all their edges (including
+            // the internal edges not in the egrp)
+            for (face = (Face *)lg[i].face_list.head; face != NULL; face = (Face*)face->hdr.next)
+            {
+                for (j = 0; j < face->n_edges; j++)
+                {
+                    e = face->edges[j];
+                    e->nsteps = band_nsteps[e->band];
+                    e->view_valid = FALSE;
+                }
+            }
+        }
+        else
+        {
+            // Set step counts for all edges in the egrp
+            for (j = 0, e = (Edge*)egrp->obj_list.head; e != NULL; j++, e = (Edge*)e->hdr.next)
+            {
+                e->nsteps = band_nsteps[e->band];
+                e->view_valid = FALSE;
+            }
+        }
+    }
 
 #if 0
     // Ensure corresponding edges in the sections have matching step counts. 

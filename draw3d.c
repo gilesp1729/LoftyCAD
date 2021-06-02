@@ -2356,7 +2356,7 @@ Draw(void)
                     }
                 }
 
-                // Step counts for all edges in a volume.
+                // Step counts and band numbers for all edges in a volume.
                 if (debug_view_normals)         // TEMP until it gets its own flag
                 {
                     Face* f;
@@ -2376,7 +2376,8 @@ Draw(void)
                                 (e->endpoints[0]->z + e->endpoints[1]->z) / 2
                             );
                             glListBase(1000);
-                            sprintf_s(buf, 64, "%d", e->nsteps);
+                            glColor3d(1.0, 0.4, 0.4);
+                            sprintf_s(buf, 64, "%d/%d", e->band, e->nsteps);
                             glCallLists(strlen(buf), GL_UNSIGNED_BYTE, buf);
                         }
                     }
