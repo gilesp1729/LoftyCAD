@@ -1005,8 +1005,9 @@ compare_lofted_groups(const void* elem1, const void* elem2)
 // Allows reversing for the nose. Return FALSE if there is a problem,
 // such as mismatching point counts.
 BOOL
-make_endcap_faces(LoftedGroup* lg, Volume* vol, BOOL reverse)
+make_endcap_faces(LoftedGroup* lg, Volume* vol, int *band_nsteps, BOOL reverse)
 {
+#if 0
     Plane symmetry;
 
     // Compute the plane of symmetry, tangent to the egrp's principal direction,
@@ -1021,11 +1022,11 @@ make_endcap_faces(LoftedGroup* lg, Volume* vol, BOOL reverse)
 
     // Find an edge in the group that crosses the plane of symmetry
     dist = distance_point_plane(&symmetry, the_point);
+#endif
 
 
 
-
-
+    return TRUE;   // TEMP
 }
 
 

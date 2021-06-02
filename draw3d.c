@@ -2355,6 +2355,32 @@ Draw(void)
                         }
                     }
                 }
+
+                // Step counts for all edges in a volume.
+                if (debug_view_normals)         // TEMP until it gets its own flag
+                {
+                    Face* f;
+                    Edge* e;
+                    int i;
+                    char buf[64];
+
+                    for (f = (Face*)vol->faces.head; f != NULL; f = (Face*)f->hdr.next)
+                    {
+                        for (i = 0; i < f->n_edges; i++)
+                        {
+                            e = f->edges[i];
+                            glRasterPos3f
+                            (
+                                (e->endpoints[0]->x + e->endpoints[1]->x) / 2,
+                                (e->endpoints[0]->y + e->endpoints[1]->y) / 2,
+                                (e->endpoints[0]->z + e->endpoints[1]->z) / 2
+                            );
+                            glListBase(1000);
+                            sprintf_s(buf, 64, "%d", e->nsteps);
+                            glCallLists(strlen(buf), GL_UNSIGNED_BYTE, buf);
+                        }
+                    }
+                }
             }
 
             // The normal and any local normals for a single highlighted face.
