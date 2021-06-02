@@ -285,7 +285,7 @@ serialise_obj(Object *obj, FILE *f, int level)
 
             INDENT(level, f);
             fprintf_s(f, "LOFT %d ", obj->ID);
-            fprintf_s(f, "%f %f %d %d %d %d %d %d %d ",
+            fprintf_s(f, "%f %f %d %d %d %d %d %d %d\n",
                 loft->nose_tension,
                 loft->tail_tension,
                 loft->body_angle_break,
@@ -294,8 +294,9 @@ serialise_obj(Object *obj, FILE *f, int level)
                 loft->nose_join_mode,
                 loft->tail_join_mode,
                 loft->follow_path,
-                loft->n_bays
+                loft->up_direction
             );
+            fprintf_s(f, "BAYS %d %d ", obj->ID, loft->n_bays);
             for (i = 0; i < loft->n_bays; i++)
                 fprintf_s(f, "%f ", loft->bay_tensions[i]);
             fprintf_s(f, "\n");
@@ -1082,8 +1083,19 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
             loft->tail_join_mode = atoi(tok);
             tok = strtok_s(NULL, " \t\n", &nexttok);
             loft->follow_path = atoi(tok);
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            loft->up_direction = atoi(tok);
+        }
+        else if (strcmp(tok, "BAYS") == 0)
+        {
+            int i;
+            LoftParams* loft;
 
-            loft->up_direction = 0;   // TODO: Serialise the up direction.
+            tok = strtok_s(NULL, " \t\n", &nexttok);
+            id = atoi(tok) + id_offset;
+            ASSERT(object[id]->type == OBJ_GROUP, "Lofted object is not a group");
+            grp = (Group*)object[id];
+            loft = grp->loft;
 
             tok = strtok_s(NULL, " \t\n", &nexttok);
             loft->n_bays = atoi(tok);
