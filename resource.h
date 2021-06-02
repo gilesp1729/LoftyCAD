@@ -84,6 +84,7 @@
 #define IDI_CONST_CIRCLE                137
 #define IDS_LOFT_NOSE_JOIN              137
 #define IDS_LOFT_TAIL_JOIN              138
+#define IDS_LOFT_UP_DIRECTION           139
 #define IDI_EXTRUDE                     140
 #define IDD_DIMENSIONS                  141
 #define IDD_PREFS                       142
@@ -207,6 +208,7 @@
 #define IDC_COMBO2                      1085
 #define IDC_LOFT_TAIL_JOIN              1085
 #define IDC_LOFT_FOLLOW_PATH            1086
+#define IDC_LOFT_UP_DIRECTION           1087
 #define IDD_PRINT_PREVIEW               1544
 #define IDD_SLICER                      1545
 #define IDD_PRINTER                     1546

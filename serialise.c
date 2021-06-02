@@ -1082,6 +1082,9 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
             loft->tail_join_mode = atoi(tok);
             tok = strtok_s(NULL, " \t\n", &nexttok);
             loft->follow_path = atoi(tok);
+
+            loft->up_direction = 0;   // TODO: Serialise the up direction.
+
             tok = strtok_s(NULL, " \t\n", &nexttok);
             loft->n_bays = atoi(tok);
             for (i = 0; i < loft->n_bays; i++)

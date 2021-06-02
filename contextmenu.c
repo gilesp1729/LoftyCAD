@@ -844,7 +844,7 @@ materials_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     return 0;
 }
 
-LoftParams default_loft = { 0.3f, 0.3f, 60, 80, 80, JOIN_BOW, JOIN_BOW, FALSE, 0, 0.3f};
+LoftParams default_loft = { 0.3f, 0.3f, 60, 80, 80, JOIN_BOW, JOIN_BOW, FALSE, 0, 0, 0.3f};
 
 // Dialog that controls lofting.
 // Input (lParam): a Group of edge groups.
@@ -879,10 +879,22 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             group->loft->n_bays = n_bays;
             for (i = 0; i < n_bays; i++)
                 group->loft->bay_tensions[i] = group->loft->bay_tensions[0];
+
+            // TODO: Initialise the up_direction semi-intelligently based on the group bbox.
+            // (e.g. NOT the direction of the path. For curved paths lying generally in a plane,
+            // it will be perp to that plane.)
+            
+            // TODO: Serialise the up_direction.
         }
         loft = group->loft;
 
         // Fill the fields
+        SendDlgItemMessage(hWnd, IDC_LOFT_UP_DIRECTION, CB_RESETCONTENT, 0, 0);
+        SendDlgItemMessage(hWnd, IDC_LOFT_UP_DIRECTION, CB_ADDSTRING, 0, (LPARAM)"+X");
+        SendDlgItemMessage(hWnd, IDC_LOFT_UP_DIRECTION, CB_ADDSTRING, 0, (LPARAM)"+Y");
+        SendDlgItemMessage(hWnd, IDC_LOFT_UP_DIRECTION, CB_ADDSTRING, 0, (LPARAM)"+Z");
+        SendDlgItemMessage(hWnd, IDC_LOFT_UP_DIRECTION, CB_SETCURSEL, loft->up_direction, 0);
+
         sprintf_s(buf, 64, "%.2f", loft->nose_tension);
         SendDlgItemMessage(hWnd, IDC_LOFT_NOSE_TENSION, WM_SETTEXT, 0, (LPARAM)buf);
         sprintf_s(buf, 64, "%.2f", loft->tail_tension);
@@ -899,7 +911,6 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         SendDlgItemMessage(hWnd, IDC_LOFT_TAIL_ANGLEBREAK, WM_SETTEXT, 0, (LPARAM)buf);
 
         // Agree in order with LoftJoinMode enum
-        // TODO: Get these strings out into the string table, and do tool tips for everything
         SendDlgItemMessage(hWnd, IDC_LOFT_NOSE_JOIN, CB_RESETCONTENT, 0, 0);
         SendDlgItemMessage(hWnd, IDC_LOFT_NOSE_JOIN, CB_ADDSTRING, 0, (LPARAM)"Bow");
         SendDlgItemMessage(hWnd, IDC_LOFT_NOSE_JOIN, CB_ADDSTRING, 0, (LPARAM)"Stern");
@@ -925,6 +936,7 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         changed = FALSE;
 
         // Load up tooltips.
+        load_tooltip(hWnd, IDC_LOFT_UP_DIRECTION, IDS_LOFT_UP_DIRECTION);
         load_tooltip(hWnd, IDC_LOFT_FOLLOW_PATH, IDS_LOFT_FOLLOW_PATH);
         load_tooltip(hWnd, IDC_LOFT_BAY_TENSIONS, IDS_LOFT_BAY_TENSIONS);
         load_tooltip(hWnd, IDC_LOFT_NOSE_TENSION, IDS_LOFT_NOSE_TENSION);
@@ -1074,6 +1086,16 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             case CBN_SELCHANGE:
                 loft->tail_join_mode = SendDlgItemMessage(hWnd, IDC_LOFT_TAIL_JOIN, CB_GETCURSEL, 0, 0);
                 EnableWindow(GetDlgItem(hWnd, IDC_LOFT_TAIL_ANGLEBREAK), loft->tail_join_mode == JOIN_BOW);
+                changed = TRUE;
+                break;
+            }
+            break;
+
+        case IDC_LOFT_UP_DIRECTION:
+            switch (HIWORD(wParam))
+            {
+            case CBN_SELCHANGE:
+                loft->up_direction = SendDlgItemMessage(hWnd, IDC_LOFT_UP_DIRECTION, CB_GETCURSEL, 0, 0);
                 changed = TRUE;
                 break;
             }
