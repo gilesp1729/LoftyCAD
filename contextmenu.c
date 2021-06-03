@@ -935,7 +935,7 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         changed = FALSE;
 
         // Load up tooltips.
-        load_tooltip(hWnd, IDC_LOFT_KEY_DIRECTION, IDS_LOFT_UP_DIRECTION);
+        load_tooltip(hWnd, IDC_LOFT_KEY_DIRECTION, IDS_LOFT_KEY_DIRECTION);
         load_tooltip(hWnd, IDC_LOFT_FOLLOW_PATH, IDS_LOFT_FOLLOW_PATH);
         load_tooltip(hWnd, IDC_LOFT_BAY_TENSIONS, IDS_LOFT_BAY_TENSIONS);
         load_tooltip(hWnd, IDC_LOFT_NOSE_TENSION, IDS_LOFT_NOSE_TENSION);

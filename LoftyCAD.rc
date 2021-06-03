@@ -979,7 +979,7 @@ BEGIN
                             "The angle breaking threshold, in degrees, at the tail. The angle between the last contour (end-to-end) and the plane of the tail section is tested."
     IDS_LOFT_NOSE_JOIN      "How contours join to the nose: smoothly towards centre (nosecone), smoothly towards edges (bow), or truncated (stern) "
     IDS_LOFT_TAIL_JOIN      "How contours join to the tail: smoothly towards centre (nosecone), smoothly towards edges (bow), or truncated (stern) "
-    IDS_LOFT_UP_DIRECTION   "Select which direction defines the plane of symmetry tangent to the current path."
+    IDS_LOFT_KEY_DIRECTION  "Select direction from centre of the first section to the key edge."
 END
 
 #endif    // English (Australia) resources

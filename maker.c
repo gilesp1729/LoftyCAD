@@ -1001,32 +1001,86 @@ compare_lofted_groups(const void* elem1, const void* elem2)
         return 0;
 }
 
-// Helper to make faces for an endcap edge group and attach them to a volume.
-// Allows reversing for the nose. Return FALSE if there is a problem,
-// such as mismatching point counts.
-BOOL
-make_endcap_faces(LoftedGroup* lg, Volume* vol, int *band_nsteps, BOOL reverse)
+// Helper to find the key edge in an endcap edge group. Return key edge if it is valid
+// after checks, or NULL if one cannot be found and the endcap must be made flat.
+Edge *
+find_key_edge(LoftParams *loft, LoftedGroup *lg)
 {
-#if 0
-    Plane symmetry;
+    int npos = 0;
+    int nneg = 0;
+    int nzero = 0;
+    int ncross = 0;
+    Edge* cross[3] = { NULL, };
+    Plane key_direction, symmetry;
+    Edge* e;
 
-    // Compute the plane of symmetry, tangent to the egrp's principal direction,
-    // and going through its quasi-centroid.
-    plcross(&lg->principal, up_direction, &symmetry);
+    key_direction.A = loft->key_direction == 0 ? 1.0f : 0;
+    key_direction.B = loft->key_direction == 1 ? 1.0f : 0;
+    key_direction.C = loft->key_direction == 2 ? 1.0f : 0;
+    plcross(&lg->principal, &key_direction, &symmetry);
     symmetry.refpt = lg->norm.refpt;
+    for (e = (Edge*)lg->egrp->obj_list.head; e != NULL; e = (Edge*)e->hdr.next)
+    {
+        int c = first_point_index(e);
+        float side0 = distance_point_plane(&symmetry, e->endpoints[c]);
+        float side1 = distance_point_plane(&symmetry, e->endpoints[1 - c]);
 
-    // Run around the egrp looking for points on either side of the plane of symmetry.
-    // Make sure there are an equal number of them on each side.
+        // There should be two edges crossing the plane of symmetry, and there should be an equal
+        // number of points on each side of it. There should be no points on the plane.
+        if (side0 < SMALL_COORD)
+            nneg++;
+        else if (side0 > SMALL_COORD)
+            npos++;
+        else
+            return NULL;        // A point is on the plane.
+        if (side0 * side1 < SMALL_COORD)
+        {
+            cross[ncross++] = e;
+            if (ncross > 2)
+                return NULL;    // too many crossings, don't count past 3
+        }
+    }
+
+    if (npos != nneg)
+        return NULL;            // mismatching points on each side
+    if (ncross != 2)
+        return NULL;            // too few or too many crossings
+    if (cross[0]->type != cross[1]->type)
+        return NULL;            // the key edge and its opposite number don't match
+
+    return cross[0];            // Bingo! Just return the first one found
+}
+
+// Helper to make faces for an endcap edge group and attach them to a volume.
+// Allows reversing for the nose. Allows generation of a single flat face as a fallback
+// if we can't join points to make internal edges correctly (tested outside) or if the
+// edge types we're trying to join do not match.
+BOOL
+make_endcap_faces(LoftedGroup* lg, Volume* vol, int *band_nsteps, BOOL single_face, BOOL reverse)
+{
+    Face* face;
+
+    if (single_face)
+    {
+        // If a single bezier face or an endcap that can't be divided up:
+        // Create the face for the endcap. Just use the standard make_face call.
+        // The nose face gets reversed. Don't link it into the volume yet,
+        // as we need it to be linked into the lg entry's list now.
+        face = make_face(lg[0].egrp, FALSE, FALSE, reverse);
+        face->vol = vol;
+        if (face->type > vol->max_facetype)
+            vol->max_facetype = face->type;
+        link_tail((Object*)face, &lg->face_list);
+    }
+    else
+    {
+        // Divide up the edge group into a stack of faces starting at the key.
 
 
 
-    // Find an edge in the group that crosses the plane of symmetry
-    dist = distance_point_plane(&symmetry, the_point);
-#endif
+    }
 
-
-
-    return TRUE;   // TEMP
+    return TRUE;
 }
 
 
@@ -1040,7 +1094,7 @@ Volume *
 make_lofted_volume(Group* group)
 {
     Group* clone, * egrp, * first_egrp = NULL;
-    Edge *e, *prev_e;
+    Edge *e, *prev_e, *key;
     Face* face;
     Volume* vol, *new_vol;
     Object* obj;
@@ -1055,8 +1109,9 @@ make_lofted_volume(Group* group)
     ListHead* contour_lists;
     Edge** contour;
     int *band_nsteps;
+    BOOL single_face = FALSE;
 
-    // Some sanity checks on the input. Some will be enforced outside.
+    // Some sanity checks on the input. Some will be enforced outside.fends
     ASSERT(group->hdr.type == OBJ_GROUP, "Must be a group");
 
     // Ensure the edge groups all have the same number and type of edges.
@@ -1333,17 +1388,13 @@ make_lofted_volume(Group* group)
     // Sort by distance (lg.param) along the axis or the path.
     qsort(lg, num_groups, sizeof(LoftedGroup), compare_lofted_groups);
 
-    // Choose an edge in the first section as the key edge. If there is a plane of symmetry,
-    // find the uppermost edge (in the defined up-direction) that crosses the plane. Rotate the
-    // first section so the key edge is at the head of the edge group.
-
-
-
-
-
-
-
-
+    // Choose an edge in the first section as the key edge.
+    // Rotate the first section so the key edge is at the head of the edge group.
+    key = find_key_edge(loft, &lg[0]);
+    if (key != NULL)
+        rotate(&lg[0].egrp->obj_list, key);
+    else if (num_edges > 4)
+        single_face = TRUE;       // No valid key edge, we can't make internal edges. Just make the endcap flat.
  
     // Find the corresponding edge in each section. Various methods have been tried, and 
     // robustness is an issue. Use an angular test summed across all the edges.
@@ -1459,10 +1510,12 @@ make_lofted_volume(Group* group)
     for (i = 0; i < num_groups; i++)
     {
         Edge* ne, * pe;
+        EDGE key_type;
 
         egrp = lg[i].egrp;
         e = (Edge*)egrp->obj_list.head;
         e->band = 0;
+        key_type = e->type;
         if (e->nsteps > band_nsteps[0])
             band_nsteps[0] = e->nsteps;
 
@@ -1476,15 +1529,25 @@ make_lofted_volume(Group* group)
             if (pe->nsteps > band_nsteps[j])
                 band_nsteps[j] = pe->nsteps;
 
+            // While here, check for a mismatched edge types across the future
+            // new face. Set to single_face (flat) if a mismatch is found.
+            // The step counts are still made to agree for the contours, 
+            // but it's not relevant to the endcaps.
+            if (ne->type != pe->type)
+                single_face = TRUE;
+
             // Move to next band. We should meet at the bottom.
             ne = (Edge *)ne->hdr.next;
             pe = (Edge *)pe->hdr.prev;
-            ASSERT(ne != NULL && pe != NULL, "Edge group must have an even number of points");
+            ASSERT(ne != NULL && pe != NULL, "Edge group must have an even number of edges");
             if (ne == pe)
             {
                 ne->band = 0;
                 if (ne->nsteps > band_nsteps[0])
                     band_nsteps[0] = ne->nsteps;
+                if (ne->type != key_type)
+                    single_face = TRUE;
+
                 break;
             }
         }
@@ -1492,8 +1555,8 @@ make_lofted_volume(Group* group)
 
     // Accumulate faces in list attached to lg[0] and lg[num_groups-1], reverse normals
     // for those in lg[0]
-    make_endcap_faces(&lg[0], vol, band_nsteps, TRUE);
-    make_endcap_faces(&lg[num_groups - 1], vol, band_nsteps, FALSE);
+    make_endcap_faces(&lg[0], vol, band_nsteps, single_face || num_edges == 4, TRUE);
+    make_endcap_faces(&lg[num_groups - 1], vol, band_nsteps, single_face || num_edges == 4, FALSE);
 
     // Set edges to have the correct max step counts accumulated above.
     for (i = 0; i < num_groups; i++)
@@ -1523,69 +1586,6 @@ make_lofted_volume(Group* group)
             }
         }
     }
-
-#if 0
-    // Ensure corresponding edges in the sections have matching step counts. 
-    for (i = 0; i < num_groups; i++)
-    {
-        egrp = lg[i].egrp;
-        for (j = 0, e = (Edge*)egrp->obj_list.head; e != NULL; j++, e = (Edge*)e->hdr.next)
-        {
-            if (e->nsteps > sect_nsteps[j])
-                sect_nsteps[j] = e->nsteps;
-        }
-    }
-
-#define MAX(a, b)   ((a) > (b) ? (a) : (b))
-    if (num_edges == 4 || (num_edges & 1))
-    {
-        if (num_edges == 4)
-        {
-            // If the endcap is going to be a single bezier face:
-            // Check that opposing edges have the same step count, as they will meet up in the endcap.
-            // We don't care about the plane of symmetry in this case.
-            sect_nsteps[0] = sect_nsteps[2] = MAX(sect_nsteps[0], sect_nsteps[2]);
-            sect_nsteps[1] = sect_nsteps[3] = MAX(sect_nsteps[1], sect_nsteps[3]);
-        }
-
-        // If a single bezier face or an odd-numbered (flat) face:
-        // Create the faces for the endcaps. Just use the standard make_face call.
-        // The nose face gets reversed. Don't link them into the volume yet,
-        // as we need themn to be linked into the lg entry's list now.
-        face = make_face(lg[0].egrp, FALSE, FALSE, TRUE);
-        face->vol = vol;
-        if (face->type > vol->max_facetype)
-            vol->max_facetype = face->type;
-        link_tail((Object*)face, &lg[0].face_list);
-
-        face = make_face(lg[num_groups - 1].egrp, FALSE, FALSE, FALSE);
-        face->vol = vol;
-        if (face->type > vol->max_facetype)
-            vol->max_facetype = face->type;
-        link_tail((Object*)face, &lg[num_groups - 1].face_list);
-    }
-    else
-    {
-        // TODO: Decide based on plane of symmetry, which points are on each side
-        // Join up points and make faces in each endcap, and make sure all step counts are tickety-boo.
-        // Accumulate faces in list attached to lg[0] and lg[num_groups-1], reverse normals
-        // for those in lg[0]
-        make_endcap_faces(&lg[0], vol, sect_nsteps, TRUE);
-        make_endcap_faces(&lg[num_groups - 1], vol, sect_nsteps, FALSE);
-    }
-
-    // Set edges to have the correct max step counts accumulated above.
-    // TODO: take care of internal edges when n < 4
-    for (i = 0; i < num_groups; i++)
-    {
-        egrp = lg[i].egrp;
-        for (j = 0, e = (Edge*)egrp->obj_list.head; e != NULL; j++, e = (Edge*)e->hdr.next)
-        {
-            e->nsteps = sect_nsteps[j];
-            e->view_valid = FALSE;
-        }
-    }
-#endif
 
     // Join corresponding points with bezier edges. Gather the edges into contour lists.
     for (i = 1; i < num_groups; i++)
