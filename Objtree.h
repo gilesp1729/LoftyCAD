@@ -368,7 +368,7 @@ typedef struct LoftParams
     LoftJoinMode    tail_join_mode; // And for the tail
     BOOL            follow_path;    // If TRUE, contours will follow path direction at each section
                                     // rather than being determined by adjacent sections (useful for tubing)
-    int             up_direction;   // Which way is up. 0 = X, 1 = Y, 2 = Z
+    int             key_direction;  // Direction from centre of section to key edge. 0 = X, 1 = Y, 2 = Z
     int             n_bays;         // Number of bays (number of sections - 1)
     float           bay_tensions[1];    // Array of tensions per bay (space between consecutive sections)
 } LoftParams;

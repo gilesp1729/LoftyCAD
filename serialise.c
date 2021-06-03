@@ -294,7 +294,7 @@ serialise_obj(Object *obj, FILE *f, int level)
                 loft->nose_join_mode,
                 loft->tail_join_mode,
                 loft->follow_path,
-                loft->up_direction
+                loft->key_direction
             );
             fprintf_s(f, "BAYS %d %d ", obj->ID, loft->n_bays);
             for (i = 0; i < loft->n_bays; i++)
@@ -1056,7 +1056,6 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
         }
         else if (strcmp(tok, "LOFT") == 0)
         {
-            int i;
             LoftParams* loft;
 
             tok = strtok_s(NULL, " \t\n", &nexttok);
@@ -1084,7 +1083,7 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
             tok = strtok_s(NULL, " \t\n", &nexttok);
             loft->follow_path = atoi(tok);
             tok = strtok_s(NULL, " \t\n", &nexttok);
-            loft->up_direction = atoi(tok);
+            loft->key_direction = atoi(tok);
         }
         else if (strcmp(tok, "BAYS") == 0)
         {

@@ -880,20 +880,19 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             for (i = 0; i < n_bays; i++)
                 group->loft->bay_tensions[i] = group->loft->bay_tensions[0];
 
-            // TODO: Initialise the up_direction semi-intelligently based on the group bbox.
+            // TODO: Initialise the key_direction semi-intelligently based on the group bbox.
             // (e.g. NOT the direction of the path. For curved paths lying generally in a plane,
             // it will be perp to that plane.)
-            
-            // TODO: Serialise the up_direction.
+
         }
         loft = group->loft;
 
         // Fill the fields
-        SendDlgItemMessage(hWnd, IDC_LOFT_UP_DIRECTION, CB_RESETCONTENT, 0, 0);
-        SendDlgItemMessage(hWnd, IDC_LOFT_UP_DIRECTION, CB_ADDSTRING, 0, (LPARAM)"+X");
-        SendDlgItemMessage(hWnd, IDC_LOFT_UP_DIRECTION, CB_ADDSTRING, 0, (LPARAM)"+Y");
-        SendDlgItemMessage(hWnd, IDC_LOFT_UP_DIRECTION, CB_ADDSTRING, 0, (LPARAM)"+Z");
-        SendDlgItemMessage(hWnd, IDC_LOFT_UP_DIRECTION, CB_SETCURSEL, loft->up_direction, 0);
+        SendDlgItemMessage(hWnd, IDC_LOFT_KEY_DIRECTION, CB_RESETCONTENT, 0, 0);
+        SendDlgItemMessage(hWnd, IDC_LOFT_KEY_DIRECTION, CB_ADDSTRING, 0, (LPARAM)"+X");
+        SendDlgItemMessage(hWnd, IDC_LOFT_KEY_DIRECTION, CB_ADDSTRING, 0, (LPARAM)"+Y");
+        SendDlgItemMessage(hWnd, IDC_LOFT_KEY_DIRECTION, CB_ADDSTRING, 0, (LPARAM)"+Z");
+        SendDlgItemMessage(hWnd, IDC_LOFT_KEY_DIRECTION, CB_SETCURSEL, loft->key_direction, 0);
 
         sprintf_s(buf, 64, "%.2f", loft->nose_tension);
         SendDlgItemMessage(hWnd, IDC_LOFT_NOSE_TENSION, WM_SETTEXT, 0, (LPARAM)buf);
@@ -936,7 +935,7 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         changed = FALSE;
 
         // Load up tooltips.
-        load_tooltip(hWnd, IDC_LOFT_UP_DIRECTION, IDS_LOFT_UP_DIRECTION);
+        load_tooltip(hWnd, IDC_LOFT_KEY_DIRECTION, IDS_LOFT_UP_DIRECTION);
         load_tooltip(hWnd, IDC_LOFT_FOLLOW_PATH, IDS_LOFT_FOLLOW_PATH);
         load_tooltip(hWnd, IDC_LOFT_BAY_TENSIONS, IDS_LOFT_BAY_TENSIONS);
         load_tooltip(hWnd, IDC_LOFT_NOSE_TENSION, IDS_LOFT_NOSE_TENSION);
@@ -1091,11 +1090,11 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             }
             break;
 
-        case IDC_LOFT_UP_DIRECTION:
+        case IDC_LOFT_KEY_DIRECTION:
             switch (HIWORD(wParam))
             {
             case CBN_SELCHANGE:
-                loft->up_direction = SendDlgItemMessage(hWnd, IDC_LOFT_UP_DIRECTION, CB_GETCURSEL, 0, 0);
+                loft->key_direction = SendDlgItemMessage(hWnd, IDC_LOFT_KEY_DIRECTION, CB_GETCURSEL, 0, 0);
                 changed = TRUE;
                 break;
             }

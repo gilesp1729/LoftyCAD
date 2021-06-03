@@ -209,6 +209,7 @@
 #define IDC_LOFT_TAIL_JOIN              1085
 #define IDC_LOFT_FOLLOW_PATH            1086
 #define IDC_LOFT_UP_DIRECTION           1087
+#define IDC_LOFT_KEY_DIRECTION          1087
 #define IDD_PRINT_PREVIEW               1544
 #define IDD_SLICER                      1545
 #define IDD_PRINTER                     1546

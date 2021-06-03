@@ -707,7 +707,7 @@ STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSM
 CAPTION "Lofting"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
-    COMBOBOX        IDC_LOFT_UP_DIRECTION,77,14,46,46,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        IDC_LOFT_KEY_DIRECTION,81,14,46,46,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
     CONTROL         "Follow path (bay tensions will be calculated automatically)",IDC_LOFT_FOLLOW_PATH,
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,15,37,257,10
     COMBOBOX        IDC_LOFT_BAY_TENSIONS,77,71,46,65,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
@@ -732,8 +732,8 @@ BEGIN
     LTEXT           "Nose join mode",IDC_STATIC,26,172,50,11
     LTEXT           "Tail join mode",IDC_STATIC,31,190,45,9
     LTEXT           "Bay tensions",IDC_STATIC,33,73,42,8
-    LTEXT           "Which way is up?",IDC_STATIC,16,16,57,10
-    LTEXT           "(defines plane of symmetry at each section)",IDC_STATIC,131,16,141,10
+    LTEXT           "Direction from centre to key edge",IDC_STATIC,15,12,62,19
+    LTEXT           "(in first section)",IDC_STATIC,134,16,63,10
 END
 
 
