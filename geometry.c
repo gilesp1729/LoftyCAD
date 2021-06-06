@@ -40,6 +40,10 @@ intersect_ray_plane(GLint x, GLint y, Plane *picked_plane, Point *new_point)
 // Find the nearest point on an edge to the ray, and return that.
 // (the mouse is snapped to the edge). Return FALSE if no point can be found.
 // Algorithm and notation from D. Sunday, "Distance between Lines", http://geomalgorithms.com/a07-_distance.html
+
+// Many of the Sunday links in this file have gone dead. They can be found at thw Wayback Machine
+// under https://web.archive.org/web/20200828055723/http://geomalgorithms.com/
+
 BOOL
 snap_ray_edge(GLint x, GLint y, Edge *edge, Point *new_point)
 {
