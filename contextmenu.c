@@ -893,6 +893,7 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         SendDlgItemMessage(hWnd, IDC_LOFT_KEY_DIRECTION, CB_ADDSTRING, 0, (LPARAM)"+Y");
         SendDlgItemMessage(hWnd, IDC_LOFT_KEY_DIRECTION, CB_ADDSTRING, 0, (LPARAM)"+Z");
         SendDlgItemMessage(hWnd, IDC_LOFT_KEY_DIRECTION, CB_SETCURSEL, loft->key_direction, 0);
+        // TODO: Gray out key direction and its static texts if egrp->n_members == 4.
 
         sprintf_s(buf, 64, "%.2f", loft->nose_tension);
         SendDlgItemMessage(hWnd, IDC_LOFT_NOSE_TENSION, WM_SETTEXT, 0, (LPARAM)buf);

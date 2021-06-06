@@ -1075,9 +1075,82 @@ make_endcap_faces(LoftedGroup* lg, Volume* vol, int *band_nsteps, BOOL single_fa
     else
     {
         // Divide up the edge group into a stack of faces starting at the key.
+        Edge* ne, * pe, *ie, *e;
+        EDGE key_type, min_type, max_type;
+        FACE face_type;
+        Group* egrp; 
+        Plane norm;
+        int j;
 
+        egrp = lg->egrp;
+        e = (Edge*)egrp->obj_list.head;
+        key_type = e->type;
 
+        ne = (Edge*)e->hdr.next;
+        pe = (Edge*)egrp->obj_list.tail;
+        for (j = 1; j < egrp->n_members; j++)  // this loop will terminate early
+        {
+            // Create an internal edge.
+            ie = edge_new(key_type);
+            ie->endpoints[0] = ne->endpoints[1 - first_point_index(ne)];
+            ie->endpoints[1] = pe->endpoints[first_point_index(pe)];
 
+            // Work out what type of face this is.
+            // straight-straight --> FLAT
+            // straight-curved --> CYLINDER (where curved == anything other than straight)
+            // arc->curved --> BARREL
+            // bezier->bezier --> BEZIER
+            ASSERT(ne->type == pe->type, "Already checked this");
+            
+            min_type = MIN(key_type, ne->type);
+            max_type = MAX(key_type, ne->type);
+            if (max_type == EDGE_STRAIGHT)
+                face_type = FACE_FLAT; 
+            else if (min_type == EDGE_STRAIGHT)
+                face_type = FACE_CYLINDRICAL; 
+            else if (min_type == EDGE_ARC)
+                face_type = FACE_BARREL; 
+            else if (min_type == EDGE_BEZIER)
+                face_type = FACE_BEZIER;
+
+            // Create the face from the edges.
+            norm = lg->norm;
+            if (reverse)
+            {
+                norm.A = -norm.A;
+                norm.B = -norm.B;
+                norm.C = -norm.C;
+            }
+            face = face_new(face_type, norm);
+            face->n_edges = 4;
+            if (reverse)
+            {
+                face->initial_point = pe->endpoints[1 - first_point_index(pe)];
+                face->edges[0] = pe;
+                face->edges[1] = ie;
+                face->edges[2] = ne;
+                face->edges[3] = e;
+            }
+            else
+            {
+                face->initial_point = ne->endpoints[first_point_index(ne)];
+                face->edges[0] = ne;
+                face->edges[1] = ie;
+                face->edges[2] = pe;
+                face->edges[3] = e;
+            }
+            face->vol = vol;
+            if (face->type > vol->max_facetype)
+                vol->max_facetype = face->type;
+            link_tail((Object*)face, &lg->face_list);
+
+            // Move to next band. We should meet at the bottom.
+            ne = (Edge*)ne->hdr.next;
+            pe = (Edge*)pe->hdr.prev;
+            e = ie;
+            if (ne == pe)
+                break;
+        }
     }
 
     return TRUE;

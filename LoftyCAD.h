@@ -212,6 +212,10 @@ extern Material materials[MAX_MATERIAL];
 #define TAB_PREVIEW     2
 #define TAB_PRINTER     3
 
+// helpful defines
+#define MIN(a, b)   ((a) < (b) ? (a) : (b))
+#define MAX(a, b)   ((a) > (b) ? (a) : (b))
+
 // Debug stuff
 
 // Debugging defines
