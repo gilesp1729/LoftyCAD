@@ -1098,6 +1098,13 @@ make_endcap_faces(LoftedGroup* lg, Volume* vol, int *band_nsteps, BOOL single_fa
             // Copy any other edge information.
             // TODO: copy bez control points - weighted avg of key and opposite number
 
+
+
+
+
+
+
+
             // Work out what type of face this is.
             // straight-straight --> FLAT
             // straight-curved --> CYLINDER (where curved == anything other than straight)
@@ -1762,7 +1769,7 @@ make_lofted_volume(Group* group)
                 join_smooth = FALSE;
                 if (loft->follow_path)
                 {
-                    // Follow curve of path. The bay tensions have been calculated in advance. (TODO!)
+                    // Follow curve of path. The bay tensions have been calculated in advance. 
                     plnext = lg[i].principal;
                     normalise_plane(&plnext);
                     join_smooth = TRUE;
@@ -1812,6 +1819,7 @@ make_lofted_volume(Group* group)
         Edge* c;
         int ci;
         float cosmax, costest, lj;
+        BezierEdge* be;
 
         c = (Edge *)contour_lists[j].head;
         ci = edge_direction(c, &pl);                // points into contour
@@ -1831,12 +1839,29 @@ make_lofted_volume(Group* group)
                 {
                     e = face->edges[i];
                     // Be careful with the directions
-                    if (e->endpoints[0] == c->endpoints[ci])
-                        point_direction(e->endpoints[1], e->endpoints[0], &pltest);
-                    else if (e->endpoints[1] == c->endpoints[ci])
-                        point_direction(e->endpoints[0], e->endpoints[1], &pltest);
-                    else
-                        continue;
+                    // Don't just use end-to-end directions when joining to other edges.
+                    // If edge is Bezier, need to use control-arm direction
+                    switch (e->type)
+                    {
+                    case EDGE_STRAIGHT:
+                        if (e->endpoints[0] == c->endpoints[ci])
+                            point_direction(e->endpoints[1], e->endpoints[0], &pltest);
+                        else if (e->endpoints[1] == c->endpoints[ci])
+                            point_direction(e->endpoints[0], e->endpoints[1], &pltest);
+                        else
+                            continue;
+                        break;
+
+                    case EDGE_BEZIER:
+                        be = (BezierEdge*)e;
+                        if (e->endpoints[0] == c->endpoints[ci])
+                            point_direction(be->ctrlpoints[0], e->endpoints[0], &pltest);
+                        else if (e->endpoints[1] == c->endpoints[ci])
+                            point_direction(be->ctrlpoints[1], e->endpoints[1], &pltest);
+                        else
+                            continue;
+                        break;
+                    }
 
                     project(&pltest, &lg[0].principal, &pltest_proj);
                     costest = pldot(&pltest_proj, &pl_proj);
@@ -1851,7 +1876,6 @@ make_lofted_volume(Group* group)
 
         if (cosmax > cosf(loft->nose_angle_break / RADF) && loft->nose_join_mode != JOIN_STERN)
         {
-            // make the first ctrl point straight into the end group's plane (don't average them)
             lj = length(c->endpoints[0], c->endpoints[1]);
             ((BezierEdge*)c)->ctrlpoints[ci]->x = c->endpoints[ci]->x + (plend.A * loft->nose_tension * lj);
             ((BezierEdge*)c)->ctrlpoints[ci]->y = c->endpoints[ci]->y + (plend.B * loft->nose_tension * lj);
@@ -1871,6 +1895,7 @@ make_lofted_volume(Group* group)
         Edge* c;
         int ci;
         float cosmax, costest, lj;
+        BezierEdge* be;
 
         c = (Edge*)contour_lists[j].tail;
         ci = edge_direction(c, &pl);                // points out of contour
@@ -1888,13 +1913,29 @@ make_lofted_volume(Group* group)
                 for (i = 0; i < face->n_edges; i++)
                 {
                     e = face->edges[i];
+
                     // Be careful with the directions
-                    if (e->endpoints[0] == c->endpoints[1 - ci])
-                        point_direction(e->endpoints[0], e->endpoints[1], &pltest);
-                    else if (e->endpoints[1] == c->endpoints[1 - ci])
-                        point_direction(e->endpoints[1], e->endpoints[0], &pltest);
-                    else
-                        continue;
+                    switch (e->type)
+                    {
+                    case EDGE_STRAIGHT:
+                        if (e->endpoints[0] == c->endpoints[1 - ci])
+                            point_direction(e->endpoints[0], e->endpoints[1], &pltest);
+                        else if (e->endpoints[1] == c->endpoints[1 - ci])
+                            point_direction(e->endpoints[1], e->endpoints[0], &pltest);
+                        else
+                            continue;
+                        break;
+
+                    case EDGE_BEZIER:
+                        be = (BezierEdge*)e;
+                        if (e->endpoints[0] == c->endpoints[1 - ci])
+                            point_direction(e->endpoints[0], be->ctrlpoints[0], &pltest);
+                        else if (e->endpoints[1] == c->endpoints[1 - ci])
+                            point_direction(e->endpoints[1], be->ctrlpoints[1], &pltest);
+                        else
+                            continue;
+                        break;
+                    }
 
                     project(&pltest, &lg[num_groups - 1].principal, &pltest_proj);
                     costest = pldot(&pltest_proj, &pl_proj);
