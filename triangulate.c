@@ -1162,6 +1162,7 @@ gen_view_list_face(Face* face)
         {
             ArcEdge* ae = (ArcEdge*)edge_new(EDGE_ARC);
             Edge* e = (Edge*)ae;
+            Plane centreline;
 
             // Don't add this edge to the object tree.
             e->hdr.ID = 0;
@@ -1169,7 +1170,15 @@ gen_view_list_face(Face* face)
             ae->centre = point_newv(0, 0, 0);
             e->endpoints[0] = point_newpv(s0);
             e->endpoints[1] = point_newpv(s1);
-            dist_point_to_perp_plane(e->endpoints[0], &ae0->normal, ae->centre);
+
+            // Don't just use ae0->normal because the centrelines might not be
+            // quite in line. You can't get this perfect but it is better.
+            centreline.A = ae1->centre->x - ae0->centre->x;
+            centreline.B = ae1->centre->y - ae0->centre->y;
+            centreline.C = ae1->centre->z - ae0->centre->z;
+            centreline.refpt = ae0->normal.refpt;
+            normalise_plane(&centreline);
+            dist_point_to_perp_plane(e->endpoints[0], &centreline, ae->centre);
 
             // make sure it points in the same direction as the first_arc
             ae->clockwise = first_arc_forward ? ae0->clockwise : !ae0->clockwise;
