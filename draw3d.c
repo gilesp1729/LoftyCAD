@@ -469,6 +469,8 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
 
         if (selected || highlighted)
         {
+            float unit = zTrans / (-2 * half_size);
+
             // Draw a square blob in the facing plane, so it's more easily seen
             glDisable(GL_CULL_FACE);
             glBegin(GL_POLYGON);
@@ -477,8 +479,8 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             {
             case PLANE_XY:
             case PLANE_MINUS_XY:
-                dx = 1;         // TODO - scale this unit so it is not too large when zoomed in
-                dy = 1;
+                dx = unit;  
+                dy = unit;
                 dz = 0;
                 glVertex3d(p->x - dx, p->y - dy, p->z);
                 glVertex3d(p->x + dx, p->y - dy, p->z);
@@ -488,8 +490,8 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
             case PLANE_YZ:
             case PLANE_MINUS_YZ:
                 dx = 0;
-                dy = 1;
-                dz = 1;
+                dy = unit;
+                dz = unit;
                 glVertex3d(p->x, p->y - dy, p->z - dz);
                 glVertex3d(p->x, p->y + dy, p->z - dz);
                 glVertex3d(p->x, p->y + dy, p->z + dz);
@@ -497,9 +499,9 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
                 break;
             case PLANE_XZ:
             case PLANE_MINUS_XZ:
-                dx = 1;
+                dx = unit;
                 dy = 0;
-                dz = 1;
+                dz = unit;
                 glVertex3d(p->x - dx, p->y, p->z - dz);
                 glVertex3d(p->x + dx, p->y, p->z - dz);
                 glVertex3d(p->x + dx, p->y, p->z + dz);
