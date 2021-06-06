@@ -1095,6 +1095,9 @@ make_endcap_faces(LoftedGroup* lg, Volume* vol, int *band_nsteps, BOOL single_fa
             ie->endpoints[0] = ne->endpoints[1 - first_point_index(ne)];
             ie->endpoints[1] = pe->endpoints[first_point_index(pe)];
 
+            // Copy any other edge information.
+            // TODO: copy bez control points - weighted avg of key and opposite number
+
             // Work out what type of face this is.
             // straight-straight --> FLAT
             // straight-curved --> CYLINDER (where curved == anything other than straight)
@@ -1223,6 +1226,13 @@ make_lofted_volume(Group* group)
             // (potentially) reversed and rotated into alignment.
             if (egrp->n_members != num_edges)
                 ERR_RETURN("Edge groups do not match");
+        }
+
+        // Check edge types are valid.
+        for (e = (Edge*)egrp->obj_list.head; e != NULL; e = (Edge*)e->hdr.next)
+        {
+            if (e->type == EDGE_ARC)
+                ERR_RETURN("Edge groups must not contain arc edges");
         }
     }
 
