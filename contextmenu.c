@@ -861,6 +861,7 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     int i;
     static LoftParams* loft;
     Volume* prev_vol;
+    Group* egrp;
 
     switch (msg)
     {
@@ -893,7 +894,12 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         SendDlgItemMessage(hWnd, IDC_LOFT_KEY_DIRECTION, CB_ADDSTRING, 0, (LPARAM)"+Y");
         SendDlgItemMessage(hWnd, IDC_LOFT_KEY_DIRECTION, CB_ADDSTRING, 0, (LPARAM)"+Z");
         SendDlgItemMessage(hWnd, IDC_LOFT_KEY_DIRECTION, CB_SETCURSEL, loft->key_direction, 0);
-        // TODO: Gray out key direction and its static texts if egrp->n_members == 4.
+
+        // Gray out key direction and its static texts if egrp->n_members == 4.
+        egrp = (Group *)group->obj_list.head;
+        EnableWindow(GetDlgItem(hWnd, IDC_LOFT_KEY_DIRECTION), egrp->n_members > 4);
+        EnableWindow(GetDlgItem(hWnd, IDC_STATIC_KEY_DIRECTION1), egrp->n_members > 4);
+        EnableWindow(GetDlgItem(hWnd, IDC_STATIC_KEY_DIRECTION2), egrp->n_members > 4);
 
         sprintf_s(buf, 64, "%.2f", loft->nose_tension);
         SendDlgItemMessage(hWnd, IDC_LOFT_NOSE_TENSION, WM_SETTEXT, 0, (LPARAM)buf);
@@ -917,13 +923,15 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         SendDlgItemMessage(hWnd, IDC_LOFT_NOSE_JOIN, CB_ADDSTRING, 0, (LPARAM)"Nosecone");
         SendDlgItemMessage(hWnd, IDC_LOFT_NOSE_JOIN, CB_SETCURSEL, loft->nose_join_mode, 0);
         EnableWindow(GetDlgItem(hWnd, IDC_LOFT_NOSE_ANGLEBREAK), loft->nose_join_mode == JOIN_BOW);
+        EnableWindow(GetDlgItem(hWnd, IDC_STATIC_NOSE_ANGLEBREAK), loft->nose_join_mode == JOIN_BOW);
 
         SendDlgItemMessage(hWnd, IDC_LOFT_TAIL_JOIN, CB_RESETCONTENT, 0, 0);
         SendDlgItemMessage(hWnd, IDC_LOFT_TAIL_JOIN, CB_ADDSTRING, 0, (LPARAM)"Bow");
         SendDlgItemMessage(hWnd, IDC_LOFT_TAIL_JOIN, CB_ADDSTRING, 0, (LPARAM)"Stern");
         SendDlgItemMessage(hWnd, IDC_LOFT_TAIL_JOIN, CB_ADDSTRING, 0, (LPARAM)"Nosecone");
         SendDlgItemMessage(hWnd, IDC_LOFT_TAIL_JOIN, CB_SETCURSEL, loft->tail_join_mode, 0);
-        EnableWindow(GetDlgItem(hWnd, IDC_LOFT_NOSE_ANGLEBREAK), loft->tail_join_mode == JOIN_BOW);
+        EnableWindow(GetDlgItem(hWnd, IDC_LOFT_TAIL_ANGLEBREAK), loft->tail_join_mode == JOIN_BOW);
+        EnableWindow(GetDlgItem(hWnd, IDC_STATIC_TAIL_ANGLEBREAK), loft->tail_join_mode == JOIN_BOW);
 
         SendDlgItemMessage(hWnd, IDC_LOFT_BAY_TENSIONS, CB_RESETCONTENT, 0, 0);
         for (i = 0; i < loft->n_bays; i++)
@@ -932,6 +940,7 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             SendDlgItemMessage(hWnd, IDC_LOFT_BAY_TENSIONS, CB_ADDSTRING, 0, (LPARAM)buf);
         }
         SendDlgItemMessage(hWnd, IDC_LOFT_BAY_TENSIONS, CB_SETCURSEL, 0, 0);
+        EnableWindow(GetDlgItem(hWnd, IDC_STATIC_BAY_TENSIONS), !loft->follow_path);
         EnableWindow(GetDlgItem(hWnd, IDC_LOFT_BAY_TENSIONS), !loft->follow_path);
         changed = FALSE;
 
@@ -1043,6 +1052,7 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             case BN_CLICKED:
                 loft->follow_path = IsDlgButtonChecked(hWnd, IDC_LOFT_FOLLOW_PATH);
                 EnableWindow(GetDlgItem(hWnd, IDC_LOFT_BAY_TENSIONS), !loft->follow_path);
+                EnableWindow(GetDlgItem(hWnd, IDC_STATIC_BAY_TENSIONS), !loft->follow_path);
                 changed = TRUE;
                 break;
             }
@@ -1075,6 +1085,7 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             case CBN_SELCHANGE:
                 loft->nose_join_mode = SendDlgItemMessage(hWnd, IDC_LOFT_NOSE_JOIN, CB_GETCURSEL, 0, 0);
                 EnableWindow(GetDlgItem(hWnd, IDC_LOFT_NOSE_ANGLEBREAK), loft->nose_join_mode == JOIN_BOW);
+                EnableWindow(GetDlgItem(hWnd, IDC_STATIC_NOSE_ANGLEBREAK), loft->nose_join_mode == JOIN_BOW);
                 changed = TRUE;
                 break;
             }
@@ -1086,6 +1097,7 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             case CBN_SELCHANGE:
                 loft->tail_join_mode = SendDlgItemMessage(hWnd, IDC_LOFT_TAIL_JOIN, CB_GETCURSEL, 0, 0);
                 EnableWindow(GetDlgItem(hWnd, IDC_LOFT_TAIL_ANGLEBREAK), loft->tail_join_mode == JOIN_BOW);
+                EnableWindow(GetDlgItem(hWnd, IDC_STATIC_TAIL_ANGLEBREAK), loft->tail_join_mode == JOIN_BOW);
                 changed = TRUE;
                 break;
             }

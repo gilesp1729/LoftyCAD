@@ -84,7 +84,6 @@
 #define IDI_CONST_CIRCLE                137
 #define IDS_LOFT_NOSE_JOIN              137
 #define IDS_LOFT_TAIL_JOIN              138
-#define IDS_LOFT_UP_DIRECTION           139
 #define IDS_LOFT_KEY_DIRECTION          139
 #define IDI_EXTRUDE                     140
 #define IDD_DIMENSIONS                  141
@@ -210,6 +209,11 @@
 #define IDC_LOFT_TAIL_JOIN              1085
 #define IDC_LOFT_FOLLOW_PATH            1086
 #define IDC_LOFT_KEY_DIRECTION          1087
+#define IDC_STATIC_KEY_DIRECTION1       1088
+#define IDC_STATIC_KEY_DIRECTION2       1089
+#define IDC_STATIC_BAY_TENSIONS         1090
+#define IDC_STATIC_NOSE_ANGLEBREAK      1091
+#define IDC_STATIC_TAIL_ANGLEBREAK      1092
 #define IDD_PRINT_PREVIEW               1544
 #define IDD_SLICER                      1545
 #define IDD_PRINTER                     1546
@@ -368,7 +372,7 @@
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        166
 #define _APS_NEXT_COMMAND_VALUE         32935
-#define _APS_NEXT_CONTROL_VALUE         1087
+#define _APS_NEXT_CONTROL_VALUE         1093
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif

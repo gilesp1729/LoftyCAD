@@ -726,14 +726,14 @@ BEGIN
     LTEXT           "Nose tension",IDC_STATIC,33,92,42,8
     LTEXT           "Tail tension",IDC_STATIC,37,109,37,8
     GROUPBOX        "Angle breaks (degrees) and joining modes at ends",IDC_STATIC,7,136,279,81
-    LTEXT           "Body angle break",IDC_STATIC,20,154,56,8
-    LTEXT           "Nose angle break",IDC_STATIC,146,172,56,8
-    LTEXT           "Tail angle break",IDC_STATIC,151,190,51,8
+    LTEXT           "Body angle break",IDC_STATIC,20,153,56,8
+    LTEXT           "Nose angle break",IDC_STATIC_NOSE_ANGLEBREAK,146,172,56,8
+    LTEXT           "Tail angle break",IDC_STATIC_TAIL_ANGLEBREAK,151,190,51,8
     LTEXT           "Nose join mode",IDC_STATIC,26,172,50,11
     LTEXT           "Tail join mode",IDC_STATIC,31,190,45,9
-    LTEXT           "Bay tensions",IDC_STATIC,33,73,42,8
-    LTEXT           "Direction from centre to key edge",IDC_STATIC,15,12,62,19
-    LTEXT           "(in first section)",IDC_STATIC,134,16,63,10
+    LTEXT           "Bay tensions",IDC_STATIC_BAY_TENSIONS,33,73,42,8
+    LTEXT           "Direction from centre to key edge",IDC_STATIC_KEY_DIRECTION1,15,12,62,19
+    LTEXT           "in first section (>4-point lofts only)",IDC_STATIC_KEY_DIRECTION2,134,16,127,10
 END
 
 
