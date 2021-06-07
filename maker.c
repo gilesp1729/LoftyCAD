@@ -984,6 +984,7 @@ typedef struct
     Plane principal;    // The plane normal to the path at this section
     Bbox  ebox;         // BBox for the edge group
     ListHead face_list; // List of faces making up the endcap (for nose and tail edge groups only)
+    Edge* opp_key;      // Points to the opposite edge to the key edge (which is at the head of the list)
 } LoftedGroup;
 
 // qsort comparo function.
@@ -1080,12 +1081,36 @@ make_endcap_faces(LoftedGroup* lg, Volume* vol, BOOL single_face, BOOL reverse)
         FACE face_type;
         Group* egrp; 
         Plane norm;
-        int j;
+        int j, ci;
+        float key_length, opp_length;
+        float key_tension[2], opp_tension[2];
+        Plane key_dirn[2], opp_dirn[2];
 
         egrp = lg->egrp;
         e = (Edge*)egrp->obj_list.head;
         key_type = e->type;
+        if (key_type == EDGE_BEZIER)
+        {
+            BezierEdge* be = (BezierEdge*)e;
+            Edge *opp = lg->opp_key;
+            BezierEdge* bo = (BezierEdge*)opp;
 
+            // Collect information about bezier control points
+            key_length = length(e->endpoints[0], e->endpoints[1]);
+            opp_length = length(opp->endpoints[0], opp->endpoints[1]);
+
+            ci = first_point_index(e);
+            point_direction(e->endpoints[ci], be->ctrlpoints[ci], &key_dirn[0]);
+            key_tension[0] = length(e->endpoints[ci], be->ctrlpoints[ci]) / key_length;
+            point_direction(e->endpoints[1 - ci], be->ctrlpoints[1 - ci], &key_dirn[1]);
+            key_tension[1] = length(e->endpoints[1 - ci], be->ctrlpoints[1 - ci]) / key_length;
+
+            ci = first_point_index(opp);
+            point_direction(opp->endpoints[1 - ci], bo->ctrlpoints[1 - ci], &opp_dirn[0]);
+            opp_tension[0] = length(opp->endpoints[1 - ci], bo->ctrlpoints[1 - ci]) / opp_length;
+            point_direction(opp->endpoints[ci], bo->ctrlpoints[ci], &opp_dirn[1]);
+            opp_tension[1] = length(opp->endpoints[ci], bo->ctrlpoints[ci]) / opp_length;
+        }
         ne = (Edge*)e->hdr.next;
         pe = (Edge*)egrp->obj_list.tail;
         for (j = 1; j < egrp->n_members; j++)  // this loop will terminate early
@@ -1098,35 +1123,37 @@ make_endcap_faces(LoftedGroup* lg, Volume* vol, BOOL single_face, BOOL reverse)
                 ie->endpoints[1] = pe->endpoints[first_point_index(pe)];
 
                 // Copy any other edge information.
-                // TODO: copy bez control points - weighted avg of key and opposite number
+                // The bezier control points take a weighted average of key and its opposite number
+                // in tensions and directions, based on distance between key and opposite
                 if (key_type == EDGE_BEZIER)
                 {
-                    Plane pl0, pl1;
-                    BezierEdge* be = (BezierEdge*)e;
                     BezierEdge* bie = (BezierEdge*)ie;
-                    float tension, le, lie;
-                    int ci;
+                    float lie;
+                    Plane dirn;
+                    float tension;
 
-                    le = length(e->endpoints[0], e->endpoints[1]);
                     lie = length(ie->endpoints[0], ie->endpoints[1]);
-                    ci = first_point_index(e);
 
-                    point_direction(e->endpoints[ci], be->ctrlpoints[ci], &pl0);
-                    tension = length(e->endpoints[ci], be->ctrlpoints[ci]) / le;
+                    dirn.A = (key_dirn[0].A + opp_dirn[0].A) / 2;
+                    dirn.B = (key_dirn[0].B + opp_dirn[0].B) / 2;
+                    dirn.C = (key_dirn[0].C + opp_dirn[0].C) / 2;
+                    tension = (key_tension[0] + opp_tension[0]) / 2;
                     bie->ctrlpoints[1] = point_new
                     (
-                        ie->endpoints[1]->x + pl0.A * lie * tension,
-                        ie->endpoints[1]->y + pl0.B * lie * tension,
-                        ie->endpoints[1]->z + pl0.C * lie * tension
+                        ie->endpoints[1]->x + dirn.A * lie * tension,
+                        ie->endpoints[1]->y + dirn.B * lie * tension,
+                        ie->endpoints[1]->z + dirn.C * lie * tension
                     );
 
-                    point_direction(e->endpoints[1 - ci], be->ctrlpoints[1 - ci], &pl1);
-                    tension = length(e->endpoints[1 - ci], be->ctrlpoints[1 - ci]) / le;
+                    dirn.A = (key_dirn[1].A + opp_dirn[1].A) / 2;
+                    dirn.B = (key_dirn[1].B + opp_dirn[1].B) / 2;
+                    dirn.C = (key_dirn[1].C + opp_dirn[1].C) / 2;
+                    tension = (key_tension[1] + opp_tension[1]) / 2;
                     bie->ctrlpoints[0] = point_new
                     (
-                        ie->endpoints[0]->x + pl1.A * lie * tension,
-                        ie->endpoints[0]->y + pl1.B * lie * tension,
-                        ie->endpoints[0]->z + pl1.C * lie * tension
+                        ie->endpoints[0]->x + dirn.A * lie * tension,
+                        ie->endpoints[0]->y + dirn.B * lie * tension,
+                        ie->endpoints[0]->z + dirn.C * lie * tension
                     );
 
                     ie->band = e->band;
@@ -1191,7 +1218,10 @@ make_endcap_faces(LoftedGroup* lg, Volume* vol, BOOL single_face, BOOL reverse)
             pe = (Edge*)pe->hdr.prev;
             e = ie;
             if (ne == pe)
+            {
+                ASSERT(ne == lg->opp_key, "This should be the opposite key edge");
                 break;
+            }
         }
     }
 
@@ -1664,6 +1694,8 @@ make_lofted_volume(Group* group)
             ASSERT(ne != NULL && pe != NULL, "Edge group must have an even number of edges");
             if (ne == pe)
             {
+                // We have reached the opposite edge to the key edge. It is in band 0.
+                lg[i].opp_key = ne;
                 ne->band = 0;
                 if (ne->nsteps > band_nsteps[0])
                     band_nsteps[0] = ne->nsteps;
