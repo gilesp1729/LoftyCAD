@@ -1056,7 +1056,7 @@ find_key_edge(LoftParams *loft, LoftedGroup *lg)
 // if we can't join points to make internal edges correctly (tested outside) or if the
 // edge types we're trying to join do not match.
 BOOL
-make_endcap_faces(LoftedGroup* lg, Volume* vol, int *band_nsteps, BOOL single_face, BOOL reverse)
+make_endcap_faces(LoftedGroup* lg, Volume* vol, BOOL single_face, BOOL reverse)
 {
     Face* face;
 
@@ -1090,20 +1090,52 @@ make_endcap_faces(LoftedGroup* lg, Volume* vol, int *band_nsteps, BOOL single_fa
         pe = (Edge*)egrp->obj_list.tail;
         for (j = 1; j < egrp->n_members; j++)  // this loop will terminate early
         {
-            // Create an internal edge.
-            ie = edge_new(key_type);
-            ie->endpoints[0] = ne->endpoints[1 - first_point_index(ne)];
-            ie->endpoints[1] = pe->endpoints[first_point_index(pe)];
+            // Create an internal edge,  unless we have arrived at the bottom.
+            if (ne->hdr.next != pe->hdr.prev)
+            {
+                ie = edge_new(key_type);
+                ie->endpoints[0] = ne->endpoints[1 - first_point_index(ne)];
+                ie->endpoints[1] = pe->endpoints[first_point_index(pe)];
 
-            // Copy any other edge information.
-            // TODO: copy bez control points - weighted avg of key and opposite number
+                // Copy any other edge information.
+                // TODO: copy bez control points - weighted avg of key and opposite number
+                if (key_type == EDGE_BEZIER)
+                {
+                    Plane pl0, pl1;
+                    BezierEdge* be = (BezierEdge*)e;
+                    BezierEdge* bie = (BezierEdge*)ie;
+                    float tension, le, lie;
+                    int ci;
 
+                    le = length(e->endpoints[0], e->endpoints[1]);
+                    lie = length(ie->endpoints[0], ie->endpoints[1]);
+                    ci = first_point_index(e);
 
+                    point_direction(e->endpoints[ci], be->ctrlpoints[ci], &pl0);
+                    tension = length(e->endpoints[ci], be->ctrlpoints[ci]) / le;
+                    bie->ctrlpoints[1] = point_new
+                    (
+                        ie->endpoints[1]->x + pl0.A * lie * tension,
+                        ie->endpoints[1]->y + pl0.B * lie * tension,
+                        ie->endpoints[1]->z + pl0.C * lie * tension
+                    );
 
+                    point_direction(e->endpoints[1 - ci], be->ctrlpoints[1 - ci], &pl1);
+                    tension = length(e->endpoints[1 - ci], be->ctrlpoints[1 - ci]) / le;
+                    bie->ctrlpoints[0] = point_new
+                    (
+                        ie->endpoints[0]->x + pl1.A * lie * tension,
+                        ie->endpoints[0]->y + pl1.B * lie * tension,
+                        ie->endpoints[0]->z + pl1.C * lie * tension
+                    );
 
-
-
-
+                    ie->band = e->band;
+                }
+            }
+            else
+            {
+                ie = (Edge *)ne->hdr.next;
+            }
 
             // Work out what type of face this is.
             // straight-straight --> FLAT
@@ -1645,8 +1677,8 @@ make_lofted_volume(Group* group)
 
     // Accumulate faces in list attached to lg[0] and lg[num_groups-1], reverse normals
     // for those in lg[0]
-    make_endcap_faces(&lg[0], vol, band_nsteps, single_face || num_edges == 4, TRUE);
-    make_endcap_faces(&lg[num_groups - 1], vol, band_nsteps, single_face || num_edges == 4, FALSE);
+    make_endcap_faces(&lg[0], vol, single_face || num_edges == 4, TRUE);
+    make_endcap_faces(&lg[num_groups - 1], vol, single_face || num_edges == 4, FALSE);
 
     // Set edges to have the correct max step counts accumulated above.
     for (i = 0; i < num_groups; i++)
@@ -1669,7 +1701,7 @@ make_lofted_volume(Group* group)
         else
         {
             // Set step counts for all edges in the egrp
-            for (j = 0, e = (Edge*)egrp->obj_list.head; e != NULL; j++, e = (Edge*)e->hdr.next)
+            for (e = (Edge*)egrp->obj_list.head; e != NULL; e = (Edge*)e->hdr.next)
             {
                 e->nsteps = band_nsteps[e->band];
                 e->view_valid = FALSE;
