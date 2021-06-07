@@ -1081,8 +1081,9 @@ make_endcap_faces(LoftedGroup* lg, Volume* vol, BOOL single_face, BOOL reverse)
         FACE face_type;
         Group* egrp; 
         Plane norm;
-        int j, ci;
-        float key_length, opp_length;
+        Point* top = NULL;
+        int j, ci, co;
+        float key_length, opp_length, egrp_height;
         float key_tension[2], opp_tension[2];
         Plane key_dirn[2], opp_dirn[2];
 
@@ -1105,11 +1106,15 @@ make_endcap_faces(LoftedGroup* lg, Volume* vol, BOOL single_face, BOOL reverse)
             point_direction(e->endpoints[1 - ci], be->ctrlpoints[1 - ci], &key_dirn[1]);
             key_tension[1] = length(e->endpoints[1 - ci], be->ctrlpoints[1 - ci]) / key_length;
 
-            ci = first_point_index(opp);
-            point_direction(opp->endpoints[1 - ci], bo->ctrlpoints[1 - ci], &opp_dirn[0]);
-            opp_tension[0] = length(opp->endpoints[1 - ci], bo->ctrlpoints[1 - ci]) / opp_length;
-            point_direction(opp->endpoints[ci], bo->ctrlpoints[ci], &opp_dirn[1]);
-            opp_tension[1] = length(opp->endpoints[ci], bo->ctrlpoints[ci]) / opp_length;
+            co = first_point_index(opp);
+            point_direction(opp->endpoints[1 - co], bo->ctrlpoints[1 - co], &opp_dirn[0]);
+            opp_tension[0] = length(opp->endpoints[1 - co], bo->ctrlpoints[1 - co]) / opp_length;
+            point_direction(opp->endpoints[co], bo->ctrlpoints[co], &opp_dirn[1]);
+            opp_tension[1] = length(opp->endpoints[co], bo->ctrlpoints[co]) / opp_length;
+
+            // A measure of the distance between key and opposite
+            top = e->endpoints[ci];
+            egrp_height = length(top, opp->endpoints[1 - co]);
         }
         ne = (Edge*)e->hdr.next;
         pe = (Edge*)egrp->obj_list.tail;
@@ -1130,14 +1135,15 @@ make_endcap_faces(LoftedGroup* lg, Volume* vol, BOOL single_face, BOOL reverse)
                     BezierEdge* bie = (BezierEdge*)ie;
                     float lie;
                     Plane dirn;
-                    float tension;
+                    float tension, t;
 
                     lie = length(ie->endpoints[0], ie->endpoints[1]);
+                    t = length(ie->endpoints[1], top) / egrp_height;
 
-                    dirn.A = (key_dirn[0].A + opp_dirn[0].A) / 2;
-                    dirn.B = (key_dirn[0].B + opp_dirn[0].B) / 2;
-                    dirn.C = (key_dirn[0].C + opp_dirn[0].C) / 2;
-                    tension = (key_tension[0] + opp_tension[0]) / 2;
+                    dirn.A = key_dirn[0].A * (1 - t) + opp_dirn[0].A * t;
+                    dirn.B = key_dirn[0].B * (1 - t) + opp_dirn[0].B * t;
+                    dirn.C = key_dirn[0].C * (1 - t) + opp_dirn[0].C * t;
+                    tension = key_tension[0] * (1 - t) + opp_tension[0] * t;
                     bie->ctrlpoints[1] = point_new
                     (
                         ie->endpoints[1]->x + dirn.A * lie * tension,
@@ -1145,10 +1151,10 @@ make_endcap_faces(LoftedGroup* lg, Volume* vol, BOOL single_face, BOOL reverse)
                         ie->endpoints[1]->z + dirn.C * lie * tension
                     );
 
-                    dirn.A = (key_dirn[1].A + opp_dirn[1].A) / 2;
-                    dirn.B = (key_dirn[1].B + opp_dirn[1].B) / 2;
-                    dirn.C = (key_dirn[1].C + opp_dirn[1].C) / 2;
-                    tension = (key_tension[1] + opp_tension[1]) / 2;
+                    dirn.A = key_dirn[1].A * (1 - t) + opp_dirn[1].A * t;
+                    dirn.B = key_dirn[1].B * (1 - t) + opp_dirn[1].B * t;
+                    dirn.C = key_dirn[1].C * (1 - t) + opp_dirn[1].C * t;
+                    tension = key_tension[1] * (1 - t) + opp_tension[1] * t;
                     bie->ctrlpoints[0] = point_new
                     (
                         ie->endpoints[0]->x + dirn.A * lie * tension,
