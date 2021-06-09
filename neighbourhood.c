@@ -266,9 +266,9 @@ find_in_neighbourhood(Object *match_obj, Group *tree)
             break;
 
         case OBJ_EDGE:
-            // only test the endpoints
+            // Only test the endpoints, and only endpoint 1 if drawing an edge.
             test = find_in_neighbourhood_point(((Edge*)match_obj)->endpoints[1], obj);
-            if (test == NULL)
+            if (test == NULL && app_state < STATE_DRAWING_EDGE)
                 test = find_in_neighbourhood_point(((Edge*)match_obj)->endpoints[0], obj);
             break;
 
