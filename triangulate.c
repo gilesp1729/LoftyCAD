@@ -1995,13 +1995,28 @@ recurse_bez
 
     // Do a length test < the grid unit, and a curve flatness test < the tolerance.
     // Test length squared (to save the sqrts)
-    if
-        (
-        LENSQ(x1, y1, z1, x4, y4, z4) < grid_snap * grid_snap
-        ||
-        LENSQ(x1234, y1234, z1234, x14, y14, z14) < tolerance * tolerance
-        )
+    double overall_lensq = LENSQ(x1, y1, z1, x4, y4, z4);
+
+    if (overall_lensq < grid_snap * grid_snap)
     {
+        // The point is very close. Don't bother checking the flatness.
+        // Add (x4, y4, z4) as a point to the view list
+        p = point_newv((float)x4, (float)y4, (float)z4);
+        link_tail((Object*)p, &e->view_list);
+        e->nsteps++;
+    }
+    else if 
+    (
+        LENSQ(x1234, y1234, z1234, x14, y14, z14) < tolerance * tolerance
+        && 
+        overall_lensq <= default_stepsize * default_stepsize
+    )
+    {
+        // We have passed the flatness test, but we may still have more than one
+        // segment to add, due to the default_stepsize. This is to facilitate
+        // later editing of the curve and also to keep the inter-segment distances
+        // consistent for face view list facet generation.
+
         // Add (x4, y4, z4) as a point to the view list
         p = point_newv((float)x4, (float)y4, (float)z4);
         link_tail((Object *)p, &e->view_list);
@@ -2055,27 +2070,6 @@ gen_view_list_bez(BezierEdge *be)
                 be->ctrlpoints[1]->x, be->ctrlpoints[1]->y, be->ctrlpoints[1]->z,
                 e->endpoints[1]->x, e->endpoints[1]->y, e->endpoints[1]->z
             );
-
-#if 0 // Find a way to do this just after drawing the bezier edge, but not at any other time
-            // Make sure nsteps is always big enough to meet the default step size.
-            // (occasionally it goes to 1 when draeing a bezier edge when starting straight)
-            int min_steps = (int)(length(e->endpoints[0], e->endpoints[1]) / default_stepsize + 1);
-
-            if (e->nsteps < min_steps)
-            {
-                e->nsteps = min_steps;
-
-                // Perform it again with the new step size
-                iterate_bez
-                (
-                    be,
-                    e->endpoints[0]->x, e->endpoints[0]->y, e->endpoints[0]->z,
-                    be->ctrlpoints[0]->x, be->ctrlpoints[0]->y, be->ctrlpoints[0]->z,
-                    be->ctrlpoints[1]->x, be->ctrlpoints[1]->y, be->ctrlpoints[1]->z,
-                    e->endpoints[1]->x, e->endpoints[1]->y, e->endpoints[1]->z
-                );
-            }
-#endif
     }
 
     e->view_valid = TRUE;

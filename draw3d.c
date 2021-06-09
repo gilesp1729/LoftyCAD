@@ -1183,6 +1183,12 @@ Draw(void)
 
                 // Move the end point of the current edge
                 intersect_ray_plane(pt.x, pt.y, picked_plane, &new_point);
+
+                // Handle shift and snap to angle as with straight edge
+                if (key_status & AUX_SHIFT)
+                    snap_to_angle(picked_plane, &picked_point, &new_point, 45);
+                else if (snapping_to_angle)
+                    snap_to_angle(picked_plane, &picked_point, &new_point, angle_snap);
                 snap_to_grid(picked_plane, &new_point, key_status & AUX_CONTROL);
 
                 // If first move, create the edge here.
@@ -1212,26 +1218,28 @@ Draw(void)
                     be->ctrlpoints[1]->z = new_point.z;
                 }
 
-                // Bezier edges: remember the first and last couple of moves, and use their 
+                // Bezier edges: remember the first and last bunch of moves, and use their 
                 // directions to position the control points.
                 if (num_moves < MAX_MOVES - 1)
                     move_points[num_moves++] = new_point;
 
-                if (num_moves > 3)
+                if (num_moves > 4)
                 {
+                    int mid_move = num_moves / 2;
+
                     dist = length(&picked_point, &new_point) * BEZ_DEFAULT_TENSION;
 
                     // These normalising operations might try to divide by zero. Break if so.
-                    grad0.A = move_points[2].x - move_points[0].x;
-                    grad0.B = move_points[2].y - move_points[0].y;
-                    grad0.C = move_points[2].z - move_points[0].z;
+                    grad0.A = move_points[mid_move].x - move_points[0].x;
+                    grad0.B = move_points[mid_move].y - move_points[0].y;
+                    grad0.C = move_points[mid_move].z - move_points[0].z;
                     if (!normalise_plane(&grad0))
                         break;
 
                     // Thank Zarquon for optimising compilers...
-                    grad1.A = move_points[num_moves - 3].x - move_points[num_moves - 1].x;
-                    grad1.B = move_points[num_moves - 3].y - move_points[num_moves - 1].y;
-                    grad1.C = move_points[num_moves - 3].z - move_points[num_moves - 1].z;
+                    grad1.A = move_points[mid_move].x - move_points[num_moves - 1].x;
+                    grad1.B = move_points[mid_move].y - move_points[num_moves - 1].y;
+                    grad1.C = move_points[mid_move].z - move_points[num_moves - 1].z;
                     if (!normalise_plane(&grad1))
                         break;
 
