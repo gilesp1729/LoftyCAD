@@ -1417,6 +1417,16 @@ make_lofted_volume(Group* group)
             {
                 return NULL;
             }
+
+            // Put the control points into the bbox too
+            if (next_edge->type == EDGE_BEZIER)
+            {
+                BezierEdge* be = (BezierEdge*)next_edge;
+
+                expand_bbox(&lg[i].ebox, be->ctrlpoints[0]);
+                expand_bbox(&lg[i].ebox, be->ctrlpoints[1]);
+            }
+
             pt = next_edge->endpoints[final];
         }
 
