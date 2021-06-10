@@ -1264,7 +1264,7 @@ gen_view_list_face(Face* face)
         //          bez
         //   Order: E0F, S1F, EnR, S0R (edges traversed anticlockwise)
         //
-        // Unlike arcs, we have alocate all the elists.
+        // Unlike arcs, we have to allocate all the elists.
         elists = (ListHead**)malloc((side_nsteps + 1) * sizeof(ListHead*));
         for (i = 0; i < side_nsteps + 1; i++)
             elists[i] = (ListHead*)calloc(1, sizeof(ListHead));
@@ -1619,10 +1619,17 @@ gen_view_list_face(Face* face)
                 lnorm->B = ln.y;
                 lnorm->C = ln.z;
                 lnorm->refpt = pt->p;
+
+                // Average all the local normals to get a face normal
+                face->normal.A += ln.x;
+                face->normal.B += ln.y;
+                face->normal.C += ln.z;
                 lnorm++;
             }
         }
         face->n_local = lnorm - face->local_norm;
+        normalise_plane(&face->normal);
+        face->normal.refpt = *face->initial_point;
 
         // Link up boundary and internal edges into facets and store these in the face VL
         for (i = 1; i <= side_nsteps; i++)
