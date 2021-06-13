@@ -1896,15 +1896,45 @@ make_lofted_volume(Group* group)
     for (j = 0; j < num_edges; j++)
     {
         Plane pl, plend, pltest, pl_proj, plend_proj, pltest_proj;
+        Point perp_pt;
         Edge* c;
         int ci;
         float cosmax, costest, lj;
         BezierEdge* be;
 
         c = (Edge *)contour_lists[j].head;
+
+        // Get the direction from the centre to the point in question
         ci = edge_direction(c, &pl);                // points into contour
         project(&pl, &lg[0].principal, &pl_proj);         // project onto principal plane
         point_direction(&lg[0].norm.refpt, c->endpoints[ci], &plend);
+
+        // Find a local normal at c->endpoints[ci] in (one of) the face(s)
+        // (if local normals exist) and use it to obtain a true tangent and store in plend.
+        // Vectors point out of face into the contour.
+        for (face = (Face*)lg[0].face_list.head; face != NULL; face = (Face*)face->hdr.next)
+        {
+            gen_view_list_face(face);
+
+            for (i = 0; i < face->n_local; i++)
+            {
+                // If there is more than one match, just take the first one and
+                // be done with it.
+                if (face->local_norm[i].refpt == c->endpoints[ci])
+                {
+                    dist_point_to_perp_planeref(&lg[0].norm.refpt, &face->local_norm[i], &perp_pt);
+                    if (!near_pt(&perp_pt, &lg[0].norm.refpt, SMALL_COORD))
+                    {
+                        plend.A = perp_pt.x - lg[0].norm.refpt.x;
+                        plend.B = perp_pt.y - lg[0].norm.refpt.y;
+                        plend.C = perp_pt.z - lg[0].norm.refpt.z;
+                        normalise_plane(&plend);
+                    }
+                }
+            }
+        }
+
+        // Project plend onto the principal plane and take the angle difference
         project(&plend, &lg[0].principal, &plend_proj);
         cosmax = pldot(&plend_proj, &pl_proj);
         
@@ -1972,6 +2002,7 @@ make_lofted_volume(Group* group)
     for (j = 0; j < num_edges; j++)
     {
         Plane pl, plend, pltest, pl_proj, plend_proj, pltest_proj;
+        Point perp_pt;
         Edge* c;
         int ci;
         float cosmax, costest, lj;
@@ -1981,6 +2012,28 @@ make_lofted_volume(Group* group)
         ci = edge_direction(c, &pl);                // points out of contour
         project(&pl, &lg[num_groups - 1].principal, &pl_proj);         // project onto principal plane
         point_direction(c->endpoints[1-ci], &lg[num_groups-1].norm.refpt, &plend);
+
+        // As before, look for a tangent at this point. Vectors now point out of contour and into face.
+        for (face = (Face*)lg[num_groups - 1].face_list.head; face != NULL; face = (Face*)face->hdr.next)
+        {
+            gen_view_list_face(face);
+
+            for (i = 0; i < face->n_local; i++)
+            {
+                if (face->local_norm[i].refpt == c->endpoints[1-ci])
+                {
+                    dist_point_to_perp_planeref(&lg[num_groups - 1].norm.refpt, &face->local_norm[i], &perp_pt);
+                    if (!near_pt(&perp_pt, &lg[0].norm.refpt, SMALL_COORD))
+                    {
+                        plend.A = lg[num_groups - 1].norm.refpt.x - perp_pt.x;
+                        plend.B = lg[num_groups - 1].norm.refpt.y - perp_pt.y;
+                        plend.C = lg[num_groups - 1].norm.refpt.z - perp_pt.z;
+                        normalise_plane(&plend);
+                    }
+                }
+            }
+        }
+
         project(&plend, &lg[num_groups - 1].principal, &plend_proj);
         cosmax = pldot(&plend_proj, &pl_proj);
 

@@ -55,10 +55,12 @@ Unzip the zip in the Installer directory, to any directory on the Windows system
 
 # Building LoftyCAD
 LoftyCAD uses the excellent CGAL computational geometry library to merge and intersect triangle meshes.
+- CGAL, Computational Geometry Algorithms Library, https://www.cgal.org
 
 # Horus branch
 - This branch is the live development branch and will become the master in due course. Features described above refer to this branch and may not be present in earlier branches.
 - This branch is to develop a picking replacement to avoid doing the GL_SELECT buffer mechanism, which is very slow.
+- Lofting is implemented in this branch.
 - Build as for the Material Girl branch.
 
 # Material Girl branch:

@@ -63,6 +63,7 @@ float dist_ray_to_segment(Plane* v, Point* p1, Point* p2, Point* new_point);
 float dist_point_to_edge(Point *P, Edge *S);
 float dist_point_to_perp_line(Point* P, Edge* S, Point* Pb);
 float dist_point_to_perp_plane(Point* P, Plane* S, Point* Pb);
+float dist_point_to_perp_planeref(Point* P, PlaneRef* S, Point* Pb);
 float dist_point_to_ray(Point* P, Plane* v, Point* Pb);
 void normal_list(Point *list, Plane *norm);
 void polygon_normal(Point* list, Plane* norm);

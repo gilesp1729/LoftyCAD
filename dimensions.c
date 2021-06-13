@@ -353,6 +353,8 @@ update_dims(Object *obj, char *buf)
 }
 
 // Get the dims into a string, if they are available for an object.
+// If not, and there is some useful non-dimension info, display that 
+// for the benefit of the treeview. (has_dims will still return FALSE)
 // Otherwise return a blank string (not NULL) so it can be used in a printf.
 char *
 get_dims_string(Object *obj, char buf[64])
@@ -401,6 +403,9 @@ get_dims_string(Object *obj, char buf[64])
                     display_rounded(buf2, (float)angle),
                     display_rounded(buf3, ae->ecc)
                     );
+            break;
+        case EDGE_BEZIER:
+            sprintf_s(buf, 64, "(%dVL)", e->nsteps);
             break;
         }
         break;

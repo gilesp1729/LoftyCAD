@@ -222,7 +222,7 @@ dist_point_to_edge(Point *P, Edge *S)
 }
 
 // The same, but consider the line as infinite, and also return the perpendicular
-// intersection point. There is also a plane/refpt and ray version.
+// intersection point. There is also a Plane, Planeref, and ray version.
 float
 dist_point_to_perp_line(Point* P, Edge* S, Point* Pb)
 {
@@ -273,6 +273,33 @@ dist_point_to_perp_plane(Point* P, Plane* S, Point* Pb)
     Pb->x = S->refpt.x + b * v.x;
     Pb->y = S->refpt.y + b * v.y;
     Pb->z = S->refpt.z + b * v.z;
+
+    return length(P, Pb);
+}
+
+float
+dist_point_to_perp_planeref(Point* P, PlaneRef* S, Point* Pb)
+{
+    Point v, w;
+    float c1, c2, b;
+
+    //  Vector v = S.P1 - S.P0; (in this case just the ABC of the plane)
+    //  Vector w = P - S.P0; (the refpt of the plane)
+    v.x = S->A;
+    v.y = S->B;
+    v.z = S->C;
+    w.x = P->x - S->refpt->x;
+    w.y = P->y - S->refpt->y;
+    w.z = P->z - S->refpt->z;
+
+    c1 = pdot(&w, &v);
+    c2 = pdot(&v, &v);
+    b = c1 / c2;
+
+    //Point Pb = S.P0 + b * v;
+    Pb->x = S->refpt->x + b * v.x;
+    Pb->y = S->refpt->y + b * v.y;
+    Pb->z = S->refpt->z + b * v.z;
 
     return length(P, Pb);
 }
