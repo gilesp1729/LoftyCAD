@@ -602,6 +602,7 @@ gen_view_list_face(Face* face)
     PlaneRef *ln0, *ln1;
     Plane outward;
     BOOL inward;
+    Point ed[4];
 
     //char buf[256];
 
@@ -772,10 +773,12 @@ gen_view_list_face(Face* face)
 
         last_point = face->initial_point;
         c = 0;
-        e0 = e1 = NULL; // just to shut compiler up
+        be = NULL; // just to shut compiler up
 
         for (i = 0; i < face->n_edges; i++)
         {
+            float l30;
+
             e = face->edges[i];
 
             switch (e->type & ~EDGE_CONSTRUCTION)
@@ -784,11 +787,21 @@ gen_view_list_face(Face* face)
                 // Update last_point to the beginning of the next edge, which must be a curved edge.
                 if (last_point == e->endpoints[0])
                 {
+                    // While here, accumulate the directions of the straight edges for use in the
+                    // normal calculation later on.
+                    ed[i].x = e->endpoints[1]->x - last_point->x;
+                    ed[i].y = e->endpoints[1]->y - last_point->y;
+                    ed[i].z = e->endpoints[1]->z - last_point->z;
+                    normalise_point(&ed[i]);
                     last_point = e->endpoints[1];
                 }
                 else
                 {
                     ASSERT(last_point == e->endpoints[1], "Straight edge doesn't join up");
+                    ed[i].x = e->endpoints[0]->x - last_point->x;
+                    ed[i].y = e->endpoints[0]->y - last_point->y;
+                    ed[i].z = e->endpoints[0]->z - last_point->z;
+                    normalise_point(&ed[i]);
                     last_point = e->endpoints[0];
                 }
 
@@ -801,14 +814,12 @@ gen_view_list_face(Face* face)
 
             case EDGE_BEZIER:
                 list = elists[c];
-                gen_view_list_bez((BezierEdge*)e);
+                be = (BezierEdge*)e;
+                gen_view_list_bez(be);
+
+            // fallthrough
 
             copy_view_list_cyl:
-                if (c == 0)
-                    e0 = e;
-                else
-                    e1 = e;
-
                 if (last_point == e->endpoints[c])
                 {
                     last_point = e->endpoints[1 - c];
@@ -820,6 +831,17 @@ gen_view_list_face(Face* face)
                         if (face->vol != NULL)
                             expand_bbox(&face->vol->bbox, p);
                         link_tail((Object*)p, list);
+                    }
+
+                    // While here, collect the t-values for the control points so we can do
+                    // derivatives later on. Use the same data structures as we use for the
+                    // full Bezier faces.
+                    if ((e->type & ~EDGE_CONSTRUCTION) == EDGE_BEZIER)
+                    {
+                        be->bezctl[0] = e->endpoints[c];
+                        be->bezctl[1] = be->ctrlpoints[c];
+                        be->bezctl[2] = be->ctrlpoints[1 - c];
+                        be->bezctl[3] = e->endpoints[1 - c];
                     }
                 }
                 else
@@ -835,6 +857,36 @@ gen_view_list_face(Face* face)
                             expand_bbox(&face->vol->bbox, p);
                         link_tail((Object*)p, list);
                     }
+                    if ((e->type & ~EDGE_CONSTRUCTION) == EDGE_BEZIER)
+                    {
+                        be->bezctl[0] = e->endpoints[1 - c];
+                        be->bezctl[1] = be->ctrlpoints[1 - c];
+                        be->bezctl[2] = be->ctrlpoints[c];
+                        be->bezctl[3] = e->endpoints[c];
+                    }
+                }
+
+                if ((e->type & ~EDGE_CONSTRUCTION) == EDGE_BEZIER)
+                {
+                    l30 = length(be->bezctl[3], be->bezctl[0]);
+                    be->t1 = dot
+                    (
+                        be->bezctl[1]->x - be->bezctl[0]->x,
+                        be->bezctl[1]->y - be->bezctl[0]->y,
+                        be->bezctl[1]->z - be->bezctl[0]->z,
+                        be->bezctl[3]->x - be->bezctl[0]->x,
+                        be->bezctl[3]->y - be->bezctl[0]->y,
+                        be->bezctl[3]->z - be->bezctl[0]->z
+                    ) / (l30 * l30);
+                    be->t2 = 1 - dot
+                    (
+                        be->bezctl[3]->x - be->bezctl[2]->x,
+                        be->bezctl[3]->y - be->bezctl[2]->y,
+                        be->bezctl[3]->z - be->bezctl[2]->z,
+                        be->bezctl[3]->x - be->bezctl[0]->x,
+                        be->bezctl[3]->y - be->bezctl[0]->y,
+                        be->bezctl[3]->z - be->bezctl[0]->z
+                    ) / (l30 * l30);
                 }
                 c++;    // update list index to process the other curved edge
                 break;
@@ -871,6 +923,107 @@ gen_view_list_face(Face* face)
             link_tail((Object*)p, &face->view_list);
         }
 
+        // Compute derivatives and local normals at endpoints and control points
+        // of Bezier edges.
+        last_point = face->initial_point;
+        lnorm = face->local_norm;
+        face->n_local = 0;
+        for (i = 0; i < face->n_edges; i++)
+        {
+            int pi = i == 0 ? face->n_edges : i - 1;
+            int ni = i == face->n_edges - 1 ? 0 : i + 1;
+
+            e = face->edges[i];
+            switch (e->type & ~EDGE_CONSTRUCTION)
+            {
+            case EDGE_STRAIGHT:
+                break;
+
+            case EDGE_ARC:
+                goto free_up_cyl;      // no local normals if an arc is found
+
+            case EDGE_BEZIER:
+                be = (BezierEdge*)e;
+
+                cp[0][0].x = be->bezctl[0]->x;
+                cp[0][0].y = be->bezctl[0]->y;
+                cp[0][0].z = be->bezctl[0]->z;
+                cp[0][0].u = 0;
+                cp[0][0].v = 0;         // the v's are not used here
+                cp[0][0].p = be->bezctl[0];
+
+                cp[1][0].x = be->bezctl[1]->x;
+                cp[1][0].y = be->bezctl[1]->y;
+                cp[1][0].z = be->bezctl[1]->z;
+                cp[1][0].u = be->t1;
+                cp[1][0].v = 0;
+                cp[1][0].p = be->bezctl[1];
+
+                cp[2][0].x = be->bezctl[2]->x;
+                cp[2][0].y = be->bezctl[2]->y;
+                cp[2][0].z = be->bezctl[2]->z;
+                cp[2][0].u = be->t2;
+                cp[2][0].v = 0;
+                cp[2][0].p = be->bezctl[2];
+
+                cp[3][0].x = be->bezctl[3]->x;
+                cp[3][0].y = be->bezctl[3]->y;
+                cp[3][0].z = be->bezctl[3]->z;
+                cp[3][0].u = 1;
+                cp[3][0].v = 0;
+                cp[3][0].p = be->bezctl[3];
+
+                for (j = 0; j < 4; j++)
+                {
+                    float u, u1, bdu[4];
+                    int m;
+                    Point du, ln;
+
+                    pt = &cp[j][0];
+                    u = pt->u;
+                    u1 = 1 - u;
+
+                    bdu[0] = -3 * u1 * u1;
+                    bdu[1] = 3 * u1 * u1 - 6 * u * u1;
+                    bdu[2] = 6 * u * u1 - 3 * u * u;
+                    bdu[3] = 3 * u * u;
+
+                    du.x = du.y = du.z = 0;
+                    for (m = 0; m < 4; m++)
+                    {
+                        du.x += bdu[m] * cp[m][0].x;
+                        du.y += bdu[m] * cp[m][0].y;
+                        du.z += bdu[m] * cp[m][0].z;
+                    }
+
+                    normalise_point(&du);
+
+                    // Cross with the normalised dirn of the corresponding straight edge.
+                    if (j < 2)
+                        pcross(&ed[pi], &du, &ln);
+                    else
+                        pcross(&du, &ed[ni], &ln);
+
+                    lnorm->A = ln.x;
+                    lnorm->B = ln.y;
+                    lnorm->C = ln.z;
+                    lnorm->refpt = pt->p;
+
+                    // Average all the local normals to get a face normal
+                    face->normal.A += ln.x;
+                    face->normal.B += ln.y;
+                    face->normal.C += ln.z;
+                    lnorm++;
+                }
+            }
+        }
+
+        face->n_local = lnorm - face->local_norm;
+        normalise_plane(&face->normal);
+        face->normal.refpt = *face->initial_point;
+
+        // Free up temp stuff 
+    free_up_cyl:
         free_point_list(elists[0]);
         free_point_list(elists[1]);
         free(elists);
