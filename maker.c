@@ -1002,6 +1002,31 @@ compare_lofted_groups(const void* elem1, const void* elem2)
         return 0;
 }
 
+// If a bezier edge has a control point that is coincident with its endpoint,
+// rectify it by moving it back toward the other control point with a tension of 0.1.
+// This means that all bezier edges have valid control arm diections and we don't get
+// mysterious zeroes when calculating local normals and the like.
+#define RECTIFY_TENSION 0.1f
+void
+rectify_bez_cp(BezierEdge* be)
+{
+    Edge* e = (Edge*)be;
+
+    if (near_pt(be->ctrlpoints[0], e->endpoints[0], SMALL_COORD))
+    {
+        be->ctrlpoints[0]->x = be->ctrlpoints[1]->x * RECTIFY_TENSION + e->endpoints[0]->x * (1 - RECTIFY_TENSION);
+        be->ctrlpoints[0]->y = be->ctrlpoints[1]->y * RECTIFY_TENSION + e->endpoints[0]->y * (1 - RECTIFY_TENSION);
+        be->ctrlpoints[0]->z = be->ctrlpoints[1]->z * RECTIFY_TENSION + e->endpoints[0]->z * (1 - RECTIFY_TENSION);
+    }
+
+    if (near_pt(be->ctrlpoints[1], e->endpoints[1], SMALL_COORD))
+    {
+        be->ctrlpoints[1]->x = be->ctrlpoints[0]->x * RECTIFY_TENSION + e->endpoints[1]->x * (1 - RECTIFY_TENSION);
+        be->ctrlpoints[1]->y = be->ctrlpoints[0]->y * RECTIFY_TENSION + e->endpoints[1]->y * (1 - RECTIFY_TENSION);
+        be->ctrlpoints[1]->z = be->ctrlpoints[0]->z * RECTIFY_TENSION + e->endpoints[1]->z * (1 - RECTIFY_TENSION);
+    }
+}
+
 // Helper to find the key edge in an endcap edge group. Return key edge if it is valid
 // after checks, or NULL if one cannot be found and the endcap must be made flat.
 Edge *
@@ -1418,11 +1443,15 @@ make_lofted_volume(Group* group)
                 return NULL;
             }
 
-            // Put the control points into the bbox too
+            // Put the control points into the bbox too. While here,
+            // we rectify the control points to get rid of any that are
+            // coincident with the endpoints. This is not usually a problem
+            // elsewhere, but here we really can't deal with it.
             if (next_edge->type == EDGE_BEZIER)
             {
                 BezierEdge* be = (BezierEdge*)next_edge;
 
+                rectify_bez_cp(be);
                 expand_bbox(&lg[i].ebox, be->ctrlpoints[0]);
                 expand_bbox(&lg[i].ebox, be->ctrlpoints[1]);
             }
@@ -1772,13 +1801,17 @@ make_lofted_volume(Group* group)
             int ei = first_point_index(e);
             int prev_ei = first_point_index(prev_e);
             Edge* ne;
+            BezierEdge* be;
 
-            // Add the edge to its list.
+            // Add the edge to its list. Make sure it has rectified control points
+            // in case they survive into the final shape (due to stern endcap or angle breaking)
             ne = edge_new(EDGE_BEZIER);
             ne->endpoints[0] = prev_e->endpoints[prev_ei];
             ne->endpoints[1] = e->endpoints[ei];
-            ((BezierEdge*)ne)->ctrlpoints[0] = point_newp(ne->endpoints[0]);
-            ((BezierEdge*)ne)->ctrlpoints[1] = point_newp(ne->endpoints[1]);
+            be = (BezierEdge*)ne;
+            be->ctrlpoints[0] = point_newp(ne->endpoints[0]);
+            be->ctrlpoints[1] = point_newp(ne->endpoints[1]);
+            rectify_bez_cp(be);
 
             // Setup step count
             ne->nsteps = steps;
@@ -1909,6 +1942,7 @@ make_lofted_volume(Group* group)
         project(&pl, &lg[0].principal, &pl_proj);         // project onto principal plane
         point_direction(&lg[0].norm.refpt, c->endpoints[ci], &plend);
 
+#if 0 // NOT ROBUST - vectors might point away from centre if highly curved.
         // Find a local normal at c->endpoints[ci] in (one of) the face(s)
         // (if local normals exist) and use it to obtain a true tangent and store in plend.
         // Vectors point out of face into the contour.
@@ -1933,6 +1967,7 @@ make_lofted_volume(Group* group)
                 }
             }
         }
+#endif
 
         // Project plend onto the principal plane and take the angle difference
         project(&plend, &lg[0].principal, &plend_proj);
@@ -2013,6 +2048,7 @@ make_lofted_volume(Group* group)
         project(&pl, &lg[num_groups - 1].principal, &pl_proj);         // project onto principal plane
         point_direction(c->endpoints[1-ci], &lg[num_groups-1].norm.refpt, &plend);
 
+#if 0
         // As before, look for a tangent at this point. Vectors now point out of contour and into face.
         for (face = (Face*)lg[num_groups - 1].face_list.head; face != NULL; face = (Face*)face->hdr.next)
         {
@@ -2033,6 +2069,7 @@ make_lofted_volume(Group* group)
                 }
             }
         }
+#endif
 
         project(&plend, &lg[num_groups - 1].principal, &plend_proj);
         cosmax = pldot(&plend_proj, &pl_proj);

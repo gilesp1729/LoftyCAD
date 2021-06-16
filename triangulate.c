@@ -996,24 +996,25 @@ gen_view_list_face(Face* face)
                         du.z += bdu[m] * cp[m][0].z;
                     }
 
-                    normalise_point(&du);
+                    if (normalise_point(&du))
+                    {
+                        // Cross with the normalised dirn of the corresponding straight edge.
+                        if (j < 2)
+                            pcross(&ed[pi], &du, &ln);
+                        else
+                            pcross(&du, &ed[ni], &ln);
 
-                    // Cross with the normalised dirn of the corresponding straight edge.
-                    if (j < 2)
-                        pcross(&ed[pi], &du, &ln);
-                    else
-                        pcross(&du, &ed[ni], &ln);
+                        lnorm->A = ln.x;
+                        lnorm->B = ln.y;
+                        lnorm->C = ln.z;
+                        lnorm->refpt = pt->p;
 
-                    lnorm->A = ln.x;
-                    lnorm->B = ln.y;
-                    lnorm->C = ln.z;
-                    lnorm->refpt = pt->p;
-
-                    // Average all the local normals to get a face normal
-                    face->normal.A += ln.x;
-                    face->normal.B += ln.y;
-                    face->normal.C += ln.z;
-                    lnorm++;
+                        // Average all the local normals to get a face normal
+                        face->normal.A += ln.x;
+                        face->normal.B += ln.y;
+                        face->normal.C += ln.z;
+                        lnorm++;
+                    }
                 }
             }
         }
@@ -1765,19 +1766,20 @@ gen_view_list_face(Face* face)
                     }
                 }
 
-                normalise_point(&udv);
-                normalise_point(&vdu);
-                pcross(&udv, &vdu, &ln);
-                lnorm->A = ln.x;
-                lnorm->B = ln.y;
-                lnorm->C = ln.z;
-                lnorm->refpt = pt->p;
+                if (normalise_point(&udv) && normalise_point(&vdu))
+                {
+                    pcross(&udv, &vdu, &ln);
+                    lnorm->A = ln.x;
+                    lnorm->B = ln.y;
+                    lnorm->C = ln.z;
+                    lnorm->refpt = pt->p;
 
-                // Average all the local normals to get a face normal
-                face->normal.A += ln.x;
-                face->normal.B += ln.y;
-                face->normal.C += ln.z;
-                lnorm++;
+                    // Average all the local normals to get a face normal
+                    face->normal.A += ln.x;
+                    face->normal.B += ln.y;
+                    face->normal.C += ln.z;
+                    lnorm++;
+                }
             }
         }
         face->n_local = lnorm - face->local_norm;
