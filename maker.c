@@ -1928,8 +1928,7 @@ make_lofted_volume(Group* group)
     // Nose endcap (at start of group)
     for (j = 0; j < num_edges; j++)
     {
-        Plane pl, plend, pltest, pl_proj, plend_proj, pltest_proj;
-        Point perp_pt;
+        Plane pl, plend, pltest, pl_proj, plend_proj, pltest_proj, tangent;
         Edge* c;
         int ci;
         float cosmax, costest, lj;
@@ -1942,7 +1941,6 @@ make_lofted_volume(Group* group)
         project(&pl, &lg[0].principal, &pl_proj);         // project onto principal plane
         point_direction(&lg[0].norm.refpt, c->endpoints[ci], &plend);
 
-#if 0 // NOT ROBUST - vectors might point away from centre if highly curved.
         // Find a local normal at c->endpoints[ci] in (one of) the face(s)
         // (if local normals exist) and use it to obtain a true tangent and store in plend.
         // Vectors point out of face into the contour.
@@ -1956,18 +1954,13 @@ make_lofted_volume(Group* group)
                 // be done with it.
                 if (face->local_norm[i].refpt == c->endpoints[ci])
                 {
-                    dist_point_to_perp_planeref(&lg[0].norm.refpt, &face->local_norm[i], &perp_pt);
-                    if (!near_pt(&perp_pt, &lg[0].norm.refpt, SMALL_COORD))
-                    {
-                        plend.A = perp_pt.x - lg[0].norm.refpt.x;
-                        plend.B = perp_pt.y - lg[0].norm.refpt.y;
-                        plend.C = perp_pt.z - lg[0].norm.refpt.z;
-                        normalise_plane(&plend);
-                    }
+                    // Get a tangent going across the point first. Watch pl collinear with local norm.
+                    plcross(&pl, (Plane *)&face->local_norm[i], &tangent);
+                    plcross((Plane *)&face->local_norm[i], &tangent, &plend);
+                    normalise_plane(&plend);
                 }
             }
         }
-#endif
 
         // Project plend onto the principal plane and take the angle difference
         project(&plend, &lg[0].principal, &plend_proj);
@@ -2036,8 +2029,7 @@ make_lofted_volume(Group* group)
     // Tail endcap (at end of group)
     for (j = 0; j < num_edges; j++)
     {
-        Plane pl, plend, pltest, pl_proj, plend_proj, pltest_proj;
-        Point perp_pt;
+        Plane pl, plend, pltest, pl_proj, plend_proj, pltest_proj, tangent;
         Edge* c;
         int ci;
         float cosmax, costest, lj;
@@ -2048,7 +2040,6 @@ make_lofted_volume(Group* group)
         project(&pl, &lg[num_groups - 1].principal, &pl_proj);         // project onto principal plane
         point_direction(c->endpoints[1-ci], &lg[num_groups-1].norm.refpt, &plend);
 
-#if 0
         // As before, look for a tangent at this point. Vectors now point out of contour and into face.
         for (face = (Face*)lg[num_groups - 1].face_list.head; face != NULL; face = (Face*)face->hdr.next)
         {
@@ -2058,18 +2049,12 @@ make_lofted_volume(Group* group)
             {
                 if (face->local_norm[i].refpt == c->endpoints[1-ci])
                 {
-                    dist_point_to_perp_planeref(&lg[num_groups - 1].norm.refpt, &face->local_norm[i], &perp_pt);
-                    if (!near_pt(&perp_pt, &lg[0].norm.refpt, SMALL_COORD))
-                    {
-                        plend.A = lg[num_groups - 1].norm.refpt.x - perp_pt.x;
-                        plend.B = lg[num_groups - 1].norm.refpt.y - perp_pt.y;
-                        plend.C = lg[num_groups - 1].norm.refpt.z - perp_pt.z;
-                        normalise_plane(&plend);
-                    }
+                    plcross(&pl, (Plane*)&face->local_norm[i], &tangent);
+                    plcross((Plane*)&face->local_norm[i], &tangent, &plend);
+                    normalise_plane(&plend);
                 }
             }
         }
-#endif
 
         project(&plend, &lg[num_groups - 1].principal, &plend_proj);
         cosmax = pldot(&plend_proj, &pl_proj);
