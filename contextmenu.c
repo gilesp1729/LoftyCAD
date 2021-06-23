@@ -149,12 +149,20 @@ contextmenu(Object *picked_obj, POINT pt)
             }
             else
             {
+                BOOL lofted_group, has_loft, is_tubed;
+
                 hMenu = LoadMenu(hInst, MAKEINTRESOURCE(IDR_CONTEXT_GROUP));
                 hMenu = GetSubMenu(hMenu, 0);
                 ModifyMenu(hMenu, 0, MF_BYPOSITION | MF_GRAYED | MF_STRING, 0, buf);
 
-                // A group must contain edge groups for it to be lofted.
-                EnableMenuItem(hMenu, ID_OBJ_LOFTGROUP, is_edge_group((Group *)(((Group *)parent)->obj_list.head)) ? MF_ENABLED : MF_GRAYED);
+                // A group must contain edge groups for it to be lofted. Or tubed.
+                lofted_group = is_edge_group((Group*)(((Group*)parent)->obj_list.head));
+                EnableMenuItem(hMenu, ID_OBJ_LOFTGROUP, lofted_group ? MF_ENABLED : MF_GRAYED);
+
+                // To be tubed, the lofted group must have been created by tubing. TODO: There's no menu option.
+                has_loft = ((Group*)parent)->loft != NULL;
+                is_tubed = has_loft && (((Group*)parent)->loft->follow_path & 2);
+                EnableMenuItem(hMenu, ID_OBJ_TUBEGROUP, lofted_group && has_loft && is_tubed ? MF_ENABLED : MF_GRAYED);
             }
             break;
         }
@@ -391,7 +399,13 @@ contextmenu(Object *picked_obj, POINT pt)
         break;
 
     case ID_OBJ_TUBEGROUP:
-        //group_changed = make_tubed_volume((Group*)picked_obj);
+        group = make_tubed_group((Group*)picked_obj);
+        if (group != NULL)
+        {
+            link_group((Object*)group, &object_tree);
+            clear_selection(&selection);
+            group_changed = TRUE;
+        }
         break;
 
     case ID_OBJ_MAKEEDGEGROUP:
@@ -844,7 +858,8 @@ materials_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     return 0;
 }
 
-LoftParams default_loft = { 0.3f, 0.3f, 60, 80, 80, JOIN_BOW, JOIN_BOW, FALSE, 0, 0, 0.3f};
+LoftParams default_loft = { 0.33f, 0.33f, 60, 80, 80, JOIN_BOW, JOIN_BOW, 0, 0, 0, 0.33f };
+LoftParams default_tube = { 0.33f, 0.33f, 60, 80, 80, JOIN_STERN, JOIN_STERN, 2, 0, 0, 0.33f };
 
 // Dialog that controls lofting.
 // Input (lParam): a Group of edge groups.
@@ -908,7 +923,7 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         
         sprintf_s(buf, 64, "%d", loft->body_angle_break);
         SendDlgItemMessage(hWnd, IDC_LOFT_BODY_ANGLEBREAK, WM_SETTEXT, 0, (LPARAM)buf);
-        CheckDlgButton(hWnd, IDC_LOFT_FOLLOW_PATH, loft->follow_path ? BST_CHECKED : BST_UNCHECKED);
+        CheckDlgButton(hWnd, IDC_LOFT_FOLLOW_PATH, (loft->follow_path & 1) ? BST_CHECKED : BST_UNCHECKED);
         EnableWindow(GetDlgItem(hWnd, IDC_LOFT_FOLLOW_PATH), is_edge_group((Group*)curr_path));
 
         sprintf_s(buf, 64, "%d", loft->nose_angle_break);
@@ -940,8 +955,8 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             SendDlgItemMessage(hWnd, IDC_LOFT_BAY_TENSIONS, CB_ADDSTRING, 0, (LPARAM)buf);
         }
         SendDlgItemMessage(hWnd, IDC_LOFT_BAY_TENSIONS, CB_SETCURSEL, 0, 0);
-        EnableWindow(GetDlgItem(hWnd, IDC_STATIC_BAY_TENSIONS), !loft->follow_path);
-        EnableWindow(GetDlgItem(hWnd, IDC_LOFT_BAY_TENSIONS), !loft->follow_path);
+        EnableWindow(GetDlgItem(hWnd, IDC_STATIC_BAY_TENSIONS), !(loft->follow_path & 1));
+        EnableWindow(GetDlgItem(hWnd, IDC_LOFT_BAY_TENSIONS), !(loft->follow_path & 1));
         changed = FALSE;
 
         // Load up tooltips.
@@ -1050,9 +1065,13 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             switch (HIWORD(wParam))
             {
             case BN_CLICKED:
-                loft->follow_path = IsDlgButtonChecked(hWnd, IDC_LOFT_FOLLOW_PATH);
-                EnableWindow(GetDlgItem(hWnd, IDC_LOFT_BAY_TENSIONS), !loft->follow_path);
-                EnableWindow(GetDlgItem(hWnd, IDC_STATIC_BAY_TENSIONS), !loft->follow_path);
+                if (IsDlgButtonChecked(hWnd, IDC_LOFT_FOLLOW_PATH))
+                    loft->follow_path |= 1;
+                else
+                    loft->follow_path &= ~1;
+
+                EnableWindow(GetDlgItem(hWnd, IDC_LOFT_BAY_TENSIONS), !(loft->follow_path & 1));
+                EnableWindow(GetDlgItem(hWnd, IDC_STATIC_BAY_TENSIONS), !(loft->follow_path & 1));
                 changed = TRUE;
                 break;
             }

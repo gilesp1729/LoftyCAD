@@ -217,6 +217,8 @@
 #define IDD_PRINT_PREVIEW               1544
 #define IDD_SLICER                      1545
 #define IDD_PRINTER                     1546
+#define IDD_LOFT1                       1547
+#define IDD_TUBE                        1547
 #define ID_FILE_NEW                     32774
 #define ID_FILE_OPEN                    32775
 #define ID_FILE_SAVE                    32776

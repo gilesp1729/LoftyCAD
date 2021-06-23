@@ -187,7 +187,7 @@ edge_tangent_to_intersect(Edge *e, int first_index, Plane* pl, Bbox *ebox, Plane
                 // We have an intersection within the ebox.
                 // Accumulate the length from first_index. Don't worry about the little bit
                 // of intersected line in the VL.
-                // TODO Take care: the VL is ordered from endpoint[0] to [1], which may not be
+                // Take care: the VL is ordered from endpoint[0] to [1], which may not be
                 // the same order as first_index to last_index.
                 if (first_index == 1)
                 {
@@ -205,6 +205,63 @@ edge_tangent_to_intersect(Edge *e, int first_index, Plane* pl, Bbox *ebox, Plane
     }
 
     return rc;
+}
+
+// Find a tangent at the given length within the edge.
+// No checks are done on length. It is assumed to be within the edge length.
+void
+edge_tangent_to_length(Edge* e, int first_index, float len, Plane* tangent)
+{
+    Point* p;
+    int rc = 0;
+    int last_index = 1 - first_index;
+    float accum_length = 0;
+    int i;
+
+    switch (e->type & ~EDGE_CONSTRUCTION)
+    {
+    case EDGE_STRAIGHT:
+        tangent->A = e->endpoints[last_index]->x - e->endpoints[first_index]->x;
+        tangent->B = e->endpoints[last_index]->y - e->endpoints[first_index]->y;
+        tangent->C = e->endpoints[last_index]->z - e->endpoints[first_index]->z;
+        normalise_plane(tangent);
+        tangent->refpt.x = e->endpoints[first_index]->x + tangent->A * len;
+        tangent->refpt.y = e->endpoints[first_index]->y + tangent->B * len;
+        tangent->refpt.z = e->endpoints[first_index]->z + tangent->C * len;
+        break;
+
+    case EDGE_ARC:
+    case EDGE_BEZIER:
+        if (first_index == 1)
+            accum_length = e->edge_length;
+
+        for (i = 0, p = (Point*)e->view_list.head; p->hdr.next != NULL; i++, p = (Point*)p->hdr.next)
+        {
+            Point* next_p = (Point*)p->hdr.next;
+
+            // Accumulate the length from first_index. Don't worry about the little bit
+            // of intersected line in the VL.
+            // Take care: the VL is ordered from endpoint[0] to [1], which may not be
+            // the same order as first_index to last_index.
+            tangent->A = next_p->x - p->x;
+            tangent->B = next_p->y - p->y;
+            tangent->C = next_p->z - p->z;
+            tangent->refpt = *p;
+            if (first_index == 0)
+            {
+                accum_length += length(p, next_p);
+                if (accum_length >= len)
+                    break;
+            }
+            else
+            {
+                accum_length -= length(p, next_p);
+                if (accum_length <= len)
+                    break;
+            }
+        }
+        break;
+    }
 }
 
 
@@ -285,4 +342,58 @@ path_tangent_to_intersect(Object* obj, Plane* pl, Bbox *ebox, Plane* tangent, fl
         }
     }
     return FALSE;
+}
+
+// Given an initial tangent and its length along the path (as returned from path_tangent_to_intersect)
+// Return an array of tangents (points/directions) along the path at suitable locations
+// for tubing. One at each end of a straight edge, and arcs/beziers subdivided so as to 
+// make no more than max_angle of deviation between them. Return the number of tangents
+// stored in the array.
+int
+path_subdivide(Object* obj, Plane* initial_tangent, float initial_len, float max_angle, Plane **tangents)
+{
+    int n_tangents = 0, max_tangents = 8;   // must be a power of 2
+
+    // Allocate a tangents array; it may be enlarged later.
+    *tangents = calloc(max_tangents, sizeof(Plane));
+
+    if (obj->type == OBJ_EDGE)
+    {
+        Edge* e = (Edge*)obj;
+
+        // Just put one in at the far end of the edge for now.
+        // TODO: subdivisions of curved edges
+        edge_tangent_to_length(e, 0, e->edge_length, &(*tangents)[n_tangents++]);
+        if (n_tangents == max_tangents)
+        {
+            max_tangents *= 2;
+            *tangents = realloc(*tangents, max_tangents * sizeof(Plane));
+        }
+    }
+    else
+    {
+        Group* group = (Group*)obj;
+        Edge* e;
+        float total_length = 0;
+
+        ASSERT(is_edge_group(group), "Path is not an edge group");
+
+        // Find the first edge whose summed length exceeds initial_len, and put
+        // in tangents at changes of edge from that point on.
+        // TODO: subdivisions of curved edges, and closed paths.
+        for (e = (Edge*)group->obj_list.head; e != NULL; e = (Edge*)e->hdr.next)
+        {
+            total_length += e->edge_length;
+            if (total_length < initial_len)
+                continue;
+
+            edge_tangent_to_length(e, first_point_index(e), e->edge_length, &(*tangents)[n_tangents++]);
+            if (n_tangents == max_tangents)
+            {
+                max_tangents *= 2;
+                *tangents = realloc(*tangents, max_tangents * sizeof(Plane));
+            }
+        }
+    }
+    return n_tangents;
 }

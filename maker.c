@@ -1262,6 +1262,7 @@ make_endcap_faces(LoftedGroup* lg, Volume* vol, BOOL single_face, BOOL reverse)
 
 
 extern LoftParams default_loft;
+extern LoftParams default_tube;
 
 // Make a lofted volume from a group of sections, represented as edge groups.
 // There may or may not be a current path. 
@@ -1675,8 +1676,8 @@ make_lofted_volume(Group* group)
         }
         rotate(&lg[i].egrp->obj_list, min_edge);
 
-        // While here, if follow_path is TRUE, calculate the bay tensions for each bay.
-        if (loft->follow_path)
+        // While here, if low bit of follow_path is set, calculate the bay tensions for each bay.
+        if (loft->follow_path & 1)
         {
             Plane pl0 = lg[i - 1].principal;
             Plane pl1 = lg[i].principal;
@@ -1880,7 +1881,7 @@ make_lofted_volume(Group* group)
                 cn = edge_direction((Edge *)contour[j]->hdr.next, &plnext);
                 angle_break = pldot(&plprev, &plnext) < cosf(loft->body_angle_break / RADF);
                 join_smooth = FALSE;
-                if (loft->follow_path)
+                if (loft->follow_path & 1)
                 {
                     // Follow curve of path. The bay tensions have been calculated in advance. 
                     plnext = lg[i].principal;
@@ -2140,13 +2141,185 @@ make_lofted_volume(Group* group)
 }
 
 // Given an input edge group, clone it along the current path (which may be an open edge group
-// containing curved edges) and loft the resulting sections. The input edge group is retained.
-Volume *
-make_tubed_volume(Group* group)
+// containing curved edges) and return a group of the input egrp and all its copies suitable
+// for lofting. The original egrp is removed from the object tree.
+Group *
+make_tubed_group(Group* group)
 {
+    Group* tubed_group = NULL;
+    Group* eg;
+    float initial_len;
+    Plane* tangents;
+    int i, n_tangents;
+    float dx, dy, dz;
+    LoftedGroup lg;
+    Edge* e, * next_edge;
+    int initial, final;
+    ListHead plist = { NULL, NULL };
+    Point* pt;
+    BOOL existing_tubed_group = FALSE;
 
+    // There must be a path.
+    if (curr_path == NULL)
+        return NULL;
 
+    // The group given must be a single closed edge group, or else a group of edge groups created by tubing.
+    if (!is_edge_group(group))
+    {
+        LoftParams* loft = group->loft;
+        Object* obj, *onext;
 
+        if (!is_edge_group((Group *)group->obj_list.head))
+            return FALSE;
+        if (loft == NULL || !(loft->follow_path & 2))
+            return NULL;
 
-    return NULL; // TEMP until we get something in here
+        // We have an existing tubed (and possibly also lofted) group. Delete everything in it
+        // leaving the first edge group intact.
+        for (obj = group->obj_list.head->next; obj != NULL; obj = onext)
+        {
+            delink_group(obj, group);
+            onext = obj->next;
+            purge_obj(obj);
+        }
+
+        tubed_group = group;
+        existing_tubed_group = TRUE;
+        group = (Group *)group->obj_list.head;
+    }
+    else
+    {
+        if (!is_closed_edge_group(group))
+            return NULL;
+
+        // Create a tubed group and put the user-supplied edge group in it.
+        tubed_group = group_new();
+        delink_group((Object *)group, &object_tree);
+        link_group((Object *)group, tubed_group);
+    }
+
+    // Find the normal and the bounding box of the original edge group.
+    clear_bbox(&lg.ebox);
+
+    // Join endpoints up into a list (the next/prev pointers aren't used for
+    // anything else)
+    e = (Edge*)group->obj_list.head;
+    next_edge = (Edge*)group->obj_list.head->next;
+    if (e->endpoints[0] == next_edge->endpoints[0])
+    {
+        initial = 1;
+        pt = e->endpoints[0];
+    }
+    else if (e->endpoints[0] == next_edge->endpoints[1])
+    {
+        initial = 1;
+        pt = e->endpoints[0];
+    }
+    else if (e->endpoints[1] == next_edge->endpoints[0])
+    {
+        initial = 0;
+        pt = e->endpoints[1];
+    }
+    else if (e->endpoints[1] == next_edge->endpoints[1])
+    {
+        initial = 0;
+        pt = e->endpoints[1];
+    }
+    else
+    {
+        ASSERT(FALSE, "The edges aren't connected");
+        return NULL;
+    }
+
+    link_tail((Object*)e->endpoints[initial], &plist);
+    expand_bbox(&lg.ebox, e->endpoints[initial]);
+    for (; e->hdr.next != NULL; e = next_edge)
+    {
+        next_edge = (Edge*)e->hdr.next;
+
+        if (e->hdr.next->type != OBJ_EDGE)
+            return NULL;
+
+        // Strip construction edges, as we can't consistently create them
+        e->type &= ~EDGE_CONSTRUCTION;
+
+        if (next_edge->endpoints[0] == pt)
+        {
+            link_tail((Object*)next_edge->endpoints[0], &plist);
+            expand_bbox(&lg.ebox, next_edge->endpoints[0]);
+            final = 1;
+        }
+        else if (next_edge->endpoints[1] == pt)
+        {
+            link_tail((Object*)next_edge->endpoints[1], &plist);
+            expand_bbox(&lg.ebox, next_edge->endpoints[1]);
+            final = 0;
+        }
+        else
+        {
+            return NULL;
+        }
+
+        pt = next_edge->endpoints[final];
+    }
+
+    polygon_normal((Point*)plist.head, &lg.norm);
+    lg.norm.refpt.x = (lg.ebox.xmin + lg.ebox.xmax) / 2;
+    lg.norm.refpt.y = (lg.ebox.ymin + lg.ebox.ymax) / 2;
+    lg.norm.refpt.z = (lg.ebox.zmin + lg.ebox.zmax) / 2;
+
+    // Find the intersection length and tangent of the original edge group.
+    path_total_length(curr_path);
+    if (!path_tangent_to_intersect(curr_path, &lg.norm, &lg.ebox, &lg.principal, &initial_len))
+        goto back_out;
+
+    // Obtain a list of candidate positions and directions for the copies.
+    n_tangents = path_subdivide(curr_path, &lg.principal, initial_len, 90.0f, &tangents);
+    if (n_tangents == 0)
+        goto back_out;
+
+    // Copy the group to all its new positions within the tubed group.
+    dx = tangents[0].refpt.x - lg.principal.refpt.x;
+    dy = tangents[0].refpt.y - lg.principal.refpt.y;
+    dz = tangents[0].refpt.z - lg.principal.refpt.z;
+    eg = (Group *)copy_obj((Object *)group, dx, dy, dz, FALSE);
+    clear_move_copy_flags((Object*)group);
+    link_tail_group((Object *)eg, tubed_group);
+    for (i = 1; i < n_tangents; i++)
+    {
+        // Copy the previous edge group to the current location.
+        // TODO: Take account of angles.
+        dx = tangents[i].refpt.x - tangents[i - 1].refpt.x;
+        dy = tangents[i].refpt.y - tangents[i - 1].refpt.y;
+        dz = tangents[i].refpt.z - tangents[i - 1].refpt.z;
+        eg = (Group *)copy_obj(tubed_group->obj_list.tail, dx, dy, dz, FALSE);
+        clear_move_copy_flags((Object*)group);
+        link_tail_group((Object *)eg, tubed_group);
+    }
+
+    if (!existing_tubed_group)
+    {
+        // Set up a LoftParams defining this new group as a tubed group.
+        // Set it to defaults
+        int n_bays = n_tangents;
+
+        tubed_group->loft = malloc(sizeof(LoftParams) + n_bays * sizeof(float));
+        memcpy(tubed_group->loft, &default_tube, sizeof(LoftParams));
+        tubed_group->loft->n_bays = n_bays;
+        for (i = 1; i < tubed_group->loft->n_bays; i++)
+            tubed_group->loft->bay_tensions[i] = tubed_group->loft->bay_tensions[0];
+    }
+
+    return tubed_group;
+
+    // Error out, putting the original group back into the object tree if we did not 
+    // start with an existing tubed group.
+back_out:
+    if (existing_tubed_group)
+        return NULL;
+
+    delink_group((Object*)group, tubed_group);
+    link_group((Object*)group, &object_tree);
+    purge_obj((Object*)tubed_group);
+    return NULL;
 }

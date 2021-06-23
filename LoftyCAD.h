@@ -349,7 +349,7 @@ Face* make_face(Group * group, BOOL clear_group, BOOL auto_reverse, BOOL reverse
 void insert_chamfer_round(Point * pt, Face * parent, float size, EDGE edge_type, BOOL restricted);
 Volume* make_body_of_revolution(Group * group, BOOL negative);
 Volume* make_lofted_volume(Group * group);
-Volume* make_tubed_volume(Group * group);
+Group* make_tubed_group(Group * group);
 
 // Path related stuff (path.c)
 int first_point_index(Edge * edge);
@@ -360,6 +360,8 @@ void project(Plane * ap, Plane * princ, Plane * proj);
 float path_total_length(Object * obj);
 BOOL path_tangent_to_intersect(Object * obj, Plane * pl, Bbox *ebox, Plane * tangent, float *ret_len);
 BOOL path_is_closed(Object* obj);
+int path_subdivide(Object* obj, Plane* initial_tangent, float initial_len, float max_angle, Plane** tangents);
+
 
 // Neighbourhood search and picking (neighbourhood.c)
 Object* Pick(GLint x_pick, GLint y_pick, BOOL force_pick);
