@@ -2175,14 +2175,16 @@ make_tubed_group(Group* group)
             return NULL;
 
         // We have an existing tubed (and possibly also lofted) group. Delete everything in it
-        // leaving the first edge group intact.
+        // leaving the first edge group intact. Remove it from the object tree (it will be
+        // put back later)
         for (obj = group->obj_list.head->next; obj != NULL; obj = onext)
         {
-            delink_group(obj, group);
             onext = obj->next;
+            delink_group(obj, group);
             purge_obj(obj);
         }
 
+        delink_group((Object*)group, &object_tree);
         tubed_group = group;
         existing_tubed_group = TRUE;
         group = (Group *)group->obj_list.head;

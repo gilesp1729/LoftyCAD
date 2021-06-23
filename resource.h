@@ -217,7 +217,6 @@
 #define IDD_PRINT_PREVIEW               1544
 #define IDD_SLICER                      1545
 #define IDD_PRINTER                     1546
-#define IDD_LOFT1                       1547
 #define IDD_TUBE                        1547
 #define ID_FILE_NEW                     32774
 #define ID_FILE_OPEN                    32775
@@ -365,6 +364,7 @@
 #define ID_EGROUP_TUBEEDGEGROUPALONGPATH 32932
 #define ID_HELP_LOFTINGANDTUBING        32933
 #define ID_HELP_BODIESOFREVOLUTION      32934
+#define ID_GROUP_TUBEGROUP32935         32935
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -373,7 +373,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        166
-#define _APS_NEXT_COMMAND_VALUE         32935
+#define _APS_NEXT_COMMAND_VALUE         32936
 #define _APS_NEXT_CONTROL_VALUE         1093
 #define _APS_NEXT_SYMED_VALUE           110
 #endif

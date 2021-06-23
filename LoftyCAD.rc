@@ -260,6 +260,7 @@ BEGIN
         MENUITEM "Rotate 90",                   ID_OBJ_ROTATE90
         MENUITEM SEPARATOR
         MENUITEM "Loft Group...",               ID_OBJ_LOFTGROUP
+        MENUITEM "Tube group",                  ID_OBJ_TUBEGROUP
         MENUITEM "Ungroup",                     ID_OBJ_UNGROUP
         MENUITEM "Save group as...",            ID_OBJ_SAVEGROUP
     END

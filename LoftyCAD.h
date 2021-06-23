@@ -237,7 +237,7 @@ extern Material materials[MAX_MATERIAL];
 #undef TIME_DRAWING
 
 
-#undef BREAK_ON_ASSERT
+#define BREAK_ON_ASSERT
 #ifdef BREAK_ON_ASSERT
 #ifdef _DEBUG
 #define ASSERT_BREAK  DebugBreak()

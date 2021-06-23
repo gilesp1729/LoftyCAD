@@ -159,7 +159,7 @@ contextmenu(Object *picked_obj, POINT pt)
                 lofted_group = is_edge_group((Group*)(((Group*)parent)->obj_list.head));
                 EnableMenuItem(hMenu, ID_OBJ_LOFTGROUP, lofted_group ? MF_ENABLED : MF_GRAYED);
 
-                // To be tubed, the lofted group must have been created by tubing. TODO: There's no menu option.
+                // To be tubed, the lofted group must have been created by tubing.
                 has_loft = ((Group*)parent)->loft != NULL;
                 is_tubed = has_loft && (((Group*)parent)->loft->follow_path & 2);
                 EnableMenuItem(hMenu, ID_OBJ_TUBEGROUP, lofted_group && has_loft && is_tubed ? MF_ENABLED : MF_GRAYED);
@@ -859,7 +859,7 @@ materials_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 }
 
 LoftParams default_loft = { 0.33f, 0.33f, 60, 80, 80, JOIN_BOW, JOIN_BOW, 0, 0, 0, 0.33f };
-LoftParams default_tube = { 0.33f, 0.33f, 60, 80, 80, JOIN_STERN, JOIN_STERN, 2, 0, 0, 0.33f };
+LoftParams default_tube = { 0.33f, 0.33f, 60, 80, 80, JOIN_STERN, JOIN_STERN, 3, 0, 0, 0.33f };
 
 // Dialog that controls lofting.
 // Input (lParam): a Group of edge groups.
