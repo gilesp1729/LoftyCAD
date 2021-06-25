@@ -350,6 +350,7 @@ void insert_chamfer_round(Point * pt, Face * parent, float size, EDGE edge_type,
 Volume* make_body_of_revolution(Group * group, BOOL negative);
 Volume* make_lofted_volume(Group * group);
 Group* make_tubed_group(Group * group);
+void remove_tubed_group(Group * group);
 
 // Path related stuff (path.c)
 int first_point_index(Edge * edge);

@@ -365,6 +365,8 @@
 #define ID_HELP_LOFTINGANDTUBING        32933
 #define ID_HELP_BODIESOFREVOLUTION      32934
 #define ID_GROUP_TUBEGROUP32935         32935
+#define ID_GROUP_REMOVETUBEDGROUP       32936
+#define ID_OBJ_REMOVETUBEDGROUP         32937
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -373,7 +375,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        166
-#define _APS_NEXT_COMMAND_VALUE         32936
+#define _APS_NEXT_COMMAND_VALUE         32938
 #define _APS_NEXT_CONTROL_VALUE         1093
 #define _APS_NEXT_SYMED_VALUE           110
 #endif

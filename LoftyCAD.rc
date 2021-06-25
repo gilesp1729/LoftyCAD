@@ -261,6 +261,7 @@ BEGIN
         MENUITEM SEPARATOR
         MENUITEM "Loft Group...",               ID_OBJ_LOFTGROUP
         MENUITEM "Tube group",                  ID_OBJ_TUBEGROUP
+        MENUITEM "Remove Tubed Group",          ID_OBJ_REMOVETUBEDGROUP
         MENUITEM "Ungroup",                     ID_OBJ_UNGROUP
         MENUITEM "Save group as...",            ID_OBJ_SAVEGROUP
     END

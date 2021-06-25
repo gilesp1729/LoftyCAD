@@ -2170,7 +2170,7 @@ make_tubed_group(Group* group)
         Object* obj, *onext;
 
         if (!is_edge_group((Group *)group->obj_list.head))
-            return FALSE;
+            return NULL;
         if (loft == NULL || !(loft->follow_path & 2))
             return NULL;
 
@@ -2294,7 +2294,7 @@ make_tubed_group(Group* group)
         dx = tangents[i].refpt.x - tangents[i - 1].refpt.x;
         dy = tangents[i].refpt.y - tangents[i - 1].refpt.y;
         dz = tangents[i].refpt.z - tangents[i - 1].refpt.z;
-        eg = (Group *)copy_obj(tubed_group->obj_list.tail, dx, dy, dz, FALSE);
+        eg = (Group *)copy_obj(tubed_group->obj_list.tail, 0.95 * dx, dy, dz, FALSE);  // TODO some slop so it intersects the path
         clear_move_copy_flags((Object*)group);
         link_tail_group((Object *)eg, tubed_group);
     }
@@ -2324,4 +2324,34 @@ back_out:
     link_group((Object*)group, &object_tree);
     purge_obj((Object*)tubed_group);
     return NULL;
+}
+
+// Remove the copies of the initial edge group from a tubed group, and put the initial
+// egrp back into the object tree.
+void
+remove_tubed_group(Group* group)
+{
+    LoftParams* loft = group->loft;
+    Object* obj, * onext;
+
+    // Must be a tubed group containing edge groups.
+    if (!is_edge_group((Group*)group->obj_list.head))
+        return;
+    if (loft == NULL || !(loft->follow_path & 2))
+        return;
+
+    // We have an existing tubed (and possibly also lofted) group. Delete everything in it
+    // leaving the first edge group intact. Remove it from the object tree.
+    for (obj = group->obj_list.head->next; obj != NULL; obj = onext)
+    {
+        onext = obj->next;
+        delink_group(obj, group);
+        purge_obj(obj);
+    }
+
+    delink_group((Object*)group, &object_tree);
+    obj = group->obj_list.head;
+    delink_group(obj, group);
+    link_group(obj, &object_tree);
+    purge_obj((Object *)group);
 }

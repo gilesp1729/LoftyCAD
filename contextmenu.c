@@ -163,6 +163,7 @@ contextmenu(Object *picked_obj, POINT pt)
                 has_loft = ((Group*)parent)->loft != NULL;
                 is_tubed = has_loft && (((Group*)parent)->loft->follow_path & 2);
                 EnableMenuItem(hMenu, ID_OBJ_TUBEGROUP, lofted_group && has_loft && is_tubed ? MF_ENABLED : MF_GRAYED);
+                EnableMenuItem(hMenu, ID_OBJ_REMOVETUBEDGROUP, lofted_group && has_loft && is_tubed ? MF_ENABLED : MF_GRAYED);
             }
             break;
         }
@@ -393,7 +394,7 @@ contextmenu(Object *picked_obj, POINT pt)
         }
         break;
 
-    case ID_OBJ_LOFTGROUP:
+    case ID_OBJ_LOFTGROUP:      // TODO investigate cases where loft fails, group_changed comes back FALSE, but display is messed up
         group_changed =
             DialogBoxParam(hInst, MAKEINTRESOURCE(IDD_LOFT), auxGetHWND(), lofting_dialog, (LPARAM)picked_obj);
         break;
@@ -406,6 +407,12 @@ contextmenu(Object *picked_obj, POINT pt)
             clear_selection(&selection);
             group_changed = TRUE;
         }
+        break;
+
+    case ID_OBJ_REMOVETUBEDGROUP:
+        remove_tubed_group((Group*)picked_obj);
+        clear_selection(&selection);
+        group_changed = TRUE;
         break;
 
     case ID_OBJ_MAKEEDGEGROUP:
