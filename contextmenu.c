@@ -394,7 +394,7 @@ contextmenu(Object *picked_obj, POINT pt)
         }
         break;
 
-    case ID_OBJ_LOFTGROUP:      // TODO investigate cases where loft fails, group_changed comes back FALSE, but display is messed up
+    case ID_OBJ_LOFTGROUP:
         group_changed =
             DialogBoxParam(hInst, MAKEINTRESOURCE(IDD_LOFT), auxGetHWND(), lofting_dialog, (LPARAM)picked_obj);
         break;
@@ -995,6 +995,9 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 link_tail_group((Object*)vol, group);
                 clear_selection(&selection);
             }
+            // Update the drawing but don't write a checkpoint yet
+            invalidate_dl();
+            invalidate_all_view_lists((Object*)&group, (Object*)&group, 0, 0, 0);
             EndDialog(hWnd, (INT_PTR)changed);
             break;
 

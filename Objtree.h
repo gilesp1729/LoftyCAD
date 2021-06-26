@@ -485,6 +485,7 @@ Face *clone_face_reverse(Face *face);
 void find_obj_pivot(Object* obj, float* xc, float* yc, float* zc);
 void rotate_obj_90_facing(Object* obj, float xc, float yc, float zc);
 void rotate_obj_free_facing(Object* obj, float alpha, float xc, float yc, float zc);
+void rotate_obj_free_abc(Object* obj, Plane* v1, Plane* v2);
 void scale_obj_free(Object* obj, float sx, float sy, float sz, float xc, float yc, float zc);
 void reflect_obj_facing(Object* obj, float xc, float yc, float zc);
 

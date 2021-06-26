@@ -1497,7 +1497,6 @@ make_lofted_volume(Group* group)
             {
                 // No intersection was found. This is not what the user intended,
                 // so we error out.
-                purge_obj((Object*)vol);
                 purge_obj((Object*)clone);
                 free(lg);
                 free(contour_lists);
@@ -1666,7 +1665,6 @@ make_lofted_volume(Group* group)
         // If there were no valid rotations, bail out. Edge types cannot be made to match.
         if (min_edge == NULL)
         {
-            purge_obj((Object*)vol);
             purge_obj((Object*)clone);
             free(lg);
             free(contour_lists);
@@ -2149,7 +2147,7 @@ make_tubed_group(Group* group)
     Group* tubed_group = NULL;
     Group* eg;
     float initial_len;
-    Plane* tangents;
+    Plane* tangents, *v1, *v2;
     int i, n_tangents;
     float dx, dy, dz;
     LoftedGroup lg;
@@ -2281,21 +2279,27 @@ make_tubed_group(Group* group)
         goto back_out;
 
     // Copy the group to all its new positions within the tubed group.
-    dx = tangents[0].refpt.x - lg.principal.refpt.x;
-    dy = tangents[0].refpt.y - lg.principal.refpt.y;
-    dz = tangents[0].refpt.z - lg.principal.refpt.z;
-    eg = (Group *)copy_obj((Object *)group, dx, dy, dz, FALSE);
-    clear_move_copy_flags((Object*)group);
-    link_tail_group((Object *)eg, tubed_group);
-    for (i = 1; i < n_tangents; i++)
+    for (i = 0; i < n_tangents; i++)
     {
         // Copy the previous edge group to the current location.
-        // TODO: Take account of angles.
-        dx = tangents[i].refpt.x - tangents[i - 1].refpt.x;
-        dy = tangents[i].refpt.y - tangents[i - 1].refpt.y;
-        dz = tangents[i].refpt.z - tangents[i - 1].refpt.z;
-        eg = (Group *)copy_obj(tubed_group->obj_list.tail, 0.95 * dx, dy, dz, FALSE);  // TODO some slop so it intersects the path
+        if (i == 0)
+        {
+            v1 = &lg.principal;
+            v2 = &tangents[0];
+        }
+        else
+        {
+            v1 = &tangents[i - 1];
+            v2 = &tangents[i];
+        }
+        dx = v2->refpt.x - v1->refpt.x;
+        dy = v2->refpt.y - v1->refpt.y;
+        dz = v2->refpt.z - v1->refpt.z;
+        eg = (Group *)copy_obj(tubed_group->obj_list.tail, dx, dy, dz, FALSE);  // TODO some slop so it intersects the path
         clear_move_copy_flags((Object*)group);
+        rotate_obj_free_abc((Object*)eg, v1, v2);
+        clear_move_copy_flags((Object*)group);
+
         link_tail_group((Object *)eg, tubed_group);
     }
 

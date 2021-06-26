@@ -2,6 +2,10 @@
 #include "LoftyCAD.h"
 #include <stdio.h>
 
+// Rotation matrix cached.
+static float rotate_3x3[9];
+static BOOL rotate_3x3_valid = FALSE;
+
 // Anything to do with moving and copying objects.
 
 // Clear the moved and copied_to flags on all points referenced by the object.
@@ -19,6 +23,8 @@ clear_move_copy_flags(Object* obj)
     Volume* vol;
     Group* grp;
     Object* o;
+
+    rotate_3x3_valid = FALSE;
 
     switch (obj->type)
     {
@@ -953,6 +959,144 @@ rotate_obj_free_facing(Object* obj, float alpha, float xc, float yc, float zc)
         break;
     }
 }
+
+
+// Calculate the 3x3 rotation matrix that takes direction v1 onto v2.
+// Cache it in a global (clear_move_copy_flags will clear it)
+// From kevinmoran/noacos_derivation.md 
+// (https://gist.github.com/kevinmoran/b45980723e53edeb8a5a43c49f134724)
+void
+rotate_matrix_free_abc(Plane v1, Plane v2)
+{
+    Plane axis;
+    float cosA, k;
+        
+    // Pass v1 and v2 by value so they can be normalised in here.
+    normalise_plane(&v1);
+    normalise_plane(&v2);
+    cosA = pldot(&v1, &v2);
+    plcross(&v1, &v2, &axis);
+    k = 1.0f / (1.0f + cosA);
+
+    rotate_3x3[0] = (axis.A * axis.A * k) + cosA;
+    rotate_3x3[1] = (axis.B * axis.A * k) - axis.C;
+    rotate_3x3[2] = (axis.C * axis.A * k) + axis.B;
+    rotate_3x3[3] = (axis.A * axis.B * k) + axis.C;
+    rotate_3x3[4] = (axis.B * axis.B * k) + cosA;
+    rotate_3x3[5] = (axis.C * axis.B * k) - axis.A;
+    rotate_3x3[6] = (axis.A * axis.C * k) - axis.B;
+    rotate_3x3[7] = (axis.B * axis.C * k) + axis.A;
+    rotate_3x3[8] = (axis.C * axis.C * k) + cosA;
+}
+
+// Rotate a point by the angle between two Planes in 3D.
+// The centre of rotation is the refpt of v2.
+void
+rotate_coord_free_abc(float* x, float* y, float* z, Plane* v1, Plane* v2)
+{
+    float x0 = *x - v2->refpt.x;
+    float y0 = *y - v2->refpt.y;
+    float z0 = *z - v2->refpt.z;
+
+    ASSERT(rotate_3x3_valid, "We must have a valid 3x3 rotation matrix by now");
+
+    *x = rotate_3x3[0] * x0 + rotate_3x3[1] * y0 + rotate_3x3[2] * z0 + v2->refpt.x;
+    *y = rotate_3x3[3] * x0 + rotate_3x3[4] * y0 + rotate_3x3[5] * z0 + v2->refpt.y;
+    *z = rotate_3x3[6] * x0 + rotate_3x3[7] * y0 + rotate_3x3[8] * z0 + v2->refpt.z;
+}
+
+// Rotate any object by the angle between two Planes in 3D; i.e. taking v1 onto v2.
+// They must not be at 180 degrees. Small (<90) angles preferred. 
+// The centre of rotation is the refpt of v2.
+void
+rotate_obj_free_abc(Object* obj, Plane* v1, Plane* v2)
+{
+    int i;
+    Point* p;
+    EDGE type;
+    Edge* edge;
+    ArcEdge* ae;
+    BezierEdge* be;
+    Face* face;
+    Volume* vol;
+    Group* grp;
+    Object* o;
+
+    if (!rotate_3x3_valid)
+    {
+        rotate_matrix_free_abc(*v1, *v2);
+        rotate_3x3_valid = TRUE;
+    }
+
+    switch (obj->type)
+    {
+    case OBJ_POINT:
+        p = (Point*)obj;
+        if (!p->moved)
+        {
+            rotate_coord_free_abc(&p->x, &p->y, &p->z, v1, v2);
+            p->moved = TRUE;
+        }
+        break;
+
+    case OBJ_EDGE:
+        edge = (Edge*)obj;
+        rotate_obj_free_abc((Object*)edge->endpoints[0], v1, v2);
+        rotate_obj_free_abc((Object*)edge->endpoints[1], v1, v2);
+        type = ((Edge*)obj)->type & ~EDGE_CONSTRUCTION;
+        switch (type)
+        {
+        case EDGE_ARC:
+#if 0 // not supported in tubing
+            ae = (ArcEdge*)obj;
+            if (!ae->centre->moved)     // don't do it twice
+                rotate_plane_free_abc(&ae->normal, v1, v2);
+            rotate_obj_free_abc((Object*)ae->centre, v1, v2);
+            rotate_obj_free_abc((Object*)&ae->normal.refpt, v1, v2);
+            edge->view_valid = FALSE;
+#endif
+            break;
+
+        case EDGE_BEZIER:
+            be = (BezierEdge*)obj;
+            rotate_obj_free_abc((Object*)be->ctrlpoints[0], v1, v2);
+            rotate_obj_free_abc((Object*)be->ctrlpoints[1], v1, v2);
+            edge->view_valid = FALSE;
+            break;
+        }
+        break;
+
+    case OBJ_FACE:
+        face = (Face*)obj;
+        for (i = 0; i < face->n_edges; i++)
+        {
+            edge = face->edges[i];
+            rotate_obj_free_abc((Object*)edge, v1, v2);
+        }
+        // don't forget to rotate the normal refpt too
+        rotate_coord_free_abc(&face->normal.refpt.x, &face->normal.refpt.y, &face->normal.refpt.z, v1, v2);
+        if (face->text != NULL)             // and the text positions
+        {
+            rotate_coord_free_abc(&face->text->origin.x, &face->text->origin.y, &face->text->origin.z, v1, v2);
+            rotate_coord_free_abc(&face->text->endpt.x, &face->text->endpt.y, &face->text->endpt.z, v1, v2);
+        }
+        face->view_valid = FALSE;
+        break;
+
+    case OBJ_VOLUME:
+        vol = (Volume*)obj;
+        for (face = (Face*)vol->faces.head; face != NULL; face = (Face*)face->hdr.next)
+            rotate_obj_free_abc((Object*)face, v1, v2);
+        break;
+
+    case OBJ_GROUP:
+        grp = (Group*)obj;
+        for (o = grp->obj_list.head; o != NULL; o = o->next)
+            rotate_obj_free_abc(o, v1, v2);
+        break;
+    }
+}
+
 
 // Scale a coordinate by (sx, sy, sz) about (xc, yc, zc). Unused scales are expected to be 1.
 // Zero or negative scales are ignored.
