@@ -257,7 +257,10 @@ edge_tangent_to_length(Edge* e, int first_index, float len, Plane* tangent)
             {
                 accum_length -= length(p, next_p);
                 if (accum_length <= len)
+                {
+                    tangent->refpt = *next_p;
                     break;
+                }
             }
         }
         break;
@@ -363,7 +366,7 @@ path_subdivide(Object* obj, Plane* initial_tangent, float initial_len, float max
 
         // Just put one in at the far end of the edge for now.
         // TODO: subdivisions of curved edges
-        edge_tangent_to_length(e, 0, e->edge_length, &(*tangents)[n_tangents++]);
+        edge_tangent_to_length(e, 0, e->edge_length - tolerance, &(*tangents)[n_tangents++]);
         if (n_tangents == max_tangents)
         {
             max_tangents *= 2;
@@ -387,7 +390,7 @@ path_subdivide(Object* obj, Plane* initial_tangent, float initial_len, float max
             if (total_length < initial_len)
                 continue;
 
-            edge_tangent_to_length(e, first_point_index(e), e->edge_length, &(*tangents)[n_tangents++]);
+            edge_tangent_to_length(e, first_point_index(e), e->edge_length - tolerance, &(*tangents)[n_tangents++]);
             if (n_tangents == max_tangents)
             {
                 max_tangents *= 2;

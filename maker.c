@@ -2011,6 +2011,7 @@ make_lofted_volume(Group* group)
             }
         }
 
+        // TODO: Even if it is Stern, if  follow_path bit 0 is set, the endcap contours should follow the path.
         if (cosmax > cosf(loft->nose_angle_break / RADF) && loft->nose_join_mode != JOIN_STERN)
         {
             lj = length(c->endpoints[0], c->endpoints[1]);
