@@ -243,21 +243,26 @@ edge_tangent_to_length(Edge* e, int first_index, float len, Plane* tangent)
             // of intersected line in the VL.
             // Take care: the VL is ordered from endpoint[0] to [1], which may not be
             // the same order as first_index to last_index.
-            tangent->A = next_p->x - p->x;
-            tangent->B = next_p->y - p->y;
-            tangent->C = next_p->z - p->z;
-            tangent->refpt = *p;
             if (first_index == 0)
             {
                 accum_length += length(p, next_p);
                 if (accum_length >= len)
+                {
+                    tangent->A = next_p->x - p->x;
+                    tangent->B = next_p->y - p->y;
+                    tangent->C = next_p->z - p->z;
+                    tangent->refpt = *p;
                     break;
+                }
             }
             else
             {
                 accum_length -= length(p, next_p);
                 if (accum_length <= len)
                 {
+                    tangent->A = p->x - next_p->x;
+                    tangent->B = p->y - next_p->y;
+                    tangent->C = p->z - next_p->z;
                     tangent->refpt = *next_p;
                     break;
                 }

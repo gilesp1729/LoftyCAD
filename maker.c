@@ -1932,6 +1932,7 @@ make_lofted_volume(Group* group)
         int ci;
         float cosmax, costest, lj;
         BezierEdge* be;
+        BOOL join_smooth = FALSE;
 
         c = (Edge *)contour_lists[j].head;
 
@@ -1965,7 +1966,7 @@ make_lofted_volume(Group* group)
         project(&plend, &lg[0].principal, &plend_proj);
         cosmax = pldot(&plend_proj, &pl_proj);
         
-        if (loft->nose_join_mode != JOIN_NOSECONE)
+        if (loft->nose_join_mode == JOIN_BOW)
         {
             // Check the edges incident on the common point (c->endpoints[ci]) and see if
             // they make a smaller angle (greater dot product). If so, use that for the test.
@@ -2009,10 +2010,17 @@ make_lofted_volume(Group* group)
                     }
                 }
             }
+            join_smooth = TRUE;
+        }
+        else if (loft->nose_join_mode == JOIN_STERN && (loft->follow_path & 1))
+        {
+            // Stern joins don't join to the endcap, but may still need to follow the path.
+            plend = lg[0].principal;
+            normalise_plane(&plend);
+            join_smooth = TRUE;
         }
 
-        // TODO: Even if it is Stern, if  follow_path bit 0 is set, the endcap contours should follow the path.
-        if (cosmax > cosf(loft->nose_angle_break / RADF) && loft->nose_join_mode != JOIN_STERN)
+        if (cosmax > cosf(loft->nose_angle_break / RADF) || join_smooth)
         {
             lj = length(c->endpoints[0], c->endpoints[1]);
             ((BezierEdge*)c)->ctrlpoints[ci]->x = c->endpoints[ci]->x + (plend.A * loft->nose_tension * lj);
@@ -2034,6 +2042,7 @@ make_lofted_volume(Group* group)
         int ci;
         float cosmax, costest, lj;
         BezierEdge* be;
+        BOOL join_smooth = FALSE;
 
         c = (Edge*)contour_lists[j].tail;
         ci = edge_direction(c, &pl);                // points out of contour
@@ -2059,7 +2068,7 @@ make_lofted_volume(Group* group)
         project(&plend, &lg[num_groups - 1].principal, &plend_proj);
         cosmax = pldot(&plend_proj, &pl_proj);
 
-        if (loft->tail_join_mode != JOIN_NOSECONE)
+        if (loft->tail_join_mode == JOIN_BOW)
         {
             // Check the edges incident on the common point (c->endpoints[1-ci]) and see if
             // they make a smaller angle (greater dot product). If so, use that for the test.
@@ -2101,9 +2110,17 @@ make_lofted_volume(Group* group)
                     }
                 }
             }
+            join_smooth = TRUE;
+        }
+        else if (loft->tail_join_mode == JOIN_STERN && (loft->follow_path & 1))
+        {
+            // Stern joins don't join to the endcap, but may still need to follow the path.
+            plend = lg[num_groups - 1].principal;
+            normalise_plane(&plend);
+            join_smooth = TRUE;
         }
 
-        if (cosmax > cosf(loft->tail_angle_break / RADF) && loft->tail_join_mode != JOIN_STERN)
+        if (cosmax > cosf(loft->tail_angle_break / RADF) || join_smooth)
         {
             // make the first ctrl point straight into the end group's plane (don't average them)
             lj = length(c->endpoints[0], c->endpoints[1]);
@@ -2296,10 +2313,10 @@ make_tubed_group(Group* group)
         dx = v2->refpt.x - v1->refpt.x;
         dy = v2->refpt.y - v1->refpt.y;
         dz = v2->refpt.z - v1->refpt.z;
-        eg = (Group *)copy_obj(tubed_group->obj_list.tail, dx, dy, dz, FALSE);  // TODO some slop so it intersects the path
-        clear_move_copy_flags((Object*)group);
+        eg = (Group *)copy_obj(tubed_group->obj_list.tail, dx, dy, dz, FALSE); 
+        clear_move_copy_flags(tubed_group->obj_list.tail);
         rotate_obj_free_abc((Object*)eg, v1, v2);
-        clear_move_copy_flags((Object*)group);
+        clear_move_copy_flags((Object*)eg);
 
         link_tail_group((Object *)eg, tubed_group);
     }
