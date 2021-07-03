@@ -2292,7 +2292,7 @@ make_tubed_group(Group* group)
         goto back_out;
 
     // Obtain a list of candidate positions and directions for the copies.
-    n_tangents = path_subdivide(curr_path, &lg.principal, initial_len, 90.0f, &tangents);
+    n_tangents = path_subdivide(curr_path, &lg.principal, &lg.ebox, initial_len, &tangents);
     if (n_tangents == 0)
         goto back_out;
 

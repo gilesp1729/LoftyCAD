@@ -866,7 +866,7 @@ materials_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 }
 
 LoftParams default_loft = { 0.33f, 0.33f, 60, 80, 80, JOIN_BOW, JOIN_BOW, 0, 0, 0, 0.33f };
-LoftParams default_tube = { 0.33f, 0.33f, 60, 80, 80, JOIN_STERN, JOIN_STERN, 3, 0, 0, 0.33f };
+LoftParams default_tube = { 0.33f, 0.33f, 90, 90, 90, JOIN_STERN, JOIN_STERN, 3, 0, 0, 0.33f };
 
 // Dialog that controls lofting.
 // Input (lParam): a Group of edge groups.

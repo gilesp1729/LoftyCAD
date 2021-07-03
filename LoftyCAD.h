@@ -361,7 +361,7 @@ void project(Plane * ap, Plane * princ, Plane * proj);
 float path_total_length(Object * obj);
 BOOL path_tangent_to_intersect(Object * obj, Plane * pl, Bbox *ebox, Plane * tangent, float *ret_len);
 BOOL path_is_closed(Object* obj);
-int path_subdivide(Object* obj, Plane* initial_tangent, float initial_len, float max_angle, Plane** tangents);
+int path_subdivide(Object* obj, Plane* initial_tangent, Bbox *ebox, float initial_len, Plane** tangents);
 
 
 // Neighbourhood search and picking (neighbourhood.c)

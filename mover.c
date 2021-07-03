@@ -1015,7 +1015,7 @@ rotate_obj_free_abc(Object* obj, Plane* v1, Plane* v2)
     Point* p;
     EDGE type;
     Edge* edge;
-    ArcEdge* ae;
+    //ArcEdge* ae;
     BezierEdge* be;
     Face* face;
     Volume* vol;
