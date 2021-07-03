@@ -1679,11 +1679,16 @@ make_lofted_volume(Group* group)
         {
             Plane pl0 = lg[i - 1].principal;
             Plane pl1 = lg[i].principal;
-            float theta, chord;
+            float theta, chord, cosa;
 
             normalise_plane(&pl0);
             normalise_plane(&pl1);
-            theta = acosf(pldot(&pl0, &pl1));
+
+            // Protect against 1.00000+ causing out of domain for acosf
+            cosa = pldot(&pl0, &pl1);
+            if (cosa > 1.0f)
+                cosa = 1.0f;
+            theta = acosf(cosa);
 
             // The usual (4/3) tan (theta/4) formula for tension is as a fraction
             // of the radius, but our tensions are as multiples of the chord
