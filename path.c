@@ -138,76 +138,6 @@ edge_total_length(Edge* e)
     return 0;  // catch-all
 }
 
-// Return length along path to intersect with pl, and the tangent at pl.
-// Returns: 1 - intersects, 0 - no intersection, -1 - line lies in the plane
-// Returns 2 if intersection is off the end of the edge, but is valid
-// (as for intersect_line_plane)
-int
-edge_tangent_to_intersect(Edge *e, int first_index, Plane* pl, Bbox *ebox, Plane* tangent, float* ret_len)
-{
-    Point pt;
-    Point* p;
-    int rc = 0;
-    int last_index = 1 - first_index;
-    float accum_length = 0;
-    int i;
-
-    switch (e->type & ~EDGE_CONSTRUCTION)
-    {
-    case EDGE_STRAIGHT:
-        tangent->A = e->endpoints[last_index]->x - e->endpoints[first_index]->x;
-        tangent->B = e->endpoints[last_index]->y - e->endpoints[first_index]->y;
-        tangent->C = e->endpoints[last_index]->z - e->endpoints[first_index]->z;
-        tangent->refpt = *e->endpoints[first_index];
-
-        rc = intersect_line_plane(tangent, pl, &pt);
-        *ret_len = length(e->endpoints[first_index], &pt);
-        tangent->refpt = pt;
-        
-        // Check that pt is within ebox, and return 0 if it isn't.
-        if (!in_bbox(&pt, ebox, (float)SMALL_COORD))
-            rc = 0;
-        break;
-
-    case EDGE_ARC:
-    case EDGE_BEZIER:
-        for (i = 0, p = (Point*)e->view_list.head; p->hdr.next != NULL; i++, p = (Point*)p->hdr.next)
-        {
-            Point* next_p = (Point *)p->hdr.next;
-
-            accum_length += length(p, next_p);
-            tangent->A = next_p->x - p->x;
-            tangent->B = next_p->y - p->y;
-            tangent->C = next_p->z - p->z;
-            tangent->refpt = *p;
-            rc = intersect_line_plane(tangent, pl, &pt);
-            if (!in_bbox(&pt, ebox, (float)SMALL_COORD))
-                rc = 0;
-            if (rc == 1)
-            {
-                // We have an intersection within the ebox.
-                // Accumulate the length from first_index. Don't worry about the little bit
-                // of intersected line in the VL.
-                // Take care: the VL is ordered from endpoint[0] to [1], which may not be
-                // the same order as first_index to last_index.
-                if (first_index == 1)
-                {
-                    accum_length = e->edge_length - accum_length;
-                    tangent->A = -tangent->A;
-                    tangent->B = -tangent->B;
-                    tangent->C = -tangent->C;
-                    tangent->refpt = *next_p;
-                }
-                *ret_len = accum_length;
-                break;
-            }
-        }
-        break;
-    }
-
-    return rc;
-}
-
 // Find a tangent at the given length within the edge.
 // No checks are done on length. It is assumed to be within the edge length.
 void
@@ -283,6 +213,124 @@ edge_tangent_to_length(Edge* e, int first_index, float len, Plane* tangent)
     }
 }
 
+// Return length along path to intersect with pl, and the tangent at pl.
+// Returns: 1 - intersects, 0 - no intersection, -1 - line lies in the plane
+// Returns 2 if intersection is off the end of the edge, but is valid
+// (as for intersect_line_plane)
+int
+edge_tangent_to_intersect(Edge *e, int first_index, Plane* pl, Bbox *ebox, Plane* tangent, float* ret_len)
+{
+    Point pt;
+    Point* p;
+    int rc = 0;
+    int last_index = 1 - first_index;
+    float accum_length = 0;
+    
+    switch (e->type & ~EDGE_CONSTRUCTION)
+    {
+    case EDGE_STRAIGHT:
+        tangent->A = e->endpoints[last_index]->x - e->endpoints[first_index]->x;
+        tangent->B = e->endpoints[last_index]->y - e->endpoints[first_index]->y;
+        tangent->C = e->endpoints[last_index]->z - e->endpoints[first_index]->z;
+        tangent->refpt = *e->endpoints[first_index];
+
+        rc = intersect_line_plane(tangent, pl, &pt);
+        *ret_len = length(e->endpoints[first_index], &pt);
+        tangent->refpt = pt;
+        
+        // Check that pt is within ebox, and return 0 if it isn't.
+        if (!in_bbox(&pt, ebox, (float)SMALL_COORD))
+            rc = 0;
+
+        // If we're off the end (rc == 2) check that an endpoint is also
+        // within the ebox, using a wider tolerance. If not, return 0.
+        if (rc == 2)
+        {
+            if (!in_bbox(e->endpoints[first_index], ebox, tolerance) && !in_bbox(e->endpoints[last_index], ebox, tolerance))
+                rc = 0;
+        }
+        normalise_plane(tangent);
+        return rc;
+
+    case EDGE_ARC:
+    case EDGE_BEZIER:
+        // Check for true intersetions first before admitting off-end conditions.
+        for (p = (Point*)e->view_list.head; p->hdr.next != NULL; p = (Point*)p->hdr.next)
+        {
+            Point* next_p = (Point *)p->hdr.next;
+
+            accum_length += length(p, next_p);
+            tangent->A = next_p->x - p->x;
+            tangent->B = next_p->y - p->y;
+            tangent->C = next_p->z - p->z;
+            tangent->refpt = *p;
+
+            rc = intersect_line_plane(tangent, pl, &pt);
+            if (!in_bbox(&pt, ebox, (float)SMALL_COORD))
+                rc = 0;
+            if (rc == 1)
+            {
+                // We have a true intersection within the ebox.
+                // Accumulate the length from first_index. Don't worry about the little bit
+                // of intersected line in the VL.
+                // Take care: the VL is ordered from endpoint[0] to [1], which may not be
+                // the same order as first_index to last_index.
+                if (first_index == 1)
+                {
+                    accum_length = e->edge_length - accum_length;
+                    tangent->A = -tangent->A;
+                    tangent->B = -tangent->B;
+                    tangent->C = -tangent->C;
+                    tangent->refpt = *next_p;
+                }
+                *ret_len = accum_length;
+                normalise_plane(tangent);
+                return rc;
+            }
+        }
+
+        // If we come out here, there was no intersection. Check again for off-end.
+        accum_length = 0;
+        for (p = (Point*)e->view_list.head; p->hdr.next != NULL; p = (Point*)p->hdr.next)
+        {
+            Point* next_p = (Point*)p->hdr.next;
+
+            accum_length += length(p, next_p);
+            tangent->A = next_p->x - p->x;
+            tangent->B = next_p->y - p->y;
+            tangent->C = next_p->z - p->z;
+            tangent->refpt = *p;
+
+            rc = intersect_line_plane(tangent, pl, &pt);
+            if (!in_bbox(&pt, ebox, (float)SMALL_COORD))
+                rc = 0;
+            if (rc == 2)
+            {
+                if (!in_bbox(p, ebox, tolerance) && !in_bbox(next_p, ebox, tolerance))
+                    rc = 0;
+            }
+            if (rc > 0)
+            {
+                // We have an off-end intersection and an endpoint within the ebox.
+                // Accumulate the length from first_index as before.
+                if (first_index == 1)
+                {
+                    accum_length = e->edge_length - accum_length;
+                    tangent->A = -tangent->A;
+                    tangent->B = -tangent->B;
+                    tangent->C = -tangent->C;
+                    tangent->refpt = *next_p;
+                }
+                *ret_len = accum_length;
+                normalise_plane(tangent);
+                return rc;
+            }
+        }
+        break;
+    }
+    return rc;
+}
+
 // Spacings and angles governing tubing copies.
 // The spacings are given as fractions of the largest size of the edge bounding box.
 #define MAX_ANGLE   90
@@ -316,6 +364,19 @@ edge_subdivide(Edge *e, Plane *initial_tangent, float initial_len, float max_ebo
             }
         }
     }
+
+    // Final tangent position goes at end of the edge
+    // Average angle with next edge (e->hdr.next) if it exists, in case of a discontinuity of angle
+    if (e->hdr.next != NULL)
+    {
+        Plane next_tangent;
+
+        edge_tangent_to_length((Edge *)e->hdr.next, first_point_index((Edge *)e->hdr.next), tolerance, &next_tangent);
+        end_tangent.A = (end_tangent.A + next_tangent.A) / 2;
+        end_tangent.B = (end_tangent.B + next_tangent.B) / 2;
+        end_tangent.C = (end_tangent.C + next_tangent.C) / 2;
+    }
+
     (*tangents)[(*n_tangents)++] = end_tangent;
     if (*n_tangents == *max_tangents)
     {
@@ -379,6 +440,8 @@ path_tangent_to_intersect(Object* obj, Plane* pl, Bbox *ebox, Plane* tangent, fl
     {
         Edge* e = (Edge*)obj;
 
+        ASSERT(e->hdr.next == NULL, "Single edge path should not have a successor");
+
         // The intersection can be off the end of the edge, that's OK.
         // But fail for parallels or not in bbox.
         return edge_tangent_to_intersect(e, 0, pl, ebox, tangent, ret_len) > 0;
@@ -395,7 +458,17 @@ path_tangent_to_intersect(Object* obj, Plane* pl, Bbox *ebox, Plane* tangent, fl
         // Take only the intersections within the bbox and within the edge.
         for (e = (Edge*)group->obj_list.head; e != NULL; e = (Edge*)e->hdr.next)
         {
-            if (edge_tangent_to_intersect(e, first_point_index(e), pl, ebox, tangent, ret_len) == 1)
+            // Tolerate off-end at the end of the path to assist tubing.
+             
+
+
+            // TODO: Average tangent angles when neighbouring edge endpoints both fall within ebox.
+            // TODO: Some sort of short-segment skipping.
+
+
+
+
+            if (edge_tangent_to_intersect(e, first_point_index(e), pl, ebox, tangent, ret_len) > 0)
             {
                 // Add in the lengths of the non-intersecting edges found so far.
                 *ret_len += total_length;
@@ -432,6 +505,7 @@ path_subdivide(Object* obj, Plane* initial_tangent, Bbox *ebox, float initial_le
     {
         Edge* e = (Edge*)obj;
 
+        ASSERT(e->hdr.next == NULL, "Single edge path should not have a successor");
         edge_subdivide(e, initial_tangent, initial_len, max_ebox, tangents, &n_tangents, &max_tangents);
     }
     else

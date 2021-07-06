@@ -2283,6 +2283,16 @@ make_tubed_group(Group* group)
             return NULL;
         }
 
+        // Put the control points into the bbox too. 
+        if (next_edge->type == EDGE_BEZIER)
+        {
+            BezierEdge* be = (BezierEdge*)next_edge;
+
+            rectify_bez_cp(be);
+            expand_bbox(&lg.ebox, be->ctrlpoints[0]);
+            expand_bbox(&lg.ebox, be->ctrlpoints[1]);
+        }
+
         pt = next_edge->endpoints[final];
     }
 
