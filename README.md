@@ -12,15 +12,16 @@ In particular, it will:
 - Write STL and other triangle mesh files directly
 - Not be subscription or web-based; your data is yours forever on your local PC
 
-# Interface
-- Sketch-up-like (draw a 2D-2.5D face followed by extrusion into a 3D volume)
+# Drawing interface
 - Volume-face-edge-point hierarchy with controlled locking
+- Sketch-up-like (draw a 2D-2.5D face followed by extrusion into a 3D volume)
 - Allows rect edges, polygons, circles, arcs, Beziers and the extruded right prisms from them
 - Allows curved surfaces (cylinders, barrel arcs, and Bezier surfaces)
 - Allows extrusion of curved surfaces, either parallel or along local normals
 - Allows extrusion of text and fonts
-- Allows axially symmetric objects (bodies of revolution)
-- Allows building volumes from cross-sections (lofting)
+- Bodies of revolution (make axially symmetric objects by rotating)
+- Lofting (building volumes from cross-sections)
+- Tubing (repeating a cross-section along a path and lofting)
 - Copy and paste objects
 - Reflect and rotate objects
 - Group objects and transform (scale and rotate)
@@ -47,11 +48,9 @@ In particular, it will:
 - Multi-material slicing
 - Directly control and print to a USB, serial or Octoprint connected printer
 - Repairing imported triangle meshes
-- Allow manipulation of triangle meshes: smooth extrusion, refinement, surface fitting, and more
-- Tubing (copying sections and lofting)
 
 # Installing LoftyCAD from the prebuilt installer
-Unzip the zip in the Installer directory, to any directory on the Windows system (c:\Program Files (x86) is the standard place for 32-bit programs). The install.bat file will do this (run as administrator!), register the file associations, and create a desktop link.
+Unzip the zip in the Installer directory, to any directory on the Windows system (C:\Program Files (x86) is the standard place for 32-bit programs). The install.bat file will do this (run as administrator!), register the file associations, and create a desktop link.
 
 # Building LoftyCAD
 LoftyCAD uses the excellent CGAL computational geometry library to merge and intersect triangle meshes.
@@ -60,7 +59,7 @@ LoftyCAD uses the excellent CGAL computational geometry library to merge and int
 # Horus branch
 - This branch is the live development branch and will become the master in due course. Features described above refer to this branch and may not be present in earlier branches.
 - This branch is to develop a picking replacement to avoid doing the GL_SELECT buffer mechanism, which is very slow.
-- Lofting is implemented in this branch.
+- Lofting and tubing are implemented in this branch.
 - Build as for the Material Girl branch.
 
 # Material Girl branch:
