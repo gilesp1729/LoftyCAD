@@ -458,16 +458,12 @@ path_tangent_to_intersect(Object* obj, Plane* pl, Bbox *ebox, Plane* tangent, fl
         // Take only the intersections within the bbox and within the edge.
         for (e = (Edge*)group->obj_list.head; e != NULL; e = (Edge*)e->hdr.next)
         {
+            // TODO: Average tangent angles when neighbouring edge endpoints both fall within ebox (or more than two)
+
+
+
+
             // Tolerate off-end at the end of the path to assist tubing.
-             
-
-
-            // TODO: Average tangent angles when neighbouring edge endpoints both fall within ebox.
-            // TODO: Some sort of short-segment skipping.
-
-
-
-
             if (edge_tangent_to_intersect(e, first_point_index(e), pl, ebox, tangent, ret_len) > 0)
             {
                 // Add in the lengths of the non-intersecting edges found so far.
@@ -526,6 +522,14 @@ path_subdivide(Object* obj, Plane* initial_tangent, Bbox *ebox, float initial_le
                 continue;
 
             edge_subdivide(e, initial_tangent, initial_len, max_ebox, tangents, &n_tangents, &max_tangents);
+
+            // TODO: Some sort of short-segment skipping 
+            // - drop tangents if they fall within min_spacing
+            // - always do the final one
+            // if angles are similar, they can be kept
+
+
+
 
             // Zero the initial length and set initial tangent to end of previous edge
             initial_len = 0;
