@@ -1031,9 +1031,14 @@ Command(int message, int wParam, int lParam)
             display_help("Revolution");
             break;
 
-        case ID_HELP_LOFTINGANDTUBING:
+        case ID_HELP_LOFTING:
             display_help_window();
-            display_help("Lofting_Tubing");
+            display_help("Lofting");
+            break;
+
+        case ID_HELP_TUBING:
+            display_help_window();
+            display_help("Tubing");
             break;
 
         case ID_HELP_SCALING:

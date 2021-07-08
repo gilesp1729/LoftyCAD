@@ -222,7 +222,8 @@ BEGIN
         MENUITEM "CSG Operations",              ID_HELP_CSGOPERATIONS
         MENUITEM "Import and Export",           ID_HELP_IMPORTANDEXPORT
         MENUITEM "Bodies of Revolution",        ID_HELP_BODIESOFREVOLUTION
-        MENUITEM "Lofting and Tubing",          ID_HELP_LOFTINGANDTUBING
+        MENUITEM "Lofting",                     ID_HELP_LOFTING
+        MENUITEM "Tubing",                      ID_HELP_TUBING
         MENUITEM SEPARATOR
         MENUITEM "&About LoftyCAD...",          IDM_ABOUT
     END
@@ -261,7 +262,7 @@ BEGIN
         MENUITEM SEPARATOR
         MENUITEM "Loft Group...",               ID_OBJ_LOFTGROUP
         MENUITEM "Tube group",                  ID_OBJ_TUBEGROUP
-        MENUITEM "Remove Tubed Group",          ID_OBJ_REMOVETUBEDGROUP
+        MENUITEM "Remove Tubed/Lofted Group",   ID_OBJ_REMOVETUBEDGROUP
         MENUITEM "Ungroup",                     ID_OBJ_UNGROUP
         MENUITEM "Save group as...",            ID_OBJ_SAVEGROUP
     END

@@ -451,28 +451,45 @@ path_tangent_to_intersect(Object* obj, Plane* pl, Bbox *ebox, Plane* tangent, fl
         Group* group = (Group*)obj;
         Edge* e;
         float total_length = 0;
+        Plane tangent_candidate = { 0, };
+        float len;
+        int num_found = 0;
 
         ASSERT(is_edge_group(group), "Path is not an edge group");
+        *ret_len = 0;
 
         // If the path is not straight, there's a chance it will intersect pl twice.
         // Take only the intersections within the bbox and within the edge.
         for (e = (Edge*)group->obj_list.head; e != NULL; e = (Edge*)e->hdr.next)
         {
-            // TODO: Average tangent angles when neighbouring edge endpoints both fall within ebox (or more than two)
-
-
-
-
+            // Average tangent angles when neighbouring edge endpoints both fall within ebox (or more than two)
             // Tolerate off-end at the end of the path to assist tubing.
-            if (edge_tangent_to_intersect(e, first_point_index(e), pl, ebox, tangent, ret_len) > 0)
+            if (edge_tangent_to_intersect(e, first_point_index(e), pl, ebox, &tangent_candidate, &len) > 0)
             {
-                // Add in the lengths of the non-intersecting edges found so far.
-                *ret_len += total_length;
-                return TRUE;
+                num_found++;
+                *ret_len += len + total_length;
+                tangent->A += tangent_candidate.A;
+                tangent->B += tangent_candidate.B;
+                tangent->C += tangent_candidate.C;
+                tangent->refpt.x += tangent_candidate.refpt.x;
+                tangent->refpt.y += tangent_candidate.refpt.y;
+                tangent->refpt.z += tangent_candidate.refpt.z;
             }
             total_length += e->edge_length;
         }
+        if (num_found > 0)
+        {
+            *ret_len /= num_found;
+            tangent->A /= num_found;
+            tangent->B /= num_found;
+            tangent->C /= num_found;
+            tangent->refpt.x /= num_found;
+            tangent->refpt.y /= num_found;
+            tangent->refpt.z /= num_found;
+            return TRUE;
+        }
     }
+
     return FALSE;
 }
 
@@ -521,15 +538,8 @@ path_subdivide(Object* obj, Plane* initial_tangent, Bbox *ebox, float initial_le
             if (total_length < initial_len)
                 continue;
 
+            // Short runs are not processed for now, as there are just too many cases that cannot be handled.
             edge_subdivide(e, initial_tangent, initial_len, max_ebox, tangents, &n_tangents, &max_tangents);
-
-            // TODO: Some sort of short-segment skipping 
-            // - drop tangents if they fall within min_spacing
-            // - always do the final one
-            // if angles are similar, they can be kept
-
-
-
 
             // Zero the initial length and set initial tangent to end of previous edge
             initial_len = 0;
