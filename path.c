@@ -440,8 +440,6 @@ path_tangent_to_intersect(Object* obj, Plane* pl, Bbox *ebox, Plane* tangent, fl
     {
         Edge* e = (Edge*)obj;
 
-        ASSERT(e->hdr.next == NULL, "Single edge path should not have a successor");
-
         // The intersection can be off the end of the edge, that's OK.
         // But fail for parallels or not in bbox.
         return edge_tangent_to_intersect(e, 0, pl, ebox, tangent, ret_len) > 0;
@@ -519,7 +517,6 @@ path_subdivide(Object* obj, Plane* initial_tangent, Bbox *ebox, float initial_le
     {
         Edge* e = (Edge*)obj;
 
-        ASSERT(e->hdr.next == NULL, "Single edge path should not have a successor");
         edge_subdivide(e, initial_tangent, initial_len, max_ebox, tangents, &n_tangents, &max_tangents);
     }
     else

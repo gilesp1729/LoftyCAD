@@ -1884,21 +1884,24 @@ make_lofted_volume(Group* group)
                 cn = edge_direction((Edge *)contour[j]->hdr.next, &plnext);
                 angle_break = pldot(&plprev, &plnext) < cosf(loft->body_angle_break / RADF);
                 join_smooth = FALSE;
-                if (loft->follow_path & 1)
+                if (!angle_break)
                 {
-                    // Follow curve of path. The bay tensions have been calculated in advance. 
-                    plnext = lg[i].principal;
-                    normalise_plane(&plnext);
-                    join_smooth = TRUE;
-                }
-                else if (!angle_break)
-                {
-                    // Average the directions to prev and next endpoints, and use that for the edges on both sides.
-                    // (i.e. ctrl[1-ci] of curr, ctrl[cn] of next)
-                    plnext.A = (plprev.A + plnext.A) / 2;
-                    plnext.B = (plprev.B + plnext.B) / 2;
-                    plnext.C = (plprev.C + plnext.C) / 2;
-                    join_smooth = TRUE;
+                    if (loft->follow_path & 1)
+                    {
+                        // Follow curve of path. The bay tensions have been calculated in advance. 
+                        plnext = lg[i].principal;
+                        normalise_plane(&plnext);
+                        join_smooth = TRUE;
+                    }
+                    else 
+                    {
+                        // Average the directions to prev and next endpoints, and use that for the edges on both sides.
+                        // (i.e. ctrl[1-ci] of curr, ctrl[cn] of next)
+                        plnext.A = (plprev.A + plnext.A) / 2;
+                        plnext.B = (plprev.B + plnext.B) / 2;
+                        plnext.C = (plprev.C + plnext.C) / 2;
+                        join_smooth = TRUE;
+                    }
                 }
                 if (join_smooth)
                 {
@@ -2025,7 +2028,7 @@ make_lofted_volume(Group* group)
             join_smooth = TRUE;
         }
 
-        if (cosmax > cosf(loft->nose_angle_break / RADF) || join_smooth)
+        if ((cosmax > cosf(loft->nose_angle_break / RADF) && loft->nose_join_mode != JOIN_STERN) || join_smooth)
         {
             lj = length(c->endpoints[0], c->endpoints[1]);
             ((BezierEdge*)c)->ctrlpoints[ci]->x = c->endpoints[ci]->x + (plend.A * loft->nose_tension * lj);
@@ -2125,7 +2128,7 @@ make_lofted_volume(Group* group)
             join_smooth = TRUE;
         }
 
-        if (cosmax > cosf(loft->tail_angle_break / RADF) || join_smooth)
+        if ((cosmax > cosf(loft->tail_angle_break / RADF) && loft->tail_join_mode != JOIN_STERN) || join_smooth)
         {
             // make the first ctrl point straight into the end group's plane (don't average them)
             lj = length(c->endpoints[0], c->endpoints[1]);
