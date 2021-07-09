@@ -451,12 +451,13 @@ path_tangent_to_intersect(Object* obj, Plane* pl, Bbox *ebox, Plane* tangent, fl
         Group* group = (Group*)obj;
         Edge* e;
         float total_length = 0;
-        Plane tangent_candidate = { 0, };
+        Plane tangent_candidate;
         float len;
         int num_found = 0;
 
         ASSERT(is_edge_group(group), "Path is not an edge group");
         *ret_len = 0;
+        memset(tangent, 0, sizeof(Plane));
 
         // If the path is not straight, there's a chance it will intersect pl twice.
         // Take only the intersections within the bbox and within the edge.
