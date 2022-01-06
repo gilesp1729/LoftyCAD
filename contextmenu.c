@@ -36,7 +36,7 @@ contextmenu(Object *picked_obj, POINT pt)
     HMENU hMenu;
     int rc;
     Object *parent, *sel_obj, *o, *o_next;
-    char buf[128], buf2[128];
+    char buf[128], buf2[128], buf3[128];
     LOCK old_parent_lock;
     BOOL group_changed = FALSE;
     BOOL dims_changed = FALSE;
@@ -45,6 +45,7 @@ contextmenu(Object *picked_obj, POINT pt)
     BOOL material_changed = FALSE;
     BOOL inserted = FALSE;
     BOOL hole;
+    BOOL has_parent_group = FALSE;
     OPERATION op, old_op;
     Group *group, *parent_group;
     Volume* vol;
@@ -57,15 +58,17 @@ contextmenu(Object *picked_obj, POINT pt)
     char group_filename[256];
     float xc, yc, zc;
     Bbox box;
+#define ID_OBJ_UPTOPARENT  56754 // some random number
 
     // Display the object ID and parent group (optionally) at the top of the menu
     brief_description(picked_obj, buf, 128);
     if (picked_obj->parent_group != NULL && picked_obj->parent_group->hdr.ID != 0)
     {
-        strcat_s(buf, 128, " (");
-        brief_description((Object*)picked_obj->parent_group, buf2, 128);
-        strcat_s(buf, 128, buf2);
-        strcat_s(buf, 128, ")");
+        strcpy_s(buf2, 128, " (in ");
+        brief_description((Object*)picked_obj->parent_group, buf3, 128);
+        strcat_s(buf2, 128, buf3);
+        strcat_s(buf2, 128, ")");
+        has_parent_group = TRUE;
     }
 
 
@@ -87,6 +90,8 @@ contextmenu(Object *picked_obj, POINT pt)
             CheckMenuItem(hMenu, ID_OBJ_MAKEPATH, curr_path == picked_obj ? MF_CHECKED : MF_UNCHECKED);
             hMenu = GetSubMenu(hMenu, 0);
             ModifyMenu(hMenu, 0, MF_BYPOSITION | MF_GRAYED | MF_STRING, 0, buf);
+            if (has_parent_group)
+                InsertMenu(hMenu, 1, MF_BYPOSITION | MF_STRING, ID_OBJ_UPTOPARENT, buf2);
 
             EnableMenuItem(hMenu, ID_LOCKING_FACES, MF_GRAYED);
             EnableMenuItem(hMenu, ID_LOCKING_VOLUME, MF_GRAYED);
@@ -96,6 +101,8 @@ contextmenu(Object *picked_obj, POINT pt)
             hMenu = LoadMenu(hInst, MAKEINTRESOURCE(IDR_CONTEXT_FACE));
             hMenu = GetSubMenu(hMenu, 0);
             ModifyMenu(hMenu, 0, MF_BYPOSITION | MF_GRAYED | MF_STRING, 0, buf);
+            if (has_parent_group)
+                InsertMenu(hMenu, 1, MF_BYPOSITION | MF_STRING, ID_OBJ_UPTOPARENT, buf2);
 
             EnableMenuItem(hMenu, ID_LOCKING_VOLUME, MF_GRAYED);
             EnableMenuItem(hMenu, ID_OBJ_MAKEEDGEGROUP, ((Face*)parent)->vol == NULL ? MF_ENABLED : MF_GRAYED);
@@ -107,6 +114,9 @@ contextmenu(Object *picked_obj, POINT pt)
             hMenu = LoadMenu(hInst, MAKEINTRESOURCE(IDR_CONTEXT_VOL));
             hMenu = GetSubMenu(hMenu, 0);
             ModifyMenu(hMenu, 0, MF_BYPOSITION | MF_GRAYED | MF_STRING, 0, buf);
+            if (has_parent_group)
+                InsertMenu(hMenu, 1, MF_BYPOSITION | MF_STRING, ID_OBJ_UPTOPARENT, buf2);
+
             face = (Face *)(((Volume*)parent)->faces.tail);
             hole = face->extrude_height < 0;
             EnableMenuItem(hMenu, ID_OPERATION_UNION, hole ? MF_GRAYED : MF_ENABLED);
@@ -137,6 +147,8 @@ contextmenu(Object *picked_obj, POINT pt)
                 hMenu = LoadMenu(hInst, MAKEINTRESOURCE(IDR_CONTEXT_EDGEGROUP));
                 hMenu = GetSubMenu(hMenu, 0);
                 ModifyMenu(hMenu, 0, MF_BYPOSITION | MF_GRAYED | MF_STRING, 0, buf);
+                if (has_parent_group)
+                    InsertMenu(hMenu, 1, MF_BYPOSITION | MF_STRING, ID_OBJ_UPTOPARENT, buf2);
 
                 // The edge group must be closed to make a face, but open to make a path.
                 closed = is_closed_edge_group((Group *)parent);
@@ -155,6 +167,8 @@ contextmenu(Object *picked_obj, POINT pt)
                 hMenu = LoadMenu(hInst, MAKEINTRESOURCE(IDR_CONTEXT_GROUP));
                 hMenu = GetSubMenu(hMenu, 0);
                 ModifyMenu(hMenu, 0, MF_BYPOSITION | MF_GRAYED | MF_STRING, 0, buf);
+                if (has_parent_group)
+                    InsertMenu(hMenu, 1, MF_BYPOSITION | MF_STRING, ID_OBJ_UPTOPARENT, buf2);
 
                 // A group must contain edge groups for it to be lofted. Or tubed.
                 lofted_group = is_edge_group((Group*)(((Group*)parent)->obj_list.head));
@@ -260,7 +274,7 @@ contextmenu(Object *picked_obj, POINT pt)
     else
         EnableMenuItem(hMenu, ID_MATERIALS_NEW, MF_GRAYED);
 
-    display_help("Context menu");
+    //display_help("Context menu");     // TODO: This html has gone missing
 
     // Display and track the menu
     suppress_drawing = TRUE;
@@ -333,6 +347,10 @@ contextmenu(Object *picked_obj, POINT pt)
         clear_selection(&selection);
         link_single(parent, &selection);
         break;
+
+    case ID_OBJ_UPTOPARENT:
+        contextmenu((Object*)parent->parent_group, pt);
+        return;
 
     case ID_OBJ_ENTERDIMENSIONS:
         show_dims_at(pt, picked_obj, TRUE);
