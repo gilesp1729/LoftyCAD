@@ -13,7 +13,7 @@ group_connected_edges(Edge* edge)
 {
     Object* obj, * nextobj;
     Edge* e;
-    Group* group;
+    Group* group, *parent_group;
     int n_edges = 0;
     int pass;
     typedef struct End          // an end of the growing chain
@@ -28,11 +28,18 @@ group_connected_edges(Edge* edge)
     if (((Object*)edge)->type != OBJ_EDGE)
         return NULL;
 
-    // Put the first edge in the list, removing it from the object tree.
-    // It had better be in the object tree to start with! Check to be sure,
+    // The edge group will go into the parent group of the edges.
+    // Along the way we will check that they are all in fact in the same group, just to
+    // be paranoid.
+    parent_group = ((Object*)edge)->parent_group;
+    if (parent_group == NULL)
+        return NULL;
+
+    // Put the first edge in the list, removing it from its group.
+    // It had better be in the group to start with! Check to be sure,
     // and while here, find out how many top-level edges there are as an
     // upper bound on passes later on.
-    for (obj = object_tree.obj_list.head; obj != NULL; obj = obj->next)
+    for (obj = parent_group->obj_list.head; obj != NULL; obj = obj->next) 
     {
         if (obj->type == OBJ_EDGE)
         {
@@ -46,7 +53,7 @@ group_connected_edges(Edge* edge)
 
     // make a group for the edges
     group = group_new();
-    delink_group((Object*)edge, &object_tree);
+    delink_group((Object*)edge, parent_group);
     link_group((Object*)edge, group);
     end0.edge = edge;
     end0.which_end = 0;
@@ -60,18 +67,20 @@ group_connected_edges(Edge* edge)
     {
         BOOL advanced = FALSE;
 
-        for (obj = object_tree.obj_list.head; obj != NULL; obj = nextobj)
+        for (obj = parent_group->obj_list.head; obj != NULL; obj = nextobj)
         {
             nextobj = obj->next;
 
             if (obj->type != OBJ_EDGE)
+                continue;
+            if (obj->parent_group != parent_group)
                 continue;
 
             e = (Edge*)obj;
             if (near_pt(e->endpoints[0], end0.edge->endpoints[end0.which_end], snap_tol))
             {
                 // endpoint 0 of obj connects to end0. Put obj in the list.
-                delink_group(obj, &object_tree);
+                delink_group(obj, parent_group); 
                 link_group(obj, group);
 
                 // Share the endpoints. Return unused points to the free list.
@@ -88,7 +97,7 @@ group_connected_edges(Edge* edge)
             // Check for endpoint 1 connecting to end0 similarly
             else if (near_pt(e->endpoints[1], end0.edge->endpoints[end0.which_end], snap_tol))
             {
-                delink_group(obj, &object_tree);
+                delink_group(obj, parent_group); 
                 link_group(obj, group);
                 purge_obj((Object*)e->endpoints[1]);
                 e->endpoints[1] = end0.edge->endpoints[end0.which_end];
@@ -101,7 +110,7 @@ group_connected_edges(Edge* edge)
             // And the same for end1. New edges are linked at the tail. 
             else if (near_pt(e->endpoints[0], end1.edge->endpoints[end1.which_end], snap_tol))
             {
-                delink_group(obj, &object_tree);
+                delink_group(obj, parent_group); 
                 link_tail_group(obj, group);
                 purge_obj((Object*)e->endpoints[0]);
                 e->endpoints[0] = end1.edge->endpoints[end1.which_end];
@@ -113,7 +122,7 @@ group_connected_edges(Edge* edge)
 
             else if (near_pt(e->endpoints[1], end1.edge->endpoints[end1.which_end], snap_tol))
             {
-                delink_group(obj, &object_tree);
+                delink_group(obj, parent_group); 
                 link_tail_group(obj, group);
                 purge_obj((Object*)e->endpoints[1]);
                 e->endpoints[1] = end1.edge->endpoints[end1.which_end];
@@ -2171,7 +2180,7 @@ Group *
 make_tubed_group(Group* group)
 {
     Group* tubed_group = NULL;
-    Group* eg;
+    Group* eg, * parent_group;
     float initial_len;
     Plane* tangents, *v1, *v2;
     int i, n_tangents;
@@ -2187,6 +2196,9 @@ make_tubed_group(Group* group)
     if (curr_path == NULL)
         return NULL;
 
+    // Get the parent group.
+    parent_group = group->hdr.parent_group;
+
     // The group given must be a single closed edge group, or else a group of edge groups created by tubing.
     if (!is_edge_group(group))
     {
@@ -2199,7 +2211,7 @@ make_tubed_group(Group* group)
             return NULL;
 
         // We have an existing tubed (and possibly also lofted) group. Delete everything in it
-        // leaving the first edge group intact. Remove it from the object tree (it will be
+        // leaving the first edge group intact. Remove it from its parent group (it will be
         // put back later)
         for (obj = group->obj_list.head->next; obj != NULL; obj = onext)
         {
@@ -2208,7 +2220,7 @@ make_tubed_group(Group* group)
             purge_obj(obj);
         }
 
-        delink_group((Object*)group, &object_tree);
+        delink_group((Object*)group, parent_group); 
         tubed_group = group;
         existing_tubed_group = TRUE;
         group = (Group *)group->obj_list.head;
@@ -2220,7 +2232,7 @@ make_tubed_group(Group* group)
 
         // Create a tubed group and put the user-supplied edge group in it.
         tubed_group = group_new();
-        delink_group((Object *)group, &object_tree);
+        delink_group((Object *)group, parent_group); 
         link_group((Object *)group, tubed_group);
     }
 
@@ -2361,7 +2373,7 @@ back_out:
         return NULL;
 
     delink_group((Object*)group, tubed_group);
-    link_group((Object*)group, &object_tree);
+    link_group((Object*)group, parent_group); 
     purge_obj((Object*)tubed_group);
     return NULL;
 }
@@ -2373,12 +2385,14 @@ remove_tubed_group(Group* group)
 {
     LoftParams* loft = group->loft;
     Object* obj, * onext;
+    Group* parent_group;
 
     // Must be a tubed group containing edge groups.
     if (!is_edge_group((Group*)group->obj_list.head))
         return;
     if (loft == NULL || !(loft->follow_path & 2))
         return;
+    parent_group = group->hdr.parent_group;
 
     // We have an existing tubed (and possibly also lofted) group. Delete everything in it
     // leaving the first edge group intact. Remove it from the object tree.
@@ -2389,9 +2403,9 @@ remove_tubed_group(Group* group)
         purge_obj(obj);
     }
 
-    delink_group((Object*)group, &object_tree);
+    delink_group((Object*)group, parent_group); 
     obj = group->obj_list.head;
     delink_group(obj, group);
-    link_group(obj, &object_tree);
+    link_group(obj, parent_group); 
     purge_obj((Object *)group);
 }

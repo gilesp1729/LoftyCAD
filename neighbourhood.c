@@ -617,7 +617,7 @@ Pick(GLint x_pick, GLint y_pick, BOOL force_pick)
 
         if (test != NULL)
         {
-            parent = find_top_level_parent(&object_tree, test);
+            parent = find_top_level_parent(test);
 
             // Special cases: if we are in STATE_NONE and we have a face on a fully locked volume,
             // or some other object locked it is own level, just look straight through it 
@@ -755,104 +755,4 @@ Pick_all_in_rect(GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
 
 }
 
-
-// Old code
-
-#if 0
-    GLuint buffer[4096];
-    GLint num_hits;
-    Object* obj = NULL;
-    Object* list = NULL;
-    Object* parent;
-
-    // Find the objects within the rect
-    glSelectBuffer(4096, buffer);           // TODO: This may be too small. There are a lot of null hits.
-    glRenderMode(GL_SELECT);
-    Draw(TRUE, x_pick, y_pick, w_pick, h_pick);
-    num_hits = glRenderMode(GL_RENDER);
-
-    if (num_hits > 0)
-    {
-        int n = 0;
-        int i;
-#ifdef DEBUG_PICK
-        int j, len;
-        char buf[512];
-        size_t size = 512;
-        char* p = buf;
-        char* obj_prefix[] = { "N", "P", "E", "F", "V" };
-#endif
-
-        for (i = 0; i < num_hits; i++)
-        {
-            int num_objs = buffer[n];
-
-            if (num_objs == 0)
-            {
-                n += 3;  // skip count, min and max
-                continue;
-            }
-
-            // buffer = {{num objs, min depth, max depth, obj name, ...}, ...}
-
-            // find top-of-stack and its parent
-            obj = (Object*)buffer[n + num_objs + 2];
-            if (obj != NULL)
-            {
-                parent = find_top_level_parent(&object_tree, obj);
-                if (parent == NULL)
-                {
-                    n += num_objs + 3;
-                    continue;
-                }
-
-                // If parent is not already in the list, add it
-                if (obj != NULL)
-                    link_single_checked(parent, &selection);
-
-#ifdef DEBUG_PICK_ALL
-                if (view_debug)
-                {
-                    len = sprintf_s(p, size, "(%d) objs %d min %x max %x: ", n, buffer[n], buffer[n + 1], buffer[n + 2]);
-                    p += len;
-                    size -= len;
-                    n += 3;
-                    for (j = 0; j < num_objs; j++)
-                    {
-                        Object* obj = (Object*)buffer[n];
-
-                        if (obj == NULL)
-                            len = sprintf_s(p, size, "NULL ");
-                        else
-                            len = sprintf_s(p, size, "%s%d ", obj_prefix[obj->type], obj->ID);
-                        p += len;
-                        size -= len;
-                        n++;
-                    }
-                    len = sprintf_s(p, size, "\r\n");
-                    Log(buf);
-                    p = buf;
-                    size = 512;
-                }
-                else  // not logging, still need to skip the data
-#endif
-                {
-                    n += num_objs + 3;
-                }
-            }
-            else
-            {
-                n += num_objs + 3;
-            }
-        }
-
-#ifdef DEBUG_PICK
-        if (view_debug)
-        {
-            len = sprintf_s(p, size, "Select buffer used: %d\r\n", n);
-            Log(buf);
-        }
-#endif
-    }
-#endif // 0
 

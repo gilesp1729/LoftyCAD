@@ -235,7 +235,7 @@ Group *group_new(void)
     return grp;
 }
 
-// Test if an object is in the object tree at the top level.
+// Test if an object is in a tree at the top level (and not a component)
 BOOL
 is_top_level_object(Object *obj, Group *tree)
 {
@@ -377,7 +377,7 @@ find_parent_object(Group *tree, Object *obj, BOOL deep_search)
 
 // Find the highest parent object or group (i.e. in the object tree) for the given object.
 Object *
-find_top_level_parent(Group *tree, Object *obj)
+find_top_level_parent(Object *obj)
 {
     Object *top_level;
     
@@ -386,7 +386,7 @@ find_top_level_parent(Group *tree, Object *obj)
     if (obj->type == OBJ_GROUP)
         top_level = obj;
     else
-        top_level = find_parent_object(tree, obj, TRUE);
+        top_level = find_parent_object(&object_tree, obj, TRUE);
 
     if (top_level == NULL)
         return NULL;
@@ -590,7 +590,7 @@ purge_tree(Group *tree, BOOL preserve_objects, ListHead *saved_list)
 }
 
 // Can we extrude this face? Any face can be extruded, as long it has a valid normal
-// and is not a corner face or a construction face.
+// and is not a corner face or a construction face. 
 BOOL
 extrudible(Object* obj)
 {

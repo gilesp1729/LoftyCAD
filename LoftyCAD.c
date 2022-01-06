@@ -609,7 +609,7 @@ left_down(AUX_EVENTREC *event)
         case OBJ_EDGE:
         case OBJ_POINT:
             // Find the parent
-            picked_obj = find_top_level_parent(&object_tree, picked_obj);
+            picked_obj = find_top_level_parent(picked_obj);
             if (picked_obj->type == OBJ_FACE)
             {
                 // We're rotating or scaling a face in-place.
@@ -1143,7 +1143,7 @@ left_click(AUX_EVENTREC *event)
 
             // test for this first, as we get called twice and don't want to unselect it
             // before the double click comes through
-            parent = find_top_level_parent(&object_tree, picked_obj);
+            parent = find_top_level_parent(picked_obj);
             if (parent != NULL)
             {
                 picked_obj = parent;

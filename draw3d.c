@@ -970,7 +970,7 @@ Draw(void)
                 else if (snapping_to_angle)
                     snap_to_angle(facing_plane, &picked_point, &new_point, angle_snap);
                 snap_to_grid(facing_plane, &new_point, key_status & AUX_CONTROL);
-                parent = find_top_level_parent(&object_tree, picked_obj);
+                parent = find_top_level_parent(picked_obj);
 
                 // moving a single object (or group) under the cursor
                 // allow moving handles even if selected
@@ -1748,9 +1748,10 @@ Draw(void)
                         Edge *e, *o, *ne;
                         Point *eip, *oip;
                         Volume *vol;
+                        Group* parent_group = picked_obj->parent_group; // it must be at top level
 
                         // Put face into the volume's face list, and remove any text structure attached.
-                        delink_group((Object *)face, &object_tree);
+                        delink_group((Object *)face, parent_group);
                         vol = vol_new();
                         link((Object *)face, &vol->faces);
                         face->vol = vol;
@@ -1849,9 +1850,9 @@ Draw(void)
                             }
                         }
 
-                        // Link the volume into the object tree. Set its lock to FACES
+                        // Link the volume into the original group. Set its lock to FACES
                         // (default locking is one level down)
-                        link_group((Object *)vol, &object_tree);
+                        link_group((Object *)vol, parent_group);  
                         ((Object *)vol)->lock = LOCK_FACES;
                     }
 

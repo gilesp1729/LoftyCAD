@@ -46,7 +46,7 @@ contextmenu(Object *picked_obj, POINT pt)
     BOOL inserted = FALSE;
     BOOL hole;
     OPERATION op, old_op;
-    Group *group;
+    Group *group, *parent_group;
     Volume* vol;
     Face *face;
     Point *p, *nextp;
@@ -111,6 +111,7 @@ contextmenu(Object *picked_obj, POINT pt)
             hole = face->extrude_height < 0;
             EnableMenuItem(hMenu, ID_OPERATION_UNION, hole ? MF_GRAYED : MF_ENABLED);
             EnableMenuItem(hMenu, ID_OPERATION_DIFFERENCE, hole ? MF_GRAYED : MF_ENABLED);
+            EnableMenuItem(hMenu, ID_OBJ_SELECTPARENTVOLUME, picked_obj->type == OBJ_VOLUME ? MF_GRAYED : MF_ENABLED);
 
 #if 0
             // Don't allow unlocking of some components to keep view lists integrity.
@@ -352,24 +353,26 @@ contextmenu(Object *picked_obj, POINT pt)
         break;
 
     case ID_OBJ_GROUPEDGES:
+        parent_group = parent->parent_group;
         group = group_connected_edges((Edge*)picked_obj);
         if (group != NULL)
         {
-            link_group((Object*)group, &object_tree);
+            link_group((Object*)group, parent_group);
             clear_selection(&selection);
             group_changed = TRUE;
         }
         break;
 
     case ID_OBJ_MAKEFACE:
+        parent_group = parent->parent_group;
         face = make_face((Group*)picked_obj, TRUE, TRUE, FALSE);
         if (face != NULL)
         {
-            // Delete the original edge group before putting face into the object tree
-            delink_group(picked_obj, &object_tree);
+            // Delete the original edge group before putting face back into the group
+            delink_group(picked_obj, parent_group); 
             purge_obj(picked_obj);
 
-            link_group((Object*)face, &object_tree);
+            link_group((Object*)face, parent_group);  
             clear_selection(&selection);
             group_changed = TRUE;
         }
@@ -385,10 +388,11 @@ contextmenu(Object *picked_obj, POINT pt)
 
     case ID_OBJ_MAKEBODYREV:
         // TODO: Some sort of UI to support negative BOR (holes)
+        parent_group = parent->parent_group;
         vol = make_body_of_revolution((Group*)picked_obj, FALSE);
         if (vol != NULL)
         {
-            link_group((Object*)vol, &object_tree);
+            link_group((Object*)vol, parent_group);
             clear_selection(&selection);
             group_changed = TRUE;
         }
@@ -400,10 +404,11 @@ contextmenu(Object *picked_obj, POINT pt)
         break;
 
     case ID_OBJ_TUBEGROUP:
+        parent_group = parent->parent_group;
         group = make_tubed_group((Group*)picked_obj);
         if (group != NULL)
         {
-            link_group((Object*)group, &object_tree);
+            link_group((Object*)group, parent_group); 
             clear_selection(&selection);
             group_changed = TRUE;
         }
@@ -416,13 +421,15 @@ contextmenu(Object *picked_obj, POINT pt)
         break;
 
     case ID_OBJ_MAKEEDGEGROUP:
-        delink_group(picked_obj, &object_tree);         // TODO this and other places - don't assume we're in the object tree!
+        // This makes an edge group from a face (not to be confused with Group Connected Edges)
+        parent_group = parent->parent_group;
+        delink_group(picked_obj, parent_group);
         face = (Face*)picked_obj;
         group = group_new();
         for (i = 0; i < face->n_edges; i++)
             link_tail_group((Object *)face->edges[i], group);   // TODO watch circles - the normal comes out wrong
         group->hdr.lock = LOCK_POINTS;
-        link_group((Object *)group, &object_tree);
+        link_group((Object *)group, parent_group);
         group_changed = TRUE;
         break;
 
@@ -485,15 +492,16 @@ contextmenu(Object *picked_obj, POINT pt)
         break;
 
     case ID_OBJ_UNGROUP:
+        parent_group = parent->parent_group;
         group = (Group*)picked_obj;
-        delink_group(picked_obj, &object_tree);         // TODO this and other places - don't assume we're in the object tree!
+        delink_group(picked_obj, parent_group); 
         if (is_edge_group(group))
             disconnect_edges_in_group(group);
         for (o = group->obj_list.head; o != NULL; o = o_next)
         {
             o_next = o->next;
             delink_group(o, group);
-            link_tail_group(o, &object_tree);
+            link_tail_group(o, parent_group);  
         }
         purge_obj(picked_obj);
         clear_selection(&selection);

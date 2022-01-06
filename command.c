@@ -866,16 +866,16 @@ Command(int message, int wParam, int lParam)
             break;
 
         case ID_EDIT_CUT:
-            // You can't cut a component, only a top-level object (in the object tree).
+            // You can't cut a component, only a top-level object in the object tree or its group.
             // Check that they are (all) in fact top-level before unlinking them.
             for (obj = selection.head; obj != NULL; obj = obj->next)
             {
-                if (!is_top_level_object(obj->prev, &object_tree))
+                if (!is_top_level_object(obj->prev, obj->prev->parent_group))
                     goto skip_cut;
             }
 
             for (obj = selection.head; obj != NULL; obj = obj->next)
-                delink_group(obj->prev, &object_tree);
+                delink_group(obj->prev, obj->prev->parent_group);
 
             clear_selection(&saved_list);
             clear_selection(&clipboard);
@@ -950,9 +950,9 @@ Command(int message, int wParam, int lParam)
             // Check that they are in fact top-level before deleting them.
             for (obj = selection.head; obj != NULL; obj = obj->next)
             {
-                if (is_top_level_object(obj->prev, &object_tree))       // TODO allow deletion from a group
+                if (is_top_level_object(obj->prev, obj->prev->parent_group))
                 {
-                    delink_group(obj->prev, &object_tree);
+                    delink_group(obj->prev, obj->prev->parent_group);
                     purge_obj(obj->prev);
                 }
             }

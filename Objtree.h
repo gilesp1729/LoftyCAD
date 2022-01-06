@@ -492,7 +492,7 @@ void reflect_obj_facing(Object* obj, float xc, float yc, float zc);
 // Find object in tree or as child of another object
 BOOL find_obj(Object *parent, Object *obj);
 Object *find_parent_object(Group *tree, Object *obj, BOOL deep_search);
-Object *find_top_level_parent(Group *tree, Object *obj);
+Object *find_top_level_parent(Object *obj);
 BOOL is_top_level_object(Object *obj, Group *tree);
 
 // Write and read a tree to a file (serialise.c)
