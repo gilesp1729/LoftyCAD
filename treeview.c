@@ -460,7 +460,8 @@ populate_treeview_tree(Group *tree, HTREEITEM hItem)
             tvins.hParent = hItem;
             tvins.hInsertAfter = TVI_LAST;
             hGroup = (HTREEITEM)SendDlgItemMessage(hWndTree, IDC_TREEVIEW, TVM_INSERTITEM, 0, (LPARAM)&tvins);
-            populate_treeview_tree((Group *)obj, hGroup);
+            if (obj->lock < LOCK_VOLUME)
+                populate_treeview_tree((Group *)obj, hGroup);
         }
         else
         {
@@ -507,9 +508,11 @@ treeview_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     HMENU hMenu;
     NMTVGETINFOTIP *ngit;
     NMTREEVIEW *nmtv;
+    NMTVKEYDOWN* nmkd;
     TVITEM* tvi;
     Object *obj;
     POINT pt;
+    int ctrl;
 
     switch (msg)
     {
@@ -527,6 +530,45 @@ treeview_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         case TVN_GETINFOTIP:
             ngit = (NMTVGETINFOTIP *)lParam;
             treeview_highlight = (Object *)ngit->lParam;
+            break;
+
+        case TVN_KEYDOWN:
+            // Make sure IsDialogMessage gets called, otherwise the accelerators mysteriously vaporise
+            nmkd = (NMTVKEYDOWN*)lParam;
+            ctrl = GetKeyState(VK_CONTROL) & 0x8000;
+#if 0
+            {
+                char buf[64];
+                sprintf_s(buf, 64, "Key: %d ctrl %d\r\n", (int)nmkd->wVKey, ctrl);
+                OutputDebugString(buf);
+            }
+#endif
+            switch (nmkd->wVKey)
+            {
+            case VK_DELETE:
+                treeview_highlight = NULL;
+                SendMessage(auxGetHWND(), WM_COMMAND, ID_EDIT_DELETE, 0);
+                break;
+            case 'Z':
+                if (ctrl)
+                    SendMessage(auxGetHWND(), WM_COMMAND, ID_EDIT_UNDO, 0);
+                break;
+            case 'X':
+                if (ctrl)
+                    SendMessage(auxGetHWND(), WM_COMMAND, ID_EDIT_CUT, 0);
+                break;
+            case 'C':
+                if (ctrl)
+                    SendMessage(auxGetHWND(), WM_COMMAND, ID_EDIT_COPY, 0);
+                break;
+            case 'V':
+                if (ctrl)
+                    SendMessage(auxGetHWND(), WM_COMMAND, ID_EDIT_PASTE, 0);
+                break;
+
+                // TODO also other accelerators ctrl-D, etc.
+                // How to keep in track with the acelerator table?
+            }
             break;
 
         case NM_RCLICK:
@@ -548,17 +590,21 @@ treeview_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             nmtv = (NMTREEVIEW *)lParam;
             obj = (Object *)nmtv->itemNew.lParam;
 
-#if 0 // Shift key handling is not done yet here - treat as if always shifted. Prevent illegal selections (TODO)
+#if 1 // Shift key handling is not done yet here - treat as if always shifted. 
             if (nmtv->action == TVC_BYMOUSE && obj != NULL)
             {
-                Object *o;
+                Object *o, *parent;
 
-                if (!is_selected_direct(obj, &o))
-                    link_single_checked(obj, &selection);
-                else
-                    remove_from_selection(obj);
+                parent = find_parent_object(&object_tree, obj, FALSE);
+                if (parent->lock < obj->type)
+                {
+                    if (!is_selected_direct(obj, &o))
+                        link_single_checked(obj, &selection);
+                    else
+                        remove_from_selection(obj);
 
-                update_drawing();
+                    update_drawing();
+                }
             }
 #endif
             break;

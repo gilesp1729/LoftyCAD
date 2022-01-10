@@ -1089,7 +1089,10 @@ remove_from_selection(Object *obj)
                 selection.tail = prev_in_list;
         }
 
-        ASSERT(sel_obj->prev == picked_obj, "Selection list broken");
+        // we might be in the obect tree view, so nothing picked_obj
+        // This can be bogus when doing from object tree view
+        //ASSERT(picked_obj == NULL || sel_obj->prev == picked_obj, "Selection list broken");  
+        
         sel_obj->next = free_list_obj.head;  // put it in the free list
         if (free_list_obj.head == NULL)
             free_list_obj.tail = sel_obj;
@@ -1128,7 +1131,7 @@ left_click(AUX_EVENTREC *event)
     if (parent != NULL && parent->lock >= picked_obj->type)
         return;
 
-    display_help("Selection");
+   // display_help("Selection");   // TODO this is missing
 
     // Pick object (already in picked_obj) and select.
     // If a double click, select its parent volume.
@@ -1657,12 +1660,12 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
         // Main message loop:
         while (GetMessage(&msg, NULL, 0, 0))
         {
-            if (!IsDialogMessage(hWndToolbar, &msg) && !IsDialogMessage(hWndDims, &msg))
+            if (!IsDialogMessage(hWndTree, &msg)) // this is important to collect key presses in the treeview
             {
                 /*
-                * Send accelerator keys straight to the 3D window, if it is in front.
+                * Send accelerator keys straight to the 3D window, if it is in front.   // This is bogus
                 */
-                if (msg.hwnd == auxGetHWND() || !TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
+               // if (msg.hwnd == auxGetHWND() || !TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
                 {
                     if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
                     {

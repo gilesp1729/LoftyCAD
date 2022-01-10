@@ -241,6 +241,8 @@ is_top_level_object(Object *obj, Group *tree)
 {
     Object *o;
 
+    if (tree == NULL)
+        return FALSE;   // its parent group is NULL
     for (o = tree->obj_list.head; o != NULL; o = o->next)
     {
         if (obj == o)
