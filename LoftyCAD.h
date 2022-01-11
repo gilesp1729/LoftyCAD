@@ -81,6 +81,7 @@ typedef enum
 
 // Externs
 extern HINSTANCE hInst;
+extern HACCEL hAccelTable;
 
 extern GLint wWidth, wHeight;
 extern int toolbar_bottom;

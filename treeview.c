@@ -512,10 +512,19 @@ treeview_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     TVITEM* tvi;
     Object *obj;
     POINT pt;
-    int ctrl;
+    int i;
+    BOOL ctrl;
+    static int nAccel = 0;
+    static ACCEL accels[32];
 
     switch (msg)
     {
+    case WM_INITDIALOG:
+        // Bring in the accelerators from the main window's accelerator table
+        nAccel = CopyAcceleratorTable(hAccelTable, NULL, 0);
+        CopyAcceleratorTable(hAccelTable, accels, nAccel);
+        break;
+
     case WM_CLOSE:
         treeview_highlight = NULL;
         view_tree = FALSE;
@@ -533,41 +542,23 @@ treeview_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             break;
 
         case TVN_KEYDOWN:
-            // Make sure IsDialogMessage gets called, otherwise the accelerators mysteriously vaporise
+            // Make sure IsDialogMessage gets called, otherwise the accelerated keys mysteriously vaporise
             nmkd = (NMTVKEYDOWN*)lParam;
-            ctrl = GetKeyState(VK_CONTROL) & 0x8000;
-#if 0
-            {
-                char buf[64];
-                sprintf_s(buf, 64, "Key: %d ctrl %d\r\n", (int)nmkd->wVKey, ctrl);
-                OutputDebugString(buf);
-            }
-#endif
-            switch (nmkd->wVKey)
-            {
-            case VK_DELETE:
-                treeview_highlight = NULL;
-                SendMessage(auxGetHWND(), WM_COMMAND, ID_EDIT_DELETE, 0);
-                break;
-            case 'Z':
-                if (ctrl)
-                    SendMessage(auxGetHWND(), WM_COMMAND, ID_EDIT_UNDO, 0);
-                break;
-            case 'X':
-                if (ctrl)
-                    SendMessage(auxGetHWND(), WM_COMMAND, ID_EDIT_CUT, 0);
-                break;
-            case 'C':
-                if (ctrl)
-                    SendMessage(auxGetHWND(), WM_COMMAND, ID_EDIT_COPY, 0);
-                break;
-            case 'V':
-                if (ctrl)
-                    SendMessage(auxGetHWND(), WM_COMMAND, ID_EDIT_PASTE, 0);
-                break;
+            ctrl = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
 
-                // TODO also other accelerators ctrl-D, etc.
-                // How to keep in track with the acelerator table?
+            for (i = 0; i < nAccel; i++)
+            {
+                // Assume all the accels are Vkeys.
+                if
+                (
+                    nmkd->wVKey == accels[i].key
+                    &&
+                    !(ctrl ^ ((accels[i].fVirt & FCONTROL) != 0))
+                )
+                {
+                    treeview_highlight = NULL;  // in case of DELete
+                    SendMessage(auxGetHWND(), WM_COMMAND, accels[i].cmd, 0);
+                }
             }
             break;
 

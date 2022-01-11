@@ -12,6 +12,7 @@
 
 // Global Variables:
 HINSTANCE hInst;								// current instance
+HACCEL hAccelTable;                             // accelerator table
 TCHAR szTitle[MAX_LOADSTRING];					// The title bar text
 TCHAR szWindowClass[MAX_LOADSTRING];			// the main window class name
 
@@ -1335,7 +1336,6 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 	UNREFERENCED_PARAMETER(hPrevInstance);
 
 	MSG msg;
-	HACCEL hAccelTable;
     HMENU hMenu;
     POINT pt = { 0, 0 };
     RECT rect;
@@ -1385,6 +1385,9 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 
         auxIdleFunc(Draw);
         auxMainLoop(Draw);
+
+        // Accelerator table (used by both main and treeview windows)
+        hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_LOFTYCAD));
 
         // Property sheet for the tools and preview tools. Tabs are indexed by symbols
         // to make it simpler to refer to them consistently elsewhere.
@@ -1662,16 +1665,10 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
         {
             if (!IsDialogMessage(hWndTree, &msg)) // this is important to collect key presses in the treeview
             {
-                /*
-                * Send accelerator keys straight to the 3D window, if it is in front.   // This is bogus
-                */
-               // if (msg.hwnd == auxGetHWND() || !TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
+                if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
                 {
-                    if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
-                    {
-                        TranslateMessage(&msg);
-                        DispatchMessage(&msg);
-                    }
+                    TranslateMessage(&msg);
+                    DispatchMessage(&msg);
                 }
             }
         }
