@@ -2289,15 +2289,14 @@ Draw(void)
             }
 
 #ifdef DEBUG_HIGHLIGHTING_ENABLED
-            // The bounding box for a volume, or the parent volume of any highlighted component.
-            // TODO: this will not work for groups, as find_parent_object won't return them.
-            if (app_state == STATE_NONE && parent != NULL && parent->type == OBJ_VOLUME)
+            // The bounding box for a volume or group, or the parent volume of any highlighted component.
+            if (app_state == STATE_NONE && parent != NULL && parent->type >= OBJ_VOLUME)
             {
                 Volume* vol = (Volume*)parent;
 
                 if (debug_view_bbox)
                 {
-                    Bbox box = vol->bbox;
+                    Bbox box = vol->bbox;   // Will also work for group, as structures align (see header)
 
                     glColor3d(1.0, 0.4, 0.4);
                     glBegin(GL_LINE_LOOP);
