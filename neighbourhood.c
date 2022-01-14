@@ -747,12 +747,162 @@ Pick(GLint x_pick, GLint y_pick, BOOL force_pick)
     return ret_obj;
 }
 
-// Pick all top-level objects intersecting the given rect and select.
+
+// Helpers for find_in_rect.
+GLdouble model[16], proj[16];
+GLint viewport[4];
+
+// Find a point in a rect (window coordinates). Incidentally store the window
+// coordinates of the point, in case they are needed later.
+BOOL
+find_in_rect_point(Point* p, RECT *winrc)
+{
+    GLdouble winx, winy, winz;
+
+    if (clipped(p))
+        return FALSE;
+
+    gluProject(p->x, p->y, p->z, model, proj, viewport, &winx, &winy, &winz);
+
+    // Window coordinates are bottom-up
+    p->winpt.x = (int)winx;
+    p->winpt.y = viewport[3] - (int)winy;
+    return PtInRect(winrc, p->winpt);
+}
+
+BOOL
+find_in_rect_edge(Edge* e, RECT *winrc)
+{
+    BOOL rc = FALSE;
+    Point* p;
+
+    // Check if the endpoints are hit first. 
+    // TODO: There is some duplication of effort here. Does it matter?
+    rc = find_in_rect_point(e->endpoints[0], winrc);
+    if (rc)
+        return TRUE;
+    rc = find_in_rect_point(e->endpoints[1], winrc);
+    if (rc)
+        return TRUE;
+
+    // Check if edge crosses the rect. The windows points (winpts) of the
+    // endpoints have been calculated already above.
+    switch (e->type)
+    {
+    case EDGE_STRAIGHT:
+        return segment_in_rect(e->endpoints[0]->winpt, e->endpoints[1]->winpt, winrc);
+
+    case EDGE_ARC:
+    case EDGE_BEZIER:
+        // As a shortcut, just check all the view list points. TODO: We may have to do 
+        // th1s really properly later on if they are widely spaced.
+        if (!e->view_valid)
+            return FALSE;
+        for (p = (Point*)e->view_list.head; p != NULL; p = (Point*)p->hdr.next)
+        {
+            rc = find_in_rect_point(p, winrc);
+            if (rc)
+                return TRUE;
+        }
+        break;
+    }
+
+    return FALSE;
+}
+
+BOOL find_in_rect_face(Face* f, RECT* winrc)
+{
+    BOOL rc = FALSE;
+    int i;
+
+    // Check if the edges are hit first.
+    for (i = 0; i < f->n_edges; i++)
+    {
+        rc = find_in_rect_edge(f->edges[i], winrc);
+        if (rc)
+            return TRUE;
+    }
+
+    // Check if the face polygon (in window coordinates) intersects the rect.
+    // 
+    // Since these routines are used for dragging selection, we know
+    // the rect starts out from outside any object it later moves into. 
+    // 
+    // This simplifies checking. We need do nothing here, as we must
+    // have crossed an edge.
+
+    return FALSE;
+}
+
+// Find if an object is within a window-coordinate rect.
+BOOL
+find_in_rect(Object* obj, RECT* winrc)
+{
+    BOOL rc = FALSE;
+    Face* f;
+    Object* o;
+
+    switch (obj->type)
+    {
+    case OBJ_POINT:
+        return find_in_rect_point((Point*)obj, winrc);
+
+    case OBJ_EDGE:
+        return find_in_rect_edge((Edge*)obj, winrc);
+
+    case OBJ_FACE:
+        return find_in_rect_face((Face*)obj, winrc);
+
+    case OBJ_VOLUME:
+        for (f = (Face*)((Volume*)obj)->faces.head; f != NULL; f = (Face*)f->hdr.next)
+        {
+            rc = find_in_rect_face(f, winrc); 
+            if (rc)
+                return TRUE;
+        }
+        break;
+
+    case OBJ_GROUP:
+        // tODO: Work out whether, and how, to allow selection inside unlocked groups.
+        for (o = ((Group*)obj)->obj_list.head; o != NULL; o = o->next)
+        {
+            rc = find_in_rect(o, winrc);
+            if (rc)
+                return TRUE;
+        }
+        break;
+    }
+
+    return FALSE;
+}
+
+
+// Pick all top-level objects intersecting the given rect and add them to 
+// the current selection. 
 void
 Pick_all_in_rect(GLint x_pick, GLint y_pick, GLint w_pick, GLint h_pick)
 {
-    // Unfinished!
+    RECT winrc;
+    Object* obj;
 
+    // Get the matrices. They should not change while this pick is happening.
+    glGetDoublev(GL_MODELVIEW_MATRIX, model);
+    glGetDoublev(GL_PROJECTION_MATRIX, proj);
+    glGetIntegerv(GL_VIEWPORT, viewport);
+
+    // The passed in (x_pick, y_pick) is the centre of the rect. Convert it to a
+    // proper RECT.
+    winrc.left = x_pick - w_pick / 2;
+    winrc.right = winrc.left + w_pick;
+    winrc.top = y_pick - h_pick / 2;
+    winrc.bottom = winrc.top + h_pick;
+
+    // Loop though top-level objects.
+    for (obj = object_tree.obj_list.head; obj != NULL; obj = obj->next)
+    {
+        if (find_in_rect(obj, &winrc))
+            link_single(obj, &selection);
+    }
 }
 
 
