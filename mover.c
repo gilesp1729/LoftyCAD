@@ -8,7 +8,8 @@ static BOOL rotate_3x3_valid = FALSE;
 
 // Anything to do with moving and copying objects.
 
-// Clear the moved and copied_to flags on all points referenced by the object.
+// Clear the moved and copied_to flags, and the window-coordinate valid flag,
+// on all points referenced by the object.
 // Call this after move_obj, copy_obj or the rotate/reflect functions.
 void
 clear_move_copy_flags(Object* obj)
@@ -31,6 +32,7 @@ clear_move_copy_flags(Object* obj)
     case OBJ_POINT:
         p = (Point*)obj;
         p->moved = FALSE;
+        p->win_valid = FALSE;
         obj->copied_to = NULL;
         break;
 

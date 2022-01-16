@@ -464,7 +464,13 @@ left_down(AUX_EVENTREC *event)
             orig_left_mouseY = left_mouseY = event->data[AUX_MOUSEY];
             left_mouse = TRUE;
             key_status = event->data[AUX_MOUSESTATUS];
+
+            // Stop spinning so the window coordinates don't jump around.
             change_state(STATE_DRAGGING_SELECT);
+            trackball_stop_spin();
+
+            // Clear all window coord valid flags on all points
+            clear_move_copy_flags((Object *)&object_tree);
         }
         else if (picked_obj == NULL)
         {

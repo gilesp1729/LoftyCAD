@@ -198,6 +198,12 @@ trackball_CalcRotMatrix( GLfloat matRot[4][4] )
 }
 
 void
+trackball_stop_spin()
+{
+    gbSpinning = FALSE;
+}
+
+void
 vzero(float *v)
 {
     v[0] = 0.0f;

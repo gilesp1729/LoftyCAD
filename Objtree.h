@@ -134,6 +134,7 @@ typedef struct Point
     struct Edge     *start_list;    // List of edges that start at this point (i.e. this point is endpoint 0)
     struct Point    *bucket_next;   // Next point in sorting bucket (used for searching points by coordinate)
     POINT           winpt;          // A screen-coordinate of this Point, used when drag-selecting.
+    BOOL            win_valid;      // If TRUE, the winpt is valid ad has not changed.
 } Point;
 
 // Compact 2D and 3D point structs.

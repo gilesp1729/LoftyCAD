@@ -792,6 +792,16 @@ segs_crossing(int x1, int y1, int x2, int y2, int x3, int y3, int x4, int y4)
 BOOL
 edge_crossing_rect(POINT p1, POINT p2, RECT* rect)
 {
+    if (p1.x < rect->left && p2.x < rect->left)
+        return FALSE;
+    if (p1.x > rect->right && p2.x > rect->right)
+        return FALSE;
+
+    if (p1.y < rect->top && p2.y < rect->top)
+        return FALSE;
+    if (p1.y > rect->bottom && p2.y > rect->bottom)
+        return FALSE;
+
     return
         segs_crossing(p1.x, p1.y, p2.x, p2.y, rect->left, rect->top, rect->left, rect->bottom)
         ||
@@ -809,13 +819,17 @@ find_in_rect_point(Point* p, RECT *winrc)
 {
     GLdouble winx, winy, winz;
 
-    gluProject(p->x, p->y, p->z, model, proj, viewport, &winx, &winy, &winz);
+    if (!p->win_valid)
+    {
+        gluProject(p->x, p->y, p->z, model, proj, viewport, &winx, &winy, &winz);
 
-    // Window coordinates are bottom-up
-    p->winpt.x = (int)winx;
-    p->winpt.y = viewport[3] - (int)winy;
+        // Window coordinates are bottom-up
+        p->winpt.x = (int)winx;
+        p->winpt.y = viewport[3] - (int)winy;
+        p->win_valid = TRUE;
+    }
     if (clipped(p))
-        return FALSE;   // but we still have the winpt
+        return FALSE;   // but we will still have the winpt, in case we need it
 
     return PtInRect(winrc, p->winpt);
 }
@@ -913,7 +927,7 @@ find_in_rect(Object* obj, RECT* winrc)
         break;
 
     case OBJ_GROUP:
-        // tODO: Work out whether, and how, to allow selection inside unlocked groups.
+        // TODO: Work out whether, and how, to allow selection inside unlocked groups.
         for (o = ((Group*)obj)->obj_list.head; o != NULL; o = o->next)
         {
             rc = find_in_rect(o, winrc);
