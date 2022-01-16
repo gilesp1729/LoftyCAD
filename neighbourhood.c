@@ -752,21 +752,71 @@ Pick(GLint x_pick, GLint y_pick, BOOL force_pick)
 GLdouble model[16], proj[16];
 GLint viewport[4];
 
-// Find a point in a rect (window coordinates). Incidentally store the window
-// coordinates of the point, in case they are needed later.
+
+// Look for segments crossing into a rect. Coordinates in window integers.
+// 
+// Two-point segment crossing test; compute t-parameter and test within [0,1].
+// Avoid divison by denom by testing numerator within [0, denom].
+BOOL
+segs_crossing(int x1, int y1, int x2, int y2, int x3, int y3, int x4, int y4)
+{
+    int denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+    int t, u;
+
+    if (denom == 0)
+        return FALSE;   // segs are parallel
+
+    if (denom > 0)
+    {
+        t = (x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4);
+        if (t < 0 || t > denom)
+            return FALSE;
+
+        u = (x1 - x3) * (y1 - y2) - (y1 - y3) * (x1 - x2);
+        if (u < 0 || u > denom)
+            return FALSE;
+    }
+    else    // case where denom < 0, test in [denom, 0]
+    {
+        t = (x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4);
+        if (t > 0 || t < denom)
+            return FALSE;
+
+        u = (x1 - x3) * (y1 - y2) - (y1 - y3) * (x1 - x2);
+        if (u > 0 || u < denom)
+            return FALSE;
+    }
+    return TRUE;
+}
+
+BOOL
+edge_crossing_rect(POINT p1, POINT p2, RECT* rect)
+{
+    return
+        segs_crossing(p1.x, p1.y, p2.x, p2.y, rect->left, rect->top, rect->left, rect->bottom)
+        ||
+        segs_crossing(p1.x, p1.y, p2.x, p2.y, rect->left, rect->top, rect->right, rect->top)
+        ||
+        segs_crossing(p1.x, p1.y, p2.x, p2.y, rect->right, rect->top, rect->right, rect->bottom)
+        ||
+        segs_crossing(p1.x, p1.y, p2.x, p2.y, rect->right, rect->bottom, rect->left, rect->bottom);
+}
+
+// Find a point in a rect (window coordinates). Store the window
+// coordinates of the point, in case they are needed later for edge crossing checks.
 BOOL
 find_in_rect_point(Point* p, RECT *winrc)
 {
     GLdouble winx, winy, winz;
-
-    if (clipped(p))
-        return FALSE;
 
     gluProject(p->x, p->y, p->z, model, proj, viewport, &winx, &winy, &winz);
 
     // Window coordinates are bottom-up
     p->winpt.x = (int)winx;
     p->winpt.y = viewport[3] - (int)winy;
+    if (clipped(p))
+        return FALSE;   // but we still have the winpt
+
     return PtInRect(winrc, p->winpt);
 }
 
@@ -790,7 +840,7 @@ find_in_rect_edge(Edge* e, RECT *winrc)
     switch (e->type)
     {
     case EDGE_STRAIGHT:
-        return segment_in_rect(e->endpoints[0]->winpt, e->endpoints[1]->winpt, winrc);
+        return edge_crossing_rect(e->endpoints[0]->winpt, e->endpoints[1]->winpt, winrc);
 
     case EDGE_ARC:
     case EDGE_BEZIER:
