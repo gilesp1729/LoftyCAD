@@ -581,7 +581,7 @@ Object* pick_object(Object* obj, LOCK parent_lock, Plane* line, float* dist)
     case OBJ_GROUP:
         for (o = ((Group*)obj)->obj_list.head; o != NULL; o = o->next)
         {
-            test = pick_object(o, obj->lock, line, dist);
+            test = pick_object(o, o->lock, line, dist);
             if (test != NULL)
                 break;
         }
