@@ -270,7 +270,7 @@ contextmenu(Object *picked_obj, POINT pt)
     }
 
     if (picked_obj->type == OBJ_VOLUME)
-        load_materials_menu(GetSubMenu(hMenu, 10), FALSE, ((Volume*)picked_obj)->material);
+        load_materials_menu(GetSubMenu(hMenu, has_parent_group ? 9 : 8), FALSE, ((Volume*)picked_obj)->material);
     else
         EnableMenuItem(hMenu, ID_MATERIALS_NEW, MF_GRAYED);
 
@@ -717,7 +717,7 @@ contextmenu(Object *picked_obj, POINT pt)
         if (rc < ID_MATERIAL_BASE || rc >= ID_MATERIAL_BASE + MAX_MATERIAL)
             break;
 
-        hMenu = GetSubMenu(hMenu, 3);
+        hMenu = GetSubMenu(hMenu, has_parent_group ? 9 : 8);
 
         // Find which material index this menu item corresponds to. This number is at the
         // front of the menu string.
