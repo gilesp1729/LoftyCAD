@@ -52,6 +52,12 @@ In particular, it will:
 # Installing LoftyCAD from the prebuilt installer
 Unzip the zip in the Installer directory, to any directory on the Windows system (C:\Program Files (x86) is the standard place for 32-bit programs). The install.bat file will do this (run as administrator!), register the file associations, and create a desktop link.
 
+# Installing on Linux and running with Wine
+Install Wine according to the WineHQ installation instructions, making sure to enable a 32-bit architecture. 
+Unzip the zip in the Installer directory and run LoftyCAD.exe, opening it with the Wine program loader (double clicking it in the file explorer)
+On first run it may want to install mono and gecko. 
+It will only run on an x86 machine, and it is only lightly tested, e.g. there are a few crashes with text/font handling.
+
 # Building LoftyCAD
 LoftyCAD uses the excellent CGAL computational geometry library to merge and intersect triangle meshes.
 - CGAL, Computational Geometry Algorithms Library, https://www.cgal.org
