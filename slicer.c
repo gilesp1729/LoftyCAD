@@ -43,8 +43,8 @@ typedef struct InhSection
 } InhSection;
 
 // Slicer and config fixed arrays
-#define NUM_SLICER_LOCATIONS    6
-#define NUM_CONFIG_LOCATIONS    3
+#define NUM_SLICER_LOCATIONS    10
+#define NUM_CONFIG_LOCATIONS    4
 
 // Location structure used for executables and ini files. Allows marking any location 
 // as PrusaSlicer, Slic3rPE, or Slic3r to discourage accidentally pointing a slicer at
@@ -62,20 +62,26 @@ typedef struct Location
 // Directory names may have version stuff appended, so search using a wildcard.
 Location slic3r_locations[NUM_SLICER_LOCATIONS] =
 {
-    {"\\Prusa3D\\PrusaSlicer",      "prusa-slicer-console.exe", SLIC_PRUSA},
+    {"\\Prusa3D\\PrusaSlicer",      "prusa-slicer-console.exe", SLIC_PRUSA },
     {"\\Prusa3D\\Slic3rPE",         "slic3r-console.exe",       SLIC_SLIC3R},
+    {"\\Repetier-Host\\Slic3rPE",   "prusa-slicer-console.exe", SLIC_PRUSA},
+    {"\\Repetier-Host\\Slic3r",     "slic3r-console.exe",       SLIC_SLIC3R},
     {"\\Slic3r*",                   "slic3r-console.exe",       SLIC_SLIC3R},
-    {" (x86)\\Prusa3D\\PrusaSlicer","prusa-slicer-console.exe", SLIC_PRUSA},
+    {" (x86)\\Prusa3D\\PrusaSlicer","prusa-slicer-console.exe", SLIC_PRUSA },
     {" (x86)\\Prusa3D\\Slic3rPE",   "slic3r-console.exe",       SLIC_SLIC3R},
+    {" (x86)\\Repetier-Host\\Slic3rPE", "prusa-slicer-console.exe", SLIC_PRUSA},
+    {" (x86)\\Repetier-Host\\Slic3r", "slic3r-console.exe",     SLIC_SLIC3R},
     {" (x86)\\Slic3r*",             "slic3r-console.exe",       SLIC_SLIC3R}
 };
 
 // List of possible locations for config files under Application Data. No wildcards.
+// Some Prusa installs (e.g. Repetier) use PrusaSlicer.ini under the old directory name.
 Location config_locations[NUM_CONFIG_LOCATIONS] =
 {
-    {"\\PrusaSlicer",                "PrusaSlicer.ini", SLIC_PRUSA },
-    {"\\Slic3rPE",                   "slic3r.ini",      SLIC_SLIC3R},
-    {"\\Slic3r",                     "slic3r.ini",      SLIC_SLIC3R}
+    {"\\PrusaSlicer",                "PrusaSlicer.ini",         SLIC_PRUSA },
+    {"\\Slic3rPE",                   "PrusaSlicer.ini",         SLIC_PRUSA },
+    {"\\Slic3rPE",                   "slic3r.ini",              SLIC_SLIC3R},
+    {"\\Slic3r",                     "slic3r.ini",              SLIC_SLIC3R}
 };
 
 // Command sets (a sprintf string that takes the bed centre as two floats)
