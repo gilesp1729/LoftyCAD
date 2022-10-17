@@ -442,7 +442,7 @@ gen_view_list_tree_surfaces_op(OPERATION op, Group *tree, Group *parent_tree)
                     process_messages();
 
                     // Merge group mesh to tree mesh
-                    group->mesh_merged = mesh_merge_op(op, parent_tree->mesh, group->mesh);
+                    group->mesh_merged = mesh_merge_op(op, &parent_tree->mesh, group->mesh);
                     if (!group->mesh_merged)
                     {
                         parent_tree->mesh_complete = FALSE;
