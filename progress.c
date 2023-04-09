@@ -17,10 +17,10 @@ int file_read;
 // Show status in the status bar. Set to blank strings to clear it.
 void show_status(char* heading, char* string)
 {
-    char buf[128];
+    char buf[256];
 
-    strcpy_s(buf, 128, heading);
-    strcat_s(buf, 128, string);
+    strcpy_s(buf, 256, heading);
+    strcat_s(buf, 256, string);
     SendMessage(hwndStatus, SB_SETTEXT, 0, (LPARAM)buf);
 }
 
