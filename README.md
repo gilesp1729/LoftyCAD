@@ -70,14 +70,14 @@ LoftyCAD uses the excellent CGAL computational geometry library to merge and int
 
 # Material Girl branch:
 # No further development will be done on this branch.
-- This branch requires CGAL 5.0 (at least) and VS2019.
+- This branch requires CGAL 5.0 (at least; has been tested to 5.5.1) and VS2019 (Community edition is fine)
 - The 32-bit version must be used, since LoftyCAD is a 32-bit program for now.
 - CGAL from 5.0 is a header-only library and requires no build steps (other than cmake to make all the .slns and vsprojs).
 - Some environment variables still need to be set up to build:
-	CGAL_DIR --> CGAL checkout location
-	BOOST_INCLUDEDIR --> Boost checkout location
-	BOOST_LIBRARYDIR --> Boost checkout location
-	PATH --> <CGAL_DIR>\\auxiliary\gmp\lib added to path
+-	CGAL_DIR --> CGAL checkout location
+-	BOOST_INCLUDEDIR --> Boost checkout location
+-	BOOST_LIBRARYDIR --> Boost checkout location
+-	PATH --> <CGAL_DIR>\auxiliary\gmp\lib added to PATH
 
 # Master branch:
 # No further development will be done on the master branch.
