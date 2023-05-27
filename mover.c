@@ -239,6 +239,8 @@ copy_obj(Object* obj, float xoffset, float yoffset, float zoffset, BOOL cloning)
             link_tail((Object*)new_face, &new_vol->faces);
         }
         new_vol->op = vol->op;
+        new_vol->material = vol->material;
+        new_vol->measured = vol->measured;
         new_vol->max_facetype = vol->max_facetype;
         break;
 
