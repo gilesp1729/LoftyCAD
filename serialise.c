@@ -1024,6 +1024,9 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
                 last_face = face;
             }
 
+            // Generate the bounding box and normals, then the extrude heights,
+            // so dims show on the volume
+            gen_view_list_vol(vol);
             calc_extrude_heights(vol);
 
             stkptr--;
