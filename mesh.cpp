@@ -189,7 +189,7 @@ extern "C"
         {
             rc = 0;
             strcpy_s(err, 256, e.what());
-            exception = 0;
+            exception = 2;
         }
 
         return rc;
