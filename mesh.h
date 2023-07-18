@@ -4,7 +4,7 @@
 #include <CGAL/Surface_mesh.h>
 #include <boost/container/flat_map.hpp>
 #include <CGAL/Polygon_mesh_processing/corefinement.h>
-
+#include <CGAL/Polygon_mesh_processing/repair.h>
 
 typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
 typedef CGAL::Exact_predicates_exact_constructions_kernel EK;

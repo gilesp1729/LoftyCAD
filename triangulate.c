@@ -333,6 +333,8 @@ inform_mesh_error(Object* obj)
 
     if (exception > 0)
         return MessageBox(auxGetHWND(), err, obj_description(obj, buf, 64, FALSE), MB_OKCANCEL | MB_ICONEXCLAMATION);
+    else if (exception < 0)
+        return MessageBox(auxGetHWND(), "Object mesh is not manifold", obj_description(obj, buf, 64, FALSE), MB_OKCANCEL | MB_ICONINFORMATION);
     else
         return MessageBox(auxGetHWND(), "Could not merge object (mesh is probably OK)", obj_description(obj, buf, 64, FALSE), MB_OK | MB_ICONINFORMATION);
 }
@@ -348,6 +350,7 @@ gen_view_list_tree_surfaces_op(OPERATION op, Group *tree, Group *parent_tree)
     Volume *vol;
     Group *group;
     char buf[64];
+    int i;
 
     for (obj = tree->obj_list.head; obj != NULL; obj = obj->next)
     {
@@ -366,6 +369,25 @@ gen_view_list_tree_surfaces_op(OPERATION op, Group *tree, Group *parent_tree)
 #ifdef DEBUG_WRITE_VOL_MESH
             mesh_write_off("vol", obj->ID, vol->mesh);
 #endif
+            // check for manifoldness (Warning: may be slow) and warn user if not.
+            // TODO: provide repair option here
+            show_status("Checking for manifold: ", obj_description(obj, buf, 64, FALSE));
+            i = mesh_check_for_manifold(vol->mesh);
+            if (i > 0)
+            {
+                exception = -1;
+                parent_tree->mesh_complete = FALSE;
+                if (inform_mesh_error(obj) == IDCANCEL)
+                {
+                    parent_tree->mesh_valid = FALSE;
+                    return FALSE;
+                }
+
+                //show_status("Repairing: ", obj_description(obj, buf, 64, FALSE));
+                //i = mesh_duplicate_non_manifold_vertices(vol->mesh);
+            }
+
+            // Mark it valid in any case
             vol->mesh_valid = TRUE;
             if (!parent_tree->mesh_valid)
             {

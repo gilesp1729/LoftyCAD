@@ -645,8 +645,10 @@ calc_extrude_heights(Volume* vol)
 
     vol->measured = TRUE;   // assume it is, unless we find an exception
 
-    // TODO: Handle explicitly-given render op separately somehow
-    vol->op = last_face->extrude_height < 0 ? OP_INTERSECTION : OP_UNION;
+    // If the volume has a negative height, we assume it's for intersection (holes).
+    // Otherwise just leave it alone as it may have been specified on the input.
+    if (last_face->extrude_height < 0)
+        vol->op = OP_INTERSECTION;
 
     // Check the rest of the faces, skipping those that are already paired.
     // If all the faces are flat and paired (other than possible round-corner faces)

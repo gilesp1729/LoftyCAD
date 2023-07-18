@@ -35,7 +35,8 @@ BOOL mesh_merge_op(OPERATION op, Mesh *mesh1, Mesh *mesh2);
 void init_clip_tess(void);
 void gen_view_list_surface(Face *face);
 
-// Mesh functions, and interface to CGAL (mesh.cpp)
+// Mesh functions, and interface to CGAL (mesh.cpp) 
+// NOTE: DO NOT include mesh.h in any C files.
 Mesh *mesh_new(int material);
 Mesh *mesh_copy(Mesh *from);
 void mesh_destroy(Mesh *mesh);
@@ -58,6 +59,8 @@ void mesh_foreach_face_coords(Mesh* mesh, FaceCoordCB callback, void* callback_a
 void mesh_foreach_face_coords_mat(Mesh* mesh, FaceCoordMaterialCB callback, void* callback_arg);
 int mesh_num_vertices(Mesh *mesh);
 int mesh_num_faces(Mesh *mesh);
+int mesh_check_for_manifold(Mesh* mesh);
+int mesh_duplicate_non_manifold_vertices(Mesh* mesh);
 
 // Triangulate and render
 void init_triangulator(void);

@@ -352,9 +352,33 @@ extern "C"
     {
         return mesh->number_of_vertices();
     }
+
     int
         mesh_num_faces(Mesh *mesh)
     {
         return mesh->number_of_faces();
+    }
+
+    int
+        mesh_check_for_manifold(Mesh* mesh)
+    {
+        std::vector<Mesh::Halfedge_index> nm_vertices;
+        PMP::non_manifold_vertices(*mesh, std::back_inserter(nm_vertices));
+        return nm_vertices.size();
+    }
+
+    namespace NP = CGAL::parameters;
+    int
+        mesh_duplicate_non_manifold_vertices(Mesh* mesh)
+    {
+        // Fix manifoldness by splitting non-manifold vertices
+        std::vector<std::vector<vertex_descriptor>> duplicated_vertices;
+
+        std::size_t new_vertices_nb = PMP::duplicate_non_manifold_vertices
+        (
+            *mesh,
+            NP::output_iterator(std::back_inserter(duplicated_vertices))
+        );
+        return new_vertices_nb;
     }
 }
