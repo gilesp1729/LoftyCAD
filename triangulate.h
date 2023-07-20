@@ -61,6 +61,8 @@ int mesh_num_vertices(Mesh *mesh);
 int mesh_num_faces(Mesh *mesh);
 int mesh_check_for_manifold(Mesh* mesh);
 int mesh_duplicate_non_manifold_vertices(Mesh* mesh);
+int mesh_self_intersections(Mesh* mesh);
+int mesh_repair_self_intersections(Mesh* mesh);
 
 // Triangulate and render
 void init_triangulator(void);

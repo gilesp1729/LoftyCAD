@@ -163,12 +163,20 @@ extern "C"
         visitor.properties[mesh2] = mesh2_id;
         visitor.properties[out] = out_id;
 
+        rc = PMP::does_self_intersect(*mesh1);
+        if (!rc)
+            rc = PMP::does_bound_a_volume(*mesh1);
+        rc = PMP::does_self_intersect(*mesh2);
+        if (!rc)
+            rc = PMP::does_bound_a_volume(*mesh2);
+
+            
         try
         {
             rc = (PMP::corefine_and_compute_intersection(*mesh1,
                 *mesh2,
                 *out,
-                params::vertex_point_map(mesh1_pm).visitor(visitor),
+                params::vertex_point_map(mesh1_pm).visitor(visitor).throw_on_self_intersection(true),
                 params::vertex_point_map(mesh2_pm),
                 params::vertex_point_map(out_pm)));
 
@@ -239,7 +247,7 @@ extern "C"
             rc = (PMP::corefine_and_compute_difference(*mesh1,
                 *mesh2,
                 *out,
-                params::vertex_point_map(mesh1_pm).visitor(visitor),
+                params::vertex_point_map(mesh1_pm).visitor(visitor).throw_on_self_intersection(true),
                 params::vertex_point_map(mesh2_pm),
                 params::vertex_point_map(out_pm)));
 
@@ -380,5 +388,21 @@ extern "C"
             NP::output_iterator(std::back_inserter(duplicated_vertices))
         );
         return new_vertices_nb;
+    }
+
+    typedef boost::graph_traits<Mesh>::face_descriptor          face_descriptor;
+    int
+        mesh_self_intersections(Mesh* mesh)
+    {
+        std::vector<std::pair<face_descriptor, face_descriptor> > intersected_tris;
+
+        PMP::self_intersections(*mesh, std::back_inserter(intersected_tris));
+        return intersected_tris.size();
+    }
+
+    int
+        mesh_repair_self_intersections(Mesh* mesh)
+    {
+        return PMP::experimental::remove_self_intersections(*mesh);
     }
 }

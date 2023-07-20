@@ -516,7 +516,7 @@ export_object_tree(Group *tree, char *filename, int file_index)
     }
 }
 
-#ifdef DEBUG_WRITE_VOL_MESH
+#if 1//def DEBUG_WRITE_VOL_MESH
 
 // Write a mesh out to OFF. Used for debugging (sending meshes to CGAL for bug reporting)
 void

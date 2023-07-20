@@ -333,8 +333,10 @@ inform_mesh_error(Object* obj)
 
     if (exception > 0)
         return MessageBox(auxGetHWND(), err, obj_description(obj, buf, 64, FALSE), MB_OKCANCEL | MB_ICONEXCLAMATION);
-    else if (exception < 0)
+    else if (exception == -1)
         return MessageBox(auxGetHWND(), "Object mesh is not manifold", obj_description(obj, buf, 64, FALSE), MB_OKCANCEL | MB_ICONINFORMATION);
+    else if (exception == -2)
+        return MessageBox(auxGetHWND(), "Object mesh has self-intersections", obj_description(obj, buf, 64, FALSE), MB_OKCANCEL | MB_ICONINFORMATION);
     else
         return MessageBox(auxGetHWND(), "Could not merge object (mesh is probably OK)", obj_description(obj, buf, 64, FALSE), MB_OK | MB_ICONINFORMATION);
 }
@@ -387,6 +389,26 @@ gen_view_list_tree_surfaces_op(OPERATION op, Group *tree, Group *parent_tree)
                 //i = mesh_duplicate_non_manifold_vertices(vol->mesh);
             }
 
+#ifdef NOT_YET_TOO_SLOW
+            // check for self-intersections in volume (Warning: may be slow)
+            show_status("Checking for self-intersections: ", obj_description(obj, buf, 64, FALSE));
+            i = mesh_self_intersections(vol->mesh);
+            if (i > 0)
+            {
+                exception = -2;
+                parent_tree->mesh_complete = FALSE;
+                if (inform_mesh_error(obj) == IDCANCEL)
+                {
+                    parent_tree->mesh_valid = FALSE;
+                    return FALSE;
+                }
+                mesh_write_off("selfinter", 1, vol->mesh);
+                show_status("Repairing: ", obj_description(obj, buf, 64, FALSE));
+                mesh_repair_self_intersections(vol->mesh);
+                i = mesh_self_intersections(vol->mesh);
+            }
+#endif
+
             // Mark it valid in any case
             vol->mesh_valid = TRUE;
             if (!parent_tree->mesh_valid)
@@ -409,6 +431,9 @@ gen_view_list_tree_surfaces_op(OPERATION op, Group *tree, Group *parent_tree)
                 show_status("Merging volume: ", obj_description(obj, buf, 64, FALSE));
                 bump_progress();
                 process_messages();
+
+                // TEMP
+                i = mesh_check_for_manifold(parent_tree->mesh);
 
                 // Merge volume mesh to tree mesh
                 vol->mesh_merged = mesh_merge_op(op, &parent_tree->mesh, vol->mesh);
