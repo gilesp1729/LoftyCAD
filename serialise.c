@@ -1024,6 +1024,10 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
                 last_face = face;
             }
 
+            // Handle missing or garbage operator from old files
+            if (vol->op == OP_MAX)
+                vol->op = OP_UNION;
+
             // Generate the bounding box and normals, then the extrude heights,
             // so dims show on the volume
             gen_view_list_vol(vol);
