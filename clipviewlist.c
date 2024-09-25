@@ -137,7 +137,7 @@ clip_tess_combineData(GLdouble coords[3], void *vertex_data[4], GLfloat weight[4
 {
     // Allocate a new Point for the new vertex, and (TODO:) hang it off the face's spare vertices list.
     // It will be freed when the view list is regenerated.
-    Point *p = point_newv((float)coords[0], (float)coords[1], (float)coords[2]);
+    Point *p = point_newv(coords[0], coords[1], coords[2]);
 
     *outData = p;
 }

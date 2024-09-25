@@ -624,7 +624,7 @@ bez_interp(BezierEdge* be, float t)
     double y = c0 * be->bezctl[0]->y + c1 * be->bezctl[1]->y + c2 * be->bezctl[2]->y + c3 * be->bezctl[3]->y;
     double z = c0 * be->bezctl[0]->z + c1 * be->bezctl[1]->z + c2 * be->bezctl[2]->z + c3 * be->bezctl[3]->z;
 
-    return point_newv((float)x, (float)y, (float)z);
+    return point_newv(x, y, z);
 }
 
 // Regenerate the unclipped view list for a face. While here, also calculate the outward
@@ -1742,7 +1742,7 @@ gen_view_list_face(Face* face)
                 }
 
                 // Put the internal point into the elist
-                link_tail((Object*)point_newv((float)px, (float)py, (float)pz), elists[i]);
+                link_tail((Object*)point_newv(px, py, pz), elists[i]);
             }
 
             // Put the last side edge view list point into the elist, and move to the next row
@@ -2061,7 +2061,7 @@ gen_view_list_arc(ArcEdge *ae)
             v[2] = 0;
             v[3] = 1;
             mat_mult_by_col_d(matrix, v, res);
-            p = point_newv((float)res[0], (float)res[1], (float)res[2]);
+            p = point_newv(res[0], res[1], res[2]);
             link_tail((Object *)p, &edge->view_list);
 #ifdef DEBUG_VIEW_LIST_ARC
             {
@@ -2087,7 +2087,7 @@ gen_view_list_arc(ArcEdge *ae)
             v[2] = 0;
             v[3] = 1;
             mat_mult_by_col_d(matrix, v, res);
-            p = point_newv((float)res[0], (float)res[1], (float)res[2]);
+            p = point_newv(res[0], res[1], res[2]);
             link_tail((Object *)p, &edge->view_list);
 #ifdef DEBUG_VIEW_LIST_ARC
             {
@@ -2150,7 +2150,7 @@ iterate_bez
         double y = c0 * y1 + c1 * y2 + c2 * y3 + c3 * y4;
         double z = c0 * z1 + c1 * z2 + c2 * z3 + c3 * z4;
 
-        p = point_newv((float)x, (float)y, (float)z);
+        p = point_newv(x, y, z);
         link_tail((Object *)p, &e->view_list);
     }
 }
@@ -2209,7 +2209,7 @@ recurse_bez
     {
         // The point is very close. Don't bother checking the flatness.
         // Add (x4, y4, z4) as a point to the view list
-        p = point_newv((float)x4, (float)y4, (float)z4);
+        p = point_newv(x4, y4, z4);
         link_tail((Object*)p, &e->view_list);
         e->nsteps++;
     }
@@ -2290,7 +2290,7 @@ render_beginData(GLenum type, void * polygon_data)
 {
     Plane *norm = (Plane *)polygon_data;
 
-    glNormal3f(norm->A, norm->B, norm->C); 
+    glNormal3d(norm->A, norm->B, norm->C); 
     glBegin(type);
 }
 
@@ -2313,7 +2313,7 @@ render_combineData(GLdouble coords[3], void *vertex_data[4], GLfloat weight[4], 
 {
     // Allocate a new Point for the new vertex, and (TODO:) hang it off the face's spare vertices list.
     // It will be freed when the view list is regenerated.
-    *outData = point_newv((float)coords[0], (float)coords[1], (float)coords[2]);;
+    *outData = point_newv(coords[0], coords[1], coords[2]);;
 }
 
 void render_errorData(GLenum errno, void * polygon_data)

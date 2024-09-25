@@ -69,7 +69,7 @@ Point* point_new_raw()
     return pt;
 }
 
-Point *point_new(float x, float y, float z)
+Point *point_new(double x, double y, double z)
 {
     Point* pt = point_new_raw();
 
@@ -95,7 +95,7 @@ Point *point_newp(Point *p)
 }
 
 // The same, but don't store or increment an objid. Used for viewlists.
-Point* point_newv(float x, float y, float z)
+Point* point_newv(double x, double y, double z)
 {
     Point* pt = point_new_raw();
 

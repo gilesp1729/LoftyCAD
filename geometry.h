@@ -18,7 +18,7 @@
 
 // test for near points (within the snapping tolerance, or the small coord tolerance)
 // DEBUG: Flag nearness comparisons that pass with tol, but fail with (tol * tol)
-//#define DEBUG_NEAR_PT_TOL
+#define DEBUG_NEAR_PT_TOL
 #ifdef DEBUG_NEAR_PT_TOL
 BOOL near_pt(Point* p1, Point* p2, double tol);
 #else

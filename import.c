@@ -680,7 +680,7 @@ read_till(char *string, FILE* f)
 BOOL
 read_amf_vertex(Group* group, FILE* f)
 {
-    float x, y, z;
+    double x, y, z;
 
     if (!next_token(f))
         return FALSE;
@@ -691,13 +691,13 @@ read_amf_vertex(Group* group, FILE* f)
     read_till("<x", f);
 
     tok = strtok_s(NULL, "<", &nexttok);
-    x = (float)atof(tok);
+    x = atof(tok);
     read_till("<y", f);
     tok = strtok_s(NULL, "<", &nexttok);
-    y = (float)atof(tok);
+    y = atof(tok);
     read_till("<z", f);
     tok = strtok_s(NULL, "<", &nexttok);
-    z = (float)atof(tok);
+    z = atof(tok);
     read_till("</vertex", f);
 
     if (npoints >= npoints_alloced)

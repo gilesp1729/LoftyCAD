@@ -431,9 +431,9 @@ extern ListHead free_list_zedge;
 
 // Object creation
 Object *obj_new();
-Point* point_new(float x, float y, float z);
+Point* point_new(double x, double y, double z);
 Point* point_newp(Point* p);
-Point* point_newv(float x, float y, float z);
+Point* point_newv(double x, double y, double z);
 Point* point_newpv(Point* p);
 Point* point_newr(Point* p0, Point* p1, float ratio);
 

@@ -679,7 +679,7 @@ display_rounded(char *buf, float val)
 BOOL
 normalise_plane(Plane *p)
 {
-    float length = (float)sqrt(p->A * p->A + p->B * p->B + p->C * p->C);
+    double length = sqrt(p->A * p->A + p->B * p->B + p->C * p->C);
 
     if (nz(length))
         return FALSE;
@@ -716,7 +716,7 @@ plcross(Plane *p1, Plane *p2, Plane *cp)
 BOOL
 normalise_point(Point *p)
 {
-    float length = (float)sqrt(p->x * p->x + p->y * p->y + p->z * p->z);
+    double length = (float)sqrt(p->x * p->x + p->y * p->y + p->z * p->z);
 
     if (nz(length))
         return FALSE;
@@ -842,7 +842,7 @@ look_at_centre_d(Point c, Point p1, Plane n, double matrix[16])
     pp1.B = p1.y - c.y;
     pp1.C = p1.z - c.z;
     normalise_plane(&pp1);
-    plcross(&n, &pp1, &nxpp1);          // TODO! make these all use double.
+    plcross(&n, &pp1, &nxpp1); 
 
     // set rotation part
     matrix[0] = pp1.A;
@@ -972,7 +972,7 @@ BOOL near_pt(Point* p1, Point* p2, double tol)
                 fabs((p1)->z - (p2)->z) < tol * tol
              )
         )
-            DebugBreak();
+           OutputDebugString("Tol check\r\n");
     }
 
     return rc;  // return result of testing with the original tol

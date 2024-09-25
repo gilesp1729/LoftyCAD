@@ -144,7 +144,7 @@ text_face(Text *text, Face *f)
         {
             // New contour starts with this point
             gluUnProject(textbuf[i + 1], textbuf[i + 2], textbuf[i + 3], modelMatrix, projMatrix, viewport, &p[0], &p[1], &p[2]);
-            e->endpoints[1] = point_new((float)p[0], (float)p[1], (float)p[2]);
+            e->endpoints[1] = point_new(p[0], p[1], p[2]);
             first_point = e->endpoints[1];
             closed = FALSE;
         }
@@ -171,7 +171,7 @@ text_face(Text *text, Face *f)
         }
         else
         {
-            e->endpoints[0] = point_new((float)p[0], (float)p[1], (float)p[2]);
+            e->endpoints[0] = point_new(p[0], p[1], p[2]);
         }
         last_point = e->endpoints[0];
         i += 6;
