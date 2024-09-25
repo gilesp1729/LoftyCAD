@@ -18,7 +18,7 @@ int *reindex;
 
 // Write a single mesh triangle with normal out to an STL file
 void
-export_triangle_stl(void *arg, float x[3], float y[3], float z[3])
+export_triangle_stl(void* arg, float x[3], float y[3], float z[3])
 {
     int i;
     float A, B, C, length;
@@ -36,6 +36,30 @@ export_triangle_stl(void *arg, float x[3], float y[3], float z[3])
     fprintf_s(stl, "  outer loop\n");
     for (i = 0; i < 3; i++)
         fprintf_s(stl, "    vertex %f %f %f\n", x[i], y[i], z[i]);
+    fprintf_s(stl, "  endloop\n");
+    fprintf_s(stl, "endfacet\n");
+    num_exported_tri++;
+}
+
+void
+export_triangle_stl_d(void* arg, double x[3], double y[3], double z[3])
+{
+    int i;
+    float A, B, C, length;
+
+    cross(x[1] - x[0], y[1] - y[0], z[1] - z[0], x[2] - x[0], y[2] - y[0], z[2] - z[0], &A, &B, &C);
+    length = (float)sqrt(A * A + B * B + C * C);
+    if (!nz(length))
+    {
+        A /= length;
+        B /= length;
+        C /= length;
+    }
+
+    fprintf_s(stl, "facet normal %f %f %f\n", A, B, C);
+    fprintf_s(stl, "  outer loop\n");
+    for (i = 0; i < 3; i++)
+        fprintf_s(stl, "    vertex %.15f %.15f %.15f\n", x[i], y[i], z[i]);
     fprintf_s(stl, "  endloop\n");
     fprintf_s(stl, "endfacet\n");
     num_exported_tri++;
@@ -77,6 +101,13 @@ export_vertex_amf(void* arg, Vertex_index* v, float x, float y, float z)
     reindex[*(int*)v] = num_exported_vertices++;
 }
 
+void
+export_vertex_amf_d(void* arg, Vertex_index* v, double x, double y, double z)
+{
+    fprintf_s(amf, "        <vertex><coordinates><x>%.15f</x><y>%.15f</y><z>%.15f</z></coordinates></vertex>\n", x, y, z);
+    reindex[*(int*)v] = num_exported_vertices++;
+}
+
 // Write a single mesh triangle out to an AMF file (actually, to the AMF temp volume file)
 void
 export_triangle_amf(void* arg, int nv, Vertex_index* vi)
@@ -95,6 +126,13 @@ void
 export_vertex_obj(void* arg, Vertex_index* v, float x, float y, float z)
 {
     fprintf_s(objf, "v %f %f %f\n", x, y, z);
+    reindex[*(int*)v] = num_exported_vertices++;
+}
+
+void
+export_vertex_obj_d(void* arg, Vertex_index* v, double x, double y, double z)
+{
+    fprintf_s(objf, "v %.15f %.15f %.15f\n", x, y, z);
     reindex[*(int*)v] = num_exported_vertices++;
 }
 
@@ -123,7 +161,7 @@ export_unmerged_object_stl(Object *obj)
     case OBJ_VOLUME:
         vol = (Volume *)obj;
         if (!vol->mesh_merged)
-            mesh_foreach_face_coords(((Volume *)obj)->mesh, export_triangle_stl, NULL);
+            mesh_foreach_face_coords_d(((Volume *)obj)->mesh, export_triangle_stl_d, NULL);
         break;
 
     case OBJ_GROUP:
@@ -164,7 +202,7 @@ export_object_tree(Group *tree, char *filename, int file_index)
 
         num_exported_tri = 0;
         if (tree->mesh != NULL && tree->mesh_valid && !tree->mesh_merged)
-            mesh_foreach_face_coords(tree->mesh, export_triangle_stl, NULL);
+            mesh_foreach_face_coords_d(tree->mesh, export_triangle_stl_d, NULL);
 
         sprintf_s(buf, 64, "Mesh: %d triangles\r\n", num_exported_tri);
         Log(buf);
@@ -293,7 +331,7 @@ export_object_tree(Group *tree, char *filename, int file_index)
                 continue;
 
             // vertices for the mesh for this material
-            mesh_foreach_vertex(tree->mesh, export_vertex_amf, NULL);
+            mesh_foreach_vertex_d(tree->mesh, export_vertex_amf_d, NULL);
 
             // AMF volume for this material (write it to a temp file and append it at the end)
             if (candidates[i] != 0)
@@ -431,7 +469,7 @@ export_object_tree(Group *tree, char *filename, int file_index)
                 continue;
 
             // vertices for the mesh for this material
-            mesh_foreach_vertex(tree->mesh, export_vertex_obj, NULL);
+            mesh_foreach_vertex_d(tree->mesh, export_vertex_obj_d, NULL);
 
             // OBJ volume for this material (write it to a temp file and append it at the end)
             if (candidates[i] != 0)
@@ -549,172 +587,4 @@ mesh_write_off(char *prefix, int id, Mesh* mesh)
 }
 
 #endif // DEBUG_WRITE_VOL_MESH
-
-
-#ifdef OLD_EXPORT_CODE  // Old code to export direct from GL tessellator
-
-// count of vertices received so far in the polygon
-int stl_count;
-
-// count of triangles output so far in the polygon
-int stl_tri_count;
-
-// Points stored for the next triangle
-Point stl_points[3];
-
-// Normal for the current polygon
-Plane stl_normal;
-
-// What kind of triangle sequence is being output (GL_TRIANGLES, TRIANGLE_STRIP or TRIANGLE_FAN)
-GLenum stl_sequence;
-
-// Write a single triangle out to the STL file
-void
-stl_write(void)
-{
-    int i;
-
-    fprintf_s(stl, "facet normal %f %f %f\n", stl_normal.A, stl_normal.B, stl_normal.C);
-    fprintf_s(stl, "  outer loop\n");
-    for (i = 0; i < 3; i++)
-        fprintf_s(stl, "    vertex %f %f %f\n", stl_points[i].x, stl_points[i].y, stl_points[i].z);
-    fprintf_s(stl, "  endloop\n");
-    fprintf_s(stl, "endfacet\n");
-    stl_tri_count++;
-}
-
-// callbacks for exporting tessellated stuff to an STL file
-void
-export_beginData(GLenum type, void * polygon_data)
-{
-    Plane *norm = (Plane *)polygon_data;
-
-    stl_sequence = type;
-    stl_normal = *norm;
-    stl_count = 0;
-    stl_tri_count = 0;
-}
-
-void
-export_vertexData(void * vertex_data, void * polygon_data)
-{
-    Point *v = (Point *)vertex_data;
-
-    if (stl_count < 3)
-    {
-        stl_points[stl_count++] = *v;
-    }
-    else
-    {
-        switch (stl_sequence)
-        {
-        case GL_TRIANGLES:
-            stl_write();
-            stl_count = 0;
-            stl_points[stl_count++] = *v;
-            break;
-
-        case GL_TRIANGLE_FAN:
-            stl_write();
-            stl_points[1] = stl_points[2];
-            stl_points[2] = *v;
-            break;
-
-        case GL_TRIANGLE_STRIP:
-            stl_write();
-            if (stl_tri_count & 1)
-                stl_points[0] = stl_points[2];
-            else
-                stl_points[1] = stl_points[2];
-            stl_points[2] = *v;
-            break;
-        }
-    }
-}
-
-void
-export_endData(void * polygon_data)
-{
-    // write out the last triangle
-    if (stl_count == 3)
-        stl_write();
-}
-
-void
-export_combineData(GLdouble coords[3], void *vertex_data[4], GLfloat weight[4], void **outData, void * polygon_data)
-{
-    // Allocate a new Point for the new vertex, and (TODO:) hang it off the face's spare vertices list.
-    // It will be freed when the view list is regenerated.
-    Point *p = point_new((float)coords[0], (float)coords[1], (float)coords[2]);
-    p->hdr.ID = 0;
-    objid--;
-
-    *outData = p;
-}
-
-void export_errorData(GLenum errno, void * polygon_data)
-{
-    ASSERT(FALSE, "tesselator error");
-}
-
-
-// Render an volume or face object to triangles
-void
-export_object(GLUtesselator *tess, Object *obj)
-{
-    Face *face;
-    Object *o;
-
-    switch (obj->type)
-    {
-    case OBJ_FACE:
-        face = (Face *)obj;
-        gen_view_list_face(face);
-        face_shade(tess, face, FALSE, FALSE, LOCK_NONE);
-        break;
-
-    case OBJ_VOLUME:
-        for (face = ((Volume *)obj)->faces; face != NULL; face = (Face *)face->hdr.next)
-            export_object(tess, (Object *)face);
-        break;
-
-    case OBJ_GROUP:
-        for (o = ((Group *)obj)->obj_list; o != NULL; o = o->next)
-            export_object(tess, o);
-        break;
-    }
-}
-
-// Tessellate every solid object in the tree to triangles and export to STL
-void
-export_object_tree(Group *tree, char *filename, int file_index)
-{
-    Object *obj;
-    GLUtesselator *tess = gluNewTess();
-
-    gluTessCallback(tess, GLU_TESS_BEGIN_DATA, (void(__stdcall *)(void))export_beginData);
-    gluTessCallback(tess, GLU_TESS_VERTEX_DATA, (void(__stdcall *)(void))export_vertexData);
-    gluTessCallback(tess, GLU_TESS_END_DATA, (void(__stdcall *)(void))export_endData);
-    gluTessCallback(tess, GLU_TESS_COMBINE_DATA, (void(__stdcall *)(void))export_combineData);
-    gluTessCallback(tess, GLU_TESS_ERROR_DATA, (void(__stdcall *)(void))export_errorData);
-
-    fopen_s(&stl, filename, "wt");
-    if (stl == NULL)
-        return;
-    fprintf_s(stl, "solid %s\n", tree->title);
-
-    for (obj = tree->obj_list; obj != NULL; obj = obj->next)
-    {
-        if (obj->type == OBJ_VOLUME || obj->type == OBJ_GROUP)
-            export_object(tess, obj);
-    }
-
-    fprintf_s(stl, "endsolid %s\n", tree->title);
-    fclose(stl);
-
-    gluDeleteTess(tess);
-}
-
-#endif
-
 
