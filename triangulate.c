@@ -372,7 +372,6 @@ gen_view_list_tree_surfaces_op(OPERATION op, Group *tree, Group *parent_tree)
             mesh_write_off("vol", obj->ID, vol->mesh);
 #endif
             // check for manifoldness (Warning: may be slow) and warn user if not.
-            // TODO: provide repair option here
             show_status("Checking for manifold: ", obj_description(obj, buf, 64, FALSE));
             i = mesh_check_for_manifold(vol->mesh);
             if (i > 0)
@@ -385,8 +384,8 @@ gen_view_list_tree_surfaces_op(OPERATION op, Group *tree, Group *parent_tree)
                     return FALSE;
                 }
 
-                //show_status("Repairing: ", obj_description(obj, buf, 64, FALSE));
-                //i = mesh_duplicate_non_manifold_vertices(vol->mesh);
+                show_status("Repairing: ", obj_description(obj, buf, 64, FALSE));
+                i = mesh_duplicate_non_manifold_vertices(vol->mesh);
             }
 
 #ifdef NOT_YET_TOO_SLOW
