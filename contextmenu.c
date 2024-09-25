@@ -56,7 +56,7 @@ contextmenu(Object *picked_obj, POINT pt)
     CHOOSEFONT cf;
     LOGFONT lf;
     char group_filename[256];
-    float xc, yc, zc;
+    double xc, yc, zc;
     Bbox box;
 #define ID_OBJ_UPTOPARENT  56754 // some random number
 

@@ -502,7 +502,7 @@ insert_chamfer_round(Point* pt, Face* parent, float size, EDGE edge_type, BOOL r
     int i, k, end[2], eindex[2];
     Point orig_pt = *pt;
     Edge* ne;
-    float len0, len1, backoff;
+    double len0, len1, backoff;
 
     if (parent->hdr.type != OBJ_FACE)
         return;     // We can't do this
@@ -595,11 +595,11 @@ insert_chamfer_round(Point* pt, Face* parent, float size, EDGE edge_type, BOOL r
 
 // Helper to find the greatest radius to the path within the points of
 // an edge's view list.
-float
+double
 dist_view_list_to_path(Edge* e, Edge* path)
 {
-    float r;
-    float rad = 0;
+    double r;
+    double rad = 0;
     Point* p;
     Point dummy;
 
@@ -635,7 +635,7 @@ make_body_of_revolution(Group* group, BOOL negative)
     int idx, initial, final, n_steps;
     BOOL open = !is_closed_edge_group(group);
     BOOL wind_reverse;
-    float r, rad;
+    double r, rad;
 
     // Some checks first.
     if (!is_edge_group(group))
@@ -989,7 +989,7 @@ typedef struct
 {
     Group* egrp;        // Edge group at this section
     Plane norm;         // Normal of the edge group
-    float param;        // How far (as a fraction) along the path or principal direction it is
+    double param;        // How far (as a fraction) along the path or principal direction it is
     Plane principal;    // The plane normal to the path at this section
     Bbox  ebox;         // BBox for the edge group
     ListHead face_list; // List of faces making up the endcap (for nose and tail edge groups only)
@@ -1057,8 +1057,8 @@ find_key_edge(LoftParams *loft, LoftedGroup *lg)
     for (e = (Edge*)lg->egrp->obj_list.head; e != NULL; e = (Edge*)e->hdr.next)
     {
         int c = first_point_index(e);
-        float side0 = distance_point_plane(&symmetry, e->endpoints[c]);
-        float side1 = distance_point_plane(&symmetry, e->endpoints[1 - c]);
+        double side0 = distance_point_plane(&symmetry, e->endpoints[c]);
+        double side1 = distance_point_plane(&symmetry, e->endpoints[1 - c]);
 
         // There should be two edges crossing the plane of symmetry, and there should be an equal
         // number of points on each side of it. There should be no points on the plane.
@@ -1117,8 +1117,8 @@ make_endcap_faces(LoftedGroup* lg, Volume* vol, BOOL single_face, BOOL reverse)
         Plane norm;
         Point* top = NULL;
         int j, ci, co;
-        float key_length, opp_length, egrp_height;
-        float key_tension[2], opp_tension[2];
+        double key_length, opp_length, egrp_height;
+        double key_tension[2], opp_tension[2];
         Plane key_dirn[2], opp_dirn[2];
 
         egrp = lg->egrp;
@@ -1167,9 +1167,9 @@ make_endcap_faces(LoftedGroup* lg, Volume* vol, BOOL single_face, BOOL reverse)
                 if (key_type == EDGE_BEZIER)
                 {
                     BezierEdge* bie = (BezierEdge*)ie;
-                    float lie;
+                    double lie;
                     Plane dirn;
-                    float tension, t;
+                    double tension, t;
 
                     lie = length(ie->endpoints[0], ie->endpoints[1]);
                     t = length(ie->endpoints[1], top) / egrp_height;
@@ -1482,7 +1482,7 @@ make_lofted_volume(Group* group)
     // The direction is given by the principal direction.
     if (curr_path != NULL)
     {
-        float len;
+        double len;
 
         total_length = path_total_length(curr_path);
         for (i = 0; i < num_groups; i++)
@@ -1639,7 +1639,7 @@ make_lofted_volume(Group* group)
         {
             Edge* e0, * e1;
             float angle = 0;
-            float cosa;
+            double cosa;
 
             // Walk down the current and previous EG's summing the angles between the
             // corresponding edges. But do not consider rotations where the
@@ -1656,7 +1656,7 @@ make_lofted_volume(Group* group)
                 cosa = pldot((Plane*)&e1->dirn, (Plane*)&e0->dirn);
                 if (cosa > 1)   // protect against domain error in acosf
                     cosa = 1;
-                angle += acosf(cosa);
+                angle += (float)acos(cosa);
             }
 
             if (angle < min_angle)
@@ -1688,7 +1688,8 @@ make_lofted_volume(Group* group)
         {
             Plane pl0 = lg[i - 1].principal;
             Plane pl1 = lg[i].principal;
-            float theta, chord, cosa;
+            float theta, chord;
+            double cosa;
 
             normalise_plane(&pl0);
             normalise_plane(&pl1);
@@ -1697,7 +1698,7 @@ make_lofted_volume(Group* group)
             cosa = pldot(&pl0, &pl1);
             if (cosa > 1.0f)
                 cosa = 1.0f;
-            theta = acosf(cosa);
+            theta = (float)acos(cosa);
 
             // The usual (4/3) tan (theta/4) formula for tension is as a fraction
             // of the radius, but our tensions are as multiples of the chord
@@ -1854,7 +1855,7 @@ make_lofted_volume(Group* group)
             Plane dummy = { 0, };
             Plane plprev, plnext;
             Edge* c;
-            float lj;
+            double lj;
             BOOL angle_break, join_smooth;
 
             switch (e->type)
@@ -1947,7 +1948,7 @@ make_lofted_volume(Group* group)
         Plane pl, plend, pltest, pl_proj, plend_proj, pltest_proj, tangent;
         Edge* c;
         int ci;
-        float cosmax, costest, lj;
+        double cosmax, costest, lj;
         BezierEdge* be;
         BOOL join_smooth = FALSE;
 
@@ -2057,7 +2058,7 @@ make_lofted_volume(Group* group)
         Plane pl, plend, pltest, pl_proj, plend_proj, pltest_proj, tangent;
         Edge* c;
         int ci;
-        float cosmax, costest, lj;
+        double cosmax, costest, lj;
         BezierEdge* be;
         BOOL join_smooth = FALSE;
 
@@ -2181,10 +2182,10 @@ make_tubed_group(Group* group)
 {
     Group* tubed_group = NULL;
     Group* eg, * parent_group;
-    float initial_len;
+    double initial_len;
     Plane* tangents, *v1, *v2;
     int i, n_tangents;
-    float dx, dy, dz;
+    double dx, dy, dz;
     LoftedGroup lg;
     Edge* e, * next_edge;
     int initial, final;

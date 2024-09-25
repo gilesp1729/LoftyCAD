@@ -20,7 +20,7 @@ text_face(Text *text, Face *f)
     Point *last_point = NULL, *first_point = NULL;
     ListHead edge_list = { NULL, NULL };
     double matrix[16];
-    float scale;
+    double scale;
     BOOL closed = FALSE;
 
     // Map picked_point to origin, new_point to X axis, and attempt to scale the font.

@@ -126,8 +126,8 @@ typedef struct Point
     double          z;
     BOOL            moved;          // When a point is moved, this is set TRUE. This stops shared
                                     // points from being moved twice.
-    float           decay;          // Decay factor for smooth moves.
-    float           cosine;         // Cosine of normals factor for smooth moves.
+    double          decay;          // Decay factor for smooth moves.
+    double          cosine;         // Cosine of normals factor for smooth moves.
     unsigned int    drawn;          // Drawn number increments and stops shared points being drawn twice.
     PFLAG           flags;          // Flag to indicate start of facet or contour in view lists.
     Vertex_index    *vi;            // Index to CGAL mesh vertex (used when building meshes)
@@ -140,15 +140,15 @@ typedef struct Point
 // Compact 2D and 3D point structs.
 typedef struct Point2D
 {
-    float x;
-    float y;
+    double x;
+    double y;
 } Point2D;
 
 typedef struct Point3D
 {
-    float x;
-    float y;
-    float z;
+    double x;
+    double y;
+    double z;
 } Point3D;
 
 // Plane definitions
@@ -294,10 +294,10 @@ typedef struct Face
                                     // their opposite number with an equal and opposite normal.
     BOOL            has_corners;    // TRUE for faces that contain corner edges in their edge list.
                                     // These faces cannot have corner faces adjacent to them.
-    float           extrude_height; // Extrude height to the paired face. 
+    double          extrude_height; // Extrude height to the paired face. 
                                     // If negative, it's a hole (face normals face inwards)
     BOOL            corner;         // If TRUE, this face is extruded from a round or chamfer corner.
-    float           color_decay;    // Color attenuation factor for halo faces (derived from points)
+    double          color_decay;    // Color attenuation factor for halo faces (derived from points)
     struct Point    *initial_point; // Point in the first edge that the face starts from. Used to allow
                                     // view lists to be built up independent of the order of points
                                     // in any edge.
@@ -470,26 +470,26 @@ void free_bucket_points(Point ***bucket);
 void free_bucket(Point ***bucket);
 
 // Copy and move object (mover.c)
-Object *copy_obj(Object *obj, float xoffset, float yoffset, float zoffset, BOOL cloning);
-void move_obj(Object *obj, float xoffset, float yoffset, float zoffset);
-void extrude_local(Face* face, float length);
+Object *copy_obj(Object *obj, double xoffset, double yoffset, double zoffset, BOOL cloning);
+void move_obj(Object *obj, double xoffset, double yoffset, double zoffset);
+void extrude_local(Face* face, double length);
 void centroid_face(Face* face, Point* cent);
 void calc_halo_params(Face* face, ListHead *halo);
-void move_halo_around_face(Face* face, float xoffset, float yoffset, float zoffset);
+void move_halo_around_face(Face* face, double xoffset, double yoffset, double zoffset);
 BOOL find_corner_edges(Object* obj, Object* parent, ListHead *halo);
 //void find_adjacent_points(Edge* edge, Group* group, ListHead* halo);
 //void find_adjacent_point(Point* pt, Group* group, ListHead* halo);
-void move_corner_edges(ListHead *halo, float xoffset, float yoffset, float zoffset);
+void move_corner_edges(ListHead *halo, double xoffset, double yoffset, double zoffset);
 void clear_move_copy_flags(Object *obj);
 Face *clone_face_reverse(Face *face);
 
 // Rotate, reflect and scale an object in place (mover.c)
-void find_obj_pivot(Object* obj, float* xc, float* yc, float* zc);
-void rotate_obj_90_facing(Object* obj, float xc, float yc, float zc);
-void rotate_obj_free_facing(Object* obj, float alpha, float xc, float yc, float zc);
+void find_obj_pivot(Object* obj, double* xc, double* yc, double* zc);
+void rotate_obj_90_facing(Object* obj, double xc, double yc, double zc);
+void rotate_obj_free_facing(Object* obj, float alpha, double xc, double yc, double zc);
 void rotate_obj_free_abc(Object* obj, Plane* v1, Plane* v2);
-void scale_obj_free(Object* obj, float sx, float sy, float sz, float xc, float yc, float zc);
-void reflect_obj_facing(Object* obj, float xc, float yc, float zc);
+void scale_obj_free(Object* obj, double sx, double sy, double sz, double xc, double yc, double zc);
+void reflect_obj_facing(Object* obj, double xc, double yc, double zc);
 
 // Find object in tree or as child of another object
 BOOL find_obj(Object *parent, Object *obj);

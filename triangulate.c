@@ -45,7 +45,7 @@ expand_bbox(Bbox *box, Point *p)
 
 // Expand a bounding box to include a point given by (x, y, z)
 void
-expand_bbox_coords(Bbox* box, float x, float y, float z)
+expand_bbox_coords(Bbox* box, double x, double y, double z)
 {
     if (x < box->xmin)
         box->xmin = x;
@@ -165,7 +165,7 @@ enforce_arc_constraints(Edge *e, Point *p, float dx, float dy, float dz)
 // since we may encounter arc edges that need constraints updated when, say, an 
 // endpoint has moved. We also pass in how much it has moved.
 void
-invalidate_all_view_lists(Object *parent, Object *obj, float dx, float dy, float dz)
+invalidate_all_view_lists(Object *parent, Object *obj, double dx, double dy, double dz)
 {
     Group *group;
     Volume *vol;

@@ -99,7 +99,7 @@ void new_length_mid(Point* p0, Point* p1, double len);
 
 void snap_to_grid(Plane *plane, Point *point, BOOL inhibit_snapping);
 void snap_to_scale(double*length, BOOL inhibit_snapping);
-char *display_rounded(char *buf, float val);
+char *display_rounded(char *buf, double val);
 void snap_2d_angle(double x0, double y0, double*x1, double*y1, int angle_tol);
 float cleanup_angle_and_snap(float angle, BOOL snap_to_45);
 void snap_to_angle(Plane *plane, Point *p0, Point *p1, int angle_tol);

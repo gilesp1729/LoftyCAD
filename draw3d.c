@@ -95,9 +95,9 @@ SetMaterial(int mat, BOOL force_set)
 // Some standard colors sent to GL.
 // Color as an object of the given type.
 void
-color_as(OBJECT obj_type, float color_decay, BOOL construction, PRESENTATION pres, BOOL locked)
+color_as(OBJECT obj_type, double color_decay, BOOL construction, PRESENTATION pres, BOOL locked)
 {
-    float r, g, b, a;
+    double r, g, b, a;
 
     // This object is selected. Color it and all its components.
     BOOL selected = pres & DRAW_SELECTED;
@@ -194,14 +194,14 @@ color_as(OBJECT obj_type, float color_decay, BOOL construction, PRESENTATION pre
         break;
     }
 
-    glColor4f(r, g, b, a);
+    glColor4d(r, g, b, a);
 }
 
 // Color a passed object.
 void
 color(Object* obj, BOOL construction, PRESENTATION pres, BOOL locked)
 {
-    float color_decay = 1.0f;
+    double color_decay = 1.0f;
 
     if (pres & DRAW_HIGHLIGHT_HALO)
         color_decay = 0;
@@ -936,7 +936,7 @@ Draw(void)
             ArcEdge *ae;
             BezierEdge *be;
             Plane grad0, grad1;
-            float dist;
+            double dist;
             Face *rf, *bf;
             Plane norm;
             Object *parent, *dummy;
@@ -1318,7 +1318,7 @@ Draw(void)
                 }
                 else
                 {
-                    float ax, ay, az;
+                    double ax, ay, az;
 
                     // Drawing on a face on an existing object. Derive rect directions
                     // from it if it is sensible to do so.
@@ -1342,9 +1342,9 @@ Draw(void)
                         // Some other kind of face. Find a principal direction by looking
                         // for the smallest component in the normal. If it is axis-aligned
                         // one or two components of the normal will be zero. Any will do.
-                        ax = fabsf(dn.x);
-                        ay = fabsf(dn.y);
-                        az = fabsf(dn.z);
+                        ax = fabs(dn.x);
+                        ay = fabs(dn.y);
+                        az = fabs(dn.z);
                         if (ax <= ay && ax <= az)
                         {
                             da.x = 1;
@@ -1948,7 +1948,7 @@ Draw(void)
             case STATE_DRAWING_SCALE:
                 if (picked_obj != NULL)
                 {
-                    float sx, sy, sz;
+                    double sx, sy, sz;
 
                     intersect_ray_plane(pt.x, pt.y, &centre_facing_plane, &new_point);
                     // Find dominant direction in plane, or do both if SHIFT key down
@@ -1960,24 +1960,24 @@ Draw(void)
                     {
                     case PLANE_XY:
                     case PLANE_MINUS_XY:
-                        d1.x = fabsf(picked_point.x - centre_facing_plane.refpt.x);
-                        d1.y = fabsf(picked_point.y - centre_facing_plane.refpt.y);
+                        d1.x = fabs(picked_point.x - centre_facing_plane.refpt.x);
+                        d1.y = fabs(picked_point.y - centre_facing_plane.refpt.y);
                         if (key_status & AUX_SHIFT)
                             scaled = DIRN_X | DIRN_Y;
                         break;
 
                     case PLANE_XZ:
                     case PLANE_MINUS_XZ:
-                        d1.x = fabsf(picked_point.x - centre_facing_plane.refpt.x);
-                        d1.z = fabsf(picked_point.z - centre_facing_plane.refpt.z);
+                        d1.x = fabs(picked_point.x - centre_facing_plane.refpt.x);
+                        d1.z = fabs(picked_point.z - centre_facing_plane.refpt.z);
                         if (key_status & AUX_SHIFT)
                             scaled = DIRN_X | DIRN_Z;
                         break;
 
                     case PLANE_YZ:
                     case PLANE_MINUS_YZ:
-                        d1.y = fabsf(picked_point.y - centre_facing_plane.refpt.y);
-                        d1.z = fabsf(picked_point.z - centre_facing_plane.refpt.z);
+                        d1.y = fabs(picked_point.y - centre_facing_plane.refpt.y);
+                        d1.z = fabs(picked_point.z - centre_facing_plane.refpt.z);
                         if (key_status & AUX_SHIFT)
                             scaled = DIRN_Y | DIRN_Z;
                         break;
@@ -1986,25 +1986,25 @@ Draw(void)
                     sx = sy = sz = 1;
                     if ((scaled & DIRN_X) && !nz(d1.x))
                     {
-                        sx = fabsf(new_point.x - centre_facing_plane.refpt.x) / d1.x;
+                        sx = fabs(new_point.x - centre_facing_plane.refpt.x) / d1.x;
                         eff_sx *= sx;
                     }
                     if ((scaled & DIRN_Y) && !nz(d1.y))
                     {
-                        sy = fabsf(new_point.y - centre_facing_plane.refpt.y) / d1.y;
+                        sy = fabs(new_point.y - centre_facing_plane.refpt.y) / d1.y;
                         eff_sy *= sy;
                     }
                     if ((scaled & DIRN_Z) && !nz(d1.z))
                     {
-                        sz = fabsf(new_point.z - centre_facing_plane.refpt.z) / d1.z;
+                        sz = fabs(new_point.z - centre_facing_plane.refpt.z) / d1.z;
                         eff_sz *= sz;
                     }
                     scale_obj_free
                     (
                         picked_obj,
                         sx,
-                        ((scaled & DIRN_Y) && !nz(d1.y)) ? fabsf(new_point.y - centre_facing_plane.refpt.y) / d1.y : 1,
-                        ((scaled & DIRN_Z) && !nz(d1.z)) ? fabsf(new_point.z - centre_facing_plane.refpt.z) / d1.z : 1,
+                        ((scaled & DIRN_Y) && !nz(d1.y)) ? fabs(new_point.y - centre_facing_plane.refpt.y) / d1.y : 1,
+                        ((scaled & DIRN_Z) && !nz(d1.z)) ? fabs(new_point.z - centre_facing_plane.refpt.z) / d1.z : 1,
                         centre_facing_plane.refpt.x,
                         centre_facing_plane.refpt.y,
                         centre_facing_plane.refpt.z
@@ -2348,8 +2348,8 @@ Draw(void)
 
                             glColor3d(1.0, 0.4, 0.4);
                             glBegin(GL_LINES);
-                            glVertex3f(n->refpt.x, n->refpt.y, n->refpt.z);
-                            glVertex3f(n->refpt.x + 3 * n->A, n->refpt.y + 3 * n->B, n->refpt.z + 3 * n->C);
+                            glVertex3d(n->refpt.x, n->refpt.y, n->refpt.z);
+                            glVertex3d(n->refpt.x + 3 * n->A, n->refpt.y + 3 * n->B, n->refpt.z + 3 * n->C);
                             glEnd();
                         }
 
@@ -2359,8 +2359,8 @@ Draw(void)
 
                             glColor3d(0.4, 0.4, 1.0);
                             glBegin(GL_LINES);
-                            glVertex3f(n->refpt->x, n->refpt->y, n->refpt->z);
-                            glVertex3f(n->refpt->x + 2 * n->A, n->refpt->y + 2 * n->B, n->refpt->z + 2 * n->C);
+                            glVertex3d(n->refpt->x, n->refpt->y, n->refpt->z);
+                            glVertex3d(n->refpt->x + 2 * n->A, n->refpt->y + 2 * n->B, n->refpt->z + 2 * n->C);
                             glEnd();
                         }
                     }
@@ -2379,7 +2379,7 @@ Draw(void)
                         for (i = 0; i < f->n_edges; i++)
                         {
                             e = f->edges[i];
-                            glRasterPos3f
+                            glRasterPos3d
                             (
                                 (e->endpoints[0]->x + e->endpoints[1]->x) / 2,
                                 (e->endpoints[0]->y + e->endpoints[1]->y) / 2,
@@ -2408,8 +2408,8 @@ Draw(void)
 
                         glColor3d(1.0, 0.4, 0.4);
                         glBegin(GL_LINES);
-                        glVertex3f(n->refpt.x, n->refpt.y, n->refpt.z);
-                        glVertex3f(n->refpt.x + 3 * n->A, n->refpt.y + 3 * n->B, n->refpt.z + 3 * n->C);
+                        glVertex3d(n->refpt.x, n->refpt.y, n->refpt.z);
+                        glVertex3d(n->refpt.x + 3 * n->A, n->refpt.y + 3 * n->B, n->refpt.z + 3 * n->C);
                         glEnd();
                     }
                     for (i = 0; i < f->n_local; i++)
@@ -2418,8 +2418,8 @@ Draw(void)
 
                         glColor3d(0.4, 0.4, 1.0);
                         glBegin(GL_LINES);
-                        glVertex3f(n->refpt->x, n->refpt->y, n->refpt->z);
-                        glVertex3f(n->refpt->x + 2 * n->A, n->refpt->y + 2 * n->B, n->refpt->z + 2 * n->C);
+                        glVertex3d(n->refpt->x, n->refpt->y, n->refpt->z);
+                        glVertex3d(n->refpt->x + 2 * n->A, n->refpt->y + 2 * n->B, n->refpt->z + 2 * n->C);
                         glEnd();
                     }
                 }

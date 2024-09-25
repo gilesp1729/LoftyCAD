@@ -420,9 +420,9 @@ get_dims_string(Object *obj, char buf[64])
         // TODO local extrude test here too
         else if ((app_state == STATE_STARTING_EXTRUDE || app_state == STATE_DRAWING_EXTRUDE) && f->paired)
         {
-            float x = fabsf(dot(f->normal.A, f->normal.B, f->normal.C, 1, 0, 0));
-            float y = fabsf(dot(f->normal.A, f->normal.B, f->normal.C, 0, 1, 0));
-            float z = fabsf(dot(f->normal.A, f->normal.B, f->normal.C, 0, 0, 1));
+            double x = fabs(dot(f->normal.A, f->normal.B, f->normal.C, 1, 0, 0));
+            double y = fabs(dot(f->normal.A, f->normal.B, f->normal.C, 0, 1, 0));
+            double z = fabs(dot(f->normal.A, f->normal.B, f->normal.C, 0, 0, 1));
 
             // We are extruding, so show the length/width/height.
             if (x > y && x > z)

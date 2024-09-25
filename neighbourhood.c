@@ -64,7 +64,7 @@ find_in_neighbourhood_point(Point *point, Object *obj)
 {
     Point *p;
     Point2D pt;
-    float a, b, c, dx, dy, dz;
+    double a, b, c, dx, dy, dz;
     Edge *e;
     Face *f;
     Volume *vol;
@@ -111,15 +111,15 @@ find_in_neighbourhood_point(Point *point, Object *obj)
         }
 
         // Test point against interior of face.
-        a = fabsf(f->normal.A);
-        b = fabsf(f->normal.B);
-        c = fabsf(f->normal.C);
+        a = fabs(f->normal.A);
+        b = fabs(f->normal.B);
+        c = fabs(f->normal.C);
         
         // make sure point is in plane first
         dx = point->x - f->normal.refpt.x;
         dy = point->y - f->normal.refpt.y;
         dz = point->z - f->normal.refpt.z;
-        if (fabsf(a * dx + b * dy + c * dz) > snap_tol)
+        if (fabs(a * dx + b * dy + c * dz) > snap_tol)
             return NULL;
 
         if (c > b && c > a)
@@ -178,7 +178,7 @@ find_in_neighbourhood_face(Face *face, Object *obj)
     Face *f, *face1;
     Volume *vol;
     Object *o;
-    float dx, dy, dz;
+    double dx, dy, dz;
     int i;
 
     switch (obj->type)
@@ -194,17 +194,17 @@ find_in_neighbourhood_face(Face *face, Object *obj)
         // Easy tests first.
         // Test if normals are the same, and the refpts lie in close to the same plane
         // Allow normals to be exactly opposite (e.g. one up one down)
-        if (!nz(fabsf(face1->normal.A) - fabsf(face->normal.A)))
+        if (!nz(fabs(face1->normal.A) - fabsf(face->normal.A)))
             return NULL;
-        if (!nz(fabsf(face1->normal.B) - fabsf(face->normal.B)))
+        if (!nz(fabs(face1->normal.B) - fabsf(face->normal.B)))
             return NULL;
-        if (!nz(fabsf(face1->normal.C) - fabsf(face->normal.C)))
+        if (!nz(fabs(face1->normal.C) - fabsf(face->normal.C)))
             return NULL;
 
         dx = face->normal.refpt.x - face1->normal.refpt.x;
         dy = face->normal.refpt.y - face1->normal.refpt.y;
         dz = face->normal.refpt.z - face1->normal.refpt.z;
-        if (fabsf(face1->normal.A * dx + face1->normal.B * dy + face1->normal.C * dz) > snap_tol)
+        if (fabs(face1->normal.A * dx + face1->normal.B * dy + face1->normal.C * dz) > snap_tol)
             return NULL;
 
         // If we got through that, now test if face and face1 overlap
@@ -302,7 +302,7 @@ find_in_neighbourhood(Object *match_obj, Group *tree)
 // Picking helpers: return an intersecting object with a ray. Also return the distance
 // to the ray's near plane (the refpt of the Plane) to help with sorting.
 // For faces, only viewable faces are considered (normal towards eye)
-Object* pick_point(Point* p, LOCK parent_lock, Plane* line, float *dist, float bias)
+Object* pick_point(Point* p, LOCK parent_lock, Plane* line, double*dist, double bias)
 {
     Point point;
 
@@ -315,7 +315,7 @@ Object* pick_point(Point* p, LOCK parent_lock, Plane* line, float *dist, float b
     return NULL;
 }
 
-Object* pick_edge(Edge* e, LOCK parent_lock, Plane* line, float* dist, float bias)
+Object* pick_edge(Edge* e, LOCK parent_lock, Plane* line, double* dist, double bias)
 {
     Point point;
     Point* p;

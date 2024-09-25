@@ -669,7 +669,7 @@ snap_2d_angle(double x0, double y0, double*x1, double*y1, int angle_tol)
 // Display a coordinate or length, rounded to the tolerance.
 // buf must be char[64]
 char *
-display_rounded(char *buf, float val)
+display_rounded(char *buf, double val)
 {
     sprintf_s(buf, 64, "%.*f", tol_log, val); 
     return buf;

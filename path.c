@@ -95,7 +95,7 @@ point_direction(Point* p0, Point* p1, Plane* pl)
 void
 project(Plane* ap, Plane* princ, Plane* proj)
 {
-    float perp_factor =
+    double perp_factor =
         (princ->A * ap->A + princ->B * ap->B + princ->C * ap->C)
         /
         (princ->A * princ->A + princ->B * princ->B + princ->C * princ->C);
@@ -117,11 +117,11 @@ project(Plane* ap, Plane* princ, Plane* proj)
 // Single edge routines.
 
 // Return the total length of the edge.
-float
+double
 edge_total_length(Edge* e)
 {
     Point* p;
-    float total_length = 0;
+    double total_length = 0;
 
     switch (e->type & ~EDGE_CONSTRUCTION)
     {
@@ -146,8 +146,8 @@ edge_tangent_to_length(Edge* e, int first_index, float len, Plane* tangent)
     Point* p;
     int rc = 0;
     int last_index = 1 - first_index;
-    float accum_length = 0;
-    float el;
+    double accum_length = 0;
+    double el;
     int i;
 
     switch (e->type & ~EDGE_CONSTRUCTION)
@@ -218,13 +218,13 @@ edge_tangent_to_length(Edge* e, int first_index, float len, Plane* tangent)
 // Returns 2 if intersection is off the end of the edge, but is valid
 // (as for intersect_line_plane)
 int
-edge_tangent_to_intersect(Edge *e, int first_index, Plane* pl, Bbox *ebox, Plane* tangent, float* ret_len)
+edge_tangent_to_intersect(Edge *e, int first_index, Plane* pl, Bbox *ebox, Plane* tangent, double* ret_len)
 {
     Point pt;
     Point* p;
     int rc = 0;
     int last_index = 1 - first_index;
-    float accum_length = 0;
+    double accum_length = 0;
     
     switch (e->type & ~EDGE_CONSTRUCTION)
     {
@@ -434,7 +434,7 @@ path_total_length(Object* obj)
 
 // Return length along path to intersect with pl, and the tangent at pl.
 BOOL
-path_tangent_to_intersect(Object* obj, Plane* pl, Bbox *ebox, Plane* tangent, float *ret_len)
+path_tangent_to_intersect(Object* obj, Plane* pl, Bbox *ebox, Plane* tangent, double*ret_len)
 {
     if (obj->type == OBJ_EDGE)
     {

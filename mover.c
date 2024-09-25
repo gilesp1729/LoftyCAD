@@ -3,7 +3,7 @@
 #include <stdio.h>
 
 // Rotation matrix cached.
-static float rotate_3x3[9];
+static double rotate_3x3[9];
 static BOOL rotate_3x3_valid = FALSE;
 
 // Anything to do with moving and copying objects.
@@ -98,7 +98,7 @@ clear_move_copy_flags(Object* obj)
 // (like clone_face_reverse does).
 // Make sure to call clear_move_copy_flags afterwards.
 Object*
-copy_obj(Object* obj, float xoffset, float yoffset, float zoffset, BOOL cloning)
+copy_obj(Object* obj, double xoffset, double yoffset, double zoffset, BOOL cloning)
 {
     int i;
     Object* new_obj = NULL;
@@ -386,7 +386,7 @@ Face
 // Move any object by an offset on all its point coordinates.
 // Make sure to call clear_move_copy_flags afterwards.
 void
-move_obj(Object* obj, float xoffset, float yoffset, float zoffset)
+move_obj(Object* obj, double xoffset, double yoffset, double zoffset)
 {
     int i;
     Point* p;
@@ -474,7 +474,7 @@ move_obj(Object* obj, float xoffset, float yoffset, float zoffset)
 // Move a face by local normals (each boundary point is assumed to have a local normal
 // in the face's PlaneRef array)
 void
-extrude_local(Face* face, float length)
+extrude_local(Face* face, double length)
 {
     int i;
 
@@ -604,7 +604,7 @@ finished:
 // by find_corner_edges or find_adjacent_points.
 // Ignore any smooth factors, and ignore any groups in the halo list.
 void
-move_corner_edges(ListHead *halo, float xoffset, float yoffset, float zoffset)
+move_corner_edges(ListHead *halo, double xoffset, double yoffset, double zoffset)
 {
     Object* obj;
 
@@ -617,7 +617,7 @@ move_corner_edges(ListHead *halo, float xoffset, float yoffset, float zoffset)
 
 // Find a suitable (x,y,z) point about which to rotate any object.
 void
-find_obj_pivot(Object* obj, float* x, float* y, float* z)
+find_obj_pivot(Object* obj, double* x, double* y, double* z)
 {
     Point* p;
     Edge* edge;
@@ -666,7 +666,7 @@ find_obj_pivot(Object* obj, float* x, float* y, float* z)
 
 // Rotate a coordinate, in the facing plane, by 90 degrees in the positive direction.
 void
-rotate_coord_90_facing(double* x, double* y, double* z, float xc, float yc, float zc)
+rotate_coord_90_facing(double* x, double* y, double* z, double xc, double yc, double zc)
 {
     double x0 = *x - xc;
     double y0 = *y - yc;
@@ -727,7 +727,7 @@ rotate_plane_90_facing(Plane* pl)
 // Rotate any object, in the facing plane, by 90 degrees in the positive direction.
 // Make sure to call clear_move_copy_flags afterwards.
 void
-rotate_obj_90_facing(Object* obj, float xc, float yc, float zc)
+rotate_obj_90_facing(Object* obj, double xc, double yc, double zc)
 {
     int i;
     Point* p;
@@ -817,7 +817,7 @@ mat_mult_2x2_xy(double m[4], double x0, double y0, double* x, double* y)
 
 // Rotate a coordinate, in the facing plane, by angle alpha in the positive direction.
 void
-rotate_coord_free_facing(double* x, double* y, double* z, float alpha, float xc, float yc, float zc)
+rotate_coord_free_facing(double* x, double* y, double* z, float alpha, double xc, double yc, double zc)
 {
     double x0 = *x - xc;
     double y0 = *y - yc;
@@ -884,7 +884,7 @@ break;
 // Rotate any object, in the facing plane, by angle alpha in the positive direction.
 // Make sure to call clear_move_copy_flags afterwards.
 void
-rotate_obj_free_facing(Object* obj, float alpha, float xc, float yc, float zc)
+rotate_obj_free_facing(Object* obj, float alpha, double xc, double yc, double zc)
 {
     int i;
     Point* p;
@@ -973,14 +973,14 @@ void
 rotate_matrix_free_abc(Plane v1, Plane v2)
 {
     Plane axis;
-    float cosA, k;
+    double cosA, k;
         
     // Pass v1 and v2 by value so they can be normalised in here.
     normalise_plane(&v1);
     normalise_plane(&v2);
     cosA = pldot(&v1, &v2);
     plcross(&v1, &v2, &axis);
-    k = 1.0f / (1.0f + cosA);
+    k = 1.0 / (1.0 + cosA);
 
     rotate_3x3[0] = (axis.A * axis.A * k) + cosA;
     rotate_3x3[1] = (axis.B * axis.A * k) - axis.C;
@@ -1105,7 +1105,7 @@ rotate_obj_free_abc(Object* obj, Plane* v1, Plane* v2)
 // Scale a coordinate by (sx, sy, sz) about (xc, yc, zc). Unused scales are expected to be 1.
 // Zero or negative scales are ignored.
 void
-scale_coord_free(double* x, double* y, double* z, float sx, float sy, float sz, float xc, float yc, float zc)
+scale_coord_free(double* x, double* y, double* z, double sx, double sy, double sz, double xc, double yc, double zc)
 {
     if (sx < SMALL_COORD)
         sx = 1;
@@ -1121,7 +1121,7 @@ scale_coord_free(double* x, double* y, double* z, float sx, float sy, float sz, 
 
 // Scale an object.
 void
-scale_obj_free(Object* obj, float sx, float sy, float sz, float xc, float yc, float zc)
+scale_obj_free(Object* obj, double sx, double sy, double sz, double xc, double yc, double zc)
 {
     int i;
     Point* p;
@@ -1201,7 +1201,7 @@ scale_obj_free(Object* obj, float sx, float sy, float sz, float xc, float yc, fl
 
 // Reflect a coordinate in the facing plane.
 void
-reflect_coord_facing(double* x, double* y, double* z, float xc, float yc, float zc)
+reflect_coord_facing(double* x, double* y, double* z, double xc, double yc, double zc)
 {
     double x0 = *x - xc;
     double y0 = *y - yc;
@@ -1257,7 +1257,7 @@ reflect_plane_facing(Plane* pl)
 // take care to get normals and face ordering right!
 // Make sure to call clear_move_copy_flags afterwards.
 void
-reflect_obj_facing(Object* obj, float xc, float yc, float zc)
+reflect_obj_facing(Object* obj, double xc, double yc, double zc)
 {
     int i, n;
     Point* p;
@@ -1407,7 +1407,7 @@ reflect_obj_facing(Object* obj, float xc, float yc, float zc)
 void
 smooth_decay(Point* p, Point* cent)
 {
-    float two_stds = 2 * halo_rad * halo_rad / 9;  // Temp 2 * (R/3)**2
+    double two_stds = 2 * halo_rad * halo_rad / 9;  // Temp 2 * (R/3)**2
     double d2 = length_squared(p, cent);
 
     if (p->decay > 0)       // only set this once
@@ -1415,14 +1415,14 @@ smooth_decay(Point* p, Point* cent)
     if (d2 > halo_rad * halo_rad) // outside the radius
         return;
 
-    p->decay = expf(-d2 / two_stds);
+    p->decay = exp(-d2 / two_stds);
 }
 
 // Move a point by the smoothed offsets
 void
-move_smoothed_point(Point* p, float xoffset, float yoffset, float zoffset)
+move_smoothed_point(Point* p, double xoffset, double yoffset, double zoffset)
 {
-    float smooth = p->cosine * p->decay;
+    double smooth = p->cosine * p->decay;
 
     move_obj((Object*)p, xoffset * smooth, yoffset * smooth, zoffset * smooth);
 }
@@ -1471,7 +1471,7 @@ calc_halo_params(Face* face, ListHead* halo)
     Point cent;
     ArcEdge* ae;
     BezierEdge* be;
-    float cosine;
+    double cosine;
     int i;
 
     // The face must be part of a volume
@@ -1513,7 +1513,7 @@ calc_halo_params(Face* face, ListHead* halo)
     for (f = (Face*)vol->faces.head; f != NULL; f = (Face*)f->hdr.next)
     {
         BOOL in_halo = FALSE;
-        float face_decay = 0;
+        double face_decay = 0;
 
         if (f == face)
             continue;   // don't touch the central face
@@ -1583,7 +1583,7 @@ calc_halo_params(Face* face, ListHead* halo)
 // Move the halo around a face. The given face is assumed to 
 // already have been moved by (xoffset,yoffset,zoffset) and to have had its moved flags set.
 void
-move_halo_around_face(Face* face, float xoffset, float yoffset, float zoffset)
+move_halo_around_face(Face* face, double xoffset, double yoffset, double zoffset)
 {
     Volume* vol = face->vol;
     Face* f;

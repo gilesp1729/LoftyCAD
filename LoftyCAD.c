@@ -120,7 +120,7 @@ float total_angle;
 float effective_angle;
 
 // Effective scales similarly
-float eff_sx, eff_sy, eff_sz;
+double eff_sx, eff_sy, eff_sz;
 
 
 // Standard planes.
@@ -163,7 +163,7 @@ BOOL view_constr = TRUE;
 BOOL view_halo = FALSE;
 
 // Halo radius
-float halo_rad = 50;
+double halo_rad = 50;
 
 // Current filename
 char curr_filename[256] = { 0, };
