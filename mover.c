@@ -666,11 +666,11 @@ find_obj_pivot(Object* obj, float* x, float* y, float* z)
 
 // Rotate a coordinate, in the facing plane, by 90 degrees in the positive direction.
 void
-rotate_coord_90_facing(float* x, float* y, float* z, float xc, float yc, float zc)
+rotate_coord_90_facing(double* x, double* y, double* z, float xc, float yc, float zc)
 {
-    float x0 = *x - xc;
-    float y0 = *y - yc;
-    float z0 = *z - zc;
+    double x0 = *x - xc;
+    double y0 = *y - yc;
+    double z0 = *z - zc;
 
     switch (facing_index)
     {
@@ -698,9 +698,9 @@ rotate_coord_90_facing(float* x, float* y, float* z, float xc, float yc, float z
 void
 rotate_plane_90_facing(Plane* pl)
 {
-    float A0 = pl->A;
-    float B0 = pl->B;
-    float C0 = pl->C;
+    double A0 = pl->A;
+    double B0 = pl->B;
+    double C0 = pl->C;
 
     switch (facing_index)
     {
@@ -809,19 +809,19 @@ rotate_obj_90_facing(Object* obj, float xc, float yc, float zc)
 
 // 2x2 rotation helper
 static void
-mat_mult_2x2_xy(double m[4], float x0, float y0, float* x, float* y)
+mat_mult_2x2_xy(double m[4], double x0, double y0, double* x, double* y)
 {
-    *x = (float)(m[0] * x0 + m[1] * y0);
-    *y = (float)(m[2] * x0 + m[3] * y0);
+    *x = m[0] * x0 + m[1] * y0;
+    *y = m[2] * x0 + m[3] * y0;
 }
 
 // Rotate a coordinate, in the facing plane, by angle alpha in the positive direction.
 void
-rotate_coord_free_facing(float* x, float* y, float* z, float alpha, float xc, float yc, float zc)
+rotate_coord_free_facing(double* x, double* y, double* z, float alpha, float xc, float yc, float zc)
 {
-    float x0 = *x - xc;
-    float y0 = *y - yc;
-    float z0 = *z - zc;
+    double x0 = *x - xc;
+    double y0 = *y - yc;
+    double z0 = *z - zc;
     double co = cos(alpha / RAD);
     double si = sin(alpha / RAD);
     double m[4] = { co, si, -si, co };
@@ -855,9 +855,9 @@ rotate_coord_free_facing(float* x, float* y, float* z, float alpha, float xc, fl
 void
 rotate_plane_free_facing(Plane* pl, float alpha)
 {
-    float A0 = pl->A;
-    float B0 = pl->B;
-    float C0 = pl->C;
+    double A0 = pl->A;
+    double B0 = pl->B;
+    double C0 = pl->C;
     double co = cos(alpha / RAD);
     double si = sin(alpha / RAD);
     double m[4] = { co, si, -si, co };
@@ -996,11 +996,11 @@ rotate_matrix_free_abc(Plane v1, Plane v2)
 // Rotate a point by the angle between two Planes in 3D.
 // The centre of rotation is the refpt of v2.
 void
-rotate_coord_free_abc(float* x, float* y, float* z, Plane* v1, Plane* v2)
+rotate_coord_free_abc(double* x, double* y, double* z, Plane* v1, Plane* v2)
 {
-    float x0 = *x - v2->refpt.x;
-    float y0 = *y - v2->refpt.y;
-    float z0 = *z - v2->refpt.z;
+    double x0 = *x - v2->refpt.x;
+    double y0 = *y - v2->refpt.y;
+    double z0 = *z - v2->refpt.z;
 
     ASSERT(rotate_3x3_valid, "We must have a valid 3x3 rotation matrix by now");
 
@@ -1105,7 +1105,7 @@ rotate_obj_free_abc(Object* obj, Plane* v1, Plane* v2)
 // Scale a coordinate by (sx, sy, sz) about (xc, yc, zc). Unused scales are expected to be 1.
 // Zero or negative scales are ignored.
 void
-scale_coord_free(float* x, float* y, float* z, float sx, float sy, float sz, float xc, float yc, float zc)
+scale_coord_free(double* x, double* y, double* z, float sx, float sy, float sz, float xc, float yc, float zc)
 {
     if (sx < SMALL_COORD)
         sx = 1;
@@ -1201,11 +1201,11 @@ scale_obj_free(Object* obj, float sx, float sy, float sz, float xc, float yc, fl
 
 // Reflect a coordinate in the facing plane.
 void
-reflect_coord_facing(float* x, float* y, float* z, float xc, float yc, float zc)
+reflect_coord_facing(double* x, double* y, double* z, float xc, float yc, float zc)
 {
-    float x0 = *x - xc;
-    float y0 = *y - yc;
-    float z0 = *z - zc;
+    double x0 = *x - xc;
+    double y0 = *y - yc;
+    double z0 = *z - zc;
 
     switch (facing_index)
     {
@@ -1230,9 +1230,9 @@ reflect_coord_facing(float* x, float* y, float* z, float xc, float yc, float zc)
 void
 reflect_plane_facing(Plane* pl)
 {
-    float A0 = pl->A;
-    float B0 = pl->B;
-    float C0 = pl->C;
+    double A0 = pl->A;
+    double B0 = pl->B;
+    double C0 = pl->C;
 
     switch (facing_index)
     {
@@ -1408,7 +1408,7 @@ void
 smooth_decay(Point* p, Point* cent)
 {
     float two_stds = 2 * halo_rad * halo_rad / 9;  // Temp 2 * (R/3)**2
-    float d2 = length_squared(p, cent);
+    double d2 = length_squared(p, cent);
 
     if (p->decay > 0)       // only set this once
         return;

@@ -1,11 +1,11 @@
 // C interface to a little bit of CGAL's polygon mesh processing library.
 
 #include "mesh.h"
-typedef void(*FaceCoordCB)(void* arg, float x[3], float y[3], float z[3]);
+//typedef void(*FaceCoordCB)(void* arg, float x[3], float y[3], float z[3]);
 typedef void(*FaceCoordCB_D)(void* arg, double x[3], double y[3], double z[3]);
 typedef void(*FaceCoordMaterialCB)(void* arg, int mat_index, float x[3], float y[3], float z[3]);
 typedef void(*FaceVertexCB)(void *arg, int nv, Vertex_index *vi);
-typedef void(*VertexCB)(void* arg, Vertex_index* v, float x, float y, float z);
+//typedef void(*VertexCB)(void* arg, Vertex_index* v, float x, float y, float z);
 typedef void(*VertexCB_D)(void* arg, Vertex_index* v, double x, double y, double z);
 
 
@@ -277,15 +277,6 @@ extern "C"
 
     // Routines for enumerating vertices in index or coord form.
     void
-        mesh_foreach_vertex(Mesh* mesh, VertexCB callback, void* callback_arg)
-    {
-        BOOST_FOREACH(Vertex_index v, mesh->vertices())
-        {
-            (*callback)(callback_arg, &v, mesh->point(v).x(), mesh->point(v).y(), mesh->point(v).z());
-        }
-    }
-
-    void
         mesh_foreach_vertex_d(Mesh* mesh, VertexCB_D callback, void* callback_arg)
     {
         BOOST_FOREACH(Vertex_index v, mesh->vertices())
@@ -309,26 +300,6 @@ extern "C"
                 i++;
             }
             (*callback)(callback_arg, i, vi);
-        }
-    }
-
-    void
-        mesh_foreach_face_coords(Mesh* mesh, FaceCoordCB callback, void* callback_arg)
-    {
-        float x[3], y[3], z[3];
-        int i;
-
-        BOOST_FOREACH(Face_index f, mesh->faces())
-        {
-            i = 0;
-            BOOST_FOREACH(Vertex_index v, CGAL::vertices_around_face(mesh->halfedge(f), *mesh))
-            {
-                x[i] = mesh->point(v).x();
-                y[i] = mesh->point(v).y();
-                z[i] = mesh->point(v).z();
-                i++;
-            }
-            (*callback)(callback_arg, x, y, z);
         }
     }
 

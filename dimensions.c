@@ -317,7 +317,7 @@ update_dims(Object *obj, char *buf)
             // Determine principal directions from paired faces with positive axis-aligned normals
             for (f = (Face*)vol->faces.head; f != NULL; f = (Face*)f->hdr.next)
             {
-                float x, y, z;
+                double x, y, z;
 
                 if (!f->paired)
                     continue;
@@ -524,7 +524,7 @@ get_dims_string(Object *obj, char buf[64])
         }
         else if (v->measured)   // Rect prisms with all 3 dims known from parallel faces
         {
-            float x, y, z, l, w, h;
+            double x, y, z, l, w, h;
 
             // Determine principal directions from paired faces with positive axis-aligned normals
             for (f = (Face*)v->faces.head; f != NULL; f = (Face*)f->hdr.next)
@@ -622,7 +622,7 @@ show_dims_on(Object *obj, PRESENTATION pres, LOCK parent_lock)
     Edge *e;
     Point *p0, *p1, *p2;
     int n;
-    float x, y, z;
+    double x, y, z;
     BOOL selected = pres & DRAW_SELECTED;
     BOOL highlighted = pres & DRAW_HIGHLIGHT;
 
@@ -633,7 +633,7 @@ show_dims_on(Object *obj, PRESENTATION pres, LOCK parent_lock)
     case OBJ_POINT:
         p0 = (Point*)obj;
         color_as(OBJ_EDGE, 1.0f, EDGE_STRAIGHT, 0, FALSE);
-        glRasterPos3f(p0->x, p0->y, p0->z);
+        glRasterPos3d(p0->x, p0->y, p0->z);
         break;
 
     case OBJ_EDGE:
@@ -642,7 +642,7 @@ show_dims_on(Object *obj, PRESENTATION pres, LOCK parent_lock)
             return;
 
         color_as(OBJ_EDGE, 1.0f, e->type & EDGE_CONSTRUCTION, 0, FALSE);
-        glRasterPos3f
+        glRasterPos3d
         (
             (e->endpoints[0]->x + e->endpoints[1]->x) / 2,
             (e->endpoints[0]->y + e->endpoints[1]->y) / 2,
@@ -670,7 +670,7 @@ show_dims_on(Object *obj, PRESENTATION pres, LOCK parent_lock)
                 ASSERT(FALSE, "Where's the arc edge?");
                 p0 = f->edges[0]->endpoints[0];
             }
-            glRasterPos3f(p0->x, p0->y, p0->z);
+            glRasterPos3d(p0->x, p0->y, p0->z);
             break;
 
         default:
@@ -680,7 +680,7 @@ show_dims_on(Object *obj, PRESENTATION pres, LOCK parent_lock)
                 p0 = (Point *)f->view_list.head;
                 p1 = (Point *)p0->hdr.next;
                 p2 = (Point *)p1->hdr.next;
-                glRasterPos3f
+                glRasterPos3d
                 (
                     (p0->x + p2->x) / 2,
                     (p0->y + p2->y) / 2,
@@ -699,7 +699,7 @@ show_dims_on(Object *obj, PRESENTATION pres, LOCK parent_lock)
                 x /= n;
                 y /= n;
                 z /= n;
-                glRasterPos3f(x, y, z);
+                glRasterPos3d(x, y, z);
             }
             break;
         }

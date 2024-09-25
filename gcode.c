@@ -161,7 +161,7 @@ tube(Endcap* e0, Endcap* e1)
         norm.B = e0->pts[i].y - e0->pts[o].y;
         norm.C = e0->pts[i].z - e0->pts[o].z;
         normalise_plane(&norm);
-        glNormal3f(norm.A, norm.B, norm.C);
+        glNormal3d(norm.A, norm.B, norm.C);
 
         glVertex3f(e0->pts[i].x, e0->pts[i].y, e0->pts[i].z);
         glVertex3f(e0->pts[j].x, e0->pts[j].y, e0->pts[j].z);

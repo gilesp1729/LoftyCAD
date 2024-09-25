@@ -667,8 +667,8 @@ left_down(AUX_EVENTREC *event)
         {
         case PLANE_XY:
         case PLANE_MINUS_XY:
-            d1.x = fabsf(picked_point.x - centre_facing_plane.refpt.x);
-            d1.y = fabsf(picked_point.y - centre_facing_plane.refpt.y);
+            d1.x = fabs(picked_point.x - centre_facing_plane.refpt.x);
+            d1.y = fabs(picked_point.y - centre_facing_plane.refpt.y);
             if (d1.x > d1.y)
                 scaled_dirn = DIRN_X;
             else
@@ -677,8 +677,8 @@ left_down(AUX_EVENTREC *event)
 
         case PLANE_XZ:
         case PLANE_MINUS_XZ:
-            d1.x = fabsf(picked_point.x - centre_facing_plane.refpt.x);
-            d1.z = fabsf(picked_point.z - centre_facing_plane.refpt.z);
+            d1.x = fabs(picked_point.x - centre_facing_plane.refpt.x);
+            d1.z = fabs(picked_point.z - centre_facing_plane.refpt.z);
             if (d1.x > d1.z)
                 scaled_dirn = DIRN_X;
             else
@@ -687,8 +687,8 @@ left_down(AUX_EVENTREC *event)
 
         case PLANE_YZ:
         case PLANE_MINUS_YZ:
-            d1.y = fabsf(picked_point.y - centre_facing_plane.refpt.y);
-            d1.z = fabsf(picked_point.z - centre_facing_plane.refpt.z);
+            d1.y = fabs(picked_point.y - centre_facing_plane.refpt.y);
+            d1.z = fabs(picked_point.z - centre_facing_plane.refpt.z);
             if (d1.y > d1.z)
                 scaled_dirn = DIRN_Y;
             else

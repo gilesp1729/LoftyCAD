@@ -46,17 +46,13 @@ BOOL mesh_union(Mesh **mesh1, Mesh *mesh2);
 BOOL mesh_intersection(Mesh **mesh1, Mesh *mesh2);
 BOOL mesh_difference(Mesh **mesh1, Mesh *mesh2);
 
-typedef void(*FaceCoordCB)(void* arg, float x[3], float y[3], float z[3]);
 typedef void(*FaceCoordCB_D)(void* arg, double x[3], double y[3], double z[3]);
 typedef void(*FaceCoordMaterialCB)(void* arg, int mat, float x[3], float y[3], float z[3]);
 typedef void(*FaceVertexCB)(void *arg, int nv, Vertex_index *vi);
-typedef void(*VertexCB)(void* arg, Vertex_index* v, float x, float y, float z);
 typedef void(*VertexCB_D)(void* arg, Vertex_index* v, double x, double y, double z);
 
-void mesh_foreach_vertex(Mesh* mesh, VertexCB callback, void* callback_arg);
 void mesh_foreach_vertex_d(Mesh* mesh, VertexCB_D callback, void* callback_arg);
 void mesh_foreach_face_vertices(Mesh *mesh, FaceVertexCB callback, void *callback_arg);
-void mesh_foreach_face_coords(Mesh* mesh, FaceCoordCB callback, void* callback_arg);
 void mesh_foreach_face_coords_d(Mesh* mesh, FaceCoordCB_D callback, void* callback_arg);
 void mesh_foreach_face_coords_mat(Mesh* mesh, FaceCoordMaterialCB callback, void* callback_arg);
 int mesh_num_vertices(Mesh *mesh);

@@ -48,7 +48,7 @@ BOOL
 snap_ray_edge(GLint x, GLint y, Edge *edge, Point *new_point)
 {
     Plane u, v, w0;
-    float a, b, c, d, e, sc, denom;
+    double a, b, c, d, e, sc, denom;
 
     if ((edge->type & ~EDGE_CONSTRUCTION) != EDGE_STRAIGHT)
         return FALSE; 
@@ -90,11 +90,11 @@ snap_ray_edge(GLint x, GLint y, Edge *edge, Point *new_point)
 // returning the distance of the nearest point on an edge to the ray, or a 
 // very large number if there is no intersection. The edge is considered finite.
 // THere is also a point-segment version.
-float
+double
 dist_ray_to_edge(Plane *v, Edge* edge, Point* new_point)
 {
     Plane u, w0;
-    float a, b, c, d, e, sc, tc, denom;
+    double a, b, c, d, e, sc, tc, denom;
     Point other_pt;
 
     if ((edge->type & ~EDGE_CONSTRUCTION) != EDGE_STRAIGHT)
@@ -139,11 +139,11 @@ dist_ray_to_edge(Plane *v, Edge* edge, Point* new_point)
     return length(new_point, &other_pt);
 }
 
-float
+double
 dist_ray_to_segment(Plane* v, Point *p1, Point *p2, Point* new_point)
 {
     Plane u, w0;
-    float a, b, c, d, e, sc, tc, denom;
+    double a, b, c, d, e, sc, tc, denom;
     Point other_pt;
 
 
@@ -188,11 +188,11 @@ dist_ray_to_segment(Plane* v, Point *p1, Point *p2, Point* new_point)
 
 // Find the shortest distance from a point to an edge (line segment) or an infinite line (expressed by an edge)
 // Algorithm and notation from D.Sunday, "Lines and Distance of a Point to a Line", http://geomalgorithms.com/a02-_lines.html
-float
+double
 dist_point_to_edge(Point *P, Edge *S)
 {
     Point v, w, Pb;
-    float c1, c2, b;
+    double c1, c2, b;
 
     //  Vector v = S.P1 - S.P0;
     //  Vector w = P - S.P0;
@@ -223,11 +223,11 @@ dist_point_to_edge(Point *P, Edge *S)
 
 // The same, but consider the line as infinite, and also return the perpendicular
 // intersection point. There is also a Plane, Planeref, and ray version.
-float
+double
 dist_point_to_perp_line(Point* P, Edge* S, Point* Pb)
 {
     Point v, w;
-    float c1, c2, b;
+    double c1, c2, b;
 
     //  Vector v = S.P1 - S.P0;
     //  Vector w = P - S.P0;
@@ -250,11 +250,11 @@ dist_point_to_perp_line(Point* P, Edge* S, Point* Pb)
     return length(P, Pb);
 }
 
-float
+double
 dist_point_to_perp_plane(Point* P, Plane* S, Point* Pb)
 {
     Point v, w;
-    float c1, c2, b;
+    double c1, c2, b;
 
     //  Vector v = S.P1 - S.P0; (in this case just the ABC of the plane)
     //  Vector w = P - S.P0; (the refpt of the plane)
@@ -277,11 +277,11 @@ dist_point_to_perp_plane(Point* P, Plane* S, Point* Pb)
     return length(P, Pb);
 }
 
-float
+double
 dist_point_to_perp_planeref(Point* P, PlaneRef* S, Point* Pb)
 {
     Point v, w;
-    float c1, c2, b;
+    double c1, c2, b;
 
     //  Vector v = S.P1 - S.P0; (in this case just the ABC of the plane)
     //  Vector w = P - S.P0; (the refpt of the plane)
@@ -304,11 +304,11 @@ dist_point_to_perp_planeref(Point* P, PlaneRef* S, Point* Pb)
     return length(P, Pb);
 }
 
-float
+double
 dist_point_to_ray(Point* P, Plane* v, Point* Pb)
 {
     Plane w;
-    float c1, c2, b;
+    double c1, c2, b;
 
     //  Vector v = ray
     //  Vector w = P - ray.refpt
@@ -338,7 +338,7 @@ dist_point_to_ray(Point* P, Plane* v, Point* Pb)
 int
 intersect_line_plane(Plane *line, Plane *plane, Point *new_point)
 {
-    float Ldotn, dpdotn, d;
+    double Ldotn, dpdotn, d;
     Point dp;
 
     Ldotn = plane->A * line->A + plane->B * line->B + plane->C * line->C;
@@ -347,9 +347,9 @@ intersect_line_plane(Plane *line, Plane *plane, Point *new_point)
     dp.z = plane->refpt.z - line->refpt.z;
 
     dpdotn = dp.x * plane->A + dp.y * plane->B + dp.z * plane->C;
-    if (fabsf(Ldotn) < SMALL_COORD)
+    if (fabs(Ldotn) < SMALL_COORD)
     {
-        if (fabsf(dpdotn) < SMALL_COORD)    // the line lines in the plane
+        if (fabs(dpdotn) < SMALL_COORD)    // the line lines in the plane
             return -1;
         else
             return 0;                       // they do not intersect
@@ -369,14 +369,14 @@ intersect_line_plane(Plane *line, Plane *plane, Point *new_point)
 // Returns: 1 - intersects, 0 - no intersection, -1 - line lies in the plane
 // Return 2 if the intersection point is off the end of the segment.
 int
-intersect_segment_plane(float x0, float y0, float z0, float x1, float y1, float z1, 
+intersect_segment_plane(double x0, double y0, double z0, double x1, double y1, double z1,
                         Plane* plane, Point* new_point)
 {
-    float Ldotn, dpdotn, d;
+    double Ldotn, dpdotn, d;
     Point dp;
-    float A = x1 - x0;
-    float B = y1 - y0;
-    float C = z1 - z0;
+    double A = x1 - x0;
+    double B = y1 - y0;
+    double C = z1 - z0;
 
     Ldotn = plane->A * A + plane->B * B + plane->C * C;
     dp.x = plane->refpt.x - x0;
@@ -384,9 +384,9 @@ intersect_segment_plane(float x0, float y0, float z0, float x1, float y1, float 
     dp.z = plane->refpt.z - z0;
 
     dpdotn = dp.x * plane->A + dp.y * plane->B + dp.z * plane->C;
-    if (fabsf(Ldotn) < SMALL_COORD)
+    if (fabs(Ldotn) < SMALL_COORD)
     {
-        if (fabsf(dpdotn) < SMALL_COORD)    // the line lines in the plane
+        if (fabs(dpdotn) < SMALL_COORD)    // the line lines in the plane
             return -1;
         else
             return 0;                       // they do not intersect
@@ -403,7 +403,7 @@ intersect_segment_plane(float x0, float y0, float z0, float x1, float y1, float 
 }
 
 // Return the (signed) distance between a point and a plane
-float
+double
 distance_point_plane(Plane *plane, Point *p)
 {
     return
@@ -415,14 +415,14 @@ distance_point_plane(Plane *plane, Point *p)
 }
 
 // Dot and cross products given separate components.
-float
-dot(float x0, float y0, float z0, float x1, float y1, float z1)
+double
+dot(double x0, double y0, double z0, double x1, double y1, double z1)
 {
     return x0*x1 + y0*y1 + z0*z1;
 }
 
 void
-cross(float x0, float y0, float z0, float x1, float y1, float z1, float *xc, float *yc, float *zc)
+cross(double x0, double y0, double z0, double x1, double y1, double z1, double*xc, double*yc, double*zc)
 {
     *xc = y0*z1 - z0*y1;
     *yc = z0*x1 - x0*z1;
@@ -434,10 +434,10 @@ BOOL
 normal3(Point *b, Point *a, Point *c, Plane *norm)
 {
     Point cp;
-    float length;
+    double length;
 
     cross(b->x - a->x, b->y - a->y, b->z - a->z, c->x - a->x, c->y - a->y, c->z - a->z, &cp.x, &cp.y, &cp.z);
-    length = (float)sqrt(cp.x * cp.x + cp.y * cp.y + cp.z * cp.z);
+    length = sqrt(cp.x * cp.x + cp.y * cp.y + cp.z * cp.z);
     if (nz(length))
         return FALSE;
 
@@ -455,7 +455,7 @@ normal3(Point *b, Point *a, Point *c, Plane *norm)
 float
 angle3(Point *b, Point *a, Point *c, Plane *n)
 {
-    float cosa = dot(b->x - a->x, b->y - a->y, b->z - a->z, c->x - a->x, c->y - a->y, c->z - a->z);
+    double cosa = dot(b->x - a->x, b->y - a->y, b->z - a->z, c->x - a->x, c->y - a->y, c->z - a->z);
     float angle;
     Plane cp;
 
@@ -463,47 +463,47 @@ angle3(Point *b, Point *a, Point *c, Plane *n)
     cosa /= length(a, c);
     if (cosa > 1)
         cosa = 1;
-    angle = acosf(cosa);
+    angle = (float)acos(cosa);
     cross(b->x - a->x, b->y - a->y, b->z - a->z, c->x - a->x, c->y - a->y, c->z - a->z, &cp.A, &cp.B, &cp.C);
     if (pldot(n, &cp) < 0)
         angle = -angle;
     return angle;
 }
 
-float
+double
 length(Point *p0, Point *p1)
 {
-    float x0 = p0->x;
-    float y0 = p0->y;
-    float z0 = p0->z;
-    float x1 = p1->x;
-    float y1 = p1->y;
-    float z1 = p1->z;
+    double x0 = p0->x;
+    double y0 = p0->y;
+    double z0 = p0->z;
+    double x1 = p1->x;
+    double y1 = p1->y;
+    double z1 = p1->z;
 
-    return (float)sqrt((x1 - x0)*(x1 - x0) + (y1 - y0)*(y1 - y0) + (z1 - z0)*(z1 - z0));
+    return sqrt((x1 - x0)*(x1 - x0) + (y1 - y0)*(y1 - y0) + (z1 - z0)*(z1 - z0));
 }
 
-float
+double
 length_squared(Point *p0, Point *p1)
 {
-    float x0 = p0->x;
-    float y0 = p0->y;
-    float z0 = p0->z;
-    float x1 = p1->x;
-    float y1 = p1->y;
-    float z1 = p1->z;
+    double x0 = p0->x;
+    double y0 = p0->y;
+    double z0 = p0->z;
+    double x1 = p1->x;
+    double y1 = p1->y;
+    double z1 = p1->z;
 
     return (x1 - x0)*(x1 - x0) + (y1 - y0)*(y1 - y0) + (z1 - z0)*(z1 - z0);
 }
 
 // Area of a triangle
-float
+double
 area_triangle(Point *a, Point *b, Point *c)
 {
     Point cp;
 
     cross(b->x - a->x, b->y - a->y, b->z - a->z, c->x - a->x, c->y - a->y, c->z - a->z, &cp.x, &cp.y, &cp.z);
-    return 0.5f * sqrtf(cp.x * cp.x + cp.y * cp.y + cp.z * cp.z);
+    return 0.5 * sqrt(cp.x * cp.x + cp.y * cp.y + cp.z * cp.z);
 }
 
 // Normal of a 3D polygon expressed as a list of Points
@@ -547,7 +547,7 @@ polygon_planar(Point* list, Plane* norm)
     for (p = (Point *)list->hdr.next; p->hdr.next != NULL; p = (Point*)p->hdr.next)
     {
         // check every other point's distance to the plane
-        if (fabsf(distance_point_plane(&pl, p)) > tolerance)
+        if (fabs(distance_point_plane(&pl, p)) > tolerance)
             return FALSE;
     }
 
@@ -636,34 +636,34 @@ snap_to_angle(Plane *plane, Point *p0, Point *p1, int angle_tol)
 // Snap a length to the grid snapping distance, or to the smaller tolerance if snapping
 // is turned off (or temporarily inhibited)
 void
-snap_to_scale(float *length, BOOL inhibit_snapping)
+snap_to_scale(double*length, BOOL inhibit_snapping)
 {
-    float snap;
+    double snap;
 
     // This assumes grid scale and tolerance are powers of 10.
     if (snapping_to_grid && !inhibit_snapping)
         snap = grid_snap;
     else
         snap = tolerance;
-    *length = roundf(*length / snap) * snap;
+    *length = round(*length / snap) * snap;
 }
 
 // Snap to an angle in 2D. angle_tol is in degrees. 
 void
-snap_2d_angle(float x0, float y0, float *x1, float *y1, int angle_tol)
+snap_2d_angle(double x0, double y0, double*x1, double*y1, int angle_tol)
 {
-    float length = (float)sqrt((*x1 - x0)*(*x1 - x0) + (*y1 - y0)*(*y1 - y0));
-    int theta = (int)(atan2f(*y1 - y0, *x1 - x0) * 57.29577);
+    double length = sqrt((*x1 - x0)*(*x1 - x0) + (*y1 - y0)*(*y1 - y0));
+    int theta = (int)(atan2(*y1 - y0, *x1 - x0) * 57.29577);
     int tol_half = angle_tol / 2;
-    float theta_rad;
+    double theta_rad;
 
     // round theta to a multiple of angle_tol
     if (theta < 0)
         theta += 360;
     theta = ((theta + tol_half) / angle_tol) * angle_tol; 
-    theta_rad = theta / 57.29577f;
-    *x1 = x0 + length * cosf(theta_rad);
-    *y1 = y0 + length * sinf(theta_rad);
+    theta_rad = theta / 57.29577;
+    *x1 = x0 + length * cos(theta_rad);
+    *y1 = y0 + length * sin(theta_rad);
 }
 
 // Display a coordinate or length, rounded to the tolerance.
@@ -694,13 +694,13 @@ normalise_plane(Plane *p)
 BOOL
 normalised(Plane* p)
 {
-    float length = (float)sqrt(p->A * p->A + p->B * p->B + p->C * p->C);
+    double length = sqrt(p->A * p->A + p->B * p->B + p->C * p->C);
 
-    return nz(fabsf(length) - 1.0f);
+    return nz(fabs(length) - 1.0);
 }
 
 // Dot and cross products between two planes.
-float
+double
 pldot(Plane *p1, Plane *p2)
 {
     return p1->A*p2->A + p1->B*p2->B + p1->C*p2->C;
@@ -728,7 +728,7 @@ normalise_point(Point *p)
 }
 
 // Dot and cross products between two vectors represented as Points.
-float
+double
 pdot(Point *p1, Point *p2)
 {
     return p1->x*p2->x + p1->y*p2->y + p1->z*p2->z;
@@ -747,7 +747,7 @@ BOOL
 centre_3pt_circle(Point *p1, Point *p2, Point *p3, Plane *pl, Point *centre, BOOL *clockwise)
 {
     Plane n1, n2, n3, n1xn2, n2xn3, n3xn1;
-    float d1, d2, d3, denom;
+    double d1, d2, d3, denom;
 
     // Determine the 3 planes. Two of them bisect the lines p1-p2 and p2-p3.
     n1 = *pl;
@@ -802,7 +802,7 @@ BOOL
 centre_2pt_tangent_circle(Point *p1, Point *p2, Point *p, Plane *pl, Point *centre, BOOL *clockwise)
 {
     Point mid;
-    float lsq, dmsq, coeff;
+    double lsq, dmsq, coeff;
     Plane pp1, pp2, pp1xpp2;
 
     mid.x = (p1->x + p2->x) / 2;
@@ -867,7 +867,7 @@ look_at_centre_d(Point c, Point p1, Plane n, double matrix[16])
 
 // make the line p0-p1 a new length of len, by moving p1.
 void
-new_length(Point* p0, Point* p1, float len)
+new_length(Point* p0, Point* p1, double len)
 {
     Point v;
 
@@ -883,7 +883,7 @@ new_length(Point* p0, Point* p1, float len)
 // make the line p0-p1 a new length of len, by moving both p0 and p1
 // about the line's midpoint.
 void
-new_length_mid(Point* p0, Point* p1, float len)
+new_length_mid(Point* p0, Point* p1, double len)
 {
     Point v;
 
@@ -948,3 +948,34 @@ mat_mult_3x3(double *m, double *mat)
     mat_copy_3x3(res, mat);
 }
 
+#ifdef DEBUG_NEAR_PT_TOL
+BOOL near_pt(Point* p1, Point* p2, double tol)
+{
+    BOOL rc =
+    (
+        fabs((p1)->x - (p2)->x) < tol
+        &&
+        fabs((p1)->y - (p2)->y) < tol
+        &&
+        fabs((p1)->z - (p2)->z) < tol
+    );
+
+    if (rc)
+    {
+        if
+        (
+            !(
+                fabs((p1)->x - (p2)->x) < tol * tol
+                &&
+                fabs((p1)->y - (p2)->y) < tol * tol
+                &&
+                fabs((p1)->z - (p2)->z) < tol * tol
+             )
+        )
+            DebugBreak();
+    }
+
+    return rc;  // return result of testing with the original tol
+}
+
+#endif

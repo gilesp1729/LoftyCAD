@@ -216,11 +216,11 @@ void
 draw_triangle(void *arg, int mat, float x[3], float y[3], float z[3])
 {
     int i;
-    float A, B, C, length;
+    double A, B, C, length;
 
     SetMaterial(mat, FALSE);
     cross(x[1] - x[0], y[1] - y[0], z[1] - z[0], x[2] - x[0], y[2] - y[0], z[2] - z[0], &A, &B, &C);
-    length = (float)sqrt(A * A + B * B + C * C);
+    length = sqrt(A * A + B * B + C * C);
     if (!nz(length))
     {
         A /= length;
@@ -229,7 +229,7 @@ draw_triangle(void *arg, int mat, float x[3], float y[3], float z[3])
         glNormal3d(A, B, C);
     }
     for (i = 0; i < 3; i++)
-        glVertex3d(x[i], y[i], z[i]);
+        glVertex3f(x[i], y[i], z[i]);
 }
 
 // Helpers for all clipping tests: determine if a point is clipped out by any
@@ -1732,7 +1732,7 @@ Draw(void)
                 {
                     Plane proj_plane;
                     Face *face = (Face *)picked_obj;
-                    float length;
+                    double length;
 
                     // Can we extrude this face? (does it have a normal?)
                     if (!extrudible((Object *)face))

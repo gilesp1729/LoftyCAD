@@ -18,37 +18,13 @@ int *reindex;
 
 // Write a single mesh triangle with normal out to an STL file
 void
-export_triangle_stl(void* arg, float x[3], float y[3], float z[3])
-{
-    int i;
-    float A, B, C, length;
-
-    cross(x[1] - x[0], y[1] - y[0], z[1] - z[0], x[2] - x[0], y[2] - y[0], z[2] - z[0], &A, &B, &C);
-    length = (float)sqrt(A * A + B * B + C * C);
-    if (!nz(length))
-    {
-        A /= length;
-        B /= length;
-        C /= length;
-    }
-
-    fprintf_s(stl, "facet normal %f %f %f\n", A, B, C);
-    fprintf_s(stl, "  outer loop\n");
-    for (i = 0; i < 3; i++)
-        fprintf_s(stl, "    vertex %f %f %f\n", x[i], y[i], z[i]);
-    fprintf_s(stl, "  endloop\n");
-    fprintf_s(stl, "endfacet\n");
-    num_exported_tri++;
-}
-
-void
 export_triangle_stl_d(void* arg, double x[3], double y[3], double z[3])
 {
     int i;
-    float A, B, C, length;
+    double A, B, C, length;
 
     cross(x[1] - x[0], y[1] - y[0], z[1] - z[0], x[2] - x[0], y[2] - y[0], z[2] - z[0], &A, &B, &C);
-    length = (float)sqrt(A * A + B * B + C * C);
+    length = sqrt(A * A + B * B + C * C);
     if (!nz(length))
     {
         A /= length;
@@ -56,7 +32,7 @@ export_triangle_stl_d(void* arg, double x[3], double y[3], double z[3])
         C /= length;
     }
 
-    fprintf_s(stl, "facet normal %f %f %f\n", A, B, C);
+    fprintf_s(stl, "facet normal %.15f %.15f %.15f\n", A, B, C);
     fprintf_s(stl, "  outer loop\n");
     for (i = 0; i < 3; i++)
         fprintf_s(stl, "    vertex %.15f %.15f %.15f\n", x[i], y[i], z[i]);
@@ -66,13 +42,6 @@ export_triangle_stl_d(void* arg, double x[3], double y[3], double z[3])
 }
 
 // Write a vertex out to an OFF file, counting is zero-based position along the way
-void
-export_vertex_off(void* arg, Vertex_index* v, float x, float y, float z)
-{
-    fprintf_s(off, "%f %f %f\n", x, y, z);
-    reindex[*(int*)v] = num_exported_vertices++;
-}
-
 void
 export_vertex_off_d(void* arg, Vertex_index* v, double x, double y, double z)
 {
@@ -94,13 +63,6 @@ export_triangle_off(void* arg, int nv, Vertex_index* vi)
 }
 
 // Write a vertex out to an AMF file
-void
-export_vertex_amf(void* arg, Vertex_index* v, float x, float y, float z)
-{
-    fprintf_s(amf, "        <vertex><coordinates><x>%f</x><y>%f</y><z>%f</z></coordinates></vertex>\n", x, y, z);
-    reindex[*(int*)v] = num_exported_vertices++;
-}
-
 void
 export_vertex_amf_d(void* arg, Vertex_index* v, double x, double y, double z)
 {
@@ -539,7 +501,6 @@ export_object_tree(Group *tree, char *filename, int file_index)
             fprintf_s(off, "%d %d %d\n", n_vertices, n_faces, 0);
             reindex = (int *)calloc(n_vertices, sizeof(int));
 
-            //mesh_foreach_vertex(tree->mesh, export_vertex_off, NULL);
             mesh_foreach_vertex_d(tree->mesh, export_vertex_off_d, NULL);
             mesh_foreach_face_vertices(tree->mesh, export_triangle_off, NULL);
 
@@ -578,7 +539,6 @@ mesh_write_off(char *prefix, int id, Mesh* mesh)
         fprintf_s(off, "%d %d %d\n", n_vertices, n_faces, 0);
         reindex = (int*)calloc(n_vertices, sizeof(int));
 
-        //mesh_foreach_vertex(mesh, export_vertex_off, NULL);
         mesh_foreach_vertex_d(mesh, export_vertex_off_d, NULL);
         mesh_foreach_face_vertices(mesh, export_triangle_off, NULL);
         free(reindex);
