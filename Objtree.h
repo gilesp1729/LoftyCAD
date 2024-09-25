@@ -121,9 +121,9 @@ typedef struct Object
 typedef struct Point
 {
     struct Object   hdr;            // Header
-    float           x;              // Coordinates
-    float           y;
-    float           z;
+    double          x;              // Coordinates
+    double          y;
+    double          z;
     BOOL            moved;          // When a point is moved, this is set TRUE. This stops shared
                                     // points from being moved twice.
     float           decay;          // Decay factor for smooth moves.

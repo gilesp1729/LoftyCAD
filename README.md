@@ -62,8 +62,15 @@ It will only run on an x86 machine, and it is only lightly tested, e.g. there ar
 LoftyCAD uses the excellent CGAL computational geometry library to merge and intersect triangle meshes.
 - CGAL, Computational Geometry Algorithms Library, https://www.cgal.org
 
-# Horus branch
+# Double Helix branch
 - This branch is the live development branch and will become the master in due course. Features described above refer to this branch and may not be present in earlier branches.
+- This branch has been tested to CGAL 5.5.1.
+- This branch is to convert all internal coordinate (Point) representations from float to double, to improve robustness especially when re-importing rendering results as triangle meshes.
+- Build as for the Horus and Material Girl branches.
+
+# Horus branch
+# No further development will be done on this branch.
+- This branch has been tested to CGAL 5.5.1.
 - This branch is to develop a picking replacement to avoid doing the GL_SELECT buffer mechanism, which is very slow.
 - Lofting and tubing are implemented in this branch.
 - Build as for the Material Girl branch.
