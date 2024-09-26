@@ -132,21 +132,21 @@ read_stl_to_group(Group *group, char *filename)
         {
             tok = strtok_s(NULL, " \t\n", &nexttok);  // absorb "normal"
             tok = strtok_s(NULL, " \t\n", &nexttok);
-            norm.A = (float)atof(tok);
+            norm.A = (double)atof(tok);
             tok = strtok_s(NULL, " \t\n", &nexttok);
-            norm.B = (float)atof(tok);
+            norm.B = (double)atof(tok);
             tok = strtok_s(NULL, " \t\n", &nexttok);
-            norm.C = (float)atof(tok);
+            norm.C = (double)atof(tok);
             i = 0;
         }
         else if (strcmp(tok, "vertex") == 0)
         {
             tok = strtok_s(NULL, " \t\n", &nexttok);
-            pt[i].x = (float)atof(tok);
+            pt[i].x = (double)atof(tok);
             tok = strtok_s(NULL, " \t\n", &nexttok);
-            pt[i].y = (float)atof(tok);
+            pt[i].y = (double)atof(tok);
             tok = strtok_s(NULL, " \t\n", &nexttok);
-            pt[i].z = (float)atof(tok);
+            pt[i].z = (double)atof(tok);
             i++;
         }
         else if (strcmp(tok, "endfacet") == 0)
@@ -426,11 +426,11 @@ read_obj_to_group(Group* group, char* filename)
             Point* p = point_new(0, 0, 0);
 
             tok = strtok_s(NULL, " \t\n", &nexttok);
-            p->x = (float)atof(tok);
+            p->x = (double)atof(tok);
             tok = strtok_s(NULL, " \t\n", &nexttok);
-            p->y = (float)atof(tok);
+            p->y = (double)atof(tok);
             tok = strtok_s(NULL, " \t\n", &nexttok);
-            p->z = (float)atof(tok);
+            p->z = (double)atof(tok);
             if (npoints >= npoints_alloced)
             {
                 npoints_alloced *= 2;
@@ -562,11 +562,11 @@ read_off_to_group(Group *group, char *filename)
         step_file_progress(strlen(buf));
 
         tok = strtok_s(buf, " \t\n", &nexttok);
-        p->x = (float)atof(tok);
+        p->x = (double)atof(tok);
         tok = strtok_s(NULL, " \t\n", &nexttok);
-        p->y = (float)atof(tok);
+        p->y = (double)atof(tok);
         tok = strtok_s(NULL, " \t\n", &nexttok);
-        p->z = (float)atof(tok);
+        p->z = (double)atof(tok);
         points[i] = p;
     }
 
@@ -634,7 +634,7 @@ error:
 }
 
 // AMF globals
-float scale;
+double scale;
 char* tok;
 char* nexttok = NULL;
 int npoints, npoints_alloced;
@@ -956,10 +956,10 @@ BOOL
 read_gcode_to_group(Group* group, char* filename)
 {
     FILE* f;
-    float cur_x = 0;
-    float cur_y = 0;
-    float cur_z = 0;
-    float next_x, next_y, next_z, ext;
+    double cur_x = 0;
+    double cur_y = 0;
+    double cur_z = 0;
+    double next_x, next_y, next_z, ext;
     BOOL have_x, have_y, have_z, have_e;
     ZPolyEdge* edge = NULL;
     BOOL new_edge = FALSE;
@@ -997,15 +997,15 @@ read_gcode_to_group(Group* group, char* filename)
                 if (tok[0] != '=')
                     continue;
                 tok = strtok_s(NULL, "x, \t\n", &nexttok);      // 0x0
-                bed_xmin = (float)atof(tok);
+                bed_xmin = (double)atof(tok);
                 tok = strtok_s(NULL, "x, \t\n", &nexttok);
-                bed_ymin = (float)atof(tok);
+                bed_ymin = (double)atof(tok);
 
                 tok = strtok_s(NULL, ", \t\n", &nexttok);       // 250x0 (skip)
                 tok = strtok_s(NULL, "x, \t\n", &nexttok);      // 250x210
-                bed_xmax = (float)atof(tok);
+                bed_xmax = (double)atof(tok);
                 tok = strtok_s(NULL, "x, \t\n", &nexttok);
-                bed_ymax = (float)atof(tok);
+                bed_ymax = (double)atof(tok);
 
                 group->xoffset = (bed_xmax - bed_xmin) / 2;
                 group->yoffset = (bed_ymax - bed_ymin) / 2;
@@ -1016,7 +1016,7 @@ read_gcode_to_group(Group* group, char* filename)
                 if (tok[0] != '=')
                     continue;
                 tok = strtok_s(NULL, " \t\n", &nexttok);
-                layer_height = (float)atof(tok);
+                layer_height = (double)atof(tok);
             }
             else if (strcmp(tok, "filament") == 0 && group->fil_used[0] == '\0')
             {
@@ -1063,19 +1063,19 @@ read_gcode_to_group(Group* group, char* filename)
                     {
                     case 'X':
                         have_x = TRUE;
-                        next_x = (float)atof(&tok[1]);
+                        next_x = (double)atof(&tok[1]);
                         break;
                     case 'Y':
                         have_y = TRUE;
-                        next_y = (float)atof(&tok[1]);
+                        next_y = (double)atof(&tok[1]);
                         break;
                     case 'Z':
                         have_z = TRUE;
-                        next_z = (float)atof(&tok[1]);
+                        next_z = (double)atof(&tok[1]);
                         break;
                     case 'E':
                         have_e = TRUE;
-                        ext = (float)atof(&tok[1]);
+                        ext = (double)atof(&tok[1]);
                         break;
                     default:                // here for F and other stuff we ignore
                         break;
@@ -1156,16 +1156,16 @@ read_gcode_to_group(Group* group, char* filename)
                     switch (tok[0])
                     {
                     case 'X':
-                        cur_x = (float)atof(&tok[1]);
+                        cur_x = (double)atof(&tok[1]);
                         break;
                     case 'Y':
-                        cur_y = (float)atof(&tok[1]);
+                        cur_y = (double)atof(&tok[1]);
                         break;
                     case 'Z':
-                        cur_z = (float)atof(&tok[1]);
+                        cur_z = (double)atof(&tok[1]);
                         break;
                     case 'E':
-                        ext = (float)atof(&tok[1]);
+                        ext = (double)atof(&tok[1]);
                         break;
                     default:   
                         break;

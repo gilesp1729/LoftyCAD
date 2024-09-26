@@ -16,12 +16,12 @@ ray_from_eye(GLint x, GLint y, Plane *line)
     glGetIntegerv(GL_VIEWPORT, viewport);
     gluUnProject(x, viewport[3] - y, 0, modelMatrix, projMatrix, viewport, &nearp[0], &nearp[1], &nearp[2]);
     gluUnProject(x, viewport[3] - y, 1, modelMatrix, projMatrix, viewport, &farp[0], &farp[1], &farp[2]);
-    line->refpt.x = (float)nearp[0];
-    line->refpt.y = (float)nearp[1];
-    line->refpt.z = (float)nearp[2];
-    line->A = (float)(farp[0] - nearp[0]);
-    line->B = (float)(farp[1] - nearp[1]);
-    line->C = (float)(farp[2] - nearp[2]);
+    line->refpt.x = (double)nearp[0];
+    line->refpt.y = (double)nearp[1];
+    line->refpt.z = (double)nearp[2];
+    line->A = (double)(farp[0] - nearp[0]);
+    line->B = (double)(farp[1] - nearp[1]);
+    line->C = (double)(farp[2] - nearp[2]);
 }
 
 // Intersect a ray through a mouse (window) coordinate with a plane.
@@ -452,18 +452,18 @@ normal3(Point *b, Point *a, Point *c, Plane *norm)
 
 // Returns the angle at a, between b and c, relative to a normal n.
 // The angle can be in [-pi, pi].
-float
+double
 angle3(Point *b, Point *a, Point *c, Plane *n)
 {
     double cosa = dot(b->x - a->x, b->y - a->y, b->z - a->z, c->x - a->x, c->y - a->y, c->z - a->z);
-    float angle;
+    double angle;
     Plane cp;
 
     cosa /= length(a, b);
     cosa /= length(a, c);
     if (cosa > 1)
         cosa = 1;
-    angle = (float)acos(cosa);
+    angle = (double)acos(cosa);
     cross(b->x - a->x, b->y - a->y, b->z - a->z, c->x - a->x, c->y - a->y, c->z - a->z, &cp.A, &cp.B, &cp.C);
     if (pldot(n, &cp) < 0)
         angle = -angle;
@@ -556,7 +556,7 @@ polygon_planar(Point* list, Plane* norm)
 
 // multiply a 4x4 by 4-vector 
 void
-mat_mult_by_row(float *m, float *v, float *res)
+mat_mult_by_row(double *m, double *v, double *res)
 {
     res[0] = m[0] * v[0] + m[1] * v[1] + m[2] * v[2] + m[3] * v[3];
     res[1] = m[4] * v[0] + m[5] * v[1] + m[6] * v[2] + m[7] * v[3];
@@ -599,17 +599,17 @@ snap_to_grid(Plane *plane, Point *point, BOOL inhibit_snapping)
 
 // Cleanup an angle (in degrees) to [-180, 180] and optionally snap it to a multiple
 // of 45 degrees.
-float
-cleanup_angle_and_snap(float angle, BOOL snap_to_45)
+double
+cleanup_angle_and_snap(double angle, BOOL snap_to_45)
 {
     while (angle > 180)
         angle -= 360;
     while (angle < -180)
         angle += 360;
     if (snap_to_45)
-        angle = roundf(angle / 45) * 45;
+        angle = round(angle / 45) * 45;
     else if (snapping_to_angle)
-        angle = roundf(angle / angle_snap) * angle_snap;
+        angle = round(angle / angle_snap) * angle_snap;
 
     return angle;
 }
@@ -716,7 +716,7 @@ plcross(Plane *p1, Plane *p2, Plane *cp)
 BOOL
 normalise_point(Point *p)
 {
-    double length = (float)sqrt(p->x * p->x + p->y * p->y + p->z * p->z);
+    double length = (double)sqrt(p->x * p->x + p->y * p->y + p->z * p->z);
 
     if (nz(length))
         return FALSE;

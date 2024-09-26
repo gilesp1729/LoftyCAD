@@ -213,7 +213,7 @@ color(Object* obj, BOOL construction, PRESENTATION pres, BOOL locked)
 
 // Draw a single mesh triangle with normal and material index.
 void
-draw_triangle(void *arg, int mat, float x[3], float y[3], float z[3])
+draw_triangle(void *arg, int mat, double x[3], double y[3], double z[3])
 {
     int i;
     double A, B, C, length;
@@ -229,7 +229,7 @@ draw_triangle(void *arg, int mat, float x[3], float y[3], float z[3])
         glNormal3d(A, B, C);
     }
     for (i = 0; i < 3; i++)
-        glVertex3f(x[i], y[i], z[i]);
+        glVertex3d(x[i], y[i], z[i]);
 }
 
 // Helpers for all clipping tests: determine if a point is clipped out by any
@@ -253,7 +253,7 @@ clipped(Point* p)
 
 // Determine if a point is clipped out by its coordinates. One sided test.
 BOOL
-clippedv(float x, float y, float z)
+clippedv(double x, double y, double z)
 {
     double f;
 
@@ -296,7 +296,7 @@ is_bbox_clipped(Bbox* box)
 
 // Determine if a triangle is partially clipped (by its coordinates)
 BOOL
-is_tri_clipped(float x[3], float y[3], float z[3])
+is_tri_clipped(double x[3], double y[3], double z[3])
 {
     int count = 0;
 
@@ -315,7 +315,7 @@ is_tri_clipped(float x[3], float y[3], float z[3])
 
 // Draw the clip plane intersection with a triangle (given either by point coords or by edges)
 void
-clip_triangle_by_coords(void* arg, int mat, float x[3], float y[3], float z[3])
+clip_triangle_by_coords(void* arg, int mat, double x[3], double y[3], double z[3])
 {
     int rc, count = 0;
     Point pt, points[6];
@@ -444,7 +444,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
     Object *o;
     Volume *vol;
     Group *group;
-    float dx, dy, dz;
+    double dx, dy, dz;
     BOOL locked, constr_edge, re_enable;
     // This object is selected. Color it and all its components.
     BOOL selected = pres & DRAW_SELECTED;
@@ -469,7 +469,7 @@ draw_object(Object *obj, PRESENTATION pres, LOCK parent_lock)
 
         if (selected || highlighted)
         {
-            float unit = zTrans / (-2 * half_size);
+            double unit = zTrans / (-2 * half_size);
 
             // Draw a square blob in the facing plane, so it's more easily seen
             glDisable(GL_CULL_FACE);
@@ -2022,8 +2022,8 @@ Draw(void)
                 if (picked_obj == NULL)
                     break;
                 {
-                    float da;
-                    float alpha;
+                    double da;
+                    double alpha;
 
                     intersect_ray_plane(pt.x, pt.y, &centre_facing_plane, &new_point);
                     da = RADF * angle3(&picked_point, &centre_facing_plane.refpt, &new_point, &centre_facing_plane);
@@ -2108,13 +2108,13 @@ Draw(void)
             if (width > height)
             {
                 // Y window coords need inverting for GL
-                xTrans += 2 * zTrans * (float)(right_mouseX - pt.x) / height;
-                yTrans += 2 * zTrans * (float)(pt.y - right_mouseY) / height;
+                xTrans += 2 * zTrans * (double)(right_mouseX - pt.x) / height;
+                yTrans += 2 * zTrans * (double)(pt.y - right_mouseY) / height;
             }
             else
             {
-                xTrans += 2 * zTrans * (float)(right_mouseX - pt.x) / width;
-                yTrans += 2 * zTrans * (float)(pt.y - right_mouseY) / width;
+                xTrans += 2 * zTrans * (double)(right_mouseX - pt.x) / width;
+                yTrans += 2 * zTrans * (double)(pt.y - right_mouseY) / width;
             }
 
             Position();
@@ -2300,32 +2300,32 @@ Draw(void)
 
                     glColor3d(1.0, 0.4, 0.4);
                     glBegin(GL_LINE_LOOP);
-                    glVertex3f(box.xmin, box.ymin, box.zmin);
-                    glVertex3f(box.xmax, box.ymin, box.zmin);
-                    glVertex3f(box.xmax, box.ymax, box.zmin);
-                    glVertex3f(box.xmin, box.ymax, box.zmin);
+                    glVertex3d(box.xmin, box.ymin, box.zmin);
+                    glVertex3d(box.xmax, box.ymin, box.zmin);
+                    glVertex3d(box.xmax, box.ymax, box.zmin);
+                    glVertex3d(box.xmin, box.ymax, box.zmin);
                     glEnd();
                     glBegin(GL_LINE_LOOP);
-                    glVertex3f(box.xmin, box.ymin, box.zmax);
-                    glVertex3f(box.xmax, box.ymin, box.zmax);
-                    glVertex3f(box.xmax, box.ymax, box.zmax);
-                    glVertex3f(box.xmin, box.ymax, box.zmax);
+                    glVertex3d(box.xmin, box.ymin, box.zmax);
+                    glVertex3d(box.xmax, box.ymin, box.zmax);
+                    glVertex3d(box.xmax, box.ymax, box.zmax);
+                    glVertex3d(box.xmin, box.ymax, box.zmax);
                     glEnd();
                     glBegin(GL_LINES);
-                    glVertex3f(box.xmin, box.ymin, box.zmin);
-                    glVertex3f(box.xmin, box.ymin, box.zmax);
+                    glVertex3d(box.xmin, box.ymin, box.zmin);
+                    glVertex3d(box.xmin, box.ymin, box.zmax);
                     glEnd();
                     glBegin(GL_LINES);
-                    glVertex3f(box.xmax, box.ymin, box.zmin);
-                    glVertex3f(box.xmax, box.ymin, box.zmax);
+                    glVertex3d(box.xmax, box.ymin, box.zmin);
+                    glVertex3d(box.xmax, box.ymin, box.zmax);
                     glEnd();
                     glBegin(GL_LINES);
-                    glVertex3f(box.xmin, box.ymax, box.zmin);
-                    glVertex3f(box.xmin, box.ymax, box.zmax);
+                    glVertex3d(box.xmin, box.ymax, box.zmin);
+                    glVertex3d(box.xmin, box.ymax, box.zmax);
                     glEnd();
                     glBegin(GL_LINES);
-                    glVertex3f(box.xmax, box.ymax, box.zmin);
-                    glVertex3f(box.xmax, box.ymax, box.zmax);
+                    glVertex3d(box.xmax, box.ymax, box.zmin);
+                    glVertex3d(box.xmax, box.ymax, box.zmax);
                     glEnd();
                 }
             }
@@ -2517,10 +2517,10 @@ Draw(void)
         glTranslatef(0, 0, -1);
         glColor3f(0, 0.5, 0);
         glBegin(GL_LINE_LOOP);
-        glVertex2f((float)pt.x, (float)vp[3] - pt.y);
-        glVertex2f((float)orig_left_mouseX, (float)vp[3] - pt.y);
-        glVertex2f((float)orig_left_mouseX, (float)vp[3] - orig_left_mouseY);
-        glVertex2f((float)pt.x, (float)vp[3] - orig_left_mouseY);
+        glVertex2d((double)pt.x, (double)vp[3] - pt.y);
+        glVertex2d((double)orig_left_mouseX, (double)vp[3] - pt.y);
+        glVertex2d((double)orig_left_mouseX, (double)vp[3] - orig_left_mouseY);
+        glVertex2d((double)pt.x, (double)vp[3] - orig_left_mouseY);
         glEnd();
         glPopMatrix();
         glMatrixMode(GL_MODELVIEW);
@@ -2547,7 +2547,7 @@ Draw(void)
 
         glListBase(1000);
         glColor3f(0.4f, 0.4f, 0.4f);
-        glRasterPos2f((float)pt.x + 10, (float)vp[3] - pt.y - 12);
+        glRasterPos2f((double)pt.x + 10, (double)vp[3] - pt.y - 12);
 
         brief_description(highlight_obj, buf, 64);
         glCallLists(strlen(buf), GL_UNSIGNED_BYTE, buf);

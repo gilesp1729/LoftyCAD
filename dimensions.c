@@ -144,7 +144,7 @@ update_dims(Object *obj, char *buf)
     Face *f, *c1, *c2;
     Volume *vol;
     double angle;
-    float len, len2, rad, ecc;
+    double len, len2, rad, ecc;
     char *nexttok = NULL;
     char *tok;
     Object *parent;
@@ -159,7 +159,7 @@ update_dims(Object *obj, char *buf)
         switch (e->type & ~EDGE_CONSTRUCTION)
         {
         case EDGE_STRAIGHT:
-            len = (float)atof(buf);
+            len = (double)atof(buf);
             if (len == 0)
                 break;
             new_length(e->endpoints[0], e->endpoints[1], len);
@@ -168,7 +168,7 @@ update_dims(Object *obj, char *buf)
         case EDGE_ARC:
             ae = (ArcEdge *)e;
             tok = strtok_s(buf, " ,\t\n", &nexttok);
-            len = (float)atof(tok);
+            len = (double)atof(tok);
             if (len == 0)
                 break;
             new_length(ae->centre, e->endpoints[0], len);  // just typing the radius still works
@@ -184,7 +184,7 @@ update_dims(Object *obj, char *buf)
                 angle = angle / RAD;
 
             tok = strtok_s(NULL, " ,\t\n", &nexttok);
-            ecc = (float)atof(tok);
+            ecc = (double)atof(tok);
             if (ecc == 0)
                 ecc = 1.0f;
             ae->ecc = ecc;
@@ -196,9 +196,9 @@ update_dims(Object *obj, char *buf)
             v[2] = 0;
             v[3] = 1;
             mat_mult_by_col_d(matrix, v, res);
-            e->endpoints[1]->x = (float)res[0];
-            e->endpoints[1]->y = (float)res[1];
-            e->endpoints[1]->z = (float)res[2];
+            e->endpoints[1]->x = (double)res[0];
+            e->endpoints[1]->y = (double)res[1];
+            e->endpoints[1]->z = (double)res[2];
             break;
         }
         break;
@@ -213,11 +213,11 @@ update_dims(Object *obj, char *buf)
             e2 = f->edges[2];
             e3 = f->edges[3];
             tok = strtok_s(buf, " ,\t\n", &nexttok);
-            len = (float)atof(tok);
+            len = (double)atof(tok);
             if (len == 0)
                 break;
             tok = strtok_s(NULL, " ,\t\n", &nexttok);
-            len2 = (float)atof(tok);
+            len2 = (double)atof(tok);
             if (len2 == 0)
                 break;
 
@@ -237,7 +237,7 @@ update_dims(Object *obj, char *buf)
             e3 = f->edges[3];
             e4 = f->edges[4];
             e5 = f->edges[5];
-            len = (float)atof(buf);
+            len = (double)atof(buf);
             if (len == 0)
                 break;
             len /= (0.866f * 2);
@@ -257,11 +257,11 @@ update_dims(Object *obj, char *buf)
             ae = first_arc_edge(f);
             e = (Edge*)ae;
             tok = strtok_s(buf, " ,\t\n", &nexttok);
-            rad = (float)atof(tok);
+            rad = (double)atof(tok);
             if (rad == 0)
                 break;
             tok = strtok_s(NULL, " ,\t\n", &nexttok);
-            ecc = (float)atof(tok);
+            ecc = (double)atof(tok);
             if (ecc == 0)
                 ecc = 1.0f;
 
@@ -286,11 +286,11 @@ update_dims(Object *obj, char *buf)
             e1 = (Edge *)ae1;
             e2 = (Edge *)ae2;
             tok = strtok_s(buf, " ,\t\n", &nexttok);
-            rad = (float)atof(tok);
+            rad = (double)atof(tok);
             if (rad == 0)
                 break;
             tok = strtok_s(NULL, " ,\t\n", &nexttok);
-            len = (float)atof(tok);
+            len = (double)atof(tok);
             if (len == 0)
                 break;
 
@@ -305,14 +305,14 @@ update_dims(Object *obj, char *buf)
         }
         else if (vol->measured)
         {
-            float l, w, h;
+            double l, w, h;
 
             tok = strtok_s(buf, " ,\t\n", &nexttok);
-            l = (float)atof(tok);
+            l = (double)atof(tok);
             tok = strtok_s(NULL, " ,\t\n", &nexttok);
-            w = (float)atof(tok);
+            w = (double)atof(tok);
             tok = strtok_s(NULL, " ,\t\n", &nexttok);
-            h = (float)atof(tok);
+            h = (double)atof(tok);
 
             // Determine principal directions from paired faces with positive axis-aligned normals
             for (f = (Face*)vol->faces.head; f != NULL; f = (Face*)f->hdr.next)
@@ -400,7 +400,7 @@ get_dims_string(Object *obj, char buf[64])
                 angle += 360;
             sprintf_s(buf, 64, "%s,%s,%s mmR/deg/ecc",
                     display_rounded(buf, length(ae->centre, e->endpoints[0])),
-                    display_rounded(buf2, (float)angle),
+                    display_rounded(buf2, (double)angle),
                     display_rounded(buf3, ae->ecc)
                     );
             break;
@@ -709,7 +709,7 @@ show_dims_on(Object *obj, PRESENTATION pres, LOCK parent_lock)
     case OBJ_GROUP:
         v = (Volume *)obj;
         color_as(OBJ_EDGE, 1.0f, FALSE, 0, FALSE);
-        glRasterPos3f(v->bbox.xc, v->bbox.yc, v->bbox.zc);
+        glRasterPos3d(v->bbox.xc, v->bbox.yc, v->bbox.zc);
         break;
     }
 

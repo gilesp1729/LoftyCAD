@@ -17,8 +17,8 @@ typedef struct Endcap
 // Precalculated offsets of endcap points for different NPTS values, expressed as multiples
 // of the layer height. The offsets are from point[0] in the XZ plane of the endcap.
 #if NPTS == 6
-float xcap[NPTS] = { 0, -0.5f, -0.5f, 0, 0.5f, 0.5f };
-float zcap[NPTS] = { 0, -0.33333f, -0.66666f, -1, -0.66666f, -0.33333f };
+double xcap[NPTS] = { 0, -0.5f, -0.5f, 0, 0.5f, 0.5f };
+double zcap[NPTS] = { 0, -0.33333f, -0.66666f, -1, -0.66666f, -0.33333f };
 #endif // NPTS
 
 
@@ -28,16 +28,16 @@ float zcap[NPTS] = { 0, -0.33333f, -0.66666f, -1, -0.66666f, -0.33333f };
 void
 dirn(Point2D* p0, Point2D* p1, Point2D* d)
 {
-    float len;
+    double len;
 
     d->x = p1->x - p0->x;
     d->y = p1->y - p0->y;
-    len = sqrtf(d->x * d->x + d->y * d->y);
+    len = sqrt(d->x * d->x + d->y * d->y);
     d->x /= len;
     d->y /= len;
 }
 
-float
+double
 dot2d(Point2D* d0, Point2D* d1)
 {
     return d0->x * d1->x + d0->y * d1->y;
@@ -47,16 +47,16 @@ dot2d(Point2D* d0, Point2D* d1)
 // The next line is in direction d1. If d1 is not NULL, the endcap is mitered
 // between the two directions.
 void
-endcap(Point2D* curr, Point2D *d0, Point2D *d1, float z, Endcap* cap)
+endcap(Point2D* curr, Point2D *d0, Point2D *d1, double z, Endcap* cap)
 {
     Point3D c[NPTS];
     Point2D adj_d0;
     int i;
-    float lensq;
+    double lensq;
 
     // X/Y offsets are subtracted here.
-    float xoffset = (float)(bed_xmax - bed_xmin) / 2;
-    float yoffset = (float)(bed_ymax - bed_ymin) / 2;
+    double xoffset = (double)(bed_xmax - bed_xmin) / 2;
+    double yoffset = (double)(bed_ymax - bed_ymin) / 2;
 
     // The endcap is a polygon, anti-clockwise as seen looking along direction d0.
     if (d1 == NULL)
@@ -119,7 +119,7 @@ endcap(Point2D* curr, Point2D *d0, Point2D *d1, float z, Endcap* cap)
             // Adjust size of endcap to cope with increasing angle between the lines,
             // by normalising it to the length of (d0+d1)/2.
             // This works up to 90 degrees (protected by caller)
-            lensq = sqrtf(lensq);
+            lensq = sqrt(lensq);
             adj_d0.x /= lensq;
             adj_d0.y /= lensq;
             for (i = 0; i < NPTS; i++)
@@ -163,22 +163,22 @@ tube(Endcap* e0, Endcap* e1)
         normalise_plane(&norm);
         glNormal3d(norm.A, norm.B, norm.C);
 
-        glVertex3f(e0->pts[i].x, e0->pts[i].y, e0->pts[i].z);
-        glVertex3f(e0->pts[j].x, e0->pts[j].y, e0->pts[j].z);
-        glVertex3f(e1->pts[j].x, e1->pts[j].y, e1->pts[j].z);
-        glVertex3f(e1->pts[i].x, e1->pts[i].y, e1->pts[i].z);
+        glVertex3d(e0->pts[i].x, e0->pts[i].y, e0->pts[i].z);
+        glVertex3d(e0->pts[j].x, e0->pts[j].y, e0->pts[j].z);
+        glVertex3d(e1->pts[j].x, e1->pts[j].y, e1->pts[j].z);
+        glVertex3d(e1->pts[i].x, e1->pts[i].y, e1->pts[i].z);
     }
 }
 
 
 // Put out faces for the line segments of the ZPolyEdge view_list. 
 void
-spaghetti(ZPolyEdge *zedge, float zmin, float zmax)
+spaghetti(ZPolyEdge *zedge, double zmin, double zmax)
 {
     int i;
     Endcap endcap0, endcap1;
     Point2D d0, d1;
-    float bend;
+    double bend;
 
     glBegin(GL_QUADS);
 

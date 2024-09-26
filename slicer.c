@@ -34,10 +34,10 @@ typedef struct InhSection
 {
     char        sect_name[SECT_NAME_SIZE];      // The original name of the section from the ini file.
     int         n_keyvals;                      // Number of key/value pairs.
-    float       bed_xmin;                       // The bed size for a printer section
-    float       bed_xmax;
-    float       bed_ymin;
-    float       bed_ymax;
+    double       bed_xmin;                       // The bed size for a printer section
+    double       bed_xmax;
+    double       bed_ymin;
+    double       bed_ymax;
     InhString   keyval[MAX_KEYVALS];            // Key/value pairs inside the section_string.
     char        section_string[MAX_SECT_SIZE];  // Null-separated raw string, returned from GetPrivateProfileSection.
 } InhSection;
@@ -84,7 +84,7 @@ Location config_locations[NUM_CONFIG_LOCATIONS] =
     {"\\Slic3r",                     "slic3r.ini",              SLIC_SLIC3R}
 };
 
-// Command sets (a sprintf string that takes the bed centre as two floats)
+// Command sets (a sprintf string that takes the bed centre as two doubles)
 // Indexed by slicer type
 char slicer_cmd[MAX_TYPES][80] =
 {
@@ -562,15 +562,15 @@ load_section(char *ini, char *key, char* sect)
 
                 strcpy_s(bed_str, 256, s->keyval[n].value);
                 tok = strtok_s(bed_str, "x, \t\n", &nexttok);      // 0x0
-                s->bed_xmin = (float)atof(tok);
+                s->bed_xmin = (double)atof(tok);
                 tok = strtok_s(NULL, "x, \t\n", &nexttok);
-                s->bed_ymin = (float)atof(tok);
+                s->bed_ymin = (double)atof(tok);
 
                 tok = strtok_s(NULL, ", \t\n", &nexttok);       // 250x0 (skip)
                 tok = strtok_s(NULL, "x, \t\n", &nexttok);      // 250x210
-                s->bed_xmax = (float)atof(tok);
+                s->bed_xmax = (double)atof(tok);
                 tok = strtok_s(NULL, "x, \t\n", &nexttok);
-                s->bed_ymax = (float)atof(tok);
+                s->bed_ymax = (double)atof(tok);
             }
 
             n++;
@@ -722,15 +722,15 @@ read_slic3r_config(char* key, int dlg_item, char *sel_printer)
 
                         strcpy_s(bed_str, 256, s->keyval[n].value);        
                         tok = strtok_s(bed_str, "x, \t\n", &nexttok);      // 0x0
-                        s->bed_xmin = (float)atof(tok);
+                        s->bed_xmin = (double)atof(tok);
                         tok = strtok_s(NULL, "x, \t\n", &nexttok);
-                        s->bed_ymin = (float)atof(tok);
+                        s->bed_ymin = (double)atof(tok);
 
                         tok = strtok_s(NULL, ", \t\n", &nexttok);       // 250x0 (skip)
                         tok = strtok_s(NULL, "x, \t\n", &nexttok);      // 250x210
-                        s->bed_xmax = (float)atof(tok);
+                        s->bed_xmax = (double)atof(tok);
                         tok = strtok_s(NULL, "x, \t\n", &nexttok);
-                        s->bed_ymax = (float)atof(tok);
+                        s->bed_ymax = (double)atof(tok);
                     }
 
                     n++;

@@ -1157,13 +1157,13 @@ clip_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         case IDOK:
         case IDAPPLY:
             SendDlgItemMessage(hWnd, IDC_CLIP_A, WM_GETTEXT, 16, (LPARAM)buf);
-            clip_plane.A = (float)atof(buf);
+            clip_plane.A = (double)atof(buf);
             SendDlgItemMessage(hWnd, IDC_CLIP_B, WM_GETTEXT, 16, (LPARAM)buf);
-            clip_plane.B = (float)atof(buf);
+            clip_plane.B = (double)atof(buf);
             SendDlgItemMessage(hWnd, IDC_CLIP_C, WM_GETTEXT, 16, (LPARAM)buf);
-            clip_plane.C = (float)atof(buf);
+            clip_plane.C = (double)atof(buf);
             SendDlgItemMessage(hWnd, IDC_CLIP_D, WM_GETTEXT, 16, (LPARAM)buf);
-            clip_plane.D = (float)atof(buf);
+            clip_plane.D = (double)atof(buf);
             clip_plane.refpt.x = -clip_plane.A * clip_plane.D;
             clip_plane.refpt.y = -clip_plane.B * clip_plane.D;
             clip_plane.refpt.z = -clip_plane.C * clip_plane.D;

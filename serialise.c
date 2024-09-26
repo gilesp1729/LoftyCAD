@@ -547,7 +547,7 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
         if (strcmp(tok, "LOFTYCAD") == 0)
         {
             tok = strtok_s(NULL, " \t\n", &nexttok);
-            version = (float)atof(tok);
+            version = (double)atof(tok);
         }
         else if (strcmp(tok, "TITLE") == 0)
         {
@@ -561,24 +561,24 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
                 continue;
 
             tok = strtok_s(NULL, " \t\n", &nexttok);
-            half_size = (float)atof(tok);
+            half_size = (double)atof(tok);
             tok = strtok_s(NULL, " \t\n", &nexttok);
-            grid_snap = (float)atof(tok);
+            grid_snap = (double)atof(tok);
 
             tok = strtok_s(NULL, " \t\n", &nexttok);
-            tolerance = (float)atof(tok);
+            tolerance = (double)atof(tok);
             snap_tol = 3 * tolerance;
-            chamfer_rad = 3.5f * tolerance;
-            tol_log = (int)ceilf(log10f(1.0f / tolerance));
+            chamfer_rad = 3.5 * tolerance;
+            tol_log = (int)ceil(log10(1.0 / tolerance));
 
             tok = strtok_s(NULL, " \t\n", &nexttok);
             angle_snap = atoi(tok);
             tok = strtok_s(NULL, " \t\n", &nexttok);
             if (tok != NULL)
-                round_rad = (float)atof(tok);
+                round_rad = (double)atof(tok);
             tok = strtok_s(NULL, " \t\n", &nexttok);
             if (tok != NULL)
-                default_stepsize = (float)atof(tok);
+                default_stepsize = (double)atof(tok);
         }
         else if (strcmp(tok, "{") == 0 || strcmp(tok, "BEGIN") == 0)
         {
@@ -605,7 +605,7 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
         else if (objtype_of(tok, "POINT"))
         {
             Point *p;
-            float x, y, z;
+            double x, y, z;
 
             tok = strtok_s(NULL, " \t\n", &nexttok);
             id = atoi(tok) + id_offset;
@@ -613,11 +613,11 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
             tok = strtok_s(NULL, " \t\n", &nexttok);  // swallow up the lock type (it's ignored for points)
 
             tok = strtok_s(NULL, " \t\n", &nexttok);
-            x = (float)atof(tok);
+            x = (double)atof(tok);
             tok = strtok_s(NULL, " \t\n", &nexttok);
-            y = (float)atof(tok);
+            y = (double)atof(tok);
             tok = strtok_s(NULL, " \t\n", &nexttok);
-            z = (float)atof(tok);
+            z = (double)atof(tok);
 
             p = point_new(x, y, z);
             p->hdr.ID = id;
@@ -692,11 +692,11 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
                 ae->centre = (Point *)object[ctr];
 
                 tok = strtok_s(NULL, " \t\n", &nexttok);
-                ae->normal.A = (float)atof(tok);
+                ae->normal.A = (double)atof(tok);
                 tok = strtok_s(NULL, " \t\n", &nexttok);
-                ae->normal.B = (float)atof(tok);
+                ae->normal.B = (double)atof(tok);
                 tok = strtok_s(NULL, " \t\n", &nexttok);
-                ae->normal.C = (float)atof(tok);
+                ae->normal.C = (double)atof(tok);
                 ae->normal.refpt = *ae->centre;
 
                 if (version >= 0.2)
@@ -707,7 +707,7 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
                     edge->nsteps = atoi(tok);
                     tok = strtok_s(NULL, " \t\n", &nexttok);
                     if (tok != NULL)
-                        ae->ecc = (float)atof(tok);
+                        ae->ecc = (double)atof(tok);
                     else
                         ae->ecc = 1.0f;
                 }
@@ -821,21 +821,21 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
             ASSERT(pid != 0 && object[pid] != NULL && object[pid]->type == OBJ_POINT, "Bad initial point ID");
             init_pt = (Point *)object[pid];
 
-            // See if a normal is present in the file (6 floats). If not, the face ID's (integers) start here.
+            // See if a normal is present in the file (6 doubles). If not, the face ID's (integers) start here.
             tok = strtok_s(NULL, " \t\n", &nexttok);
             if (strchr(tok, '.') != NULL)
             {
-                norm.refpt.x = (float)atof(tok);
+                norm.refpt.x = (double)atof(tok);
                 tok = strtok_s(NULL, " \t\n", &nexttok);
-                norm.refpt.y = (float)atof(tok);
+                norm.refpt.y = (double)atof(tok);
                 tok = strtok_s(NULL, " \t\n", &nexttok);
-                norm.refpt.z = (float)atof(tok);
+                norm.refpt.z = (double)atof(tok);
                 tok = strtok_s(NULL, " \t\n", &nexttok);
-                norm.A = (float)atof(tok);
+                norm.A = (double)atof(tok);
                 tok = strtok_s(NULL, " \t\n", &nexttok);
-                norm.B = (float)atof(tok);
+                norm.B = (double)atof(tok);
                 tok = strtok_s(NULL, " \t\n", &nexttok);
-                norm.C = (float)atof(tok);
+                norm.C = (double)atof(tok);
                 tok = strtok_s(NULL, " \t\n", &nexttok);
             }
 
@@ -920,23 +920,23 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
             face->text->endpt.hdr.type = OBJ_POINT;
 
             tok = strtok_s(NULL, " \t\n", &nexttok);
-            face->text->origin.x = (float)atof(tok);
+            face->text->origin.x = (double)atof(tok);
             tok = strtok_s(NULL, " \t\n", &nexttok);
-            face->text->origin.y = (float)atof(tok);
+            face->text->origin.y = (double)atof(tok);
             tok = strtok_s(NULL, " \t\n", &nexttok);
-            face->text->origin.z = (float)atof(tok);
+            face->text->origin.z = (double)atof(tok);
             tok = strtok_s(NULL, " \t\n", &nexttok);
-            face->text->endpt.x = (float)atof(tok);
+            face->text->endpt.x = (double)atof(tok);
             tok = strtok_s(NULL, " \t\n", &nexttok);
-            face->text->endpt.y = (float)atof(tok);
+            face->text->endpt.y = (double)atof(tok);
             tok = strtok_s(NULL, " \t\n", &nexttok);
-            face->text->endpt.z = (float)atof(tok);
+            face->text->endpt.z = (double)atof(tok);
             tok = strtok_s(NULL, " \t\n", &nexttok);
-            face->text->plane.A = (float)atof(tok);
+            face->text->plane.A = (double)atof(tok);
             tok = strtok_s(NULL, " \t\n", &nexttok);
-            face->text->plane.B = (float)atof(tok);
+            face->text->plane.B = (double)atof(tok);
             tok = strtok_s(NULL, " \t\n", &nexttok);
-            face->text->plane.C = (float)atof(tok);
+            face->text->plane.C = (double)atof(tok);
             tok = strtok_s(NULL, "\n", &nexttok);  // rest of line till \n
             if (tok != NULL)
                 strcpy_s(face->text->string, 80, tok);
@@ -1071,12 +1071,12 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
             grp = (Group*)object[id];
 
             // At least large enough for the bays
-            grp->loft = malloc(sizeof(LoftParams) + (grp->n_members - 1) * sizeof(float));
+            grp->loft = malloc(sizeof(LoftParams) + (grp->n_members - 1) * sizeof(double));
             loft = grp->loft;
             tok = strtok_s(NULL, " \t\n", &nexttok);
-            loft->nose_tension = (float)atof(tok);
+            loft->nose_tension = (double)atof(tok);
             tok = strtok_s(NULL, " \t\n", &nexttok);
-            loft->tail_tension = (float)atof(tok);
+            loft->tail_tension = (double)atof(tok);
             tok = strtok_s(NULL, " \t\n", &nexttok);
             loft->body_angle_break = atoi(tok);
             tok = strtok_s(NULL, " \t\n", &nexttok);
@@ -1108,7 +1108,7 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
             for (i = 0; i < loft->n_bays; i++)
             {
                 tok = strtok_s(NULL, " \t\n", &nexttok);
-                loft->bay_tensions[i] = (float)atof(tok);
+                loft->bay_tensions[i] = (double)atof(tok);
             }
         }
         else if (strcmp(tok, "MATERIAL") == 0)
@@ -1188,13 +1188,13 @@ deserialise_tree(Group *tree, char *filename, BOOL importing)
             tok = strtok_s(NULL, " \t\n", &nexttok);
             draw_on_clip_plane = atoi(tok);
             tok = strtok_s(NULL, " \t\n", &nexttok);
-            clip_plane.A = (float)atof(tok);
+            clip_plane.A = (double)atof(tok);
             tok = strtok_s(NULL, " \t\n", &nexttok);
-            clip_plane.B = (float)atof(tok);
+            clip_plane.B = (double)atof(tok);
             tok = strtok_s(NULL, " \t\n", &nexttok);
-            clip_plane.C = (float)atof(tok);
+            clip_plane.C = (double)atof(tok);
             tok = strtok_s(NULL, " \t\n", &nexttok);
-            clip_plane.D = (float)atof(tok);
+            clip_plane.D = (double)atof(tok);
             if (view_clipped)
                 glEnable(GL_CLIP_PLANE0);
         }

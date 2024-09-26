@@ -85,7 +85,7 @@ export_triangle_amf(void* arg, int nv, Vertex_index* vi)
 
 // Write a vertex out to an OBJ file
 void
-export_vertex_obj(void* arg, Vertex_index* v, float x, float y, float z)
+export_vertex_obj(void* arg, Vertex_index* v, double x, double y, double z)
 {
     fprintf_s(objf, "v %f %f %f\n", x, y, z);
     reindex[*(int*)v] = num_exported_vertices++;

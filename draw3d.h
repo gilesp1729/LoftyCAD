@@ -24,9 +24,9 @@ Face *text_face(Text *text, Face *f);
 void CALLBACK Draw(void);
 void invalidate_dl(void);
 BOOL clipped(Point* p);
-BOOL clippedv(float x, float y, float z);
+BOOL clippedv(double x, double y, double z);
 BOOL is_bbox_clipped(Bbox* box);
-BOOL is_tri_clipped(float x[3], float y[3], float z[3]); 
+BOOL is_tri_clipped(double x[3], double y[3], double z[3]); 
 void draw_clip_intersection(Group* tree);
 
 #endif // __DRAW3D_H__

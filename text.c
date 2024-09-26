@@ -46,7 +46,7 @@ text_face(Text *text, Face *f)
     glRenderMode(GL_FEEDBACK);
     glPushMatrix();
     glMultMatrixd(matrix);
-    glScalef(scale, scale, scale);
+    glScaled(scale, scale, scale);
 
     // draw the text
     glListBase(2000);
@@ -163,7 +163,7 @@ text_face(Text *text, Face *f)
         
         // Join back to start if we have arrived there (provided we have been somewhere in the meantime)
         // TODO investigate why first_point is ocasionally NULL for some fonts
-        if (near_pt_xyz(first_point, (float)p[0], (float)p[1], (float)p[2], SMALL_COORD * 5) && tok == GL_LINE_TOKEN)
+        if (near_pt_xyz(first_point, (double)p[0], (double)p[1], (double)p[2], SMALL_COORD * 5) && tok == GL_LINE_TOKEN)
         {
             e->endpoints[0] = first_point;
             closed = TRUE;

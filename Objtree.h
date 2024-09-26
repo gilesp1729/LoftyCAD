@@ -211,7 +211,7 @@ typedef struct Edge
                                     // a flatness tolerance. The step count found is retained.
     struct PlaneRef dirn;           // Direction cosines of the segment between the endpoints
                                     // when it is part of an edge group. Only used in lofting.
-    float           edge_length;    // When in an edge group, this stores the length of this edge.
+    double           edge_length;    // When in an edge group, this stores the length of this edge.
                                     // Only used when in a path.
     int             band;           // Which band number in a lofted volume this edge belongs to.
 } Edge;
@@ -229,7 +229,7 @@ typedef struct ArcEdge
                                     // to endpoint 1, as seen from the facing plane.
                                     // If FALSE they go anticlockwise.
     struct Point    *centre;        // The centre of the arc.
-    float           ecc;            // Eccentricity (1.0 for a circle, taking line centre-endpoint[0] as being 1)
+    double           ecc;            // Eccentricity (1.0 for a circle, taking line centre-endpoint[0] as being 1)
 } ArcEdge;
 
 typedef struct BezierEdge
@@ -238,14 +238,14 @@ typedef struct BezierEdge
     struct Point    *ctrlpoints[2]; // Two control points, corresponding in order to the edge endpoints
     struct Point    *bezctl[4];      // End and control points copied into the correct order for building
                                     // the face view list, to help with Bezier surface interpolation
-    float           t1;             // Approximate t-value for the first control point at bezctl[1]
-    float           t2;             // Approximate t-value for the second control point at bezctl[2]
+    double           t1;             // Approximate t-value for the first control point at bezctl[1]
+    double           t2;             // Approximate t-value for the second control point at bezctl[2]
 } BezierEdge;
 
 typedef struct ZPolyEdge
 {
     struct Edge     edge;           // Edge (most of which is not used)
-    float           z;              // The Z-value of the points in the edge
+    double           z;              // The Z-value of the points in the edge
     struct Point2D* view_list;      // Array of 2D points for the view list, to save space of a real Point.
     int             n_view;         // Number of points in the view list.
     int             n_viewalloc;    // Alloced size of view list (in units of sizeof(Point2D))
@@ -320,15 +320,15 @@ typedef struct Face
 // Bounding box for a volume or a group
 typedef struct Bbox
 {
-    float           xmin;          // Min and max coordinates for the volume
-    float           xmax;
-    float           ymin;
-    float           ymax;
-    float           zmin;
-    float           zmax;
-    float           xc;            // Centre of bbox, calculated when required
-    float           yc;
-    float           zc;
+    double           xmin;          // Min and max coordinates for the volume
+    double           xmax;
+    double           ymin;
+    double           ymax;
+    double           zmin;
+    double           zmax;
+    double           xc;            // Centre of bbox, calculated when required
+    double           yc;
+    double           zc;
 } Bbox;
 
 // Volume struct. This is the usual top-level 3D object.
@@ -361,8 +361,8 @@ typedef enum
 // Structure containing lofting parameters for a lofted or tubed group.
 typedef struct LoftParams
 {
-    float           nose_tension;   // Tension for points adjoining endcap at nose
-    float           tail_tension;   // And for points adjoining endcap at tail
+    double           nose_tension;   // Tension for points adjoining endcap at nose
+    double           tail_tension;   // And for points adjoining endcap at tail
     int             body_angle_break;   // Angle break in degrees, beyond which smoothing will no longer be attempted
     int             nose_angle_break;    // And for points adjoining endcap at nose
     int             tail_angle_break;    // And for points adjoining endcap at tail
@@ -373,7 +373,7 @@ typedef struct LoftParams
                                     // Bit 1: the loft is produced by tubing.
     int             key_direction;  // Direction from centre of section to key edge. 0 = X, 1 = Y, 2 = Z
     int             n_bays;         // Number of bays (number of sections - 1)
-    float           bay_tensions[1];    // Array of tensions per bay (space between consecutive sections)
+    double           bay_tensions[1];    // Array of tensions per bay (space between consecutive sections)
 } LoftParams;
 
 // The group struct is used for groups, and also for the main object tree.
@@ -384,8 +384,8 @@ typedef struct Group
     OPERATION       op;             // Operation to use when combining group with tree
                                     // NOTE THE ABOVE MUST FOLLOW immediately after header
     int             n_members;      // The number of top-level objects in the group.
-    float           xoffset;        // Offset of G-code group to origin (used to translate between
-    float           yoffset;        // LCD and printer coordinates)
+    double           xoffset;        // Offset of G-code group to origin (used to translate between
+    double           yoffset;        // LCD and printer coordinates)
     char            fil_used[80];   // String describing the filament use of aG-code group
     char            est_print[80];  // String describing the estimated print time of a G-code group
     char            title[256];     // A name for the group
@@ -435,7 +435,7 @@ Point* point_new(double x, double y, double z);
 Point* point_newp(Point* p);
 Point* point_newv(double x, double y, double z);
 Point* point_newpv(Point* p);
-Point* point_newr(Point* p0, Point* p1, float ratio);
+Point* point_newr(Point* p0, Point* p1, double ratio);
 
 Edge *edge_new(EDGE edge_type);
 Face *face_new(FACE face_type, Plane norm);
@@ -486,7 +486,7 @@ Face *clone_face_reverse(Face *face);
 // Rotate, reflect and scale an object in place (mover.c)
 void find_obj_pivot(Object* obj, double* xc, double* yc, double* zc);
 void rotate_obj_90_facing(Object* obj, double xc, double yc, double zc);
-void rotate_obj_free_facing(Object* obj, float alpha, double xc, double yc, double zc);
+void rotate_obj_free_facing(Object* obj, double alpha, double xc, double yc, double zc);
 void rotate_obj_free_abc(Object* obj, Plane* v1, Plane* v2);
 void scale_obj_free(Object* obj, double sx, double sy, double sz, double xc, double yc, double zc);
 void reflect_obj_facing(Object* obj, double xc, double yc, double zc);

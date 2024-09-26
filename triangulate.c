@@ -77,7 +77,7 @@ union_bbox(Bbox *box1, Bbox *box2, Bbox *u)
 
 // Return TRUE if pt is inside bbox, within a tolerance.
 BOOL
-in_bbox(Point* pt, Bbox* box, float tol)
+in_bbox(Point* pt, Bbox* box, double tol)
 {
     if (pt->x < box->xmin - tol || pt->x > box->xmax + tol)
         return FALSE;
@@ -113,7 +113,7 @@ intersects_bbox(Bbox *box1, Bbox *box2)
 
 // Enforce constraints on an arc edge e, when one of its points p has been moved.
 void
-enforce_arc_constraints(Edge *e, Point *p, float dx, float dy, float dz)
+enforce_arc_constraints(Edge *e, Point *p, double dx, double dy, double dz)
 {
     ArcEdge *ae = (ArcEdge *)e;
 
@@ -121,7 +121,7 @@ enforce_arc_constraints(Edge *e, Point *p, float dx, float dy, float dz)
     {
         // Endpoint 0 has moved, this will force a recalculation of the radius.
         // Move endpoint 1 to suit the new radius
-        float rad = length(ae->centre, e->endpoints[0]);
+        double rad = length(ae->centre, e->endpoints[0]);
         Plane e1;
 
         e1.A = e->endpoints[1]->x - ae->centre->x;
@@ -135,7 +135,7 @@ enforce_arc_constraints(Edge *e, Point *p, float dx, float dy, float dz)
     else if (p == e->endpoints[1])
     {
         // The other endpoint has moved. Update the first one similarly
-        float rad = length(ae->centre, e->endpoints[1]);
+        double rad = length(ae->centre, e->endpoints[1]);
         Plane e0;
 
         e0.A = e->endpoints[0]->x - ae->centre->x;
@@ -613,7 +613,7 @@ find_local_norms(Edge* edge, Face* face, PlaneRef** ln0, PlaneRef** ln1)
 // Interpolate a bezier edge be at t using the bezctl points, giving a Point p.
 // The edge must have had its bezctl points placed into the correct order first.
 Point*
-bez_interp(BezierEdge* be, float t)
+bez_interp(BezierEdge* be, double t)
 {
     double mt = 1.0 - t;
     double c0 = mt * mt * mt;
@@ -633,7 +633,7 @@ void
 gen_view_list_face(Face* face)
 {
     int i, j, c, bez_nsteps, side_nsteps;
-    float step, t;
+    double step, t;
     double u, u_step, v_step;
     Edge* e, *e0, *e1;
     Point* last_point;
@@ -655,11 +655,11 @@ gen_view_list_face(Face* face)
     // Struct for corner/control points, their (u,v) values, and the Point they refer back to
     struct
     {
-        float x;
-        float y;
-        float z;
-        float u;
-        float v;
+        double x;
+        double y;
+        double z;
+        double u;
+        double v;
         Point* p;
     } *pt, cp[4][4];
 
@@ -823,7 +823,7 @@ gen_view_list_face(Face* face)
 
         for (i = 0; i < face->n_edges; i++)
         {
-            float l30;
+            double l30;
 
             e = face->edges[i];
 
@@ -1021,7 +1021,7 @@ gen_view_list_face(Face* face)
 
                 for (j = 0; j < 4; j++)
                 {
-                    float u, u1, bdu[4];
+                    double u, u1, bdu[4];
                     int m;
                     Point du, ln;
 
@@ -1485,7 +1485,7 @@ gen_view_list_face(Face* face)
         last_point = face->initial_point;
         for (i = 0; i < face->n_edges; i++)
         {
-            float l30;
+            double l30;
 
             e = face->edges[i];
             be = (BezierEdge*)e;
@@ -1701,7 +1701,7 @@ gen_view_list_face(Face* face)
 
         // Create internal view list points by 2D bezier interpolation. We only do the 
         // internal ones this way; the boundary points are directly copied from their edge's
-        // view list, to avoid any floating-point rounding errors causing mismatching edges.
+        // view list, to avoid any doubleing-point rounding errors causing mismatching edges.
         s0 = (Point *)slists[0]->head->next;
         s1 = (Point *)slists[1]->head->next;
         u_step = 1.0 / side_nsteps;
@@ -1759,7 +1759,7 @@ gen_view_list_face(Face* face)
         for (i = 0; i < 4; i++)
         {
             // No need for great accuracy in the normals
-            float u, v, u1, v1, bu[4], bdu[4], bv[4], bdv[4];
+            double u, v, u1, v1, bu[4], bdu[4], bv[4], bdv[4];
 
             for (j = 0; j < 4; j++)
             {
@@ -1894,9 +1894,9 @@ update_view_list_2D(Face *face)
 
     for (i = 0, v = (Point *)face->view_list.head; v != NULL; v = (Point *)v->hdr.next, i++)
     {
-        float a = fabsf(face->normal.A);
-        float b = fabsf(face->normal.B);
-        float c = fabsf(face->normal.C);
+        double a = fabs(face->normal.A);
+        double b = fabs(face->normal.B);
+        double c = fabs(face->normal.C);
 
         if (c > b && c > a)
         {
@@ -1928,10 +1928,10 @@ update_view_list_2D(Face *face)
 // Adjust all the step sizes in curved edges in the tree at top level,
 // to reflect a new tolerance setting. Stuff in groups is not changed.
 void
-adjust_stepsizes(Object *obj, float new_tol)
+adjust_stepsizes(Object *obj, double new_tol)
 {
     // Multiplier for nsteps in arc and bezier view lists
-    float factor = sqrtf(tolerance / new_tol);
+    double factor = sqrtf(tolerance / new_tol);
     int i;
     Edge* e;
     ArcEdge* ae;
@@ -2110,7 +2110,7 @@ gen_view_list_arc(ArcEdge *ae)
 #ifdef CHECK_ZERO_LENGTH
     for (p = (Point*)edge->view_list.head; p->hdr.next != NULL; p = (Point*)p->hdr.next)
     {
-        float len = length_squared(p, (Point*)p->hdr.next);
+        double len = length_squared(p, (Point*)p->hdr.next);
         ASSERT(len > SMALL_COORD, "Possible zero length edge in arc VL");
     }
 #endif
@@ -2133,7 +2133,7 @@ iterate_bez
     Edge *e = (Edge *)be;
     double t;
     int i;
-    float stepsize;
+    double stepsize;
 
     // Number of steps has been given in advance, so work out the stepsize
     stepsize = 1.0f / e->nsteps;
@@ -2226,7 +2226,7 @@ recurse_bez
         // consistent for face view list facet generation.
 
         // Add (x4, y4, z4) as a point to the view list
-        p = point_newv((float)x4, (float)y4, (float)z4);
+        p = point_newv((double)x4, (double)y4, (double)z4);
         link_tail((Object *)p, &e->view_list);
         e->nsteps++;
     }

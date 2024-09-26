@@ -257,7 +257,7 @@ copy_obj(Object* obj, double xoffset, double yoffset, double zoffset, BOOL cloni
         new_grp->op = grp->op;
         if (grp->loft != NULL)
         {
-            size_t loft_size = sizeof(LoftParams) + grp->loft->n_bays * sizeof(float);
+            size_t loft_size = sizeof(LoftParams) + grp->loft->n_bays * sizeof(double);
 
             new_grp->loft = malloc(loft_size);
             memcpy_s(new_grp->loft, loft_size, grp->loft, loft_size);
@@ -817,7 +817,7 @@ mat_mult_2x2_xy(double m[4], double x0, double y0, double* x, double* y)
 
 // Rotate a coordinate, in the facing plane, by angle alpha in the positive direction.
 void
-rotate_coord_free_facing(double* x, double* y, double* z, float alpha, double xc, double yc, double zc)
+rotate_coord_free_facing(double* x, double* y, double* z, double alpha, double xc, double yc, double zc)
 {
     double x0 = *x - xc;
     double y0 = *y - yc;
@@ -853,7 +853,7 @@ rotate_coord_free_facing(double* x, double* y, double* z, float alpha, double xc
 
 // Rotate the direction of a plane, in the facing plane, by angle alpha in the positive direction.
 void
-rotate_plane_free_facing(Plane* pl, float alpha)
+rotate_plane_free_facing(Plane* pl, double alpha)
 {
     double A0 = pl->A;
     double B0 = pl->B;
@@ -884,7 +884,7 @@ break;
 // Rotate any object, in the facing plane, by angle alpha in the positive direction.
 // Make sure to call clear_move_copy_flags afterwards.
 void
-rotate_obj_free_facing(Object* obj, float alpha, double xc, double yc, double zc)
+rotate_obj_free_facing(Object* obj, double alpha, double xc, double yc, double zc)
 {
     int i;
     Point* p;

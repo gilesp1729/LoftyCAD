@@ -13,7 +13,7 @@ void expand_bbox(Bbox *box, Point *p);
 void expand_bbox_coords(Bbox* box, double x, double y, double z);
 void union_bbox(Bbox *box1, Bbox *box2, Bbox *u);
 BOOL intersects_bbox(Bbox *box1, Bbox *box2);
-BOOL in_bbox(Point* pt, Bbox* box, float tol);
+BOOL in_bbox(Point* pt, Bbox* box, double tol);
 
 // Regenerate a view list
 void invalidate_all_view_lists(Object *parent, Object *obj, double dx, double dy, double dz);
@@ -23,7 +23,7 @@ void gen_view_list_arc(ArcEdge *ae);
 void gen_view_list_bez(BezierEdge *be);
 void free_view_list_face(Face *face);
 void free_view_list_edge(Edge *edge);
-void adjust_stepsizes(Object* obj, float new_tol);
+void adjust_stepsizes(Object* obj, double new_tol);
 
 // Surface meshes
 BOOL gen_view_list_vol(Volume *vol);
@@ -47,7 +47,7 @@ BOOL mesh_intersection(Mesh **mesh1, Mesh *mesh2);
 BOOL mesh_difference(Mesh **mesh1, Mesh *mesh2);
 
 typedef void(*FaceCoordCB_D)(void* arg, double x[3], double y[3], double z[3]);
-typedef void(*FaceCoordMaterialCB)(void* arg, int mat, float x[3], float y[3], float z[3]);
+typedef void(*FaceCoordMaterialCB)(void* arg, int mat, double x[3], double y[3], double z[3]);
 typedef void(*FaceVertexCB)(void *arg, int nv, Vertex_index *vi);
 typedef void(*VertexCB_D)(void* arg, Vertex_index* v, double x, double y, double z);
 

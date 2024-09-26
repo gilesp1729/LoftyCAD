@@ -716,7 +716,7 @@ preview_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 EnableWindow(GetDlgItem(hWnd, IDC_PRINTER_ZFROM), TRUE);
                 EnableWindow(GetDlgItem(hWnd, IDC_PRINTER_ZTO), FALSE);
                 SendDlgItemMessage(hWnd, IDC_PRINTER_ZFROM, WM_GETTEXT, 16, (LPARAM)buf);
-                print_zmin = print_zmax = (float)atof(buf);
+                print_zmin = print_zmax = (double)atof(buf);
                 invalidate_dl();
                 break;
 
@@ -724,9 +724,9 @@ preview_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 EnableWindow(GetDlgItem(hWnd, IDC_PRINTER_ZFROM), TRUE);
                 EnableWindow(GetDlgItem(hWnd, IDC_PRINTER_ZTO), TRUE);
                 SendDlgItemMessage(hWnd, IDC_PRINTER_ZFROM, WM_GETTEXT, 16, (LPARAM)buf);
-                print_zmin = (float)atof(buf);
+                print_zmin = (double)atof(buf);
                 SendDlgItemMessage(hWnd, IDC_PRINTER_ZTO, WM_GETTEXT, 16, (LPARAM)buf);
-                print_zmax = (float)atof(buf);
+                print_zmax = (double)atof(buf);
                 invalidate_dl();
                 break;
 
@@ -806,7 +806,7 @@ preview_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             if (LOWORD(wParam) == IDC_PRINTER_ZFROM)
             {
                 SendDlgItemMessage(hWnd, IDC_PRINTER_ZFROM, WM_GETTEXT, 16, (LPARAM)buf);
-                print_zmin = (float)atof(buf);
+                print_zmin = (double)atof(buf);
                 if (print_zmax < print_zmin)
                 {
                     print_zmax = print_zmin;
@@ -818,7 +818,7 @@ preview_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             else if (LOWORD(wParam) == IDC_PRINTER_ZTO)
             {
                 SendDlgItemMessage(hWnd, IDC_PRINTER_ZTO, WM_GETTEXT, 16, (LPARAM)buf);
-                print_zmax = (float)atof(buf);
+                print_zmax = (double)atof(buf);
                 if (print_zmin > print_zmax)
                 {
                     print_zmin = print_zmax;

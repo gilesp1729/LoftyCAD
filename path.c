@@ -141,7 +141,7 @@ edge_total_length(Edge* e)
 // Find a tangent at the given length within the edge.
 // No checks are done on length. It is assumed to be within the edge length.
 void
-edge_tangent_to_length(Edge* e, int first_index, float len, Plane* tangent)
+edge_tangent_to_length(Edge* e, int first_index, double len, Plane* tangent)
 {
     Point* p;
     int rc = 0;
@@ -239,7 +239,7 @@ edge_tangent_to_intersect(Edge *e, int first_index, Plane* pl, Bbox *ebox, Plane
         tangent->refpt = pt;
         
         // Check that pt is within ebox, and return 0 if it isn't.
-        if (!in_bbox(&pt, ebox, (float)SMALL_COORD))
+        if (!in_bbox(&pt, ebox, (double)SMALL_COORD))
             rc = 0;
 
         // If we're off the end (rc == 2) check that an endpoint is also
@@ -266,7 +266,7 @@ edge_tangent_to_intersect(Edge *e, int first_index, Plane* pl, Bbox *ebox, Plane
             tangent->refpt = *p;
 
             rc = intersect_line_plane(tangent, pl, &pt);
-            if (!in_bbox(&pt, ebox, (float)SMALL_COORD))
+            if (!in_bbox(&pt, ebox, (double)SMALL_COORD))
                 rc = 0;
             if (rc == 1)
             {
@@ -302,7 +302,7 @@ edge_tangent_to_intersect(Edge *e, int first_index, Plane* pl, Bbox *ebox, Plane
             tangent->refpt = *p;
 
             rc = intersect_line_plane(tangent, pl, &pt);
-            if (!in_bbox(&pt, ebox, (float)SMALL_COORD))
+            if (!in_bbox(&pt, ebox, (double)SMALL_COORD))
                 rc = 0;
             if (rc == 2)
             {
@@ -339,7 +339,7 @@ edge_tangent_to_intersect(Edge *e, int first_index, Plane* pl, Bbox *ebox, Plane
 
 // Subdivide an edge. Args similar to path_subdivide.
 void
-edge_subdivide(Edge *e, Plane *initial_tangent, float initial_len, float max_ebox, Plane **tangents, int *n_tangents, int *max_tangents)
+edge_subdivide(Edge *e, Plane *initial_tangent, double initial_len, double max_ebox, Plane **tangents, int *n_tangents, int *max_tangents)
 {
     Plane end_tangent;
     int i, n_copies;
@@ -351,7 +351,7 @@ edge_subdivide(Edge *e, Plane *initial_tangent, float initial_len, float max_ebo
     n_copies = (int)((e->edge_length - initial_len) / (MAX_SPACING * max_ebox));
     if (n_copies > 0)
     {
-        float delta_len = (e->edge_length - initial_len) / (n_copies + 1);
+        double delta_len = (e->edge_length - initial_len) / (n_copies + 1);
 
         for (i = 0; i < n_copies; i++)
         {
@@ -405,7 +405,7 @@ path_is_closed(Object* obj)
 
 // Return the total length of the path. Call this first before calling
 // any others.
-float
+double
 path_total_length(Object* obj)
 {
     Edge* e;
@@ -419,7 +419,7 @@ path_total_length(Object* obj)
     else
     {
         Group* group = (Group*)obj;
-        float total_length = 0;
+        double total_length = 0;
 
         ASSERT(is_edge_group(group), "Path is not an edge group");
         for (e = (Edge*)group->obj_list.head; e != NULL; e = (Edge*)e->hdr.next)
@@ -448,9 +448,9 @@ path_tangent_to_intersect(Object* obj, Plane* pl, Bbox *ebox, Plane* tangent, do
     {
         Group* group = (Group*)obj;
         Edge* e;
-        float total_length = 0;
+        double total_length = 0;
         Plane tangent_candidate;
-        float len;
+        double len;
         int num_found = 0;
 
         ASSERT(is_edge_group(group), "Path is not an edge group");
@@ -498,10 +498,10 @@ path_tangent_to_intersect(Object* obj, Plane* pl, Bbox *ebox, Plane* tangent, do
 // make no more than max_angle of deviation between them. Return the number of tangents
 // stored in the array.
 int
-path_subdivide(Object* obj, Plane* initial_tangent, Bbox *ebox, float initial_len, Plane **tangents)
+path_subdivide(Object* obj, Plane* initial_tangent, Bbox *ebox, double initial_len, Plane **tangents)
 {
     int n_tangents = 0, max_tangents = 8;   // must be a power of 2
-    float max_ebox = 0;
+    double max_ebox = 0;
 
     // Allocate a tangents array; it may be enlarged later.
     *tangents = calloc(max_tangents, sizeof(Plane));
@@ -523,7 +523,7 @@ path_subdivide(Object* obj, Plane* initial_tangent, Bbox *ebox, float initial_le
     {
         Group* group = (Group*)obj;
         Edge* e;
-        float total_length = 0;
+        double total_length = 0;
 
         ASSERT(is_edge_group(group), "Path is not an edge group");
 

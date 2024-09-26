@@ -496,7 +496,7 @@ make_face(Group* group, BOOL clear_group, BOOL auto_reverse, BOOL reverse)
 // Insert an edge at a corner point; either a single straight (chamfer) or an arc (round).
 // Optionally, restrict the radius or chamfer to prevent rounds colliding at short edges.
 void
-insert_chamfer_round(Point* pt, Face* parent, float size, EDGE edge_type, BOOL restricted)
+insert_chamfer_round(Point* pt, Face* parent, double size, EDGE edge_type, BOOL restricted)
 {
     Edge* e[2] = { NULL, NULL };
     int i, k, end[2], eindex[2];
@@ -1291,7 +1291,7 @@ make_lofted_volume(Group* group)
     int i, j;
     LoftedGroup* lg;
     LoftParams* loft;
-    float total_length;
+    double total_length;
     ListHead* contour_lists;
     Edge** contour;
     int *band_nsteps;
@@ -1368,7 +1368,7 @@ make_lofted_volume(Group* group)
         // Set it to defaults
         int n_bays = group->n_members - 1;
 
-        group->loft = malloc(sizeof(LoftParams) + n_bays * sizeof(float));
+        group->loft = malloc(sizeof(LoftParams) + n_bays * sizeof(double));
         memcpy(group->loft, &default_loft, sizeof(LoftParams));
         group->loft->n_bays = n_bays;
         for (i = 1; i < group->loft->n_bays; i++)
@@ -1517,9 +1517,9 @@ make_lofted_volume(Group* group)
     }
     else    // no path, assume (generally) axis-aligned row of centroids in the box
     {
-        float dx = box.xmax - box.xmin;
-        float dy = box.ymax - box.ymin;
-        float dz = box.zmax - box.zmin;
+        double dx = box.xmax - box.xmin;
+        double dy = box.ymax - box.ymin;
+        double dz = box.zmax - box.zmin;
 
         if (dx > dy && dx > dz)
         {
@@ -1619,8 +1619,8 @@ make_lofted_volume(Group* group)
     // Compare directions of edges in each edge group with the previous.
     for (i = 1; i < num_groups; i++)
     {
-        float angle = 0;
-        float min_angle = 999999.0f;
+        double angle = 0;
+        double min_angle = 999999.0f;
         Edge* min_edge = NULL;  // shhh compiler
 
         // Accumulate the direction cosines of the current edge group.
@@ -1638,7 +1638,7 @@ make_lofted_volume(Group* group)
         for (j = 0; j < num_edges; j++)
         {
             Edge* e0, * e1;
-            float angle = 0;
+            double angle = 0;
             double cosa;
 
             // Walk down the current and previous EG's summing the angles between the
@@ -1656,7 +1656,7 @@ make_lofted_volume(Group* group)
                 cosa = pldot((Plane*)&e1->dirn, (Plane*)&e0->dirn);
                 if (cosa > 1)   // protect against domain error in acosf
                     cosa = 1;
-                angle += (float)acos(cosa);
+                angle += (double)acos(cosa);
             }
 
             if (angle < min_angle)
@@ -1688,7 +1688,7 @@ make_lofted_volume(Group* group)
         {
             Plane pl0 = lg[i - 1].principal;
             Plane pl1 = lg[i].principal;
-            float theta, chord;
+            double theta, chord;
             double cosa;
 
             normalise_plane(&pl0);
@@ -1698,18 +1698,18 @@ make_lofted_volume(Group* group)
             cosa = pldot(&pl0, &pl1);
             if (cosa > 1.0f)
                 cosa = 1.0f;
-            theta = (float)acos(cosa);
+            theta = (double)acos(cosa);
 
             // The usual (4/3) tan (theta/4) formula for tension is as a fraction
             // of the radius, but our tensions are as multiples of the chord
             // length (distance between endpoints). Correct this to get
             // a better approximation. Watch out for near-zero divides, though.
             // As theta -> 0, the tension -> 0.33333
-            chord = 2.0f * sinf(theta / 2.0f);
-            if (fabsf(theta) < 0.05)
+            chord = 2.0f * sin(theta / 2.0f);
+            if (fabs(theta) < 0.05)
                 loft->bay_tensions[i - 1] = BEZ_DEFAULT_TENSION;
             else
-                loft->bay_tensions[i - 1] = (4.0f / 3.0f) * tanf(theta / 4.0f) / chord;
+                loft->bay_tensions[i - 1] = (4.0f / 3.0f) * tan(theta / 4.0f) / chord;
         }
     }
 
@@ -2358,7 +2358,7 @@ make_tubed_group(Group* group)
         // Set it to defaults
         int n_bays = n_tangents;
 
-        tubed_group->loft = malloc(sizeof(LoftParams) + n_bays * sizeof(float));
+        tubed_group->loft = malloc(sizeof(LoftParams) + n_bays * sizeof(double));
         memcpy(tubed_group->loft, &default_tube, sizeof(LoftParams));
         tubed_group->loft->n_bays = n_bays;
         for (i = 1; i < tubed_group->loft->n_bays; i++)

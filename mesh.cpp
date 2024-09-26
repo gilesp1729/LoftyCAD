@@ -1,11 +1,11 @@
 // C interface to a little bit of CGAL's polygon mesh processing library.
 
 #include "mesh.h"
-//typedef void(*FaceCoordCB)(void* arg, float x[3], float y[3], float z[3]);
+//typedef void(*FaceCoordCB)(void* arg, double x[3], double y[3], double z[3]);
 typedef void(*FaceCoordCB_D)(void* arg, double x[3], double y[3], double z[3]);
-typedef void(*FaceCoordMaterialCB)(void* arg, int mat_index, float x[3], float y[3], float z[3]);
+typedef void(*FaceCoordMaterialCB)(void* arg, int mat_index, double x[3], double y[3], double z[3]);
 typedef void(*FaceVertexCB)(void *arg, int nv, Vertex_index *vi);
-//typedef void(*VertexCB)(void* arg, Vertex_index* v, float x, float y, float z);
+//typedef void(*VertexCB)(void* arg, Vertex_index* v, double x, double y, double z);
 typedef void(*VertexCB_D)(void* arg, Vertex_index* v, double x, double y, double z);
 
 
@@ -326,7 +326,7 @@ extern "C"
     void
         mesh_foreach_face_coords_mat(Mesh* mesh, FaceCoordMaterialCB callback, void* callback_arg)
     {
-        float x[3], y[3], z[3];
+        double x[3], y[3], z[3];
         int i;
         int mat;
         Mesh::Property_map<Mesh::Face_index, int> mesh_id =

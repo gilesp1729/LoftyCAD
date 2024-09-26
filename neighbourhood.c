@@ -17,7 +17,7 @@
 //            =0 for P2  on the line
 //            <0 for P2  right of the line
 //    See: Algorithm 1 "Area of Triangles and Polygons"
-float
+double
 isLeft(Point2D P0, Point2D P1, Point2D P2)
 {
     return ((P1.x - P0.x) * (P2.y - P0.y)
@@ -194,11 +194,11 @@ find_in_neighbourhood_face(Face *face, Object *obj)
         // Easy tests first.
         // Test if normals are the same, and the refpts lie in close to the same plane
         // Allow normals to be exactly opposite (e.g. one up one down)
-        if (!nz(fabs(face1->normal.A) - fabsf(face->normal.A)))
+        if (!nz(fabs(face1->normal.A) - fabs(face->normal.A)))
             return NULL;
-        if (!nz(fabs(face1->normal.B) - fabsf(face->normal.B)))
+        if (!nz(fabs(face1->normal.B) - fabs(face->normal.B)))
             return NULL;
-        if (!nz(fabs(face1->normal.C) - fabsf(face->normal.C)))
+        if (!nz(fabs(face1->normal.C) - fabs(face->normal.C)))
             return NULL;
 
         dx = face->normal.refpt.x - face1->normal.refpt.x;
@@ -377,12 +377,12 @@ Object* pick_edge(Edge* e, LOCK parent_lock, Plane* line, double* dist, double b
     return NULL;
 }
 
-Object* pick_face(Face* f, LOCK parent_lock, Plane* line, float* dist, float bias)
+Object* pick_face(Face* f, LOCK parent_lock, Plane* line, double* dist, double bias)
 {
     Point point;
     Point* p;
     Point2D pt;
-    float a, b, c;
+    double a, b, c;
 
     switch (f->type & ~FACE_CONSTRUCTION)
     {
@@ -413,9 +413,9 @@ Object* pick_face(Face* f, LOCK parent_lock, Plane* line, float* dist, float bia
         // Find the intersection point and check if it lies in the face.
         if (intersect_line_plane(line, &f->normal, &point) > 0)
         {
-            a = fabsf(f->normal.A);
-            b = fabsf(f->normal.B);
-            c = fabsf(f->normal.C);
+            a = fabs(f->normal.A);
+            b = fabs(f->normal.B);
+            c = fabs(f->normal.C);
 
             if (c > b && c > a)
             {
@@ -478,9 +478,9 @@ Object* pick_face(Face* f, LOCK parent_lock, Plane* line, float* dist, float bia
             // test for intersection within facet
             if (intersect_line_plane(line, &facet_normal, &point) > 0)
             {
-                a = fabsf(facet_normal.A);
-                b = fabsf(facet_normal.B);
-                c = fabsf(facet_normal.C);
+                a = fabs(facet_normal.A);
+                b = fabs(facet_normal.B);
+                c = fabs(facet_normal.C);
 
                 if (c > b && c > a)
                 {
@@ -549,7 +549,7 @@ Object* pick_face(Face* f, LOCK parent_lock, Plane* line, float* dist, float bia
     return NULL;
 }
 
-Object* pick_object(Object* obj, LOCK parent_lock, Plane* line, float* dist)
+Object* pick_object(Object* obj, LOCK parent_lock, Plane* line, double* dist)
 {
     Object* test = NULL;
     Object* o;
@@ -602,8 +602,8 @@ Pick(GLint x_pick, GLint y_pick, BOOL force_pick)
     Object* obj;
     Object* parent;
     Plane line;
-    float dist = LARGE_COORD;
-    float ret_dist = LARGE_COORD;
+    double dist = LARGE_COORD;
+    double ret_dist = LARGE_COORD;
     BOOL locked_edge_group;
 
     // Get ray from eye position.

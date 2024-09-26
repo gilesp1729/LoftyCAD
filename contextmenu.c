@@ -923,7 +923,7 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         {
             // Create a LoftParams filled with defaults, and enough bay tension elements
             n_bays = group->n_members - ((vol != NULL) ? 2 : 1);
-            group->loft = malloc(sizeof(LoftParams) + n_bays * sizeof(float));
+            group->loft = malloc(sizeof(LoftParams) + n_bays * sizeof(double));
             memcpy(group->loft, &default_loft, sizeof(LoftParams));
             group->loft->n_bays = n_bays;
             for (i = 0; i < n_bays; i++)
@@ -1069,7 +1069,7 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             {
             case EN_KILLFOCUS:
                 SendDlgItemMessage(hWnd, IDC_LOFT_NOSE_TENSION, WM_GETTEXT, 16, (LPARAM)buf);
-                loft->nose_tension = (float)atof(buf);
+                loft->nose_tension = (double)atof(buf);
                 changed = TRUE;
                 break;
             }
@@ -1080,7 +1080,7 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             {
             case EN_KILLFOCUS:
                 SendDlgItemMessage(hWnd, IDC_LOFT_TAIL_TENSION, WM_GETTEXT, 16, (LPARAM)buf);
-                loft->tail_tension = (float)atof(buf);
+                loft->tail_tension = (double)atof(buf);
                 changed = TRUE;
                 break;
             }
@@ -1183,7 +1183,7 @@ lofting_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 if (changed)
                 {
                     SendDlgItemMessage(hWnd, IDC_LOFT_BAY_TENSIONS, WM_GETTEXT, 16, (LPARAM)buf);
-                    loft->bay_tensions[bay] = (float)atof(buf);
+                    loft->bay_tensions[bay] = (double)atof(buf);
 
                     SendDlgItemMessage(hWnd, IDC_LOFT_BAY_TENSIONS, CB_RESETCONTENT, 0, 0);
                     for (i = 0; i < loft->n_bays; i++)

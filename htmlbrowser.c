@@ -871,7 +871,7 @@ long DisplayHTMLPage(HWND hwnd, LPTSTR webPageName)
         // then passed to Navigate2(). Why? The VARIENT struct makes it possible to define generic
         // 'datatypes' that can be used with all languages. Not all languages support things like
         // nul-terminated C strings. So, by using a VARIENT, whose first field tells what sort of
-        // data (ie, string, float, etc) is in the VARIENT, COM interfaces can be used by just about
+        // data (ie, string, double, etc) is in the VARIENT, COM interfaces can be used by just about
         // any language.
         VariantInit(&myURL);
         myURL.vt = VT_BSTR;

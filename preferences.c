@@ -143,7 +143,7 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     char buf[16], version[128], print_button[128];
     char location[MAX_PATH], filename[MAX_PATH];
     HANDLE f;
-//    float new_val;
+//    double new_val;
     int i;
     static BOOL slicer_changed, index_changed, config_changed;
     char printer[64];
@@ -222,13 +222,13 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             SendDlgItemMessage(hWnd, IDC_PREFS_TITLE, WM_GETTEXT, 256, (LPARAM)object_tree.title);
 
             SendDlgItemMessage(hWnd, IDC_PREFS_HALFSIZE, WM_GETTEXT, 16, (LPARAM)buf);
-            half_size = (float)atof(buf);
+            half_size = (double)atof(buf);
             zTrans = -2.0f * half_size;
             Position();
 
 #if 0 // Not used, too dodgy
             SendDlgItemMessage(hWnd, IDC_PREFS_TOL, WM_GETTEXT, 16, (LPARAM)buf);
-            new_val = (float)atof(buf);
+            new_val = (double)atof(buf);
             if (!nz(new_val - tolerance))
             {
                 // The snapping tol and chamfer rad are fixed fractions of the tolerance. Don't change them.
@@ -258,21 +258,21 @@ prefs_dialog(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 #else
             // These don't change the drawing until something else is added.
             SendDlgItemMessage(hWnd, IDC_PREFS_TOL, WM_GETTEXT, 16, (LPARAM)buf);
-            tolerance = (float)atof(buf);
+            tolerance = (double)atof(buf);
             // The snapping tol and chamfer rad are fixed fractions of the tolerance. Don't change them.
             snap_tol = 3 * tolerance;
             chamfer_rad = 3.5f * tolerance;
-            tol_log = (int)ceilf(log10f(1.0f / tolerance));
+            tol_log = (int)ceil(log10(1.0 / tolerance));
 #endif
 
             SendDlgItemMessage(hWnd, IDC_PREFS_GRID, WM_GETTEXT, 16, (LPARAM)buf);
-            grid_snap = (float)atof(buf);
+            grid_snap = (double)atof(buf);
             SendDlgItemMessage(hWnd, IDC_PREFS_ANGLE, WM_GETTEXT, 16, (LPARAM)buf);
             angle_snap = atoi(buf);
             SendDlgItemMessage(hWnd, IDC_PREFS_STEPSIZE, WM_GETTEXT, 16, (LPARAM)buf);
-            default_stepsize = (float)atof(buf);
+            default_stepsize = (double)atof(buf);
             SendDlgItemMessage(hWnd, IDC_PREFS_ROUNDRAD, WM_GETTEXT, 16, (LPARAM)buf);
-            round_rad = (float)atof(buf);
+            round_rad = (double)atof(buf);
 
             // Store any change in the selected printer and its settings
             SendDlgItemMessage(hWnd, IDC_PREFS_SERIALPORT, WM_GETTEXT, 64, (LPARAM)printer_port);

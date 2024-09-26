@@ -120,7 +120,7 @@ Point* point_newpv(Point* p)
 }
 
 // Divide the line between p0 and p1 in a given ratio (usually 0-1), and put a new point there.
-Point* point_newr(Point* p0, Point* p1, float ratio)
+Point* point_newr(Point* p0, Point* p1, double ratio)
 {
     Point* pt = point_new_raw();
 

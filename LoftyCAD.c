@@ -116,8 +116,8 @@ SCALED scaled_dirn;
 SCALED scaled;
 
 // Total angle and effective angle accumulator for a rotation operation
-float total_angle;
-float effective_angle;
+double total_angle;
+double effective_angle;
 
 // Effective scales similarly
 double eff_sx, eff_sy, eff_sz;
@@ -169,15 +169,15 @@ double halo_rad = 50;
 char curr_filename[256] = { 0, };
 
 // Print bed dimensions defaults
-float bed_xmin = 0;
-float bed_ymin = 0;
-float bed_xmax = 200;
-float bed_ymax = 200;
-float layer_height = 0.3f;
+double bed_xmin = 0;
+double bed_ymin = 0;
+double bed_xmax = 200;
+double bed_ymax = 200;
+double layer_height = 0.3f;
 
 // Printer view Z min and max for G-code visualisation
-float print_zmin = 0;
-float print_zmax = 9999;
+double print_zmin = 0;
+double print_zmax = 9999;
 
 // Grid (for snapping points) and unit tolerance (for display of dims)
 // When grid snapping is turned off, points are still snapped to the tolerance.
@@ -186,14 +186,14 @@ float print_zmax = 9999;
 #define INITIAL_GRID 1.0f
 #define INITIAL_TOL 0.1f
 #define INITIAL_HALFSIZE 100.0f
-float grid_snap = INITIAL_GRID;
-float tolerance = INITIAL_TOL;
+double grid_snap = INITIAL_GRID;
+double tolerance = INITIAL_TOL;
 
 // Perspective zTrans adjustment
 #define ZOOM_Z_SCALE 0.25f
 
 // Snapping tolerance, a bit more relaxed than the flatness tolerance
-float snap_tol = 3 * INITIAL_TOL;
+double snap_tol = 3 * INITIAL_TOL;
 
 // log10(1.0 / tolerance)
 int tol_log = 1;
@@ -208,26 +208,26 @@ int angle_snap = 15;
 BOOL snapping_to_angle = FALSE;
 
 // Size ("radius") of chamfer. It must be slightly larger than snap_tol.
-float chamfer_rad = 3.5f * INITIAL_TOL;
+double chamfer_rad = 3.5f * INITIAL_TOL;
 
 // Radius of rounded corners.
-float round_rad = 2 * INITIAL_GRID;
+double round_rad = 2 * INITIAL_GRID;
 
 // Half-size of drawing volume, nominally in mm (although units are arbitrary)
-float half_size = INITIAL_HALFSIZE;
+double half_size = INITIAL_HALFSIZE;
 
 // Default stepsize (in mm) to be applied to arcs and beziers when flatness tolerance
 // can't be used (such as when many edges have to match)
-float default_stepsize = 2.0f;
+double default_stepsize = 2.0f;
 
 // Initial values of translation components
-float xTrans = 0;
-float yTrans = 0;
-float zTrans = -2.0f * INITIAL_HALFSIZE;
+double xTrans = 0;
+double yTrans = 0;
+double zTrans = -2.0f * INITIAL_HALFSIZE;
 int zoom_delta = 0;
 
 // Clipboard paste offsets
-float clip_xoffset, clip_yoffset, clip_zoffset;
+double clip_xoffset, clip_yoffset, clip_zoffset;
 
 // Undo (checkpoint) generation, the latest generation to be written, and the highest to be written
 int generation = 0;
@@ -242,7 +242,7 @@ BOOL debug_view_viewlist = FALSE;
 // Size and span of point-searching buckets used in coordinate matching.
 // Chosen so that there are 40 buckets covering +/-halfsize, in X and Y (we don't bucket on Z)
 // If these change, n_buckets must be even.
-float bucket_size = INITIAL_GRID * 5;
+double bucket_size = INITIAL_GRID * 5;
 int n_buckets = 40;
 
 BlendMode view_blend = BLEND_MULTIPLY;
@@ -314,7 +314,7 @@ void CALLBACK
 Position(void)
 {
     GLint viewport[4], width, height;
-    float h, w, znear, zfar, zoom_factor;
+    double h, w, znear, zfar, zoom_factor;
 #ifdef DEBUG_POSITION_ZOOM
     char buf[64];
 #endif
@@ -337,14 +337,14 @@ Position(void)
 #endif
         if (width > height)
         {
-            w = half_size * zoom_factor * (float)width / height;
+            w = half_size * zoom_factor * (double)width / height;
             h = half_size * zoom_factor;
             glOrtho(-w, w, -h, h, znear, zfar);
         }
         else
         {
             w = half_size * zoom_factor;
-            h = half_size * zoom_factor * (float)height / width;
+            h = half_size * zoom_factor * (double)height / width;
             glOrtho(-w, w, -h, h, znear, zfar);
         }
         glTranslated(xTrans, yTrans, -2.0f * half_size);
@@ -360,14 +360,14 @@ Position(void)
 #endif
         if (width > height)
         {
-            w = half_size * zoom_factor * (float)width / height;
+            w = half_size * zoom_factor * (double)width / height;
             h = half_size * zoom_factor;
             glFrustum(-w, w, -h, h, znear, zfar);
         }
         else
         {
             w = half_size * zoom_factor;
-            h = half_size * zoom_factor * (float)height / width;
+            h = half_size * zoom_factor * (double)height / width;
             glFrustum(-w, w, -h, h, znear, zfar);
         }
         glTranslated(xTrans, yTrans, -2.0f * half_size);
@@ -723,8 +723,8 @@ left_up(AUX_EVENTREC *event)
 {
     Face *rf;
     Edge *e;
-    float mv[16], vec[4], nvec[4];
-    float eye[4] = { 0, 0, 1, 0 };
+    double mv[16], vec[4], nvec[4];
+    double eye[4] = { 0, 0, 1, 0 };
 #ifdef DEBUG_LEFT_UP_FACING
     char buf[256];
 #endif
@@ -733,7 +733,7 @@ left_up(AUX_EVENTREC *event)
     {
     case STATE_NONE:
         // We have orbited - calculate the facing plane again
-        glGetFloatv(GL_MODELVIEW_MATRIX, mv);
+        glGetDoublev(GL_MODELVIEW_MATRIX, mv);
 #ifdef DEBUG_LEFT_UP_FACING
 #ifdef DEBUG_LEFT_UP_MODELVIEW
         sprintf_s(buf, 256, "%f %f %f %f\r\n", mv[0], mv[1], mv[2], mv[3]);
@@ -752,9 +752,9 @@ left_up(AUX_EVENTREC *event)
         sprintf_s(buf, 256, "Eye: %f %f %f\r\n", nvec[0], nvec[1], nvec[2]);
         Log(buf);
 #endif
-        vec[0] = fabsf(nvec[0]);
-        vec[1] = fabsf(nvec[1]);
-        vec[2] = fabsf(nvec[2]);
+        vec[0] = fabs(nvec[0]);
+        vec[1] = fabs(nvec[1]);
+        vec[2] = fabs(nvec[2]);
         if (vec[0] > vec[1] && vec[0] > vec[2])
         {
             if (nvec[0] > 0)
@@ -1179,9 +1179,9 @@ left_click(AUX_EVENTREC *event)
 
 // move the selection by a small amount
 void
-micro_move_selection(float x, float y, BOOL inhibit_snap)
+micro_move_selection(double x, double y, BOOL inhibit_snap)
 {
-    float dx, dy, dz;
+    double dx, dy, dz;
     Object *obj;
 
     if (snapping_to_grid && !inhibit_snap)

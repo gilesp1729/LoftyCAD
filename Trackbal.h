@@ -68,8 +68,8 @@ trackball_stop_spin(void);
  * if ox,oy is the window's center and sizex,sizey is its size, then
  * the proper transformation from screen coordinates (sc) to world
  * coordinates (wc) is:
- * wcx = (2.0 * (scx-ox)) / (float)sizex - 1.0
- * wcy = (2.0 * (scy-oy)) / (float)sizey - 1.0
+ * wcx = (2.0 * (scx-ox)) / (double)sizex - 1.0
+ * wcy = (2.0 * (scy-oy)) / (double)sizey - 1.0
  *
  * The resulting rotation is returned as a quaternion rotation in the
  * first paramater.
@@ -86,7 +86,7 @@ trackball_calc_quat(float q[4], float p1x, float p1y, float p2x, float p2y);
  * over-written with the resulting new total rotation).
  */
 void
-trackball_add_quats(float *q1, float *q2, float *dest);
+trackball_add_quats(float*q1, float*q2, float*dest);
 
 /*
  * A useful function, builds a rotation matrix in Matrix based on
