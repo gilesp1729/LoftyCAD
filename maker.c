@@ -1015,20 +1015,20 @@ compare_lofted_groups(const void* elem1, const void* elem2)
 // rectify it by moving it back toward the other control point with a tension of 0.1.
 // This means that all bezier edges have valid control arm diections and we don't get
 // mysterious zeroes when calculating local normals and the like.
-#define RECTIFY_TENSION 0.1f
+#define RECTIFY_TENSION 0.1
 void
 rectify_bez_cp(BezierEdge* be)
 {
     Edge* e = (Edge*)be;
 
-    if (near_pt(be->ctrlpoints[0], e->endpoints[0], SMALL_COORD))
+    if (near_pt(be->ctrlpoints[0], e->endpoints[0], LOOSE_SMALL_COORD))
     {
         be->ctrlpoints[0]->x = be->ctrlpoints[1]->x * RECTIFY_TENSION + e->endpoints[0]->x * (1 - RECTIFY_TENSION);
         be->ctrlpoints[0]->y = be->ctrlpoints[1]->y * RECTIFY_TENSION + e->endpoints[0]->y * (1 - RECTIFY_TENSION);
         be->ctrlpoints[0]->z = be->ctrlpoints[1]->z * RECTIFY_TENSION + e->endpoints[0]->z * (1 - RECTIFY_TENSION);
     }
 
-    if (near_pt(be->ctrlpoints[1], e->endpoints[1], SMALL_COORD))
+    if (near_pt(be->ctrlpoints[1], e->endpoints[1], LOOSE_SMALL_COORD))
     {
         be->ctrlpoints[1]->x = be->ctrlpoints[0]->x * RECTIFY_TENSION + e->endpoints[1]->x * (1 - RECTIFY_TENSION);
         be->ctrlpoints[1]->y = be->ctrlpoints[0]->y * RECTIFY_TENSION + e->endpoints[1]->y * (1 - RECTIFY_TENSION);

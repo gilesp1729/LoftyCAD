@@ -89,11 +89,12 @@ in_bbox(Point* pt, Bbox* box, double tol)
     return TRUE;
 }
 
+#if 0  // NOT USED
 // Return TRUE if two bboxes intersect. Make sure to allow touching bboxes.
 BOOL 
 intersects_bbox(Bbox *box1, Bbox *box2)
 {
-    if (box1->xmax < box2->xmin - SMALL_COORD)
+    if (box1->xmax < box2->xmin - SMALL_COORD)      // TODO should this be loose?
         return FALSE;
     if (box1->xmin > box2->xmax + SMALL_COORD)
         return FALSE;
@@ -110,6 +111,7 @@ intersects_bbox(Bbox *box1, Bbox *box2)
 
     return TRUE;
 }
+#endif // 0
 
 // Enforce constraints on an arc edge e, when one of its points p has been moved.
 void
@@ -2029,7 +2031,7 @@ gen_view_list_arc(ArcEdge *ae)
 
     // angle between two vectors c-p0 and c-p1. If the points are the same, we are
     // drawing a full circle. (where "same" means coincident - they are always distinct structures)
-    if (near_pt(edge->endpoints[0], edge->endpoints[1], SMALL_COORD))
+    if (near_pt(edge->endpoints[0], edge->endpoints[1], LOOSE_SMALL_COORD))       // TODO use loose small coord here
         theta = ae->clockwise ? -2 * PI : 2 * PI;
     else
         theta = angle3(edge->endpoints[0], ae->centre, edge->endpoints[1], &n);

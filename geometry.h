@@ -10,15 +10,18 @@
 // A large impossible coordinate value
 #define LARGE_COORD 999999
 
-// A small coordinate value for testing
-#define SMALL_COORD 0.000001
+// A small coordinate value for testing. The tight tolerance is for testing
+// double precision coordinate points.
+#define LOOSE_SMALL_COORD 0.000001
+#define SMALL_COORD 0.000000000001
 
 // test for "near" zero.
 #define nz(val)  (fabs(val) < SMALL_COORD)
 
 // test for near points (within the snapping tolerance, or the small coord tolerance)
-// DEBUG: Flag nearness comparisons that pass with tol, but fail with (tol * tol)
-#define DEBUG_NEAR_PT_TOL
+// DEBUG: Flag nearness comparisons that pass with tol, but fail with (tol * tol).
+// Only useful if tol is the old SMALL_COORD (0.000001) not the tighter double-precision one.
+//#define DEBUG_NEAR_PT_TOL
 #ifdef DEBUG_NEAR_PT_TOL
 BOOL near_pt(Point* p1, Point* p2, double tol);
 #else

@@ -239,7 +239,7 @@ edge_tangent_to_intersect(Edge *e, int first_index, Plane* pl, Bbox *ebox, Plane
         tangent->refpt = pt;
         
         // Check that pt is within ebox, and return 0 if it isn't.
-        if (!in_bbox(&pt, ebox, (double)SMALL_COORD))
+        if (!in_bbox(&pt, ebox, SMALL_COORD))
             rc = 0;
 
         // If we're off the end (rc == 2) check that an endpoint is also
@@ -266,7 +266,7 @@ edge_tangent_to_intersect(Edge *e, int first_index, Plane* pl, Bbox *ebox, Plane
             tangent->refpt = *p;
 
             rc = intersect_line_plane(tangent, pl, &pt);
-            if (!in_bbox(&pt, ebox, (double)SMALL_COORD))
+            if (!in_bbox(&pt, ebox, SMALL_COORD))
                 rc = 0;
             if (rc == 1)
             {
@@ -302,7 +302,7 @@ edge_tangent_to_intersect(Edge *e, int first_index, Plane* pl, Bbox *ebox, Plane
             tangent->refpt = *p;
 
             rc = intersect_line_plane(tangent, pl, &pt);
-            if (!in_bbox(&pt, ebox, (double)SMALL_COORD))
+            if (!in_bbox(&pt, ebox, SMALL_COORD))
                 rc = 0;
             if (rc == 2)
             {

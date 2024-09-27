@@ -32,10 +32,10 @@ export_triangle_stl_d(void* arg, double x[3], double y[3], double z[3])
         C /= length;
     }
 
-    fprintf_s(stl, "facet normal %.15f %.15f %.15f\n", A, B, C);
+    fprintf_s(stl, "facet normal %.15g %.15g %.15g\n", A, B, C);
     fprintf_s(stl, "  outer loop\n");
     for (i = 0; i < 3; i++)
-        fprintf_s(stl, "    vertex %.15f %.15f %.15f\n", x[i], y[i], z[i]);
+        fprintf_s(stl, "    vertex %.15g %.15g %.15g\n", x[i], y[i], z[i]);
     fprintf_s(stl, "  endloop\n");
     fprintf_s(stl, "endfacet\n");
     num_exported_tri++;
@@ -45,7 +45,7 @@ export_triangle_stl_d(void* arg, double x[3], double y[3], double z[3])
 void
 export_vertex_off_d(void* arg, Vertex_index* v, double x, double y, double z)
 {
-    fprintf_s(off, "%.15f %.15f %.15f\n", x, y, z);
+    fprintf_s(off, "%.15g %.15g %.15g\n", x, y, z);
     reindex[*(int*)v] = num_exported_vertices++;
 }
 
@@ -66,7 +66,7 @@ export_triangle_off(void* arg, int nv, Vertex_index* vi)
 void
 export_vertex_amf_d(void* arg, Vertex_index* v, double x, double y, double z)
 {
-    fprintf_s(amf, "        <vertex><coordinates><x>%.15f</x><y>%.15f</y><z>%.15f</z></coordinates></vertex>\n", x, y, z);
+    fprintf_s(amf, "        <vertex><coordinates><x>%.15g</x><y>%.15g</y><z>%.15g</z></coordinates></vertex>\n", x, y, z);
     reindex[*(int*)v] = num_exported_vertices++;
 }
 
@@ -94,7 +94,7 @@ export_vertex_obj(void* arg, Vertex_index* v, double x, double y, double z)
 void
 export_vertex_obj_d(void* arg, Vertex_index* v, double x, double y, double z)
 {
-    fprintf_s(objf, "v %.15f %.15f %.15f\n", x, y, z);
+    fprintf_s(objf, "v %.15g %.15g %.15g\n", x, y, z);
     reindex[*(int*)v] = num_exported_vertices++;
 }
 

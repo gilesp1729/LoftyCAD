@@ -12,7 +12,7 @@ void clear_bbox(Bbox *box);
 void expand_bbox(Bbox *box, Point *p);
 void expand_bbox_coords(Bbox* box, double x, double y, double z);
 void union_bbox(Bbox *box1, Bbox *box2, Bbox *u);
-BOOL intersects_bbox(Bbox *box1, Bbox *box2);
+//BOOL intersects_bbox(Bbox *box1, Bbox *box2);
 BOOL in_bbox(Point* pt, Bbox* box, double tol);
 
 // Regenerate a view list

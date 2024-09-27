@@ -1010,7 +1010,7 @@ Draw(void)
                         && 
                         ((Face *)parent)->text != NULL
                         &&
-                        !near_pt(&new_point, &last_point, SMALL_COORD)
+                        !near_pt(&new_point, &last_point, LOOSE_SMALL_COORD)
                     )
                     {
                         Face *face = (Face *)parent;

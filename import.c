@@ -222,35 +222,50 @@ binary_stl:
     i = 0;
     while (TRUE)
     {
+        float x, y, z;  // binary STL deals in floats, not doubles.
+
         step_file_progress(50);
 
-        if (fread_s(&norm.A, 4, 1, 4, f) != 4)
+        if (fread_s(&x, 4, 1, 4, f) != 4)
             goto binary_eof;
-        if (fread_s(&norm.B, 4, 1, 4, f) != 4)
+        if (fread_s(&y, 4, 1, 4, f) != 4)
             goto binary_eof;
-        if (fread_s(&norm.C, 4, 1, 4, f) != 4)
+        if (fread_s(&z, 4, 1, 4, f) != 4)
             goto binary_eof;
+        norm.A = x;
+        norm.B = y;
+        norm.C = z;
 
-        if (fread_s(&pt[0].x, 4, 1, 4, f) != 4)
+        if (fread_s(&x, 4, 1, 4, f) != 4)
             goto binary_eof;
-        if (fread_s(&pt[0].y, 4, 1, 4, f) != 4)
+        if (fread_s(&y, 4, 1, 4, f) != 4)
             goto binary_eof;
-        if (fread_s(&pt[0].z, 4, 1, 4, f) != 4)
+        if (fread_s(&z, 4, 1, 4, f) != 4)
             goto binary_eof;
+        pt[0].x = x;
+        pt[0].y = y;
+        pt[0].z = z;
 
-        if (fread_s(&pt[1].x, 4, 1, 4, f) != 4)
+        if (fread_s(&x, 4, 1, 4, f) != 4)
             goto binary_eof;
-        if (fread_s(&pt[1].y, 4, 1, 4, f) != 4)
+        if (fread_s(&y, 4, 1, 4, f) != 4)
             goto binary_eof;
-        if (fread_s(&pt[1].z, 4, 1, 4, f) != 4)
+        if (fread_s(&z, 4, 1, 4, f) != 4)
             goto binary_eof;
+        pt[1].x = x;
+        pt[1].y = y;
+        pt[1].z = z;
 
-        if (fread_s(&pt[2].x, 4, 1, 4, f) != 4)
+        if (fread_s(&x, 4, 1, 4, f) != 4)
             goto binary_eof;
-        if (fread_s(&pt[2].y, 4, 1, 4, f) != 4)
+        if (fread_s(&y, 4, 1, 4, f) != 4)
             goto binary_eof;
-        if (fread_s(&pt[2].z, 4, 1, 4, f) != 4)
+        if (fread_s(&z, 4, 1, 4, f) != 4)
             goto binary_eof;
+        pt[2].x = x;
+        pt[2].y = y;
+        pt[2].z = z;
+
 
         if (fread_s(&attrib, 2, 1, 2, f) != 2)  // ignore this
             goto binary_eof;
