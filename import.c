@@ -157,6 +157,10 @@ read_stl_to_group(Group *group, char *filename)
             p0 = find_point_coord(&pt[0], vol->point_bucket);
             p1 = find_point_coord(&pt[1], vol->point_bucket);
             p2 = find_point_coord(&pt[2], vol->point_bucket);
+
+            // These checks are necessary for STL to stop misidentification of close points.
+            // STL sucks because it does not explicitly specify connectivity, instead relying 
+            // on points being coincident.
             if (near_pt(&pt[0], &pt[1], SMALL_COORD))
                 continue;
             if (near_pt(&pt[1], &pt[2], SMALL_COORD))
@@ -475,12 +479,7 @@ read_obj_to_group(Group* group, char* filename)
 
         if (p1 == p2 || p2 == p3 || p1 == p3)
             ASSERT(FALSE, "Degenerate triangles");
-        if (near_pt(points[p1], points[p2], SMALL_COORD))
-            goto next_face;
-        if (near_pt(points[p2], points[p3], SMALL_COORD))
-            goto next_face;
-        if (near_pt(points[p3], points[p1], SMALL_COORD))
-            goto next_face;
+
         tf->edges[0] = find_edge(points[p1], points[p2]);
         tf->edges[1] = find_edge(points[p2], points[p3]);
         tf->edges[2] = find_edge(points[p3], points[p1]);
@@ -499,7 +498,6 @@ read_obj_to_group(Group* group, char* filename)
         link((Object*)tf, &vol->faces);
 
         // Read a new line
-    next_face:
         while (1)
         {
             if (fgets(buf, 512, f) == NULL)     // skip any comments and blank lines
@@ -611,12 +609,7 @@ read_off_to_group(Group *group, char *filename)
 
         if (p1 == p2 || p2 == p3 || p1 == p3)
             ASSERT(FALSE, "Degenerate triangles");
-        if (near_pt(points[p1], points[p2], SMALL_COORD))
-            continue;
-        if (near_pt(points[p2], points[p3], SMALL_COORD))
-            continue;
-        if (near_pt(points[p3], points[p1], SMALL_COORD))
-            continue;
+
         tf->edges[0] = find_edge(points[p1], points[p2]);
         tf->edges[1] = find_edge(points[p2], points[p3]);
         tf->edges[2] = find_edge(points[p3], points[p1]);

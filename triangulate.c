@@ -2392,9 +2392,22 @@ face_shade(GLUtesselator *tess, Face *face, PRESENTATION pres, BOOL locked)
 
             tess_vertex(tess, v);
 
-            // Skip coincident points for robustness (don't create zero-area triangles)
-            while (v->hdr.next != NULL && near_pt(v, (Point *)v->hdr.next, SMALL_COORD))
-                v = (Point *)v->hdr.next;
+            switch (face->type & ~FACE_CONSTRUCTION)
+            {
+            case FACE_TRI:
+            case FACE_RECT:
+            case FACE_HEX:
+                // Skip the check (we know how many edges there should be, and near
+                // points, if any, are intentional)
+                break;
+
+            default:
+                // Arbitrary faces' view lists may contain dups or near-dups. Check for them.
+                // Skip coincident points for robustness (don't create zero-area triangles)
+                while (v->hdr.next != NULL && near_pt(v, (Point*)v->hdr.next, SMALL_COORD))
+                    v = (Point*)v->hdr.next;
+                break;
+            }
 
             v = (Point *)v->hdr.next;
                 

@@ -184,16 +184,29 @@ gen_view_list_surface(Face *face)
 
                 tess_vertex(clip_tess, v);
 
-                // Skip coincident points for robustness (don't create zero-area triangles)
-                while (v->hdr.next != NULL && near_pt(v, (Point *)v->hdr.next, SMALL_COORD))
-                    v = (Point *)v->hdr.next;
+                switch (face->type & ~FACE_CONSTRUCTION)
+                {
+                case FACE_TRI:
+                case FACE_RECT:
+                case FACE_HEX:
+                    // Skip the check (we know how many edges there should be, and near
+                    // points, if any, are intentional)
+                    break;
 
-                v = (Point *)v->hdr.next;
+                default:
+                    // Arbitrary faces' view lists may contain dups or near-dups. Check for them.
+                    // Skip coincident points for robustness (don't create zero-area triangles)
+                    while (v->hdr.next != NULL && near_pt(v, (Point*)v->hdr.next, SMALL_COORD))
+                        v = (Point*)v->hdr.next;
+                }
+
+                v = (Point*)v->hdr.next;
 
                 // If face(t) is closed, skip the closing point. Watch for dups at the end.
                 while (v != NULL && near_pt(v, vfirst, SMALL_COORD))
-                    v = (Point *)v->hdr.next;
+                    v = (Point*)v->hdr.next;
             }
+
             gluTessEndContour(clip_tess);
             gluTessEndPolygon(clip_tess);
         }
