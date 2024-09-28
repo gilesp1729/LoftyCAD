@@ -8,7 +8,7 @@ Simple to use like Sketchup, but with some improvements:
 In particular, it will:
 - Retain the identity of 3D shapes, and not merge shapes irreversibly with others
 - Produce a single triangle mesh from merged objects, using CSG operations (union, intersection, difference)
-- Not produce non-manifold triangle meshes requiring repairs 
+- Not produce non-manifold triangle meshes requiring repairs (but read the fine print)
 - Write STL and other triangle mesh files directly
 - Not be subscription or web-based; your data is yours forever on your local PC
 
@@ -33,6 +33,7 @@ In particular, it will:
 # Files handled
 - Native (LCD) format is human-readable
 - Export triangle meshes in STL, AMF, OBJ, or OFF formats
+- Export flattened LCD files containing triangle mesh
 - Export multi-material model to separate STL meshes
 - Export multi-material model to AMF and OBJ along with material definitions
 - Always output full normals
@@ -66,6 +67,7 @@ LoftyCAD uses the excellent CGAL computational geometry library to merge and int
 - This branch is the live development branch and will become the master in due course. Features described above refer to this branch and may not be present in earlier branches.
 - This branch has been tested to CGAL 5.5.1.
 - This branch is to convert all internal coordinate (Point) representations from float to double, to improve robustness especially when re-importing rendering results as triangle meshes.
+- Flattened LCD (FLCD) files are exportable and readable. They are a full-precision connected triangle mesh for re-importing.
 - Build as for the Horus and Material Girl branches.
 
 # Horus branch
