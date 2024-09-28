@@ -5,7 +5,7 @@
 #include <shellapi.h>
 
 // File types for accepted imports.
-char* filetypes[6] = { "lcd", "stl", "amf", "obj", "off", "gcode" };
+char* filetypes[7] = { "lcd", "stl", "amf", "obj", "off", "gcode", "flcd" };
 
 // Message handler for about box.
 INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
@@ -142,14 +142,17 @@ Command(int message, int wParam, int lParam)
         DragQueryFile((HDROP)wParam, 0, new_filename, 256);
 
         // If an LCD file, open it. If one of the recognised import formats, import it to a group.
+        // For LCD and FLCD files, give user a choice.
         pdot = strrchr(new_filename, '.');
-        for (i = 0; i < 6; i++)
+        for (i = 0; i < 7; i++)
         {
             if (_stricmp(pdot + 1, filetypes[i]) == 0)
                 break;
         }
-        if (i == 6)
+        if (i == 7)
             break;   // not recognised, just forget it
+        if (i == 6)
+            i = 0;  // treat FLCD as LCD
 
         if (i == 0)
         {
@@ -715,6 +718,7 @@ Command(int message, int wParam, int lParam)
                 "AMF Files (*.AMF)\0*.AMF\0"
                 "OBJ Files (*.OBJ)\0*.OBJ\0"
                 "Geomview Object File Format Files (*.OFF)\0*.OFF\0"
+                "Flattened LCD Files (*.FLCD)\0*.FLCD\0"
                 "All Files\0*.*\0\0";
             ofn.nFilterIndex = 1;
             ofn.lpstrDefExt = "stl";
@@ -741,7 +745,7 @@ Command(int message, int wParam, int lParam)
             ofn.lStructSize = sizeof(OPENFILENAME);
             ofn.hwndOwner = auxGetHWND();
             ofn.lpstrFilter = 
-                "LoftyCAD Files (*.LCD)\0*.LCD\0"
+                "LoftyCAD Files (*.LCD, *.FLCD)\0*.LCD;*.FLCD\0"
                 "STL Meshes (*.STL)\0*.STL\0"
                 "AMF Files (*.AMF)\0*.AMF\0"
                 "OBJ Files (*.OBJ)\0*.OBJ\0"

@@ -71,13 +71,13 @@ void face_shade(GLUtesselator *tess, Face *face, PRESENTATION pres, BOOL locked)
 void export_object_tree(Group *tree, char *filename, int file_index);
 void mesh_write_off(char* prefix, int id, Mesh* mesh);
 
-
 // Import from STL and various formats (import.c)
 BOOL read_stl_to_group(Group *group, char *filename);
 BOOL read_amf_to_group(Group* group, char* filename);
 BOOL read_obj_to_group(Group* group, char* filename);
 BOOL read_off_to_group(Group* group, char* filename);
 BOOL read_gcode_to_group(Group* group, char* filename);
+Edge* find_edge(Point* p0, Point* p1);
 
 extern GLUtesselator *rtess;
 

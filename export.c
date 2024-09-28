@@ -15,6 +15,8 @@ int num_exported_vertices;
 // reindex array to count vertex indices in an OFF file
 int *reindex;
 
+// Points array used when accumulating vertices for an FLCD file
+Point** points;
 
 // Write a single mesh triangle with normal out to an STL file
 void
@@ -132,6 +134,50 @@ export_unmerged_object_stl(Object *obj)
         break;
     }
 }
+
+// Write a vertex out to an FLCD file
+void
+export_vertex_flcd(void* arg, Vertex_index* v, double x, double y, double z)
+{
+    Point* p = point_new(x, y, z);
+
+    reindex[*(int*)v] = num_exported_vertices;
+    points[num_exported_vertices++] = p;
+}
+
+// Write a triangle mesh out to an FLCD file
+void
+export_triangle_flcd(void* arg, int nv, Vertex_index* vi)
+{
+    Volume* vol = (Volume*)arg;
+    Plane dummy = { 0, };
+    Face* tf = face_new(FACE_TRI, dummy);
+    int p1, p2, p3;
+    int* ivi = (int*)vi;
+
+    p1 = reindex[ivi[0]];
+    p2 = reindex[ivi[1]];
+    p3 = reindex[ivi[2]];
+
+    tf->edges[0] = find_edge(points[p1], points[p2]);
+    tf->edges[1] = find_edge(points[p2], points[p3]);
+    tf->edges[2] = find_edge(points[p3], points[p1]);
+    tf->n_edges = 3;
+    if
+        (
+            tf->edges[0]->endpoints[1] == tf->edges[1]->endpoints[0]
+            ||
+            tf->edges[0]->endpoints[1] == tf->edges[1]->endpoints[1]
+            )
+        tf->initial_point = tf->edges[0]->endpoints[0];
+    else
+        tf->initial_point = tf->edges[0]->endpoints[1];
+
+    tf->vol = vol;
+    link((Object*)tf, &vol->faces);
+}
+
+
 
 // export every volume to various kinds of files
 void
@@ -510,6 +556,38 @@ export_object_tree(Group *tree, char *filename, int file_index)
         sprintf_s(buf, 64, "Mesh: %d triangles\r\n", num_exported_tri);
         Log(buf);
         fclose(off);
+        clear_status_and_progress();
+        break;
+
+    case 6:  // export to a flattened LCD file (triangle mesh)
+        show_status("Exporting ", filename);
+
+        num_exported_tri = 0;
+        num_exported_vertices = 0;
+        if (tree->mesh != NULL && tree->mesh_valid && tree->mesh_complete)
+        {
+            Volume* vol;
+            Group* group;
+            int n_vertices = mesh_num_vertices(tree->mesh);
+            int n_faces = mesh_num_faces(tree->mesh);
+
+            points = malloc(n_vertices * sizeof(Point*));       // point array
+            reindex = (int*)calloc(n_vertices, sizeof(int));    // point indexing array
+
+            vol = vol_new();
+            vol->hdr.lock = LOCK_FACES;
+            group = group_new();
+            link_group((Object*)vol, group);
+
+            mesh_foreach_vertex_d(tree->mesh, export_vertex_flcd, points);
+            mesh_foreach_face_vertices(tree->mesh, export_triangle_flcd, vol);
+            serialise_tree(group, filename);
+
+            free(points);
+            free(reindex);
+            purge_obj((Object*)group);
+        }
+
         clear_status_and_progress();
         break;
     }

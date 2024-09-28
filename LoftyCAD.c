@@ -1596,15 +1596,15 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 
             // If an LCD file, open it. If one of the recognised import formats, import it to a group.
             pdot = strrchr(new_filename, '.');
-            for (i = 0; i < 6; i++)
+            for (i = 0; i < 7; i++)
             {
                 if (_stricmp(pdot + 1, filetypes[i]) == 0)
                     break;
             }
-            if (i == 6)
+            if (i == 7)
                 goto process_messages;   // not recognised, just forget it
 
-            if (i == 0)
+            if (i == 0 || i == 6)        // treat FLCD as LCD
             {
                 strcpy_s(curr_filename, 256, new_filename);
 
